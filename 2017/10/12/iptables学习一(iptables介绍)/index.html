@@ -404,7 +404,7 @@
 <p>作用于主机防火墙则是针对单个主机的,网络防火墙则是针对该网络后的所有服务器集体,例如负载均衡、网关设备上</p>
 <p>首先,盗用<a href="http://www.zsythink.net/archives/1199" target="_blank" rel="noopener">一张图</a>,我们先看看数据包在主机里的流向(假设已开启iptables).</p>
 <p><img src="http://zskgithubblog.oss-cn-beijing.aliyuncs.com/blogpic/iptables2.JPG" alt="iptables2"></p>
-<h3><span id="数据包流向"><strong>数据包流向</strong></span></h3><blockquote>
+<h3 id="数据包流向"><a href="#数据包流向" class="headerlink" title="数据包流向"></a><strong>数据包流向</strong></h3><blockquote>
 <ol>
 <li>一个数据包进入网卡时,它首先进入PREROUTING链,内核根据数据包目的IP判断是否需要转发出去.</li>
 <li>如果数据包就是进入本机的,它就会沿着图向下移动,到达INPUT链.数据包到了INPUT链后,任何进程都会收到它.根据数据包中的目的端口号来决定具体由哪个进程处理,本机上运行的程序可以发送数据包,这些数据包会经 过OUTPUT链,然后到达POSTROUTING链输出.</li>
@@ -416,14 +416,14 @@
 <p><strong>经过本机的数据包: PREROUTING —-&gt; IPNUT —-&gt; OUTPUT —-&gt; POSTROUTING </strong></p>
 <p><strong>经本机转发的数据包: PREROUTING —-&gt; FORWARD —-&gt; POSTROUTING </strong></p>
 <p><strong>由本机出去的数据包: OUTPUT —-&gt; POSTROUTING </strong></p>
-<h3><span id="四表五链"><strong>四表五链</strong></span></h3><p>那上面的那些红色标注的是什么呢,还有大家常说的四表五链又到底什么意思?</p>
-<h4><span id="规则"><strong>规则</strong></span></h4><p><strong>规则</strong>(rules)其实就是网络管理员预定义的条件,规则一般的定义为“如果数据包头符合这样的条件,就这样处理这个数据包”.规则存储在内核空间的信息包过滤表中,这些规则分别指定了源地址、目的地址、传输协议(如TCP、UDP、ICMP)和服务类型(如HTTP、FTP和SMTP)等.当数据包与规则匹配时,iptables就根据规则所定义的方法来处理这些数据包,如放行(accept)、拒绝(reject)和丢弃(drop)等.配置防火墙的主要工作就是添加、修改和删除这些规则.</p>
+<h3 id="四表五链"><a href="#四表五链" class="headerlink" title="四表五链"></a><strong>四表五链</strong></h3><p>那上面的那些红色标注的是什么呢,还有大家常说的四表五链又到底什么意思?</p>
+<h4 id="规则"><a href="#规则" class="headerlink" title="规则"></a><strong>规则</strong></h4><p><strong>规则</strong>(rules)其实就是网络管理员预定义的条件,规则一般的定义为“如果数据包头符合这样的条件,就这样处理这个数据包”.规则存储在内核空间的信息包过滤表中,这些规则分别指定了源地址、目的地址、传输协议(如TCP、UDP、ICMP)和服务类型(如HTTP、FTP和SMTP)等.当数据包与规则匹配时,iptables就根据规则所定义的方法来处理这些数据包,如放行(accept)、拒绝(reject)和丢弃(drop)等.配置防火墙的主要工作就是添加、修改和删除这些规则.</p>
 <p><strong>总结之: 规则就是规定哪些数据可以通过/直接丢弃,哪些数据包需要转发,哪些数据包需要由本机处理,所有的规则一条一条按顺序去匹配直到匹配上,如果到最后一条规则执行完之后都匹配不上则使用默认规则.</strong></p>
 <p>要说清楚四表五链,再盗<a href="https://www.liuliqiang.info/post/dive-in-iptables/" target="_blank" rel="noopener">一张图</a></p>
 <p><img src="http://zskgithubblog.oss-cn-beijing.aliyuncs.com/blogpic/iptables1.JPG" alt="iptables1"></p>
 <p>上图中黄色方框框住的为四表</p>
 <p>红色框住的为五链</p>
-<h4><span id="四表"><strong>四表</strong></span></h4><blockquote>
+<h4 id="四表"><a href="#四表" class="headerlink" title="四表"></a><strong>四表</strong></h4><blockquote>
 <ol>
 <li>filter(默认表)<br>主要用于过滤数据包,该表根据系统管理员预定义的一组规则过滤符合条件的数据包.对于防火墙而言,主要利用在filter表中指定的规则来实现对数据包的过滤.<strong>Filter表是默认的表</strong>,如果没有指定哪个表,iptables 就默认使用filter表来执行所有命令,filter表包含了INPUT链(处理进入的数据包),RORWARD链(处理转发的数据包),OUTPUT链(处理本地生成的数据包)在filter表中只能允许对数据包进行接受,丢弃的操作,而无法对数据包进行更改.</li>
 <li>nat<br>主要用于网络地址转换NAT,该表可以实现一对一,一对多,多对多等NAT工作,iptables就是使用该表实现共享上网的,NAT表包含了PREROUTING链(修改即将到来的数据包),POSTROUTING链(修改即将出去的数据包),OUTPUT链(修改路由之前本地生成的数据包).</li>
@@ -431,7 +431,7 @@
 <li>raw<br>只使用在PREROUTING链和OUTPUT链上,因为优先级最高,从而可以对收到的数据包在连接跟踪前进行处理.一但用户使用了RAW表,在 某个链上,RAW表处理完后,将跳过NAT表和 ip_conntrack处理,即不再做地址转换和数据包的链接跟踪处理了.</li>
 </ol>
 </blockquote>
-<h4><span id="五链"><strong>五链</strong></span></h4><blockquote>
+<h4 id="五链"><a href="#五链" class="headerlink" title="五链"></a><strong>五链</strong></h4><blockquote>
 <ol>
 <li>PREROUTING: 在对数据包作路由选择之前,应用此链中的规则.</li>
 <li>FORWARD: 当接收到需要通过防火墙发送给其他地址的数据包(转发)时,应用此链中的规则.</li>
@@ -454,7 +454,7 @@
 <p>filter: INPUT、FORWARD、OUTPUT</p>
 <p>再次盗用<a href="http://www.zsythink.net/archives/1199" target="_blank" rel="noopener">一张图</a></p>
 <p><img src="http://zskgithubblog.oss-cn-beijing.aliyuncs.com/blogpic/iptables3.JPG" alt="iptables1"></p>
-<h3><span id="动作"><strong>动作</strong></span></h3><p>前面我们说了,规则是按顺序一条一条进行匹配直到匹配上,那数据包匹配上了之后如何操作呢？这就是动作.常用的动作有如下几个:</p>
+<h3 id="动作"><a href="#动作" class="headerlink" title="动作"></a><strong>动作</strong></h3><p>前面我们说了,规则是按顺序一条一条进行匹配直到匹配上,那数据包匹配上了之后如何操作呢？这就是动作.常用的动作有如下几个:</p>
 <blockquote>
 <ol>
 <li>DROP: 直接丢弃该数据包,且对端不会有任何提示,对端可能在超时时才会知道</li>
@@ -463,19 +463,19 @@
 <li>LOG: 记录该数据包然后把该数据包传递到下一规则链中</li>
 </ol>
 </blockquote>
-<h3><span id="总结"><strong>总结</strong></span></h3><ol>
+<h3 id="总结"><a href="#总结" class="headerlink" title="总结"></a><strong>总结</strong></h3><ol>
 <li>iptables是处于用户空间的命令行工具,真正实现功能的位于内核空间的netfilter.</li>
 <li>iptables有四表五链来实现数据包的流转.</li>
 <li>iptables中的数据包是按规则顺序一条一条匹配的,如果匹配上的话则执行相应的动作,如果到最后一条规则执行完之后都匹配不上,则使用默认规则.</li>
 </ol>
-<h3><span id="参考文章"><strong>参考文章:</strong></span></h3><blockquote>
+<h3 id="参考文章"><a href="#参考文章" class="headerlink" title="参考文章:"></a><strong>参考文章:</strong></h3><blockquote>
 <ul>
 <li><a href="https://wiki.archlinux.org/index.php/Iptables" target="_blank" rel="noopener">iptables-wiki</a></li>
 <li><a href="https://www.liuliqiang.info/post/dive-in-iptables/" target="_blank" rel="noopener">iptables 深度详解</a></li>
 <li><a href="http://www.zsythink.net/archives/1199" target="_blank" rel="noopener">iptables概念</a></li>
 </ul>
 </blockquote>
-<h3><span id="转载请注明出处httpsizskme"><strong>转载请注明出处<a href="https://izsk.me" target="_blank" rel="noopener">https://izsk.me</a></strong></span></h3><hr>
+<h3 id="转载请注明出处https-izsk-me"><a href="#转载请注明出处https-izsk-me" class="headerlink" title="转载请注明出处https://izsk.me"></a><strong>转载请注明出处<a href="https://izsk.me" target="_blank" rel="noopener">https://izsk.me</a></strong></h3><hr>
 
       
     </div>
@@ -674,7 +674,7 @@
             
 
             
-              <div class="post-toc-content"><ol class="nav"><li class="nav-item nav-level-3"><a class="nav-link" href="#null"><span class="nav-number">1.</span> <span class="nav-text">数据包流向</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#null"><span class="nav-number">2.</span> <span class="nav-text">四表五链</span></a><ol class="nav-child"><li class="nav-item nav-level-4"><a class="nav-link" href="#null"><span class="nav-number">2.1.</span> <span class="nav-text">规则</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#null"><span class="nav-number">2.2.</span> <span class="nav-text">四表</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#null"><span class="nav-number">2.3.</span> <span class="nav-text">五链</span></a></li></ol></li><li class="nav-item nav-level-3"><a class="nav-link" href="#null"><span class="nav-number">3.</span> <span class="nav-text">动作</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#null"><span class="nav-number">4.</span> <span class="nav-text">总结</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#null"><span class="nav-number">5.</span> <span class="nav-text">参考文章:</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#null"><span class="nav-number">6.</span> <span class="nav-text">转载请注明出处https://izsk.me</span></a></li></ol></div>
+              <div class="post-toc-content"><ol class="nav"><li class="nav-item nav-level-3"><a class="nav-link" href="#数据包流向"><span class="nav-number">1.</span> <span class="nav-text">数据包流向</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#四表五链"><span class="nav-number">2.</span> <span class="nav-text">四表五链</span></a><ol class="nav-child"><li class="nav-item nav-level-4"><a class="nav-link" href="#规则"><span class="nav-number">2.1.</span> <span class="nav-text">规则</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#四表"><span class="nav-number">2.2.</span> <span class="nav-text">四表</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#五链"><span class="nav-number">2.3.</span> <span class="nav-text">五链</span></a></li></ol></li><li class="nav-item nav-level-3"><a class="nav-link" href="#动作"><span class="nav-number">3.</span> <span class="nav-text">动作</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#总结"><span class="nav-number">4.</span> <span class="nav-text">总结</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#参考文章"><span class="nav-number">5.</span> <span class="nav-text">参考文章:</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#转载请注明出处https-izsk-me"><span class="nav-number">6.</span> <span class="nav-text">转载请注明出处https://izsk.me</span></a></li></ol></div>
             
 
           </div>

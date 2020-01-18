@@ -399,13 +399,13 @@
       
 
       
-        <h3><span id="vsdr的体系结构"><strong>VS/DR的体系结构:</strong></span></h3><p>为了阐述方便，我根据官方原理图另外制作了一幅图，如下图所示：</p>
+        <h3 id="VS-DR的体系结构"><a href="#VS-DR的体系结构" class="headerlink" title="VS/DR的体系结构:"></a><strong>VS/DR的体系结构:</strong></h3><p>为了阐述方便，我根据官方原理图另外制作了一幅图，如下图所示：</p>
 <a id="more"></a>
 <p><img src="https://zskgithubblog.oss-cn-beijing.aliyuncs.com/blogpic/LVS-DR1.jpg" alt="LVS-DR1"></p>
 <p>LVS-DR:</p>
 <p><img src="https://zskgithubblog.oss-cn-beijing.aliyuncs.com/blogpic/LVS-DR2.jpg" alt="LVS-DR2"></p>
 <p>DR 值 Direct Routing，直接路由，DR 模型中，Director 和 Realserver 处在同一网络中，对于 Director，VIP 用于接受客户端请求，DIP 用于和 Realserver 通信。对于 Realserver，每个 Realserver 都配有和 Director 相同的 VIP（此 VIP 隐藏，关闭对 ARP 请求的响应），仅用户响应客户端的请求，RIP 用于和 Director 通信。<br>当客户端请求集群服务时，请求报文发送至 Director 的 VIP（Realserver的 VIP 不会响应 ARP 请求），Director 将客户端报文的源和目标 MAC 地址进行重新封装，将报文转发至 Realserver，Realserver 接收转发的报文。此时报文的源 IP 和目标 IP 都没有被修改，因此 Realserver 接受到的请求报文的目标 IP 地址为本机配置的 VIP，它将使用自己的 VIP 直接响应客户端。<br>LVS-DR 模型中，客户端的响应报文不会经过 Director，因此 Director 的并发能力有很大提升。</p>
-<h3><span id="lvs-dr-模型特性"><strong>LVS-DR 模型特性:</strong></span></h3><blockquote>
+<h3 id="LVS-DR-模型特性"><a href="#LVS-DR-模型特性" class="headerlink" title="LVS-DR 模型特性:"></a><strong>LVS-DR 模型特性:</strong></h3><blockquote>
 <ul>
 <li>保证前端路由器将目标地址为 VIP 的报文通过 ARP 解析后送往 Director。</li>
 <li>静态绑定：在前端路由将 VIP 对应的目标 MAC 地址静态配置为Director VIP 接口的 MAC 地址。</li>
@@ -425,7 +425,7 @@
 <blockquote>
 <p>① client向目标vip发出请求，Director接收。此时IP包头及数据帧头信息如下：<br><img src="https://zskgithubblog.oss-cn-beijing.aliyuncs.com/blogpic/LVS-DR4.jpg" alt="LVS-DR4"><br>② VS根据负载均衡算法选择一台active的realserver(假设是192.168.57.122)，将此RIP所在网卡的mac地址作为目标mac地址，发送到局域网里。此时IP包头及数据帧头信息如下：<br><img src="https://zskgithubblog.oss-cn-beijing.aliyuncs.com/blogpic/LVS-DR5.jpg" alt="LVS-DR5"><br>③ realserver(192.168.57.122)在局域网中收到这个帧，拆开后发现目标IP(VIP)与本地匹配，于是处理这个报文。随后重新封装报文，发送到局域网。此时IP包头及数据帧头信息如下：<br><img src="https://zskgithubblog.oss-cn-beijing.aliyuncs.com/blogpic/LVS-DR6.jpg" alt="LVS-DR6"><br>④ 如果client与VS同一网段，那么client(192.168.57.135)将收到这个回复报文。如果跨了网段，那么报文通过gateway/路由器经由Internet返回给用户。</p>
 </blockquote>
-<h3><span id="lvsdr模式工作原理常见问题"><strong>LVS/DR模式工作原理常见问题:</strong></span></h3><ol>
+<h3 id="LVS-DR模式工作原理常见问题"><a href="#LVS-DR模式工作原理常见问题" class="headerlink" title="LVS/DR模式工作原理常见问题:"></a><strong>LVS/DR模式工作原理常见问题:</strong></h3><ol>
 <li>LVS/DR如何处理请求报文的，会修改IP包内容吗？<br>1.1 vs/dr本身不会关心IP层以上的信息，即使是端口号也是tcp/ip协议栈去判断是否正确，vs/dr本身主要做这么几个事：<br>1）接收client的请求，根据你设定的负载均衡算法选取一台realserver的ip；<br>2）以选取的这个ip对应的mac地址作为目标mac，然后重新将IP包封装成帧转发给这台RS；<br>3）在hash table中记录连接信息。<br>vs/dr做的事情很少，也很简单，所以它的效率很高，不比硬件负载均衡设备差多少。<br>数据包、数据帧的大致流向是这样的：client –&gt; VS –&gt; RS –&gt; client<br>1.2 前面已作了回答，vs/dr不会修改IP包的内容.</li>
 <li>RealServer为什么要在lo接口上配置VIP？在出口网卡上配置VIP可以吗？<br>2.1 既然要让RS能够处理目标地址为vip的IP包，首先必须要让RS能接收到这个包。<br>在lo上配置vip能够完成接收包并将结果返回client。<br>2.2 答案是不可以将VIP设置在出口网卡上,否则会响应客户端的arp request,造成client/gateway arp table紊乱，以至于整个load balance都不能正常工作。</li>
 <li><p>RealServer为什么要抑制arp帧？<br>这个问题在上一问题中已经作了说明，这里结合实施命令进一步阐述。我们在具体实施部署的时候都会作如下调整：</p>
@@ -466,12 +466,12 @@ echo &quot;2&quot; &gt;/proc/sys/net/ipv4/conf/eth0/arp_announce
 </li>
 <li>director的vip的netmask一定要是255.255.255.255吗？<br>lvs/dr里，director的vip的netmask 没必要设置为255.255.255.255，也不需要再去<br>route add -host $VIP dev eth0:0<br>director的vip本来就是要像正常的ip地址一样对外通告的,不要搞得这么特殊.</li>
 </ol>
-<h3><span id="参考文章"><strong>参考文章:</strong></span></h3><blockquote>
+<h3 id="参考文章"><a href="#参考文章" class="headerlink" title="参考文章:"></a><strong>参考文章:</strong></h3><blockquote>
 <ul>
 <li><a href="http://www.cnblogs.com/czh-liyu/archive/2011/11/29/2267963.html" target="_blank" rel="noopener">http://www.cnblogs.com/czh-liyu/archive/2011/11/29/2267963.html</a></li>
 </ul>
 </blockquote>
-<h3><span id="转载请注明出处httpsizskme"><strong>转载请注明出处<a href="https://izsk.me" target="_blank" rel="noopener">https://izsk.me</a></strong></span></h3><hr>
+<h3 id="转载请注明出处https-izsk-me"><a href="#转载请注明出处https-izsk-me" class="headerlink" title="转载请注明出处https://izsk.me"></a><strong>转载请注明出处<a href="https://izsk.me" target="_blank" rel="noopener">https://izsk.me</a></strong></h3><hr>
 
       
     </div>
@@ -666,7 +666,7 @@ echo &quot;2&quot; &gt;/proc/sys/net/ipv4/conf/eth0/arp_announce
             
 
             
-              <div class="post-toc-content"><ol class="nav"><li class="nav-item nav-level-3"><a class="nav-link" href="#null"><span class="nav-number">1.</span> <span class="nav-text">VS/DR的体系结构:</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#null"><span class="nav-number">2.</span> <span class="nav-text">LVS-DR 模型特性:</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#null"><span class="nav-number">3.</span> <span class="nav-text">LVS/DR模式工作原理常见问题:</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#null"><span class="nav-number">4.</span> <span class="nav-text">参考文章:</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#null"><span class="nav-number">5.</span> <span class="nav-text">转载请注明出处https://izsk.me</span></a></li></ol></div>
+              <div class="post-toc-content"><ol class="nav"><li class="nav-item nav-level-3"><a class="nav-link" href="#VS-DR的体系结构"><span class="nav-number">1.</span> <span class="nav-text">VS/DR的体系结构:</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#LVS-DR-模型特性"><span class="nav-number">2.</span> <span class="nav-text">LVS-DR 模型特性:</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#LVS-DR模式工作原理常见问题"><span class="nav-number">3.</span> <span class="nav-text">LVS/DR模式工作原理常见问题:</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#参考文章"><span class="nav-number">4.</span> <span class="nav-text">参考文章:</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#转载请注明出处https-izsk-me"><span class="nav-number">5.</span> <span class="nav-text">转载请注明出处https://izsk.me</span></a></li></ol></div>
             
 
           </div>

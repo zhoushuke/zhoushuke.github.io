@@ -401,7 +401,7 @@
         <p>今天在测试服务器上压测时发现并发数不在正常范围,使用netstat查看tcp连接存在很多连接的状态为time_wait状态,比established多很多,这是个不正常的现象,time_wait是什么鬼？</p>
 <p><code>netstat -n | awk &#39;/^tcp/ {++state[$NF]} END {for(key in state) print key,&quot;\t&quot;,state[key]}&#39;</code></p>
 <a id="more"></a>
-<h3><span id="三次握手"><strong>三次握手</strong></span></h3><p>这里还得从tcp的四次分手说起,在这之前,稍微带上三次握手的状态转变:</p>
+<h3 id="三次握手"><a href="#三次握手" class="headerlink" title="三次握手"></a><strong>三次握手</strong></h3><p>这里还得从tcp的四次分手说起,在这之前,稍微带上三次握手的状态转变:</p>
 <p><img src="http://zskgithubblog.oss-cn-beijing.aliyuncs.com/blogpic/tcp_timewait1.png" alt="tcp_timewait1"></p>
 <p>三次握手不是这篇笔记的重点,这里只扯一个问题:</p>
 <p><code>为什么需要3次握手而不是2次就够?</code></p>
@@ -410,20 +410,20 @@
 <p>总结一句话就是:</p>
 <p><strong>防止已经失效的请求再次到达服务端导致服务器连接资源浪费.</strong></p>
 <p>注:失效的连接请求：若客户端向服务端发送的连接请求丢失,客户端等待应答超时后就会再次发送连接请求,此时,上一个连接请求就是『失效的』</p>
-<h3><span id="四次分手"><strong>四次分手</strong></span></h3><p>tcp的四次分手过程如下:</p>
+<h3 id="四次分手"><a href="#四次分手" class="headerlink" title="四次分手"></a><strong>四次分手</strong></h3><p>tcp的四次分手过程如下:</p>
 <p><img src="http://zskgithubblog.oss-cn-beijing.aliyuncs.com/blogpic/tcp_timewait2.png" alt="tcp_timewait2"></p>
 <p>这里说一下,在实际环境下,FIN-WAIT1的状态其实很难看见,这是因为当有一端请求close时,会很快得到对方ACK,所以FIN-WAIT1有状态很快的会变成FIN-WAIT2,我们这里重点关注Time-Wait状态的2MSL(Maximum Segment Lifetime )</p>
-<h3><span id="time-wait"><strong>TIME-WAIT</strong></span></h3><p>每个具体TCP实现必须选择一个报文段最大生存时间MSL(Maximum Segment Lifetime),它是任何报文段被丢弃前在网络内的最长时间,我们知道这个时间是有限的,因为TCP报文段以IP数据报在网络内传输,而IP数据报则有限制其生存时间的TTL(time to live)字段,TTL为8位,所以最大值为255,我们来看下ip数据报头的格式:</p>
+<h3 id="TIME-WAIT"><a href="#TIME-WAIT" class="headerlink" title="TIME-WAIT"></a><strong>TIME-WAIT</strong></h3><p>每个具体TCP实现必须选择一个报文段最大生存时间MSL(Maximum Segment Lifetime),它是任何报文段被丢弃前在网络内的最长时间,我们知道这个时间是有限的,因为TCP报文段以IP数据报在网络内传输,而IP数据报则有限制其生存时间的TTL(time to live)字段,TTL为8位,所以最大值为255,我们来看下ip数据报头的格式:</p>
 <p><img src="http://zskgithubblog.oss-cn-beijing.aliyuncs.com/blogpic/tcp_timewait3.png" alt="tcp_timewait3"></p>
 <p>我们姑且认为ip数据报在网络中每经过一个跳数TTL字段-1,最后减到0时则会丢弃这个数据报,(或者这样理解:一个IP数据报可以经过的最大路由数,每经过一个处理他的路由器此值就减1,当此值为0则数据报将被丢弃,同时发送ICMP报文通知源主机)一般情况下,具有最大跳数(255)的分组在网络中的存活时间不可能超过MSL,所以这里设置为2MSL就可以确保TCP的可靠性.</p>
-<h3><span id="必要性"><strong>必要性</strong></span></h3><blockquote>
+<h3 id="必要性"><a href="#必要性" class="headerlink" title="必要性"></a><strong>必要性</strong></h3><blockquote>
 <ul>
 <li>我们没有任何机制保证最后的一个ACK能够正常传输</li>
 <li>网络上仍然有可能有残余的数据包(wandering duplicates),我们也必须能够正常处理TCP是建立在不可靠网络上的可靠的协议.</li>
 </ul>
 </blockquote>
 <p>1.假设最后一个ACK丢失了,被动关闭一方会重发它的FIN。主动关闭一方必须维持一个有效状态信息（TIMEWAIT状态下维持）,以便能够重发ACK。如果主动关闭的socket不维持这种状态而进入CLOSED状态,那么主动关闭的socket在处于CLOSED状态时,接收到FIN后将会响应一个RST。被动关闭一方接收到RST后会认为出错了。如果TCP协议想要正常完成必要的操作而终止双方的数据流传输,就必须完全正确的传输四次握手的四个节,不能有任何的丢失。这就是为什么socket在关闭后,仍然处于TIME_WAIT状态的第一个原因,因为他要等待以便重发ACK。<br>2.假设目前连接的通信双方都已经调用了close(),双方同时进入CLOSED的终结状态,而没有走TIME_WAIT状态。会出现如下问题,现在有一个新的连接被建立起来,使用的IP地址与端口与先前的完全相同,后建立的连接是原先连接的一个完全复用。还假定原先的连接中有数据报残存于网络之中,这样新的连接收到的数据报中有可能是先前连接的数据报。为了防止这一点,TCP不允许新连接复用TIME_WAIT状态下的socket。处于TIME_WAIT状态的socket在等待两倍的MSL时间以后（之所以是两倍的MSL,是由于MSL是一个数据报在网络中单向发出到认定丢失的时间,一个数据报有可能在发送途中或是其响应过程中成为残余数据报,确认一个数据报及其响应的丢弃的需要两倍的MSL）,将会转变为CLOSED状态。这就意味着,一个成功建立的连接,必然使得先前网络中残余的数据报都丢失了.</p>
-<h3><span id="负作用"><strong>负作用</strong></span></h3><p>处于Time-Wait状态的连接必须等待2MSL的时间才能变成CLOSED,RFC 793指出MSL时间为2分钟,2MSL就为4分钟,在这个时间内,这个连接处于不可用状态,也就是不能被复用,只能干等着这个时间结束后再新建新的连接,这对应用程序来说是个巨大的浪费,特别是对于短连接类的应用来说,更是性能的一大损耗,那有什么办法来缩短这个时间或者复用这个连接呢?</p>
+<h3 id="负作用"><a href="#负作用" class="headerlink" title="负作用"></a><strong>负作用</strong></h3><p>处于Time-Wait状态的连接必须等待2MSL的时间才能变成CLOSED,RFC 793指出MSL时间为2分钟,2MSL就为4分钟,在这个时间内,这个连接处于不可用状态,也就是不能被复用,只能干等着这个时间结束后再新建新的连接,这对应用程序来说是个巨大的浪费,特别是对于短连接类的应用来说,更是性能的一大损耗,那有什么办法来缩短这个时间或者复用这个连接呢?</p>
 <p>当然是有的,linux下可通过修改内核的配置来做到快回收重复用time-wait:</p>
 <figure class="highlight shell"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">#</span><span class="bash">vim /etc/sysctl.conf</span></span><br><span class="line"></span><br><span class="line">net.ipv4.tcp_tw_reuse = 1</span><br><span class="line">net.ipv4.tcp_tw_recycle = 1</span><br><span class="line"><span class="meta">#</span><span class="bash">主要是就是上面两个,下面的这些参数可根据实际情况是否开启</span></span><br><span class="line"><span class="meta">#</span><span class="bash">net.ipv4.tcp_fin_timeout = 30</span></span><br><span class="line"><span class="meta">#</span><span class="bash">net.ipv4.tcp_keepalive_time = 1800</span></span><br><span class="line"><span class="meta">#</span><span class="bash">net.ipv4.tcp_syncookies = 1</span></span><br><span class="line"><span class="meta">#</span><span class="bash">net.ipv4.ip_local_port_range = 1024 65000</span></span><br><span class="line"><span class="meta">#</span><span class="bash">net.ipv4.tcp_max_syn_backlog = 8192</span></span><br><span class="line"><span class="meta">#</span><span class="bash">net.ipv4.tcp_max_tw_buckets = 5000</span></span><br><span class="line"><span class="meta">#</span><span class="bash">net.ipv4.route.gc_timeout = 100</span></span><br><span class="line"><span class="meta">#</span><span class="bash">net.ipv4.tcp_syn_retries = 1</span></span><br><span class="line"><span class="meta">#</span><span class="bash">net.ipv4.tcp_synack_retries = 1</span></span><br><span class="line"><span class="meta">#</span><span class="bash">1、开启tcp_timestamp是开启tcp_tw_reuse的前提条件.</span></span><br><span class="line"><span class="meta">#</span><span class="bash">2、但是在nat模式下,不用将tcp_tw_recycle和tcp_timestamp同时开启,这会造成tcp超时引发故障</span></span><br><span class="line"></span><br><span class="line"><span class="meta">#</span><span class="bash"> 使用sysctl -p 重启生效</span></span><br></pre></td></tr></table></figure>
 <p>内核参数说明:</p>
@@ -440,12 +440,12 @@
 <li>net.ipv4.tcp_syn_retries = 1 对于一个新建连接,内核要发送多少个 SYN 连接请求才决定放弃.不应该大于255,默认值是5,对应于180秒左右.</li>
 </ol>
 <p>这样一来,状态为time-wait的连接数就刷刷的下来了.</p>
-<h3><span id="参考文章"><strong>参考文章:</strong></span></h3><blockquote>
+<h3 id="参考文章"><a href="#参考文章" class="headerlink" title="参考文章:"></a><strong>参考文章:</strong></h3><blockquote>
 <ul>
 <li><a href="http://blog.csdn.net/sctq8888/article/details/11180519" target="_blank" rel="noopener">修改Linux内核参数,解决TCP连接中的TIME-WAIT socket</a></li>
 </ul>
 </blockquote>
-<h3><span id="转载请注明出处httpsizskme"><strong>转载请注明出处<a href="https://izsk.me" target="_blank" rel="noopener">https://izsk.me</a></strong></span></h3><hr>
+<h3 id="转载请注明出处https-izsk-me"><a href="#转载请注明出处https-izsk-me" class="headerlink" title="转载请注明出处https://izsk.me"></a><strong>转载请注明出处<a href="https://izsk.me" target="_blank" rel="noopener">https://izsk.me</a></strong></h3><hr>
 
       
     </div>
@@ -644,7 +644,7 @@
             
 
             
-              <div class="post-toc-content"><ol class="nav"><li class="nav-item nav-level-3"><a class="nav-link" href="#null"><span class="nav-number">1.</span> <span class="nav-text">三次握手</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#null"><span class="nav-number">2.</span> <span class="nav-text">四次分手</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#null"><span class="nav-number">3.</span> <span class="nav-text">TIME-WAIT</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#null"><span class="nav-number">4.</span> <span class="nav-text">必要性</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#null"><span class="nav-number">5.</span> <span class="nav-text">负作用</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#null"><span class="nav-number">6.</span> <span class="nav-text">参考文章:</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#null"><span class="nav-number">7.</span> <span class="nav-text">转载请注明出处https://izsk.me</span></a></li></ol></div>
+              <div class="post-toc-content"><ol class="nav"><li class="nav-item nav-level-3"><a class="nav-link" href="#三次握手"><span class="nav-number">1.</span> <span class="nav-text">三次握手</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#四次分手"><span class="nav-number">2.</span> <span class="nav-text">四次分手</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#TIME-WAIT"><span class="nav-number">3.</span> <span class="nav-text">TIME-WAIT</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#必要性"><span class="nav-number">4.</span> <span class="nav-text">必要性</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#负作用"><span class="nav-number">5.</span> <span class="nav-text">负作用</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#参考文章"><span class="nav-number">6.</span> <span class="nav-text">参考文章:</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#转载请注明出处https-izsk-me"><span class="nav-number">7.</span> <span class="nav-text">转载请注明出处https://izsk.me</span></a></li></ol></div>
             
 
           </div>

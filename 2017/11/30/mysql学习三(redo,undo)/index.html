@@ -401,7 +401,7 @@
 <p>redo: 重做,重新执行一遍之前的操作.</p>
 <a id="more"></a>
 <p>这里主要以mysql常用的且支持事务特性的innodb存储引擎为例,myisam不在这之列.</p>
-<h3><span id="redo"><strong>redo</strong></span></h3><p>redo,从字面上来理解,就是<strong>重新执行一次之前做的操作,我们一般叫做前滚(rollforward)</strong>,是一种事务日志(transaction logs),可分为online和archived,以<strong>恢复</strong>为目的,保证事务的<strong>持久性</strong>.</p>
+<h3 id="redo"><a href="#redo" class="headerlink" title="redo"></a><strong>redo</strong></h3><p>redo,从字面上来理解,就是<strong>重新执行一次之前做的操作,我们一般叫做前滚(rollforward)</strong>,是一种事务日志(transaction logs),可分为online和archived,以<strong>恢复</strong>为目的,保证事务的<strong>持久性</strong>.</p>
 <p>Redo Log记录的是<strong>新数据</strong>的备份.在事务提交前,只要将Redo Log持久化即可,不需要将数据持久化(当然这需要根据配置而定具体什么时候数据文件持久化).当系统崩溃时,虽然数据没有持久化,但是Redo Log已经持久化.系统可以根据Redo Log的内容,将所有数据恢复到最新的状态.</p>
 <p>一般的,redo log 都是会以日志组的形式出现,以顺序的方式写入文件文件,这就是 online redo log(在线重做日志),写满时则回溯到第一个文件,在进行覆盖写之前,有些数据库如Oracle则会把之前的redo log文件打包到特定目录下存档,这种文件就叫做archived redo log(归档重做日志).</p>
 <p>redo log 其实由两部分组成,:<strong>redo log buffer 跟redo log file</strong>.redo log buffer 跟redo log file.buffer pool中把数据修改情况记录到redo log buffer,出现以下情况,再把redo log刷下到redo log file:</p>
@@ -416,7 +416,7 @@
 </ul>
 </blockquote>
 <p>这里有个重要的参数需要解释一下</p>
-<h4><span id="innodb_flush_log_at_trx_commit"><strong>innodb_flush_log_at_trx_commit</strong></span></h4><p>官方的解释请看<a href="https://dev.mysql.com/doc/refman/5.7/en/innodb-parameters.html#sysvar_innodb_flush_log_at_trx_commit" target="_blank" rel="noopener">这里</a>:</p>
+<h4 id="innodb-flush-log-at-trx-commit"><a href="#innodb-flush-log-at-trx-commit" class="headerlink" title="innodb_flush_log_at_trx_commit"></a><strong>innodb_flush_log_at_trx_commit</strong></h4><p>官方的解释请看<a href="https://dev.mysql.com/doc/refman/5.7/en/innodb-parameters.html#sysvar_innodb_flush_log_at_trx_commit" target="_blank" rel="noopener">这里</a>:</p>
 <blockquote>
 <ul>
 <li>innodb_flush_log_at_trx_commit=1,每次事务提交时,log buffer 会被写入到日志文件并刷写到磁盘.这也是默认值.这是最安全的配置,但由于每次事务都需要进行磁盘I/O,所以也最慢.</li>
@@ -434,17 +434,17 @@
 <p>innodb的宕机恢复不受<code>innodb_flush_log_at_trx_commit</code>参数影响,事务要么全部应用要么全部擦除.</p>
 <p>借用网上<a href="http://www.cnblogs.com/xinysu/p/6555082.html" target="_blank" rel="noopener">一张图</a>来解释这个日志流向过程:</p>
 <p><img src="http://zskgithubblog.oss-cn-beijing.aliyuncs.com/blogpic/mysqlredoundo.png" alt="mysqlredoundo"></p>
-<h4><span id="redo恢复"><strong>redo恢复</strong></span></h4><p>从上面我们知道的redo 日志的数据流向, 那么redo是如何恢复数据的呢?</p>
+<h4 id="redo恢复"><a href="#redo恢复" class="headerlink" title="redo恢复"></a><strong>redo恢复</strong></h4><p>从上面我们知道的redo 日志的数据流向, 那么redo是如何恢复数据的呢?</p>
 <ol>
 <li>在设置innodb_flush_log_at_trx_commit=1的情况下,如果只在redo log buffer中写入了日志,还没来的及写到redo log file中,此时mysql数据库宕机,再启动mysql时 redo log buffer内的记录肯定都不复存在,没有关系,也无需恢复,就相当于该事务还没发生一样,因为数据库的datafile并没有改变.</li>
 <li>在设置innodb_flush_log_at_trx_commit=1的情况下,如果日志已经写进了redo log file中(或者说从redo log file中刷数据到datafile刷到一半),此时mysql数据库宕机,再启动mysql时,mysql会自动的把redo log file中的记录执行一次到宕机的失败点,这样就能保证事务完整执行,这就是所谓的<strong>前滚</strong>.</li>
 </ol>
-<h3><span id="undo"><strong>undo</strong></span></h3><p>undo,从字面上来理解就是<strong>撤销这次操作,我们一般叫做回滚(rollback)</strong>,它也是一种事务日志(transaction logs).它主要是保证事务的<strong>原子性</strong>及提供<strong>读一致性</strong>.</p>
+<h3 id="undo"><a href="#undo" class="headerlink" title="undo"></a><strong>undo</strong></h3><p>undo,从字面上来理解就是<strong>撤销这次操作,我们一般叫做回滚(rollback)</strong>,它也是一种事务日志(transaction logs).它主要是保证事务的<strong>原子性</strong>及提供<strong>读一致性</strong>.</p>
 <p>Undo Log的原理很简单,为了满足事务的原子性,在操作任何数据之前,首先将数据备份到一个地方(这个存储数据备份的地方称为Undo Log).然后进行数据的修改.如果出现了错误或者用户执行了<strong>ROLLBACK</strong>语句,系统可以利用Undo Log中的备份将数据恢复到事务开始之前的状态.</p>
-<h4><span id="回滚"><strong>回滚</strong></span></h4><p>这个就不用说了,就是撤销到事务开始之前的状态.</p>
-<h4><span id="mvcc"><strong>MVCC</strong></span></h4><p>mvcc(Multiversion Concurrency Control,多版本并发控制),mvcc+undo一同为mysql提供<strong>一致性非锁定读</strong>的机制,提供更高的并发.</p>
+<h4 id="回滚"><a href="#回滚" class="headerlink" title="回滚"></a><strong>回滚</strong></h4><p>这个就不用说了,就是撤销到事务开始之前的状态.</p>
+<h4 id="MVCC"><a href="#MVCC" class="headerlink" title="MVCC"></a><strong>MVCC</strong></h4><p>mvcc(Multiversion Concurrency Control,多版本并发控制),mvcc+undo一同为mysql提供<strong>一致性非锁定读</strong>的机制,提供更高的并发.</p>
 <p>我们知道MySQL中的InnoDB存储引擎的默认隔离级别REPEATABLE READ(RR), 行级锁(在不能确定范围的情况下使用表级锁),当有一个事务正在更新某些数据时(写操作),同时另一个事务还能读取这些数据(读操作),确切的说是历史数据据,这就是mvcc与undo的作用,这里涉及到mysql的隔离级别,先不在这篇讨论,会另起一篇.</p>
-<h3><span id="redoundo"><strong>redo+undo</strong></span></h3><p>假设有A、B两个数据,值分别为1,2,开始一个事务,事务的操作内容为:把1修改为3,2修改为4,那么实际的记录如下(简化):</p>
+<h3 id="redo-undo"><a href="#redo-undo" class="headerlink" title="redo+undo"></a><strong>redo+undo</strong></h3><p>假设有A、B两个数据,值分别为1,2,开始一个事务,事务的操作内容为:把1修改为3,2修改为4,那么实际的记录如下(简化):</p>
 <figure class="highlight shell"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br></pre></td><td class="code"><pre><span class="line">A.事务开始.</span><br><span class="line">B.记录A=1到undo log.</span><br><span class="line">C.修改A=3.</span><br><span class="line">D.记录A=3到redo log.</span><br><span class="line">E.记录B=2到undo log.</span><br><span class="line">F.修改B=4.</span><br><span class="line">G.记录B=4到redo log.</span><br><span class="line">H.将redo log写入磁盘.</span><br><span class="line">I.事务提交</span><br></pre></td></tr></table></figure>
 <p>Undo + Redo的设计主要考虑的是提升IO性能,增大数据库吞吐量.可以看出,B D E G H,均是新增操作,但是B D E G 是缓冲到buffer区,<strong>只有H是真正的增加了IO操作</strong>,为了保证Redo Log能够有比较好的IO性能,InnoDB 的 Redo Log的设计有以下几个特点:</p>
 <blockquote>
@@ -458,7 +458,7 @@
 </blockquote>
 <figure class="highlight shell"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line">以减少日志占用的空间.例如,Redo Log中的记录内容可能是这样的：</span><br><span class="line">记录1: &lt;trx1, insert …&gt;</span><br><span class="line">记录2: &lt;trx2, update …&gt;</span><br><span class="line">记录3: &lt;trx1, delete …&gt;</span><br><span class="line">记录4: &lt;trx3, update …&gt;</span><br><span class="line">记录5: &lt;trx2, insert …&gt;</span><br></pre></td></tr></table></figure>
 <p>  一次提交IO,会将其它日志一同提交,这样便提高了IO性能.</p>
-<h3><span id="恢复"><strong>恢复</strong></span></h3><p>有2种不同的恢复策略:</p>
+<h3 id="恢复"><a href="#恢复" class="headerlink" title="恢复"></a><strong>恢复</strong></h3><p>有2种不同的恢复策略:</p>
 <blockquote>
 <ul>
 <li>A.进行恢复时,只重做已经提交了的事务.</li>
@@ -475,7 +475,7 @@
 </ul>
 </blockquote>
 <p><strong>简言之就是:mysql恢复时会执行所有的redo(包含了回滚的事务), 对于那些被回滚的事务再应用undo操作.</strong></p>
-<h3><span id="总结"><strong>总结</strong></span></h3><table>
+<h3 id="总结"><a href="#总结" class="headerlink" title="总结"></a><strong>总结</strong></h3><table>
 <thead>
 <tr>
 <th></th>
@@ -506,13 +506,13 @@
 </tr>
 </tbody>
 </table>
-<h3><span id="参考文章"><strong>参考文章:</strong></span></h3><blockquote>
+<h3 id="参考文章"><a href="#参考文章" class="headerlink" title="参考文章:"></a><strong>参考文章:</strong></h3><blockquote>
 <ul>
 <li><a href="http://www.cnblogs.com/xinysu/p/6555082.html" target="_blank" rel="noopener">说说MySQL中的Redo log Undo log都在干啥</a></li>
 <li><a href="https://oraclenz.wordpress.com/2008/06/22/differences-between-undo-and-redo/" target="_blank" rel="noopener">Differences between UNDO and REDO</a></li>
 </ul>
 </blockquote>
-<h3><span id="转载请注明出处httpsizskme"><strong>转载请注明出处<a href="https://izsk.me" target="_blank" rel="noopener">https://izsk.me</a></strong></span></h3><hr>
+<h3 id="转载请注明出处https-izsk-me"><a href="#转载请注明出处https-izsk-me" class="headerlink" title="转载请注明出处https://izsk.me"></a><strong>转载请注明出处<a href="https://izsk.me" target="_blank" rel="noopener">https://izsk.me</a></strong></h3><hr>
 
       
     </div>
@@ -711,7 +711,7 @@
             
 
             
-              <div class="post-toc-content"><ol class="nav"><li class="nav-item nav-level-3"><a class="nav-link" href="#null"><span class="nav-number">1.</span> <span class="nav-text">redo</span></a><ol class="nav-child"><li class="nav-item nav-level-4"><a class="nav-link" href="#null"><span class="nav-number">1.1.</span> <span class="nav-text">innodb_flush_log_at_trx_commit</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#null"><span class="nav-number">1.2.</span> <span class="nav-text">redo恢复</span></a></li></ol></li><li class="nav-item nav-level-3"><a class="nav-link" href="#null"><span class="nav-number">2.</span> <span class="nav-text">undo</span></a><ol class="nav-child"><li class="nav-item nav-level-4"><a class="nav-link" href="#null"><span class="nav-number">2.1.</span> <span class="nav-text">回滚</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#null"><span class="nav-number">2.2.</span> <span class="nav-text">MVCC</span></a></li></ol></li><li class="nav-item nav-level-3"><a class="nav-link" href="#null"><span class="nav-number">3.</span> <span class="nav-text">redo+undo</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#null"><span class="nav-number">4.</span> <span class="nav-text">恢复</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#null"><span class="nav-number">5.</span> <span class="nav-text">总结</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#null"><span class="nav-number">6.</span> <span class="nav-text">参考文章:</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#null"><span class="nav-number">7.</span> <span class="nav-text">转载请注明出处https://izsk.me</span></a></li></ol></div>
+              <div class="post-toc-content"><ol class="nav"><li class="nav-item nav-level-3"><a class="nav-link" href="#redo"><span class="nav-number">1.</span> <span class="nav-text">redo</span></a><ol class="nav-child"><li class="nav-item nav-level-4"><a class="nav-link" href="#innodb-flush-log-at-trx-commit"><span class="nav-number">1.1.</span> <span class="nav-text">innodb_flush_log_at_trx_commit</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#redo恢复"><span class="nav-number">1.2.</span> <span class="nav-text">redo恢复</span></a></li></ol></li><li class="nav-item nav-level-3"><a class="nav-link" href="#undo"><span class="nav-number">2.</span> <span class="nav-text">undo</span></a><ol class="nav-child"><li class="nav-item nav-level-4"><a class="nav-link" href="#回滚"><span class="nav-number">2.1.</span> <span class="nav-text">回滚</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#MVCC"><span class="nav-number">2.2.</span> <span class="nav-text">MVCC</span></a></li></ol></li><li class="nav-item nav-level-3"><a class="nav-link" href="#redo-undo"><span class="nav-number">3.</span> <span class="nav-text">redo+undo</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#恢复"><span class="nav-number">4.</span> <span class="nav-text">恢复</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#总结"><span class="nav-number">5.</span> <span class="nav-text">总结</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#参考文章"><span class="nav-number">6.</span> <span class="nav-text">参考文章:</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#转载请注明出处https-izsk-me"><span class="nav-number">7.</span> <span class="nav-text">转载请注明出处https://izsk.me</span></a></li></ol></div>
             
 
           </div>

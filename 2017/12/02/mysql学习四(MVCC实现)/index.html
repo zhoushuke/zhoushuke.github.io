@@ -396,9 +396,9 @@
       
         <p>MVCC(Multiversion Concurrency Control,多版本并发控制)是数据库为了提高并发的一种机制,现已普遍运用于各大数据库系统中,如Oracle,MS SQL Server 2005+, Postgresql, Firebird, Maria等等,开源数据库MYSQL中流行的INNODB引擎也采用了类似的并发控制技术.本文就来说说INNODB的MVCC实现原理.</p>
 <a id="more"></a>
-<h3><span id="mvcc"><strong>MVCC</strong></span></h3><p>MVCC(Multiversion Concurrency Control,多版本并发控制),即多版本并发控制技术,它使得大部分支持行锁的事务引擎,不再单纯的使用行锁来进行数据库的并发控制,取而代之的是,把数据库的行锁与行的多个版本结合起来,只需要很小的开销,就可以实现一致性非锁定读(在repeatable read隔离等级下),从而大大提高数据库系统的并发性能.</p>
-<h3><span id="mvcc实现"><strong>MVCC实现</strong></span></h3><p>MVCC是通过保存数据在某个时间点的快照来实现的.  不同存储引擎的MVCC实现是不同的,典型的有乐观并发控制和悲观并发控制,<strong>mysql的innodb则是使用的乐观锁机制,即在每次事务开始之前取出该行的版本号,再次取出时会比对该行数据的版本号是否是事务之前的版本号.</strong></p>
-<h3><span id="mvcc原理"><strong>MVCC原理</strong></span></h3><p>对于mysql来说,MVCC由于其实现原理,只支持read committed和repeatable read隔离等级.</p>
+<h3 id="MVCC"><a href="#MVCC" class="headerlink" title="MVCC"></a><strong>MVCC</strong></h3><p>MVCC(Multiversion Concurrency Control,多版本并发控制),即多版本并发控制技术,它使得大部分支持行锁的事务引擎,不再单纯的使用行锁来进行数据库的并发控制,取而代之的是,把数据库的行锁与行的多个版本结合起来,只需要很小的开销,就可以实现一致性非锁定读(在repeatable read隔离等级下),从而大大提高数据库系统的并发性能.</p>
+<h3 id="MVCC实现"><a href="#MVCC实现" class="headerlink" title="MVCC实现"></a><strong>MVCC实现</strong></h3><p>MVCC是通过保存数据在某个时间点的快照来实现的.  不同存储引擎的MVCC实现是不同的,典型的有乐观并发控制和悲观并发控制,<strong>mysql的innodb则是使用的乐观锁机制,即在每次事务开始之前取出该行的版本号,再次取出时会比对该行数据的版本号是否是事务之前的版本号.</strong></p>
+<h3 id="MVCC原理"><a href="#MVCC原理" class="headerlink" title="MVCC原理"></a><strong>MVCC原理</strong></h3><p>对于mysql来说,MVCC由于其实现原理,只支持read committed和repeatable read隔离等级.</p>
 <p>MVCC可以提供基于某个时间点的快照,使得对于事务看来,总是可以提供与事务开始时刻相一致的数据,而不管这个事务执行的时间有多长.所以在不同的事务看来,同一时刻看到的相同行的数据可能是不一样的,即一个行可能有多个版本.</p>
 <p>其它innodb会为每行数据自动维护三个隐藏字段,这三个字段通过查询无法看到,字段如下:</p>
 <table>
@@ -459,17 +459,17 @@
 </ol>
 <p>从上面的上述策略可以看出,在读取数据的时候,innodb几乎不用获得任何锁, 每个查询都通过版本检查,只获得自己需要的数据版本,从而大大提高了系统的并发度.</p>
 <p>但是为了实现多版本,innodb必须对每行增加相应的字段来存储版本信息,同时需要维护每一行的版本信息,而且在检索行的时候,需要进行版本的比较,因而降低了查询效率;innodb还必须定期清理不再需要的行版本,及时回收空间,这也增加了一些开销</p>
-<h3><span id="一致性非锁定读快照读"><strong>一致性非锁定读(快照读)</strong></span></h3><p>在REPEATABLE READ事务隔离级别下,同一事务内的一致性读均会读取到该事务中第一个读创建的快照,其他事务在之后提交或未提交的更新对当前事务的读均不可见,除非提交了该事务并开启新事务发起新查询.</p>
+<h3 id="一致性非锁定读-快照读"><a href="#一致性非锁定读-快照读" class="headerlink" title="一致性非锁定读(快照读)"></a><strong>一致性非锁定读(快照读)</strong></h3><p>在REPEATABLE READ事务隔离级别下,同一事务内的一致性读均会读取到该事务中第一个读创建的快照,其他事务在之后提交或未提交的更新对当前事务的读均不可见,除非提交了该事务并开启新事务发起新查询.</p>
 <p>事务A查询某些数据,而事务B刚好在对它些数据进行修改,正常情况下事务B会对这些数据加x锁, 其它事务便不能获取任何锁了,事务A只能等待,直到事务B释放,但是此时事务A会从undo log中读取这些数据的’’前一次备份’’,大大提高的查询的并发,不至于大量的读请求饿死.</p>
 <p>所以,mvcc跟undo log结合,给数据库的并发提高了很大一步.</p>
 <p>undo跟redo相关信息,可参考<a href="https://izsk.me/2017/11/30/mysql%E4%B9%8Bredo,undo/" target="_blank" rel="noopener">这里</a></p>
-<h3><span id="参考文章"><strong>参考文章:</strong></span></h3><blockquote>
+<h3 id="参考文章"><a href="#参考文章" class="headerlink" title="参考文章:"></a><strong>参考文章:</strong></h3><blockquote>
 <ul>
 <li><a href="https://dev.mysql.com/doc/refman/5.7/en/innodb-multi-versioning.html" target="_blank" rel="noopener">mysql官方</a></li>
 <li><a href="http://lib.csdn.net/article/mysql/32694" target="_blank" rel="noopener">innodb 多版本并发控制原理详解</a></li>
 </ul>
 </blockquote>
-<h3><span id="转载请注明出处httpsizskme"><strong>转载请注明出处<a href="https://izsk.me" target="_blank" rel="noopener">https://izsk.me</a></strong></span></h3><hr>
+<h3 id="转载请注明出处https-izsk-me"><a href="#转载请注明出处https-izsk-me" class="headerlink" title="转载请注明出处https://izsk.me"></a><strong>转载请注明出处<a href="https://izsk.me" target="_blank" rel="noopener">https://izsk.me</a></strong></h3><hr>
 
       
     </div>
@@ -668,7 +668,7 @@
             
 
             
-              <div class="post-toc-content"><ol class="nav"><li class="nav-item nav-level-3"><a class="nav-link" href="#null"><span class="nav-number">1.</span> <span class="nav-text">MVCC</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#null"><span class="nav-number">2.</span> <span class="nav-text">MVCC实现</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#null"><span class="nav-number">3.</span> <span class="nav-text">MVCC原理</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#null"><span class="nav-number">4.</span> <span class="nav-text">一致性非锁定读(快照读)</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#null"><span class="nav-number">5.</span> <span class="nav-text">参考文章:</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#null"><span class="nav-number">6.</span> <span class="nav-text">转载请注明出处https://izsk.me</span></a></li></ol></div>
+              <div class="post-toc-content"><ol class="nav"><li class="nav-item nav-level-3"><a class="nav-link" href="#MVCC"><span class="nav-number">1.</span> <span class="nav-text">MVCC</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#MVCC实现"><span class="nav-number">2.</span> <span class="nav-text">MVCC实现</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#MVCC原理"><span class="nav-number">3.</span> <span class="nav-text">MVCC原理</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#一致性非锁定读-快照读"><span class="nav-number">4.</span> <span class="nav-text">一致性非锁定读(快照读)</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#参考文章"><span class="nav-number">5.</span> <span class="nav-text">参考文章:</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#转载请注明出处https-izsk-me"><span class="nav-number">6.</span> <span class="nav-text">转载请注明出处https://izsk.me</span></a></li></ol></div>
             
 
           </div>

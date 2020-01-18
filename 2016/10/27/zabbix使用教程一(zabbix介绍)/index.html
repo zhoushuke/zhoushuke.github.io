@@ -402,7 +402,7 @@
       
 
       
-        <h3><span id="zabbix介绍"><strong>zabbix介绍</strong></span></h3><p>引自网络: zabbix（音同 zæbix）是一个基于<strong>WEB界面的提供分布式系统</strong>监视以及网络监视功能的企业级的开源解决方案，zabbix能监视各种网络参数，保证服务器系统的安全运营；并提供灵活的通知机制以让系统管理员快速定位/解决存在的各种问题。</p>
+        <h3 id="zabbix介绍"><a href="#zabbix介绍" class="headerlink" title="zabbix介绍"></a><strong>zabbix介绍</strong></h3><p>引自网络: zabbix（音同 zæbix）是一个基于<strong>WEB界面的提供分布式系统</strong>监视以及网络监视功能的企业级的开源解决方案，zabbix能监视各种网络参数，保证服务器系统的安全运营；并提供灵活的通知机制以让系统管理员快速定位/解决存在的各种问题。</p>
 <a id="more"></a>
 <p>zabbix构成:<strong>zabbix server与可选组件zabbix agent、zabbix proxy,当然还有java_gateway</strong>。zabbix server可以通过SNMP，zabbix agent，ping，端口监视等方法提供对远程服务器/网络状态的监视，数据收集等功能，它可以运行在Linux，Solaris，HP-UX，AIX，Free BSD，Open BSD，OS X等平台上</p>
 <p>agent端：主机通过安装agent方式采集数据。</p>
@@ -418,7 +418,7 @@
 <li>网络流量</li>
 </ul>
 </blockquote>
-<h3><span id="zabbix原理"><strong>zabbix原理</strong></span></h3><p>大概流程: <strong>zabbix agent需要安装到被监控的主机上，它负责定期收集各项数据，并发送到zabbix server端(或者proxy端)，zabbix server将数据存储到数据库中，zabbix web根据数据在前端进行展现和绘图。这里agent收集数据分为主动和被动两种模式:</strong></p>
+<h3 id="zabbix原理"><a href="#zabbix原理" class="headerlink" title="zabbix原理"></a><strong>zabbix原理</strong></h3><p>大概流程: <strong>zabbix agent需要安装到被监控的主机上，它负责定期收集各项数据，并发送到zabbix server端(或者proxy端)，zabbix server将数据存储到数据库中，zabbix web根据数据在前端进行展现和绘图。这里agent收集数据分为主动和被动两种模式:</strong></p>
 <blockquote>
 <ul>
 <li>主动: agent请求server获取主动的监控项列表，并主动将监控项内需要检测的数据提交给server/proxy</li>
@@ -429,7 +429,7 @@
 <p><img src="https://zskgithubblog.oss-cn-beijing.aliyuncs.com/blogpic/zabbix-python-oracle-11.png" alt="zabbix-python-oracle-11"> </p>
 <p><img src="https://zskgithubblog.oss-cn-beijing.aliyuncs.com/blogpic/zabbix-python-oracle-12.png" alt="zabbix-python-oracle-12"> </p>
 <p><img src="https://zskgithubblog.oss-cn-beijing.aliyuncs.com/blogpic/zabbix-python-oracle-13.png" alt="zabbix-python-oracle-13"></p>
-<h3><span id="zabbix主要组件及进程"><strong>zabbix主要组件及进程</strong></span></h3><h4><span id="zabbix主要组件"><strong>zabbix主要组件</strong></span></h4><blockquote>
+<h3 id="zabbix主要组件及进程"><a href="#zabbix主要组件及进程" class="headerlink" title="zabbix主要组件及进程"></a><strong>zabbix主要组件及进程</strong></h3><h4 id="zabbix主要组件"><a href="#zabbix主要组件" class="headerlink" title="zabbix主要组件"></a><strong>zabbix主要组件</strong></h4><blockquote>
 <ol>
 <li>Zabbix Server:负责接收agent发送的报告信息的核心组件，所有配置，统计数据及操作数据均由其组织进行</li>
 <li>Agent:部署在被监控主机上，负责收集本地数据并发往Server端或Proxy端</li>
@@ -438,7 +438,7 @@
 <li>Database Storage: 专用于存储所有配置信息，以及由zabbix收集的数据,基本支持所有常见数据库</li>
 </ol>
 </blockquote>
-<h4><span id="zabbix进程"><strong>zabbix进程</strong></span></h4><blockquote>
+<h4 id="zabbix进程"><a href="#zabbix进程" class="headerlink" title="zabbix进程"></a><strong>zabbix进程</strong></h4><blockquote>
 <ol>
 <li>zabbix_server: zabbix服务端守护进程。zabbix_agentd、zabbix_get、zabbix_sender、zabbix_proxy、zabbix_java_gateway的数据最终都是提交(主动)/被提交(被动)到server</li>
 <li>zabbix_agentd: 客户端守护进程，此进程收集客户端数据，例如cpu负载、内存、硬盘使用情况等</li>
@@ -448,20 +448,20 @@
 <li>java_gateway: 使用JMX协议来获取java开发的程序相关数据,通常用来监控weblogic/apache/tomcat中间件,需要特别注意的是，它只能主动去获取数据，而不能被动获取数据。它的数据最终会给到server或者proxy</li>
 </ol>
 </blockquote>
-<h3><span id="zabbix常用架构"><strong>zabbix常用架构</strong></span></h3><h4><span id="server"><strong>server</strong></span></h4><p>这是最简单的架构,只有一个server端,然后使用其它简单协议如ICMP,Ping,ODBC等获取数据,这适合出于安全原因无法在主机安装agent的情况下</p>
+<h3 id="zabbix常用架构"><a href="#zabbix常用架构" class="headerlink" title="zabbix常用架构"></a><strong>zabbix常用架构</strong></h3><h4 id="server"><a href="#server" class="headerlink" title="server"></a><strong>server</strong></h4><p>这是最简单的架构,只有一个server端,然后使用其它简单协议如ICMP,Ping,ODBC等获取数据,这适合出于安全原因无法在主机安装agent的情况下</p>
 <p><img src="https://zskgithubblog.oss-cn-beijing.aliyuncs.com/blogpic/zabbix-introduce1.png" alt="zabbix-introduce1"></p>
-<h4><span id="server-agent"><strong>server-agent</strong></span></h4><p>这算是标配的架构了</p>
+<h4 id="server-agent"><a href="#server-agent" class="headerlink" title="server-agent"></a><strong>server-agent</strong></h4><p>这算是标配的架构了</p>
 <p><img src="https://zskgithubblog.oss-cn-beijing.aliyuncs.com/blogpic/zabbix-introduce4.png" alt="zabbix-introduce4"></p>
-<h4><span id="server-proxy-agent"><strong>server-proxy-agent</strong></span></h4><p><img src="https://zskgithubblog.oss-cn-beijing.aliyuncs.com/blogpic/zabbix-introduce2.png" alt="zabbix-introduce2"></p>
-<h4><span id="server-node-agent"><strong>server-node-agent</strong></span></h4><p>这个最复杂,本人也没使用过</p>
+<h4 id="server-proxy-agent"><a href="#server-proxy-agent" class="headerlink" title="server-proxy-agent"></a><strong>server-proxy-agent</strong></h4><p><img src="https://zskgithubblog.oss-cn-beijing.aliyuncs.com/blogpic/zabbix-introduce2.png" alt="zabbix-introduce2"></p>
+<h4 id="server-node-agent"><a href="#server-node-agent" class="headerlink" title="server-node-agent"></a><strong>server-node-agent</strong></h4><p>这个最复杂,本人也没使用过</p>
 <p><img src="https://zskgithubblog.oss-cn-beijing.aliyuncs.com/blogpic/zabbix-introduce3.png" alt="zabbix-introduce3"></p>
-<h3><span id="参考文章"><strong>参考文章:</strong></span></h3><blockquote>
+<h3 id="参考文章"><a href="#参考文章" class="headerlink" title="参考文章:"></a><strong>参考文章:</strong></h3><blockquote>
 <ul>
 <li><a href="http://www.cnblogs.com/irockcode/p/6752215.html" target="_blank" rel="noopener">zabbix监控的基础概念、工作原理及架构</a></li>
 <li><a href="www.zabbix.com">zabbix官网</a></li>
 </ul>
 </blockquote>
-<h3><span id="转载请注明出处httpsizskme"><strong>转载请注明出处<a href="https://izsk.me" target="_blank" rel="noopener">https://izsk.me</a></strong></span></h3><hr>
+<h3 id="转载请注明出处https-izsk-me"><a href="#转载请注明出处https-izsk-me" class="headerlink" title="转载请注明出处https://izsk.me"></a><strong>转载请注明出处<a href="https://izsk.me" target="_blank" rel="noopener">https://izsk.me</a></strong></h3><hr>
 
       
     </div>
@@ -660,7 +660,7 @@
             
 
             
-              <div class="post-toc-content"><ol class="nav"><li class="nav-item nav-level-3"><a class="nav-link" href="#null"><span class="nav-number">1.</span> <span class="nav-text">zabbix介绍</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#null"><span class="nav-number">2.</span> <span class="nav-text">zabbix原理</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#null"><span class="nav-number">3.</span> <span class="nav-text">zabbix主要组件及进程</span></a><ol class="nav-child"><li class="nav-item nav-level-4"><a class="nav-link" href="#null"><span class="nav-number">3.1.</span> <span class="nav-text">zabbix主要组件</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#null"><span class="nav-number">3.2.</span> <span class="nav-text">zabbix进程</span></a></li></ol></li><li class="nav-item nav-level-3"><a class="nav-link" href="#null"><span class="nav-number">4.</span> <span class="nav-text">zabbix常用架构</span></a><ol class="nav-child"><li class="nav-item nav-level-4"><a class="nav-link" href="#null"><span class="nav-number">4.1.</span> <span class="nav-text">server</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#null"><span class="nav-number">4.2.</span> <span class="nav-text">server-agent</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#null"><span class="nav-number">4.3.</span> <span class="nav-text">server-proxy-agent</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#null"><span class="nav-number">4.4.</span> <span class="nav-text">server-node-agent</span></a></li></ol></li><li class="nav-item nav-level-3"><a class="nav-link" href="#null"><span class="nav-number">5.</span> <span class="nav-text">参考文章:</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#null"><span class="nav-number">6.</span> <span class="nav-text">转载请注明出处https://izsk.me</span></a></li></ol></div>
+              <div class="post-toc-content"><ol class="nav"><li class="nav-item nav-level-3"><a class="nav-link" href="#zabbix介绍"><span class="nav-number">1.</span> <span class="nav-text">zabbix介绍</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#zabbix原理"><span class="nav-number">2.</span> <span class="nav-text">zabbix原理</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#zabbix主要组件及进程"><span class="nav-number">3.</span> <span class="nav-text">zabbix主要组件及进程</span></a><ol class="nav-child"><li class="nav-item nav-level-4"><a class="nav-link" href="#zabbix主要组件"><span class="nav-number">3.1.</span> <span class="nav-text">zabbix主要组件</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#zabbix进程"><span class="nav-number">3.2.</span> <span class="nav-text">zabbix进程</span></a></li></ol></li><li class="nav-item nav-level-3"><a class="nav-link" href="#zabbix常用架构"><span class="nav-number">4.</span> <span class="nav-text">zabbix常用架构</span></a><ol class="nav-child"><li class="nav-item nav-level-4"><a class="nav-link" href="#server"><span class="nav-number">4.1.</span> <span class="nav-text">server</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#server-agent"><span class="nav-number">4.2.</span> <span class="nav-text">server-agent</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#server-proxy-agent"><span class="nav-number">4.3.</span> <span class="nav-text">server-proxy-agent</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#server-node-agent"><span class="nav-number">4.4.</span> <span class="nav-text">server-node-agent</span></a></li></ol></li><li class="nav-item nav-level-3"><a class="nav-link" href="#参考文章"><span class="nav-number">5.</span> <span class="nav-text">参考文章:</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#转载请注明出处https-izsk-me"><span class="nav-number">6.</span> <span class="nav-text">转载请注明出处https://izsk.me</span></a></li></ol></div>
             
 
           </div>

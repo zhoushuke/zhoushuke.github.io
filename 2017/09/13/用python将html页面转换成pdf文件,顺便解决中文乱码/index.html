@@ -407,14 +407,14 @@
 </ul>
 </blockquote>
 <p>在实现这个需求之前也网上对比了这几个库,个人感觉weasyprint是最理想的方案,而且该项目的开发者非常活跃,但由于当时在机器上其它原因导致weasyprint依赖包没有装上,也花了点时间reportlab研究了它的API,因为已经有了报表的html模板,感觉没有必使用它的API从头到尾再生成一个了,所有放弃了,再来说说xhmt2pdf,查看xhtml2pdf的源码,里面引用了reportlab库,而且xhtml2pdf貌似没怎么更新,2017年也偶尔有几个github的push,最后使用xhmt2pdf的原因一方面是xhtml2pdf可以t很直接地实现我需要的功能,另一方面很大程度上是因为当时网上查看方案的时候看的最多的就是xhtml2pdf的例子,所以选定了xhtml2pdf.更多深入的探究大家可以上各项目的github摸索下吧.</p>
-<h3><span id="环境"><strong>环境</strong></span></h3><blockquote>
+<h3 id="环境"><a href="#环境" class="headerlink" title="环境"></a><strong>环境</strong></h3><blockquote>
 <ul>
 <li>flask</li>
 <li>python3.4</li>
 <li>windows</li>
 </ul>
 </blockquote>
-<h3><span id="问题"><strong>问题</strong></span></h3><p>html2pdf转换成pdf,主要碰到以下几个问题:</p>
+<h3 id="问题"><a href="#问题" class="headerlink" title="问题"></a><strong>问题</strong></h3><p>html2pdf转换成pdf,主要碰到以下几个问题:</p>
 <blockquote>
 <ol>
 <li>中文转换后乱码问题</li>
@@ -423,7 +423,7 @@
 <li>资源引用路径问题</li>
 </ol>
 </blockquote>
-<h3><span id="解决"><strong>解决</strong></span></h3><p><strong>第一个问题</strong>一般都是默认的引用字体不支持中文,故可在模板文件中直接引用对应的支持中文的字体文件,这里使用微软雅黑字体,去网上下一个,把该字体文体放到reportlab库的安装路径下/font文件夹下,然后在模板文件中如下引用即可:</p>
+<h3 id="解决"><a href="#解决" class="headerlink" title="解决"></a><strong>解决</strong></h3><p><strong>第一个问题</strong>一般都是默认的引用字体不支持中文,故可在模板文件中直接引用对应的支持中文的字体文件,这里使用微软雅黑字体,去网上下一个,把该字体文体放到reportlab库的安装路径下/font文件夹下,然后在模板文件中如下引用即可:</p>
 <figure class="highlight html"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line">@font-face &#123;</span><br><span class="line">   font-family: msyh;</span><br><span class="line">   src: url("msyh.ttf");</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
 <p>当然上面也可以不把字体文件放到font目录下,反正只需要上面代码src.url里能找到字体文件即可</p>
 <p><strong>第二个问题</strong>中文的自动换行问题,网上通用的做法是在.py文件中引用以下几句代码:</p>
@@ -445,12 +445,12 @@
 <p>如果是自动生成PDF文件,官方代码如下:</p>
 <figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">from</span> xhtml2pdf <span class="keyword">import</span> pisa</span><br><span class="line"></span><br><span class="line"><span class="comment"># Define your data</span></span><br><span class="line">sourceHtml = <span class="string">"&lt;html&gt;&lt;body&gt;&lt;p&gt;To PDF or not to PDF&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;"</span></span><br><span class="line">outputFilename = <span class="string">"test.pdf"</span></span><br><span class="line"></span><br><span class="line"><span class="comment"># Utility function</span></span><br><span class="line"><span class="function"><span class="keyword">def</span> <span class="title">convertHtmlToPdf</span><span class="params">(sourceHtml, outputFilename)</span>:</span></span><br><span class="line">    <span class="comment"># open output file for writing (truncated binary)</span></span><br><span class="line">    resultFile = open(outputFilename, <span class="string">"w+b"</span>)</span><br><span class="line"></span><br><span class="line">    <span class="comment"># convert HTML to PDF</span></span><br><span class="line">    pisaStatus = pisa.CreatePDF(</span><br><span class="line">            sourceHtml,                <span class="comment"># the HTML to convert</span></span><br><span class="line">            dest=resultFile)           <span class="comment"># file handle to recieve result</span></span><br><span class="line"></span><br><span class="line">    <span class="comment"># close output file</span></span><br><span class="line">    resultFile.close()                 <span class="comment"># close output file</span></span><br><span class="line"></span><br><span class="line">    <span class="comment"># return True on success and False on errors</span></span><br><span class="line">    <span class="keyword">return</span> pisaStatus.err</span><br><span class="line"></span><br><span class="line"><span class="comment"># Main program</span></span><br><span class="line"><span class="keyword">if</span> __name__ == <span class="string">"__main__"</span>:</span><br><span class="line">    pisa.showLogging()</span><br><span class="line">    convertHtmlToPdf(sourceHtml, outputFilename)</span><br></pre></td></tr></table></figure>
 <p>官方的usage.rst其它很有用,还有些example也很值得借鉴,有时候遇到问题不防也看看issue,你碰到的问题,其它人肯定也碰到过.</p>
-<h3><span id="参考文章"><strong>参考文章:</strong></span></h3><blockquote>
+<h3 id="参考文章"><a href="#参考文章" class="headerlink" title="参考文章:"></a><strong>参考文章:</strong></h3><blockquote>
 <ul>
 <li><a href="https://github.com/xhtml2pdf" target="_blank" rel="noopener">xhtml2pdf项目github</a></li>
 </ul>
 </blockquote>
-<h3><span id="转载请注明出处httpsizskme"><strong>转载请注明出处<a href="https://izsk.me" target="_blank" rel="noopener">https://izsk.me</a></strong></span></h3><hr>
+<h3 id="转载请注明出处https-izsk-me"><a href="#转载请注明出处https-izsk-me" class="headerlink" title="转载请注明出处https://izsk.me"></a><strong>转载请注明出处<a href="https://izsk.me" target="_blank" rel="noopener">https://izsk.me</a></strong></h3><hr>
 
       
     </div>
@@ -651,7 +651,7 @@
             
 
             
-              <div class="post-toc-content"><ol class="nav"><li class="nav-item nav-level-3"><a class="nav-link" href="#null"><span class="nav-number">1.</span> <span class="nav-text">环境</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#null"><span class="nav-number">2.</span> <span class="nav-text">问题</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#null"><span class="nav-number">3.</span> <span class="nav-text">解决</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#null"><span class="nav-number">4.</span> <span class="nav-text">参考文章:</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#null"><span class="nav-number">5.</span> <span class="nav-text">转载请注明出处https://izsk.me</span></a></li></ol></div>
+              <div class="post-toc-content"><ol class="nav"><li class="nav-item nav-level-3"><a class="nav-link" href="#环境"><span class="nav-number">1.</span> <span class="nav-text">环境</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#问题"><span class="nav-number">2.</span> <span class="nav-text">问题</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#解决"><span class="nav-number">3.</span> <span class="nav-text">解决</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#参考文章"><span class="nav-number">4.</span> <span class="nav-text">参考文章:</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#转载请注明出处https-izsk-me"><span class="nav-number">5.</span> <span class="nav-text">转载请注明出处https://izsk.me</span></a></li></ol></div>
             
 
           </div>

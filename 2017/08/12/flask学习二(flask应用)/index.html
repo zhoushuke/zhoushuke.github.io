@@ -396,7 +396,7 @@
       
         <p>距离<a href="https://izsk.me/2017/08/12/falsk%E5%AD%A6%E4%B9%A0(-" target="_blank" rel="noopener">上一篇</a>)有一段时间了,上次扯了点跟flask相关的内容,这次抽空记录下flask的机制.flask之所于上手容易,是因为我们对python语言稍微了解的话,简单几步就可以把一个小应用跑起来,不需要搭建额外的东西,所以对于并发量没有要求的话flask可以轻松应对.</p>
 <a id="more"></a>
-<h3><span id="flask单应用"><strong>flask单应用</strong></span></h3><p>我们在网上看到的flask教程基本都会有这样一句代码</p>
+<h3 id="flask单应用"><a href="#flask单应用" class="headerlink" title="flask单应用"></a><strong>flask单应用</strong></h3><p>我们在网上看到的flask教程基本都会有这样一句代码</p>
 <figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">app = Flask(__name__)</span><br></pre></td></tr></table></figure>
 <p>每个 Flask 应用必须创建一个Flask类的实例,并且把模块的名称传递给该实例,<strong>flask支持多应用共存,甚至是可以跟django实例共存</strong>这个后续再说,这里只是指定了一个flask实例,并不能运行起来.</p>
 <p>Flask()更多的参数请见<a href="http://flask.pocoo.org/docs/0.12/api/#application-object" target="_blank" rel="noopener">这里</a></p>
@@ -415,15 +415,15 @@
 <figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">from</span> flask <span class="keyword">import</span> Flask,render_template</span><br><span class="line">app = Flask(__name__)  <span class="comment">#Flask的一个对象,是一个app,flask支持多app共存</span></span><br><span class="line"><span class="meta">@app.route("/",methods=["GET"]) #@是装饰器的语法糖,route则是上面说的路由转发模块</span></span><br><span class="line"><span class="function"><span class="keyword">def</span> <span class="title">index</span><span class="params">()</span>:</span></span><br><span class="line">    <span class="keyword">return</span> render_template(<span class="string">"index.html"</span>,pass_to_template=<span class="string">"index"</span>) <span class="comment">#把pass_to_template变量传递给index.html模板</span></span><br><span class="line"><span class="keyword">if</span> __name__ == <span class="string">"__main__"</span>:</span><br><span class="line">    app.run(host=<span class="string">"0.0.0.0"</span>, port=<span class="number">19090</span>, passthrough_errors=<span class="literal">True</span>, threaded=<span class="literal">True</span>) <span class="comment">#使用flask自带的wsgi-server,监听本机的19090端口,threaded=True则开启多线程模式,自带的wsgi-server性能不好,生产环境不会这么用,一般都使用并发量更大的wsgi架构如uwsgi,tornado等</span></span><br></pre></td></tr></table></figure>
 <p>现在,打开浏览器输入<code>http://ip:19090/index.html</code>即可访问index页面</p>
 <p>面对多个请求时 ,flask是如何做到请求隔离的呢,这里要提一个flask的两个上下文机制</p>
-<h3><span id="两个上下文"><strong>两个上下文</strong></span></h3><p>这里不深入源代码一探究竟,一句话:<strong>临时全局变量</strong>,flask很机智的实现了thread.local类似<code>线程隔离</code>功能,并配置<code>栈</code>这种数据结构让其很轻松的可以将对象推入、弹出、快速获取栈顶对象,当然这些操作也是线程隔离的.</p>
+<h3 id="两个上下文"><a href="#两个上下文" class="headerlink" title="两个上下文"></a><strong>两个上下文</strong></h3><p>这里不深入源代码一探究竟,一句话:<strong>临时全局变量</strong>,flask很机智的实现了thread.local类似<code>线程隔离</code>功能,并配置<code>栈</code>这种数据结构让其很轻松的可以将对象推入、弹出、快速获取栈顶对象,当然这些操作也是线程隔离的.</p>
 <p>也就是说,<strong>在一次请求的一个线程中可以将其设置为全局变量,但是仅限于请求的这个线程内部,不同线程通过“线程标识符”来区别,这样就不会影响到其他线程的请求.</strong></p>
-<h4><span id="请求上下文"><strong>请求上下文</strong></span></h4><p>实现线程隔离后,为了在一个线程中更加方便使用这些变量,flask中还有一种堆栈的数据结构(通过werkzeug的LocalStack实现),可以处理这些变量,但是并不直接处理这些变量.假如有一个程序得到一个请求,那么flask会将这个请求的所有相关信息进行打包,打包形成的东西就是处理请求的一个环境.flask将这种环境称为<code>请求上下文</code>(request context),之后flask会将这个请求上下文对象放到堆栈中.</p>
+<h4 id="请求上下文"><a href="#请求上下文" class="headerlink" title="请求上下文"></a><strong>请求上下文</strong></h4><p>实现线程隔离后,为了在一个线程中更加方便使用这些变量,flask中还有一种堆栈的数据结构(通过werkzeug的LocalStack实现),可以处理这些变量,但是并不直接处理这些变量.假如有一个程序得到一个请求,那么flask会将这个请求的所有相关信息进行打包,打包形成的东西就是处理请求的一个环境.flask将这种环境称为<code>请求上下文</code>(request context),之后flask会将这个请求上下文对象放到堆栈中.</p>
 <p>这样,请求发生时,我们一般都会指向堆栈中的“请求上下文”对象,这样可以通过请求上下文获取相关对象并直接访问,例如<code>request、session、current_app,g</code>(后两者为应用上下文).还可以通过调用对象的方法或者属性获取其他信息,例如request.method,等请求结束后,请求上下文会被销毁,堆栈重新等待新的请求上下文对象被放入.</p>
-<h4><span id="应用上下文"><strong>应用上下文</strong></span></h4><p><code>应用上下文的概念是在flask 0.9中增加的</code></p>
+<h4 id="应用上下文"><a href="#应用上下文" class="headerlink" title="应用上下文"></a><strong>应用上下文</strong></h4><p><code>应用上下文的概念是在flask 0.9中增加的</code></p>
 <p>当在一个应用的请求上下文环境中,需要嵌套处理另一个应用的相关操作时(这种情况更多的是用于测试或者在console中对多个应用进行相关处理),“请求上下文”显然就不能很好地解决问题了,因为魔法current_app无法确定当前处理的到底是哪个应用.如何让请求找到“正确”的应用呢？我们可能会想到,可以再增加一个请求上下文环境,并将其推入栈中.由于两个上下文环境的运行是独立的,不会相互干扰,所以通过调用栈顶对象的app属性或者调用current_app(current_app一直指向栈顶的对象)也可以获得当前上下文环境正在处理哪个应用.这种办法在一定程度上可行,但是如果说对第二个应用的处理不涉及到相关请求,那也就无从谈起“请求上下文”,更不可能建立请求上下文环境了.为了应对这个问题,Flask中将应用相关的信息单独拿出来,形成一个“应用上下文”对象.这个对象可以和“请求上下文”一起使用,也可以单独拿出来使用.不过有一点需要注意的是：在创建“请求上下文”时一定要创建一个“应用上下文”对象.有了“应用上下文”对象,便可以很容易地确定当前处理哪个应用,这就是魔法<code>current_app</code>.在0.1版本中,current_app是对_request_ctx_stack.top.app的引用,而在0.9版本中current_app是对_app_ctx_stack.top.app的引用.其中_request_ctx_stack和_app_ctx_stack分别是存储请求上下文和应用上下文的栈</p>
 <p><strong>请求上下文: request、session</strong></p>
 <p><strong>应用上下文: g、current_app</strong></p>
-<h3><span id="实现高并发"><strong>实现高并发</strong></span></h3><p>上面说了flask自带的wsgi的性能不好,一般都会选择其它能够实现高并发的http server,如gunicorn,greenlet,uswgi.</p>
+<h3 id="实现高并发"><a href="#实现高并发" class="headerlink" title="实现高并发"></a><strong>实现高并发</strong></h3><p>上面说了flask自带的wsgi的性能不好,一般都会选择其它能够实现高并发的http server,如gunicorn,greenlet,uswgi.</p>
 <p>其中<a href="http://gunicorn.org/" target="_blank" rel="noopener">gunicorn</a>几乎不需要什么配置就可直接整合到flask项目中,但是gunicorn只支持unix,而uswgi的配置比较复杂,但是性能比gunicorn稍好.</p>
 <p>上面启动flask是直接在主函数中使用app.run(),这里我们结合gunicorn启动app(假设已pip install gunicorn)</p>
 <p>gunicorn基于‘pre-fork worker’模型,意味着有一个中心主控master进程,用它来管理一组worker进程.</p>
@@ -442,14 +442,14 @@
 <p>这样flask就以gunicorn的方式启动了,并发数也大大提高.</p>
 <p>gunicorn处理静态资源的能力不是很好,所以一般都会在前面再部署个nginx,只需要将proxy_pass 指向gunicorn的监听端口即可,可以参考<a href="http://www.cnblogs.com/Ray-liang/p/4837850.html" target="_blank" rel="noopener">这里</a></p>
 <p>更多的flask实现高并发部署方式请见<a href="http://flask.pocoo.org/docs/0.12/deploying/#deployment" target="_blank" rel="noopener">这里</a></p>
-<h3><span id="参考文章"><strong>参考文章:</strong></span></h3><blockquote>
+<h3 id="参考文章"><a href="#参考文章" class="headerlink" title="参考文章:"></a><strong>参考文章:</strong></h3><blockquote>
 <ul>
 <li><a href="https://www.zhihu.com/question/33970027" target="_blank" rel="noopener">flask框架中应用上下文跟请求上下文是什么意思</a></li>
 <li><a href="http://flask.pocoo.org/docs/0.12/" target="_blank" rel="noopener">flask-docs</a></li>
 <li><a href="http://www.cnblogs.com/Ray-liang/p/4837850.html" target="_blank" rel="noopener">Flask + Gunicorn + Nginx 部署</a></li>
 </ul>
 </blockquote>
-<h3><span id="转载请注明出处httpsizskme"><strong>转载请注明出处<a href="https://izsk.me" target="_blank" rel="noopener">https://izsk.me</a></strong></span></h3><hr>
+<h3 id="转载请注明出处https-izsk-me"><a href="#转载请注明出处https-izsk-me" class="headerlink" title="转载请注明出处https://izsk.me"></a><strong>转载请注明出处<a href="https://izsk.me" target="_blank" rel="noopener">https://izsk.me</a></strong></h3><hr>
 
       
     </div>
@@ -510,8 +510,8 @@
         <div class="post-nav">
           <div class="post-nav-next post-nav-item">
             
-              <a href="/2017/08/12/python中调用sqlplus生成多实例oracle-awr-html报告/" rel="next" title="python中调用sqlplus生成多实例oracle-awr-html报告">
-                <i class="fa fa-chevron-left"></i> python中调用sqlplus生成多实例oracle-awr-html报告
+              <a href="/2017/08/04/flask学习一(flask介绍)/" rel="next" title="flask学习一(flask介绍)">
+                <i class="fa fa-chevron-left"></i> flask学习一(flask介绍)
               </a>
             
           </div>
@@ -520,8 +520,8 @@
 
           <div class="post-nav-prev post-nav-item">
             
-              <a href="/2017/08/20/pyinstaller打包Flask(-)/" rel="prev" title="pyinstaller打包Flask(-)">
-                pyinstaller打包Flask(-) <i class="fa fa-chevron-right"></i>
+              <a href="/2017/08/12/HTTP之长连接及短连接/" rel="prev" title="HTTP之长连接及短连接">
+                HTTP之长连接及短连接 <i class="fa fa-chevron-right"></i>
               </a>
             
           </div>
@@ -650,7 +650,7 @@
             
 
             
-              <div class="post-toc-content"><ol class="nav"><li class="nav-item nav-level-3"><a class="nav-link" href="#null"><span class="nav-number">1.</span> <span class="nav-text">flask单应用</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#null"><span class="nav-number">2.</span> <span class="nav-text">两个上下文</span></a><ol class="nav-child"><li class="nav-item nav-level-4"><a class="nav-link" href="#null"><span class="nav-number">2.1.</span> <span class="nav-text">请求上下文</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#null"><span class="nav-number">2.2.</span> <span class="nav-text">应用上下文</span></a></li></ol></li><li class="nav-item nav-level-3"><a class="nav-link" href="#null"><span class="nav-number">3.</span> <span class="nav-text">实现高并发</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#null"><span class="nav-number">4.</span> <span class="nav-text">参考文章:</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#null"><span class="nav-number">5.</span> <span class="nav-text">转载请注明出处https://izsk.me</span></a></li></ol></div>
+              <div class="post-toc-content"><ol class="nav"><li class="nav-item nav-level-3"><a class="nav-link" href="#flask单应用"><span class="nav-number">1.</span> <span class="nav-text">flask单应用</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#两个上下文"><span class="nav-number">2.</span> <span class="nav-text">两个上下文</span></a><ol class="nav-child"><li class="nav-item nav-level-4"><a class="nav-link" href="#请求上下文"><span class="nav-number">2.1.</span> <span class="nav-text">请求上下文</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#应用上下文"><span class="nav-number">2.2.</span> <span class="nav-text">应用上下文</span></a></li></ol></li><li class="nav-item nav-level-3"><a class="nav-link" href="#实现高并发"><span class="nav-number">3.</span> <span class="nav-text">实现高并发</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#参考文章"><span class="nav-number">4.</span> <span class="nav-text">参考文章:</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#转载请注明出处https-izsk-me"><span class="nav-number">5.</span> <span class="nav-text">转载请注明出处https://izsk.me</span></a></li></ol></div>
             
 
           </div>

@@ -409,14 +409,14 @@
       
 
       
-        <h3><span id="场景概述"><strong>场景概述:</strong></span></h3><p><strong>场景:</strong></p>
+        <h3 id="场景概述"><a href="#场景概述" class="headerlink" title="场景概述:"></a><strong>场景概述:</strong></h3><p><strong>场景:</strong></p>
 <p>oracle中有一条大表(物品编码表wpbm),该表中存放了很多种物品信息,大约有4亿条数据,其中最重要的两个字段为wpmc(物品名称),spbm(商品编码),其中某一物品可能对应多个商品编码,如何根据这两个字段对某一物品的各个商品编码计数?</p>
 <a id="more"></a>
 <p>我们都知道,数据库最不擅长的事就是做运算,因为只要涉及到运算,就必然会涉及到在语句中使用某些数学函数,使用函数对于亿级且使用频繁的大表来说必然会影响数据库的效率,执行时间长不说,还可能会出现把数据库拖跨.所以对于这么大的数据量,直接使用count,groupby明显是不可取的,那么就只能使用一些歪方法了,无法在linux环境下用sed,awk等脚本语言对文本进行操作,这又得想办法解决windows下处理文本的效率问题,又一次想感叹Linux的伟大.</p>
 <p><strong>思路:</strong></p>
 <p>使用离线统计的办法,4亿条数据已经按照某种partition关系建成分区表,按各分区表导出csv文件(最大的一个分区表数据7000万行,2G,需要在使用sqluldr2导出的时候使用size参数分隔成多个小文件,结合第二步需要统计来看size=200M时比较合理),然后结合python做统计,最后把csv再导入库中做分析.</p>
 <p>Oracle对于大表的导出使用sqluldr2,数据分析使用python的dataframe库,Oracle导入使用sqlldr</p>
-<h4><span id="sqluldr导出"><strong>sqluldr导出:</strong></span></h4><p>oracle数据的导出大概如下常用方式:</p>
+<h4 id="sqluldr导出"><a href="#sqluldr导出" class="headerlink" title="sqluldr导出:"></a><strong>sqluldr导出:</strong></h4><p>oracle数据的导出大概如下常用方式:</p>
 <blockquote>
 <ul>
 <li>界面工具plsql等: 图形界面,傻瓜式,小表的首选</li>
@@ -459,7 +459,7 @@
 <p><img src="http://zskgithubblog.oss-cn-beijing.aliyuncs.com/blogpic/oracle-3y-6.JPG" alt="oracle-3y-6"></p>
 <p>最后生成的CSV文件格式如下:</p>
 <p><img src="http://zskgithubblog.oss-cn-beijing.aliyuncs.com/blogpic/oracle-3y-4.JPG" alt="oracle-3y-4"></p>
-<h4><span id="python之dataframe"><strong>python之dataframe:</strong></span></h4><p>DataFrame是Pandas中的一个表结构的数据结构,包括三部分信息,表头(列的名称),表的内容(二维矩阵),索引(每行一个唯一的标记).</p>
+<h4 id="python之dataframe"><a href="#python之dataframe" class="headerlink" title="python之dataframe:"></a><strong>python之dataframe:</strong></h4><p>DataFrame是Pandas中的一个表结构的数据结构,包括三部分信息,表头(列的名称),表的内容(二维矩阵),索引(每行一个唯一的标记).</p>
 <p>官网文档请移步<a href="http://pandas.pydata.org/pandas-docs/stable/dsintro.html" target="_blank" rel="noopener">这里</a></p>
 <p>之前看过一些dataframe的资料,但是没有实际工作用到过它,这次刚好借助这次机会学习下这个python库用于数据统计.</p>
 <p>由上图得到了比较纯净的数据之后,开始以(物品[]编码)做为一个整体来统计:</p>
@@ -472,7 +472,7 @@
 <p><img src="http://zskgithubblog.oss-cn-beijing.aliyuncs.com/blogpic/oracle-3y-7.JPG" alt="oracle-3y-7"></p>
 <p><img src="http://zskgithubblog.oss-cn-beijing.aliyuncs.com/blogpic/oracle-3y-8.JPG" alt="oracle-3y-8"></p>
 <p>最后得到的是一个CSV文件,再通过sqlldr导入数据库即可.</p>
-<h4><span id="sqlldr导入"><strong>sqlldr导入:</strong></span></h4><p>sqlldr跟sqluldr2是一对利器,速度非常快,使用也很简单.</p>
+<h4 id="sqlldr导入"><a href="#sqlldr导入" class="headerlink" title="sqlldr导入:"></a><strong>sqlldr导入:</strong></h4><p>sqlldr跟sqluldr2是一对利器,速度非常快,使用也很简单.</p>
 <p>sqlldr的官方文档请移步<a href="https://docs.oracle.com/cd/B19306_01/server.102/b14215/ldr_params.htm" target="_blank" rel="noopener">这里</a></p>
 <p>启动方法:</p>
 <figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">sqlldr.exe test/123@192.0.1.1:1521/test control=E:\data_to_oracle.ctl log=E:\data_to_oracle.log</span><br></pre></td></tr></table></figure>
@@ -502,7 +502,7 @@
 <p>最后到库的数据再做统计就是秒秒钟的事了,Oracle11g添加了几个非常实用的行列互转函数,非常有用<br>这里按商品编码分类统计物品名称且条数大于1000,sql语句如下:</p>
 <figure class="highlight sql"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">select</span> <span class="keyword">decode</span>(row_number() <span class="keyword">over</span>(<span class="keyword">partition</span> <span class="keyword">by</span> SPBM <span class="keyword">order</span> <span class="keyword">by</span> zongshu <span class="keyword">desc</span>),</span><br><span class="line">              <span class="number">1</span>,</span><br><span class="line">              SPBM) SPBM,</span><br><span class="line">       WPMC,zongshu</span><br><span class="line">  <span class="keyword">from</span> SPBMISNULL t <span class="keyword">where</span>  zongshu&gt;<span class="number">1000</span></span><br></pre></td></tr></table></figure>
 <p><img src="http://zskgithubblog.oss-cn-beijing.aliyuncs.com/blogpic/oracle-3y-15.JPG" alt="oracle-3y-15"></p>
-<h3><span id="番外篇"><strong>番外篇:</strong></span></h3><h4><span id="series"><strong>Series:</strong></span></h4><p>series 可以看做一个定长的有序字典。基本任意的一维数据都可以用来构造 Series 对象:</p>
+<h3 id="番外篇"><a href="#番外篇" class="headerlink" title="番外篇:"></a><strong>番外篇:</strong></h3><h4 id="Series"><a href="#Series" class="headerlink" title="Series:"></a><strong>Series:</strong></h4><p>series 可以看做一个定长的有序字典。基本任意的一维数据都可以用来构造 Series 对象:</p>
 <p>s = pd.Series(data=[1,2,3,4], index=[‘a’,’b’,’c’,’d’])</p>
 <p>如果没有指定index,则会默认生成从0开始递增的索引列</p>
 <p><strong>查看信息:</strong></p>
@@ -510,7 +510,7 @@
 <p>s.index: 查看索引的信息</p>
 <p>s.sum(): 求data值的和,如果是非数值型,则会把整个data列表组成一个字符串</p>
 <p>s.count(): 求data的个数</p>
-<h4><span id="dataframe"><strong>dataframe</strong></span></h4><p>DataFrame 是一个表格型的数据结构，它含有一组有序的列(类似于 index),每列可以是不同的值类型(不像 ndarray 只能有一个 dtype).基本上可以把 DataFrame 看成是共享同一个 index 的 Series 的集合.</p>
+<h4 id="dataframe"><a href="#dataframe" class="headerlink" title="dataframe"></a><strong>dataframe</strong></h4><p>DataFrame 是一个表格型的数据结构，它含有一组有序的列(类似于 index),每列可以是不同的值类型(不像 ndarray 只能有一个 dtype).基本上可以把 DataFrame 看成是共享同一个 index 的 Series 的集合.</p>
 <p>DataFrame 的构造方法与 Series 类似,只不过可以同时接受多条一维数据源,每一条都会成为单独的一列:</p>
 <p>df = pd.DataFrame([[1,2,3],[4,5,6]],columns=[‘a’,’b’,’c’],index=[0,1])</p>
 <p>较完整的 DataFrame 构造器参数为:DataFrame(data=None,index=None,columns=None), columns 即为列名:</p>
@@ -576,17 +576,17 @@
 <li><p>dataframe还有一些其它高级的应用,比如Concat(),join(),append()等,以后有时间再研究下!</p>
 </li>
 </ol>
-<h4><span id="read_csvto_csv"><strong>read_csv()/to_csv():</strong></span></h4><p>read_csv的参数详解请移步<a href="http://pandas.pydata.org/pandas-docs/stable/generated/pandas.read_csv.html#pandas.read_csv" target="_blank" rel="noopener">这里</a></p>
+<h4 id="read-csv-to-csv"><a href="#read-csv-to-csv" class="headerlink" title="read_csv()/to_csv():"></a><strong>read_csv()/to_csv():</strong></h4><p>read_csv的参数详解请移步<a href="http://pandas.pydata.org/pandas-docs/stable/generated/pandas.read_csv.html#pandas.read_csv" target="_blank" rel="noopener">这里</a></p>
 <p>中文说明请移步<a href="http://www.cnblogs.com/datablog/p/6127000.html" target="_blank" rel="noopener">这里</a></p>
 <p>这两个方法比较简单,这里就不展开写了.</p>
 <p>收工!</p>
-<h3><span id="参考文章"><strong>参考文章:</strong></span></h3><p><a href="http://blog.sina.com.cn/s/blog_5ceb51480102vppw.html" target="_blank" rel="noopener">利用sqluldr2导出数据和sqlldr导入数据的方法</a></p>
+<h3 id="参考文章"><a href="#参考文章" class="headerlink" title="参考文章:"></a><strong>参考文章:</strong></h3><p><a href="http://blog.sina.com.cn/s/blog_5ceb51480102vppw.html" target="_blank" rel="noopener">利用sqluldr2导出数据和sqlldr导入数据的方法</a></p>
 <p><a href="http://pandas.pydata.org/pandas-docs/stable/dsintro.html" target="_blank" rel="noopener">pandas官方文档</a></p>
 <p><a href="https://docs.oracle.com/cd/B19306_01/server.102/b14215/ldr_params.htm" target="_blank" rel="noopener">sqlldr的官方文档</a></p>
 <p><a href="http://www.cnblogs.com/flish/archive/2010/05/31/1748221.html" target="_blank" rel="noopener">关于 Oracle 的数据导入导出及 Sql Loader (sqlldr) 的用法</a></p>
 <p><a href="http://www.webtag123.com/python/44619.html" target="_blank" rel="noopener">Python 数据分析包:pandas 基础</a></p>
 <p><a href="http://www.cnblogs.com/datablog/p/6127000.html" target="_blank" rel="noopener">pandas.read_csv参数详解</a></p>
-<h3><span id="转载请注明出处httpsizskme"><strong>转载请注明出处<a href="https://izsk.me" target="_blank" rel="noopener">https://izsk.me</a></strong></span></h3><hr>
+<h3 id="转载请注明出处https-izsk-me"><a href="#转载请注明出处https-izsk-me" class="headerlink" title="转载请注明出处https://izsk.me"></a><strong>转载请注明出处<a href="https://izsk.me" target="_blank" rel="noopener">https://izsk.me</a></strong></h3><hr>
 
       
     </div>
@@ -783,7 +783,7 @@
             
 
             
-              <div class="post-toc-content"><ol class="nav"><li class="nav-item nav-level-3"><a class="nav-link" href="#null"><span class="nav-number">1.</span> <span class="nav-text">场景概述:</span></a><ol class="nav-child"><li class="nav-item nav-level-4"><a class="nav-link" href="#null"><span class="nav-number">1.1.</span> <span class="nav-text">sqluldr导出:</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#null"><span class="nav-number">1.2.</span> <span class="nav-text">python之dataframe:</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#null"><span class="nav-number">1.3.</span> <span class="nav-text">sqlldr导入:</span></a></li></ol></li><li class="nav-item nav-level-3"><a class="nav-link" href="#null"><span class="nav-number">2.</span> <span class="nav-text">番外篇:</span></a><ol class="nav-child"><li class="nav-item nav-level-4"><a class="nav-link" href="#null"><span class="nav-number">2.1.</span> <span class="nav-text">Series:</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#null"><span class="nav-number">2.2.</span> <span class="nav-text">dataframe</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#null"><span class="nav-number">2.3.</span> <span class="nav-text">read_csv()/to_csv():</span></a></li></ol></li><li class="nav-item nav-level-3"><a class="nav-link" href="#null"><span class="nav-number">3.</span> <span class="nav-text">参考文章:</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#null"><span class="nav-number">4.</span> <span class="nav-text">转载请注明出处https://izsk.me</span></a></li></ol></div>
+              <div class="post-toc-content"><ol class="nav"><li class="nav-item nav-level-3"><a class="nav-link" href="#场景概述"><span class="nav-number">1.</span> <span class="nav-text">场景概述:</span></a><ol class="nav-child"><li class="nav-item nav-level-4"><a class="nav-link" href="#sqluldr导出"><span class="nav-number">1.1.</span> <span class="nav-text">sqluldr导出:</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#python之dataframe"><span class="nav-number">1.2.</span> <span class="nav-text">python之dataframe:</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#sqlldr导入"><span class="nav-number">1.3.</span> <span class="nav-text">sqlldr导入:</span></a></li></ol></li><li class="nav-item nav-level-3"><a class="nav-link" href="#番外篇"><span class="nav-number">2.</span> <span class="nav-text">番外篇:</span></a><ol class="nav-child"><li class="nav-item nav-level-4"><a class="nav-link" href="#Series"><span class="nav-number">2.1.</span> <span class="nav-text">Series:</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#dataframe"><span class="nav-number">2.2.</span> <span class="nav-text">dataframe</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#read-csv-to-csv"><span class="nav-number">2.3.</span> <span class="nav-text">read_csv()/to_csv():</span></a></li></ol></li><li class="nav-item nav-level-3"><a class="nav-link" href="#参考文章"><span class="nav-number">3.</span> <span class="nav-text">参考文章:</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#转载请注明出处https-izsk-me"><span class="nav-number">4.</span> <span class="nav-text">转载请注明出处https://izsk.me</span></a></li></ol></div>
             
 
           </div>

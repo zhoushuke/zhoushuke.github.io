@@ -399,7 +399,7 @@
         <p>题目是: 给定K个有序数组,将它们合并成一个数组并且有序, 需要考虑时间复杂度.</p>
 <p>这也是leetcode上的第23道题,由合并两个数组延生而来. </p>
 <a id="more"></a>
-<h3><span id="k个数组合并"><strong>K个数组合并</strong></span></h3><p>这里做个假设, 有序数组的个数为 L</p>
+<h3 id="K个数组合并"><a href="#K个数组合并" class="headerlink" title="K个数组合并"></a><strong>K个数组合并</strong></h3><p>这里做个假设, 有序数组的个数为 L</p>
 <p>所有数组中, 最长数组的长度为 N, 每个数组中的元素个数可以不等</p>
 <p>很正常的会想到写二层for循环相邻两两进行合并,但时间复杂度肯定过不去</p>
 <p>可以使用最小堆, python中很少情况会想到使用堆, 开始还以为python中没有, 顺便研究了下<a href="https://docs.python.org/3/library/heapq.html" target="_blank" rel="noopener">heap</a>,具体思路为: </p>
@@ -418,14 +418,14 @@
 <figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">import</span> heapq</span><br><span class="line"><span class="keyword">from</span> collections <span class="keyword">import</span> deque</span><br><span class="line"></span><br><span class="line"><span class="function"><span class="keyword">def</span> <span class="title">list_merge</span><span class="params">(*lists)</span>:</span></span><br><span class="line">    <span class="comment">#入参判断, 这里直接pass</span></span><br><span class="line">    <span class="comment">#将所有链表转化为deque,方便使用popleft获取链表的最左元素及根据索引返回该索引对应的剩余链表</span></span><br><span class="line">    queues = [queue <span class="keyword">for</span> queue <span class="keyword">in</span> map(deque, lists)]</span><br><span class="line">    heap = []</span><br><span class="line">    <span class="comment">#初始化链表,该链表中的元素为元组, 各个链表的第一个元素及链表所在索引</span></span><br><span class="line">    <span class="keyword">for</span> i, lst <span class="keyword">in</span> enumerate(queues):</span><br><span class="line">        heap.append((lst.popleft(), i))</span><br><span class="line">    <span class="comment">#将链表转换成最小堆</span></span><br><span class="line">    heapq.heapify(heap)</span><br><span class="line">    <span class="comment">#链表: 用于存放每次获取的堆顶层元素</span></span><br><span class="line">    result = []</span><br><span class="line">    </span><br><span class="line">    <span class="keyword">while</span> heap:</span><br><span class="line">        <span class="comment">#将堆顶层元素出堆</span></span><br><span class="line">        value, index = heapq.heappop(heap)</span><br><span class="line">        <span class="comment">#将顶层元素追加</span></span><br><span class="line">        result.append(value)</span><br><span class="line">        <span class="comment">#根据索引获取对应链表的剩余元素</span></span><br><span class="line">        <span class="keyword">if</span> queues[index]:</span><br><span class="line">             <span class="comment">#如果存在下一个元素,则将该元素及索引入堆</span></span><br><span class="line">            heapq.heappush(heap, (queues[index].popleft(), index))</span><br><span class="line">    <span class="keyword">return</span> result</span><br><span class="line"></span><br><span class="line"></span><br><span class="line"><span class="keyword">print</span> list_merge(*[[<span class="number">4</span>, <span class="number">8</span>, <span class="number">20</span>], [<span class="number">100</span>, <span class="number">200</span>, <span class="number">350</span>, <span class="number">370</span>], [<span class="number">5</span>, <span class="number">8</span>, <span class="number">350</span>, <span class="number">500</span>, <span class="number">1000</span>]])</span><br></pre></td></tr></table></figure>
 <p>通过索引来获取对应数组的下一个元素, 使用的非常巧妙</p>
 <p>这里主要使用到了heapq跟deque,大家可以到官网查看这两个的用法</p>
-<h3><span id="复杂度分析"><strong>复杂度分析</strong></span></h3><blockquote>
+<h3 id="复杂度分析"><a href="#复杂度分析" class="headerlink" title="复杂度分析"></a><strong>复杂度分析</strong></h3><blockquote>
 <ul>
 <li>时间复杂度: 由于每个元素都需要读取一次, 即最大次数为L*N, 将每一个元素插入最小堆中的复杂度为O(logL),即总的复杂度为O(L*NlogL)</li>
 <li>空间复杂度为: 维护最小堆的大小,即 O(L)</li>
 </ul>
 </blockquote>
-<h3><span id="在实际中的运用"><strong>在实际中的运用</strong></span></h3><p>在分布式任务聚合后需要按照时间顺序统一排序的场景下会有这个需要,linux下也有一些实现,可参照<a href="https://blog.csdn.net/dog250/article/details/80234049" target="_blank" rel="noopener">这篇文章</a></p>
-<h3><span id="参考文章"><strong>参考文章:</strong></span></h3><blockquote>
+<h3 id="在实际中的运用"><a href="#在实际中的运用" class="headerlink" title="在实际中的运用"></a><strong>在实际中的运用</strong></h3><p>在分布式任务聚合后需要按照时间顺序统一排序的场景下会有这个需要,linux下也有一些实现,可参照<a href="https://blog.csdn.net/dog250/article/details/80234049" target="_blank" rel="noopener">这篇文章</a></p>
+<h3 id="参考文章"><a href="#参考文章" class="headerlink" title="参考文章:"></a><strong>参考文章:</strong></h3><blockquote>
 <ul>
 <li><a href="https://docs.python.org/3/library/heapq.html" target="_blank" rel="noopener">https://docs.python.org/3/library/heapq.html</a></li>
 <li><a href="https://docs.python.org/3/library/collections.html#deque-objects" target="_blank" rel="noopener">https://docs.python.org/3/library/collections.html#deque-objects</a></li>
@@ -433,7 +433,7 @@
 <li><a href="https://blog.csdn.net/dog250/article/details/80234049" target="_blank" rel="noopener">合并N个有序链表与FQ公平调度</a></li>
 </ul>
 </blockquote>
-<h3><span id="转载请注明出处httpsizskme"><strong>转载请注明出处<a href="https://izsk.me" target="_blank" rel="noopener">https://izsk.me</a></strong></span></h3><hr>
+<h3 id="转载请注明出处https-izsk-me"><a href="#转载请注明出处https-izsk-me" class="headerlink" title="转载请注明出处https://izsk.me"></a><strong>转载请注明出处<a href="https://izsk.me" target="_blank" rel="noopener">https://izsk.me</a></strong></h3><hr>
 
       
     </div>
@@ -632,7 +632,7 @@
             
 
             
-              <div class="post-toc-content"><ol class="nav"><li class="nav-item nav-level-3"><a class="nav-link" href="#null"><span class="nav-number">1.</span> <span class="nav-text">K个数组合并</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#null"><span class="nav-number">2.</span> <span class="nav-text">复杂度分析</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#null"><span class="nav-number">3.</span> <span class="nav-text">在实际中的运用</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#null"><span class="nav-number">4.</span> <span class="nav-text">参考文章:</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#null"><span class="nav-number">5.</span> <span class="nav-text">转载请注明出处https://izsk.me</span></a></li></ol></div>
+              <div class="post-toc-content"><ol class="nav"><li class="nav-item nav-level-3"><a class="nav-link" href="#K个数组合并"><span class="nav-number">1.</span> <span class="nav-text">K个数组合并</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#复杂度分析"><span class="nav-number">2.</span> <span class="nav-text">复杂度分析</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#在实际中的运用"><span class="nav-number">3.</span> <span class="nav-text">在实际中的运用</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#参考文章"><span class="nav-number">4.</span> <span class="nav-text">参考文章:</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#转载请注明出处https-izsk-me"><span class="nav-number">5.</span> <span class="nav-text">转载请注明出处https://izsk.me</span></a></li></ol></div>
             
 
           </div>

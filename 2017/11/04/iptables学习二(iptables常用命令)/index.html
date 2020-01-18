@@ -398,7 +398,7 @@
       
         <p>上一篇介绍了iptables是如何工作,现在记录下iptables一些实用的命令</p>
 <a id="more"></a>
-<h3><span id="语法"><strong>语法</strong></span></h3><p><code>iptables [-t 表名] -命令 匹配规则 动作</code></p>
+<h3 id="语法"><a href="#语法" class="headerlink" title="语法"></a><strong>语法</strong></h3><p><code>iptables [-t 表名] -命令 匹配规则 动作</code></p>
 <p>语法说明:</p>
 <blockquote>
 <ul>
@@ -435,7 +435,7 @@
 </li>
 </ul>
 </blockquote>
-<h3><span id="常用命令"><strong>常用命令</strong></span></h3><ol>
+<h3 id="常用命令"><a href="#常用命令" class="headerlink" title="常用命令"></a><strong>常用命令</strong></h3><ol>
 <li><p>查看当前iptables设置</p>
 <figure class="highlight shell"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line">iptables -L -n -v --line-numbers</span><br><span class="line"><span class="meta">#</span><span class="bash">-L: 查看iptables规则列表</span></span><br><span class="line"><span class="meta">#</span><span class="bash">-n: 直接以ip的形式显示ip地址,不进行名称转换</span></span><br><span class="line"><span class="meta">#</span><span class="bash">-v: 显示更多更详细的信息</span></span><br><span class="line"><span class="meta">#</span><span class="bash">--line-numbers: 显示每条规则所在行号</span></span><br><span class="line"></span><br><span class="line"><span class="meta">#</span><span class="bash">当然也可以指定查看具体的表</span></span><br><span class="line">iptables -t filter -L -nv --line-numbers</span><br></pre></td></tr></table></figure>
 <p><img src="http://zskgithubblog.oss-cn-beijing.aliyuncs.com/blogpic/iptables4.JPG" alt="iptables4"></p>
@@ -465,7 +465,7 @@
 <figure class="highlight shell"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line">iptables -F</span><br><span class="line">iptables -X</span><br><span class="line">iptables -Z</span><br><span class="line"><span class="meta">#</span><span class="bash">下面增加其它规则</span></span><br><span class="line">...</span><br></pre></td></tr></table></figure>
 </li>
 </ol>
-<h3><span id="常用模块"><strong>常用模块</strong></span></h3><p>我们使用-m 参数来指定使用到的iptables模块,常用的模块如下:</p>
+<h3 id="常用模块"><a href="#常用模块" class="headerlink" title="常用模块"></a><strong>常用模块</strong></h3><p>我们使用-m 参数来指定使用到的iptables模块,常用的模块如下:</p>
 <p>最开头匹配条件中,有些我们可以直接使用,能直接使用的属于基本条件匹配,还有些是不能直接使用的,不能直接使用的就需要借助模块来使用了,比如–sport/–dport,比较常用的模块如下:</p>
 <ol>
 <li><p>tcp模块</p>
@@ -484,7 +484,7 @@
 <figure class="highlight shell"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">iptables -t filter -I INPUT -m iprange --src-range 192.168.1.1-192.168.1.10 -j DROP</span><br><span class="line"><span class="meta">#</span><span class="bash">iprange: 指定一个ip范围</span></span><br></pre></td></tr></table></figure>
 </li>
 </ol>
-<h3><span id="白名单黑名单机制"><strong>白名单/黑名单机制</strong></span></h3><p>这两种说法其实是一个意思,关键在于默认的策略是什么?</p>
+<h3 id="白名单-黑名单机制"><a href="#白名单-黑名单机制" class="headerlink" title="白名单/黑名单机制"></a><strong>白名单/黑名单机制</strong></h3><p>这两种说法其实是一个意思,关键在于默认的策略是什么?</p>
 <p>如果默认的策略为ACCEPT,如果在匹配完所有的规则之后还是无法匹配,该数据包会被ACCEPT</p>
 <p>如果默认的策略为DROP,如果在匹配完所有的规则之后还是无法匹配,该数据包会被DROP</p>
 <p>所以,正常情况下,</p>
@@ -505,14 +505,14 @@
 <li><p>我们可以复用crontab的定时执行机制写一条规则(允许通过指定ip登录的规则),让它每隔几份钟执行一次,这样不管我现在是什么规则导致我登录不了,过了几份钟后新规则生效,管理员就可以登录了, 不至于永远登录不了.</p>
 </li>
 </ol>
-<h3><span id="参考文章"><strong>参考文章:</strong></span></h3><blockquote>
+<h3 id="参考文章"><a href="#参考文章" class="headerlink" title="参考文章:"></a><strong>参考文章:</strong></h3><blockquote>
 <ul>
 <li><a href="https://wiki.archlinux.org/index.php/Iptables" target="_blank" rel="noopener">iptables-wiki</a></li>
 <li><a href="https://www.liuliqiang.info/post/dive-in-iptables/" target="_blank" rel="noopener">iptables 深度详解</a></li>
 <li><a href="http://www.zsythink.net/archives/1199" target="_blank" rel="noopener">iptables概念</a></li>
 </ul>
 </blockquote>
-<h3><span id="转载请注明出处httpsizskme"><strong>转载请注明出处<a href="https://izsk.me" target="_blank" rel="noopener">https://izsk.me</a></strong></span></h3><hr>
+<h3 id="转载请注明出处https-izsk-me"><a href="#转载请注明出处https-izsk-me" class="headerlink" title="转载请注明出处https://izsk.me"></a><strong>转载请注明出处<a href="https://izsk.me" target="_blank" rel="noopener">https://izsk.me</a></strong></h3><hr>
 
       
     </div>
@@ -711,7 +711,7 @@
             
 
             
-              <div class="post-toc-content"><ol class="nav"><li class="nav-item nav-level-3"><a class="nav-link" href="#null"><span class="nav-number">1.</span> <span class="nav-text">语法</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#null"><span class="nav-number">2.</span> <span class="nav-text">常用命令</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#null"><span class="nav-number">3.</span> <span class="nav-text">常用模块</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#null"><span class="nav-number">4.</span> <span class="nav-text">白名单/黑名单机制</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#null"><span class="nav-number">5.</span> <span class="nav-text">参考文章:</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#null"><span class="nav-number">6.</span> <span class="nav-text">转载请注明出处https://izsk.me</span></a></li></ol></div>
+              <div class="post-toc-content"><ol class="nav"><li class="nav-item nav-level-3"><a class="nav-link" href="#语法"><span class="nav-number">1.</span> <span class="nav-text">语法</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#常用命令"><span class="nav-number">2.</span> <span class="nav-text">常用命令</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#常用模块"><span class="nav-number">3.</span> <span class="nav-text">常用模块</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#白名单-黑名单机制"><span class="nav-number">4.</span> <span class="nav-text">白名单/黑名单机制</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#参考文章"><span class="nav-number">5.</span> <span class="nav-text">参考文章:</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#转载请注明出处https-izsk-me"><span class="nav-number">6.</span> <span class="nav-text">转载请注明出处https://izsk.me</span></a></li></ol></div>
             
 
           </div>
