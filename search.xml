@@ -193,6 +193,88 @@
       </tags>
   </entry>
   <entry>
+    <title>在Grafana中统计物理机上容器状态分类汇总</title>
+    <url>/2019/09/07/%E5%9C%A8Grafana%E4%B8%AD%E7%BB%9F%E8%AE%A1%E7%89%A9%E7%90%86%E6%9C%BA%E4%B8%8A%E5%AE%B9%E5%99%A8%E7%8A%B6%E6%80%81%E5%88%86%E7%B1%BB%E6%B1%87%E6%80%BB/</url>
+    <content><![CDATA[<p>Kubernetes集群中的容器监控数据已经通过Prometheus采集上来，在Grafana上配置可视化的时候，发现了个很有意思的需求，即：<strong>按物理机展示各种状态下的容器占比情况</strong></p>
+<a id="more"></a>
+<p>当然，是可以在Prometheus采集的时候对原始数据进行relabel，因为不好再回去做调整, 目前采集上来的数据不能直接实现上面的需求，所以只能在Prometheus上用提供的函数对数据做各种操作，最终达到效果,因为grafana直接支持prom语法，所以可以直接对prometheus的数据做sql.</p>
+<h3 id="展示需求"><a href="#展示需求" class="headerlink" title="展示需求"></a><strong>展示需求</strong></h3><p><strong>按物理机展示各种状态下的容器占比</strong></p>
+<p>最终要实现的效果如下:</p>
+<p><img src="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20200119152857.png" alt></p>
+<p>说明: 这里运行的容器数跟pod数不不一致是因为运行的容器数中包含静态pod, 所以会比pod数多.</p>
+<h3 id="Grafana完整语句"><a href="#Grafana完整语句" class="headerlink" title="Grafana完整语句"></a><strong>Grafana完整语句</strong></h3><p>这里的语句跟Prometheus采集到的原始数据有很大的关系, 我只是想记录下grafana的几个比较有用的语法, 所以可能这个语句没有很大的参考性.</p>
+<p>grafana中实现以上的效果，完整的语句如下:</p>
+<figure class="highlight bash"><table><tr><td class="code"><pre><span class="line">(sum by(node)(avg by(node,pod)(kube_pod_info&#123;node=~<span class="string">"hd1g-senserealty-k8s-1"</span>&#125;) * on(pod) group_right(node) kube_pod_status_phase&#123;phase=<span class="string">"Running"</span>&#125;) ) </span><br><span class="line">/ </span><br><span class="line">on(node) label_replace(kubelet_running_pod_count,<span class="string">"node"</span>, <span class="string">"<span class="variable">$1</span>"</span>, <span class="string">"kubernetes_io_hostname"</span>,<span class="string">"(.*)"</span>) *100</span><br></pre></td></tr></table></figure>
+<p>下面进行这个语句的拆解, 主要使用到了3个promql语法,所以分为3部分来看</p>
+<blockquote>
+<ul>
+<li>avg by(node,pod)(kube_pod_info{node=~”hd1g-senserealty-k8s-1”})</li>
+<li>* on(pod) group_right</li>
+<li>Sum by</li>
+</ul>
+</blockquote>
+<h3 id="语句解析"><a href="#语句解析" class="headerlink" title="语句解析"></a><strong>语句解析</strong></h3><h4 id="avg-by"><a href="#avg-by" class="headerlink" title="avg by"></a><strong>avg by</strong></h4><p>avg by 这个语法跟常用的数据库里的语法一样，以node,pod为纬度统计出现的次数</p>
+<p><img src="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20200119154209.png" alt></p>
+<h4 id="on-xx-group-right-group-left"><a href="#on-xx-group-right-group-left" class="headerlink" title="on(xx) group_right|group_left"></a><strong>on(xx) group_right|group_left</strong></h4><p>group_left(node)/group_right(node) 一般使用在<strong>一对多或者多对一</strong>的情况，指的是一侧的结果中的每一个向量元素可以与另一侧的多个元素匹配的情况，哪一边的向量具有更高的基数，说是如果右侧的对应多的一方，则使用group_right, 左边多则对应 group_left,Node对应label, 这个label是两边都必须具有的。</p>
+<p>上面这个例子 <strong>kube_pod_status_phase</strong> 中并没有node这个label，所有无法使用group语句进行match, 因此需要使用label_replace添加一个node这样的label</p>
+<p>on(pod)则表示当表1以node label映射到表2时，从映射结果中再以pod为key label,从下面的映射结果已经把 node label加到结果了.</p>
+<p>(除了on， 还可以使用ignoring(xxx)， 即除了这些lable,用剩下的labal为key)</p>
+<p><img src="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20200119154552.png" alt></p>
+<h4 id="sum-by"><a href="#sum-by" class="headerlink" title="sum by"></a><strong>sum by</strong></h4><p>最后再以node为纬度进行sum</p>
+<p><img src="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20200119154650.png" alt></p>
+<p>最终即能实现想要的效果了, 这里再说下label_replace这个函数，还是挺有用的</p>
+<h4 id="label-replace"><a href="#label-replace" class="headerlink" title="label_replace"></a><strong>label_replace</strong></h4><figure class="highlight bash"><table><tr><td class="code"><pre><span class="line"><span class="comment">#label_replace用于添加/覆盖label</span></span><br><span class="line">label_replace(table, dst_label, replace_string, src_label, regex)</span><br><span class="line"></span><br><span class="line">table表示需要操作的表</span><br><span class="line">dst_label： 添加/被覆盖的label, 如果指定的label不存在，则添加</span><br><span class="line">replace_string:  匹配到的string ,使用<span class="variable">$1</span>,<span class="variable">$2</span>...引用</span><br><span class="line">src_label: regex表达式匹配的源label </span><br><span class="line">regex: 正则表达式，可使用<span class="variable">$1</span>,<span class="variable">$2</span>…引用</span><br></pre></td></tr></table></figure>
+<p>比如，table的原始数据是这样</p>
+<p><img src="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20200119155014.png" alt></p>
+<p>如果我想添加一个上面没有的的叫node的label，这个时候就需要使用label_replace</p>
+<figure class="highlight bash"><table><tr><td class="code"><pre><span class="line">label_replace(kubelet_running_pod_count,<span class="string">"node"</span>, <span class="string">"<span class="variable">$1</span>"</span>, <span class="string">"kubernetes_io_hostname"</span>,<span class="string">"(.*)"</span>)</span><br></pre></td></tr></table></figure>
+<p>添加一个node label</p>
+<p><img src="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20200119155259.png" alt></p>
+<p>覆盖label</p>
+<p><img src="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20200119155433.png" alt></p>
+<p>这里把instance给覆盖了，做打码处理了</p>
+<h3 id="参考文章"><a href="#参考文章" class="headerlink" title="参考文章:"></a><strong>参考文章:</strong></h3><blockquote>
+<ul>
+<li><a href="https://prometheus.io/docs/prometheus/latest/querying/functions/" target="_blank" rel="noopener">Prometheus functions</a></li>
+<li><a href="https://grafana.com/docs/grafana/latest/features/datasources/prometheus/" target="_blank" rel="noopener">Grafana</a></li>
+</ul>
+</blockquote>
+<h3 id="转载请注明出处https-izsk-me"><a href="#转载请注明出处https-izsk-me" class="headerlink" title="转载请注明出处https://izsk.me"></a><strong>转载请注明出处<a href="https://izsk.me" target="_blank" rel="noopener">https://izsk.me</a></strong></h3>]]></content>
+      <categories>
+        <category>CloudNavi</category>
+      </categories>
+      <tags>
+        <tag>CloudNavi</tag>
+      </tags>
+  </entry>
+  <entry>
+    <title>Node-Exporter采集自定义Metrics</title>
+    <url>/2019/08/28/Node-Exporter%E9%87%87%E9%9B%86%E8%87%AA%E5%AE%9A%E4%B9%89Metrics/</url>
+    <content><![CDATA[<p>如果使用Prometheus做监控系统的话, node-exporter一定是不能绕过的采集工具, 开箱即用的实用性让运维同学节省很多时间, 最近也是发现了一个比较有意思的功能, NodeExporter可以采集额外的Metrics到Prometheus中</p>
+<a id="more"></a>
+<p>假如有时我们有自定义的Metrics需要上传到Promethues中，一般情况下, 我们会通过PushGateway来做采集，假如这个时候恰恰没有部署PushGateway, 有没有更快捷的办法, 这个时候NodeExporter就派上用场了.</p>
+<h3 id="启动参数"><a href="#启动参数" class="headerlink" title="启动参数"></a><strong>启动参数</strong></h3><p>查看node-exporter的github描述,node-exporter启动的时候指定–collector.textfile.directory=/opt/exporter/node_exporter/key 即可, 这个参数会解析指定目录下的所有以prom结尾的文件.</p>
+<p>即：</p>
+<p>我们只需要把自定义脚本的输出Metrics数据写入到指定目录下的文件,并以Prom结尾即可, Prometheus在定时采集node exporter获取数据的时候，也会把这份数据一同上传, 非常方便</p>
+<p><strong>需要注意的是，要保证在Prometheus在一个周期内，自定义脚本将最新的数据写入文件中即可, 每次写入都需要覆盖之前的Metrics.如果文件内的Metrics没有更新，则会一直拿到之前的旧数据, 所以最好在执行之前执行旧数据的清理</strong></p>
+<h3 id="自定义脚本"><a href="#自定义脚本" class="headerlink" title="自定义脚本"></a><strong>自定义脚本</strong></h3><figure class="highlight bash"><table><tr><td class="code"><pre><span class="line"><span class="meta">#! /bin/bash</span></span><br><span class="line">prom_file=/opt/exporter/node_exporter/key/key.prom</span><br><span class="line"> </span><br><span class="line">IFS=<span class="string">";"</span></span><br><span class="line"> </span><br><span class="line"><span class="built_in">export</span> TERM=vt100</span><br><span class="line"> </span><br><span class="line">key_value=<span class="string">"</span></span><br><span class="line"><span class="string">Logical_CPU_core_total  `cat /proc/cpuinfo| grep "</span>processor<span class="string">"| wc -l`;</span></span><br><span class="line"><span class="string">logined_users_total     `who | wc -l`;</span></span><br><span class="line"><span class="string">procs_total             `/bin/top -b -n 1|grep Tasks|sed 's/,/\n/g'|grep total|awk '&#123; print <span class="variable">$(NF-1)</span> &#125;'`;</span></span><br><span class="line"><span class="string">procs_zombie            `/bin/top -b -n 1|grep Tasks|sed 's/,/\n/g'|grep zombie|awk '&#123; print <span class="variable">$(NF-1)</span> &#125;'`"</span></span><br><span class="line"> </span><br><span class="line"><span class="keyword">for</span> i <span class="keyword">in</span> <span class="variable">$key_value</span></span><br><span class="line"><span class="keyword">do</span></span><br><span class="line">    IFS=<span class="string">" "</span></span><br><span class="line">    j=(`<span class="built_in">echo</span> <span class="variable">$i</span>`)</span><br><span class="line">    key=<span class="variable">$&#123;j[0]&#125;</span></span><br><span class="line">    value=<span class="variable">$&#123;j[1]&#125;</span></span><br><span class="line">    <span class="built_in">echo</span> <span class="variable">$key</span> <span class="variable">$value</span> &gt;&gt; <span class="string">"<span class="variable">$prom_file</span>"</span>.tmp</span><br><span class="line"><span class="keyword">done</span></span><br><span class="line"> </span><br><span class="line">cat <span class="string">"<span class="variable">$prom_file</span>"</span>.tmp &gt; <span class="variable">$prom_file</span></span><br><span class="line">rm -rf <span class="string">"<span class="variable">$prom_file</span>"</span>.tmp</span><br><span class="line">IFS=<span class="variable">$OLD_IFS</span></span><br></pre></td></tr></table></figure>
+<p>加上可执行权限.</p>
+<h3 id="Crontab"><a href="#Crontab" class="headerlink" title="Crontab "></a><strong>Crontab </strong></h3><p>在系统的crontab上加上定时执行脚本</p>
+<h3 id="参考文章"><a href="#参考文章" class="headerlink" title="参考文章:"></a><strong>参考文章:</strong></h3><blockquote>
+<ul>
+<li><a href="https://github.com/prometheus/node_exporter" target="_blank" rel="noopener">node_exporter</a></li>
+<li><a href="https://www.cnblogs.com/momoyan/p/11520676.html" target="_blank" rel="noopener">node-exporter的安装与配置</a></li>
+</ul>
+</blockquote>
+<h3 id="转载请注明出处https-izsk-me"><a href="#转载请注明出处https-izsk-me" class="headerlink" title="转载请注明出处https://izsk.me"></a><strong>转载请注明出处<a href="https://izsk.me" target="_blank" rel="noopener">https://izsk.me</a></strong></h3>]]></content>
+      <categories>
+        <category>CloudNavi</category>
+      </categories>
+      <tags>
+        <tag>CloudNavi</tag>
+      </tags>
+  </entry>
+  <entry>
     <title>寻找重复数(python)</title>
     <url>/2019/04/21/%E6%9F%A5%E6%89%BE%E9%87%8D%E5%A4%8D%E5%85%83%E7%B4%A0(python)/</url>
     <content><![CDATA[<p>题目是: 给定一个包含 n + 1 个整数的数组 nums，其数字都在 1 到 n 之间（包括 1 和 n），可知至少存在一个重复的整数。假设只有一个重复的整数，找出这个重复的数</p>
@@ -1976,63 +2058,6 @@
       </tags>
   </entry>
   <entry>
-    <title>python中调用sqlplus生成多实例oracle-awr-html报告</title>
-    <url>/2017/08/12/python%E4%B8%AD%E8%B0%83%E7%94%A8sqlplus%E7%94%9F%E6%88%90%E5%A4%9A%E5%AE%9E%E4%BE%8Boracle-awr-html%E6%8A%A5%E5%91%8A/</url>
-    <content><![CDATA[<p>这里不多说,说是稍微改了下官方的脚本,这里使用了subprocess调用sqlplus,关于subprocess,可以参考<a href="https://izsk.me/2017/04/08/python%E4%B8%AD%E8%B0%83%E7%94%A8sqlplus/" target="_blank" rel="noopener">这里</a></p>
-<a id="more"></a>
-<p>其中,包含了两个业务相关的参数,这里就不过多说明…</p>
-<figure class="highlight python"><table><tr><td class="code"><pre><span class="line"><span class="function"><span class="keyword">def</span> <span class="title">gen_sqlfile</span><span class="params">(_file)</span>:</span></span><br><span class="line">    <span class="keyword">with</span> open(_file,<span class="string">"w"</span>) <span class="keyword">as</span> f:</span><br><span class="line">        f.write(</span><br><span class="line"><span class="string">"""set define off</span></span><br><span class="line"><span class="string">set feedback off</span></span><br><span class="line"><span class="string">set termout off</span></span><br><span class="line"><span class="string">set pages 0</span></span><br><span class="line"><span class="string">set lines 120</span></span><br><span class="line"><span class="string">set serveroutput on </span></span><br><span class="line"><span class="string">spool oracle_awr_html.sql</span></span><br><span class="line"><span class="string">declare</span></span><br><span class="line"><span class="string">   v_str varchar2(180);</span></span><br><span class="line"><span class="string">   procedure p (l_str  varchar2)</span></span><br><span class="line"><span class="string">   is</span></span><br><span class="line"><span class="string">   begin</span></span><br><span class="line"><span class="string">     dbms_output.put_line(l_str);</span></span><br><span class="line"><span class="string">   end;</span></span><br><span class="line"><span class="string">begin</span></span><br><span class="line"><span class="string">	p('set pages 0');</span></span><br><span class="line"><span class="string">	p('variable dbid number');</span></span><br><span class="line"><span class="string">	p('variable inst_num number');</span></span><br><span class="line"><span class="string">	p('variable inst_name varchar2(20)');</span></span><br><span class="line"><span class="string">	p('variable bid number');</span></span><br><span class="line"><span class="string">	p('variable eid number');</span></span><br><span class="line"><span class="string">	p('variable rpt_options number');</span></span><br><span class="line"><span class="string">	p('variable ENABLE_ADDM number');</span></span><br><span class="line"><span class="string">	p('variable cur_date varchar2(20)');</span></span><br><span class="line"><span class="string">	p('variable city varchar2(20)');</span></span><br><span class="line"><span class="string">	p('');</span></span><br><span class="line"><span class="string">	p('declare');</span></span><br><span class="line"><span class="string">	p('begin');</span></span><br><span class="line"><span class="string">  	p('select distinct first_value (snap_id) over( ');</span></span><br><span class="line"><span class="string">	p('		order by snap_id desc rows between unbounded preceding and unbounded following) max_snap_id ');</span></span><br><span class="line"><span class="string">	p('into :eid ');</span></span><br><span class="line"><span class="string">  	p('	    from  dba_hist_snapshot;');</span></span><br><span class="line"><span class="string">	p('select dbid into :dbid from dba_hist_database_instance where rownum=1;');</span></span><br><span class="line"><span class="string">p('end;');</span></span><br><span class="line"><span class="string">p('/');</span></span><br><span class="line"><span class="string"></span></span><br><span class="line"><span class="string">p('exec :rpt_options :=0;');</span></span><br><span class="line"><span class="string">p('exec :ENABLE_ADDM :=8;');</span></span><br><span class="line"><span class="string">p('exec :cur_date :=to_char(sysdate,''yyyymmdd'');');</span></span><br><span class="line"><span class="string">p('exec :city :=''&amp;1'';');</span></span><br><span class="line"><span class="string">p('exec :bid :=:eid-to_number(''&amp;2'');');</span></span><br><span class="line"><span class="string">p('column rpt_name new_value rpt_name noprint;');</span></span><br><span class="line"><span class="string"></span></span><br><span class="line"><span class="string">for c1 in  (select instance_number,instance_name from gv$instance order by instance_number) </span></span><br><span class="line"><span class="string">loop   </span></span><br><span class="line"><span class="string">   p('exec :inst_num :='||c1.instance_number||';');</span></span><br><span class="line"><span class="string">   p('exec :inst_name :='''||c1.instance_name||''';');</span></span><br><span class="line"><span class="string">   v_str:= q'[select :cur_date||'_'||:city||'_'||:inst_name||'_'||:inst_num||'_'||:bid||'_'||:eid||'.html' rpt_name from dual;]';</span></span><br><span class="line"><span class="string">   p(v_str);</span></span><br><span class="line"><span class="string">   p('set lines 8000');</span></span><br><span class="line"><span class="string">   p('spool &amp;rpt_name');</span></span><br><span class="line"><span class="string">   p(' select output from table(sys.dbms_workload_repository.awr_report_html( :dbid,');</span></span><br><span class="line"><span class="string">   p('                                                         :inst_num,');</span></span><br><span class="line"><span class="string">   p('                                                         :bid, :eid,');</span></span><br><span class="line"><span class="string">   p('                                                         :rpt_options ));');</span></span><br><span class="line"><span class="string">   p('spool off');</span></span><br><span class="line"><span class="string">   v_str := q'[select :cur_date||'_'||:city||'_'||:inst_name||'_'||:inst_num||'_'||:bid||'_'||:eid||'.html' file_name from dual;]';</span></span><br><span class="line"><span class="string">   p(v_str);</span></span><br><span class="line"><span class="string">   p('set termout off');</span></span><br><span class="line"><span class="string">end loop;</span></span><br><span class="line"><span class="string">p('exit');</span></span><br><span class="line"><span class="string">end;</span></span><br><span class="line"><span class="string">/</span></span><br><span class="line"><span class="string">spool off</span></span><br><span class="line"><span class="string">set define on</span></span><br><span class="line"><span class="string">set feedback off</span></span><br><span class="line"><span class="string">set termout on</span></span><br><span class="line"><span class="string">set termout off</span></span><br><span class="line"><span class="string">@oracle_awr_html.sql &amp;1 &amp;2</span></span><br><span class="line"><span class="string">set termout on</span></span><br><span class="line"><span class="string">set pagesize 24</span></span><br><span class="line"><span class="string">"""</span>)</span><br><span class="line"></span><br><span class="line"><span class="class"><span class="keyword">class</span> <span class="title">callsqluldr</span><span class="params">()</span>:</span></span><br><span class="line">    <span class="function"><span class="keyword">def</span> <span class="title">__init__</span><span class="params">(self,username,password,databaseName,city,beforethis)</span>:</span></span><br><span class="line">        self.username = username</span><br><span class="line">        self.password = password</span><br><span class="line">        self.databaseName = databaseName</span><br><span class="line">        self.city = city</span><br><span class="line">        self.beforethis = beforethis</span><br><span class="line">    <span class="function"><span class="keyword">def</span> <span class="title">run</span><span class="params">(self)</span>:</span></span><br><span class="line">        <span class="keyword">try</span>:</span><br><span class="line">            command = <span class="string">"sqlplus "</span> + self.username + <span class="string">"/"</span> + self.password + <span class="string">"@"</span> + self.databaseName + <span class="string">" @gen_oracle_awr_html.sql "</span> + self.city + <span class="string">" "</span> + self.beforethis</span><br><span class="line">            child = subprocess.Popen(command,shell=<span class="literal">True</span>)</span><br><span class="line">            child.wait()</span><br><span class="line">            <span class="comment">#print("&lt;&lt;%s done.&gt;&gt;" %self.city)</span></span><br><span class="line">        <span class="keyword">except</span> Exception <span class="keyword">as</span> e:</span><br><span class="line">            err_txt = <span class="string">"ERROR: CALL ORACLE SQLPLUS ERROR!"</span></span><br><span class="line">            print(err_txt)</span><br><span class="line">            write_errtxt(err_txt)</span><br><span class="line">            </span><br><span class="line"><span class="function"><span class="keyword">def</span> <span class="title">write_errtxt</span><span class="params">(err_txt)</span>:</span></span><br><span class="line">    <span class="keyword">pass</span></span><br></pre></td></tr></table></figure>
-<h3 id="参考文章"><a href="#参考文章" class="headerlink" title="参考文章:"></a><strong>参考文章:</strong></h3><h3 id="转载请注明出处https-izsk-me"><a href="#转载请注明出处https-izsk-me" class="headerlink" title="转载请注明出处https://izsk.me"></a><strong>转载请注明出处<a href="https://izsk.me" target="_blank" rel="noopener">https://izsk.me</a></strong></h3><hr>
-]]></content>
-      <categories>
-        <category>Python</category>
-      </categories>
-      <tags>
-        <tag>Python</tag>
-        <tag>Oracle</tag>
-      </tags>
-  </entry>
-  <entry>
-    <title>HTTP之长连接及短连接</title>
-    <url>/2017/08/12/HTTP%E4%B9%8B%E9%95%BF%E8%BF%9E%E6%8E%A5%E5%8F%8A%E7%9F%AD%E8%BF%9E%E6%8E%A5/</url>
-    <content><![CDATA[<p>我们都说HTTP协议是无状态的,我们又都说HTTP分长连接及短连接,’无状态’到底是个什么意思？</p>
-<a id="more"></a>
-<h3 id="无状态"><a href="#无状态" class="headerlink" title="无状态"></a><strong>无状态</strong></h3><p>HTTP无状态其实指的是协议对于事务处理没有记忆能力,服务器不知道客户端是什么状态.也就是说,打开一个服务器上的网页和你之前打开这个服务器上的网页之间没有任何联系.HTTP是一个无状态的面向连接的协议,无状态不代表HTTP不能保持TCP连接,更不能代表HTTP使用的是UDP协议(无连接).</p>
-<p>那http又是如何保持长连接的呢?</p>
-<p>在<code>HTTP/1.0</code>中,默认使用的是短连接.也就是说,浏览器和服务器每进行一次HTTP操作,就建立一次连接,但任务结束就中断连接.如果客户端浏览器访问的某个HTML或其他类型的 Web页中包含有其他的Web资源,如JavaScript文件、图像文件、CSS文件等；当浏览器每遇到这样一个Web资源,就会建立一个HTTP会话.<br>但从<code>HTTP/1.1</code>起,默认使用长连接,用以保持连接特性.使用长连接的HTTP协议,会在响应头有加入这行代码:</p>
-<p><code>Connection:keep-alive</code></p>
-<p>　　在使用长连接的情况下,当一个网页打开完成后,客户端和服务器之间用于传输HTTP数据的 TCP连接不会关闭,如果客户端再次访问这个服务器上的网页,会继续使用这一条已经建立的连接.<code>Keep-Alive</code>不会永久保持连接,它有一个保持时间,可以在不同的服务器软件（如Apache）中设定这个时间.实现长连接要客户端和服务端都支持长连接.</p>
-<p>当然,在很多web服务器中可以设置这个keep-Alive的保持时间,比如nginx的配置文件nginx.conf中可直接使用:</p>
-<p><code>keepalive_timeout  60;</code></p>
-<p><strong>HTTP协议的长连接和短连接,实质上是TCP协议的长连接和短连接.</strong></p>
-<p>那长短连接各自对应的场景有哪些呢(各自的优缺点)?</p>
-<h3 id="短连接"><a href="#短连接" class="headerlink" title="短连接"></a><strong>短连接</strong></h3><p>场景: client向server发起连接请求,server接到请求,然后双方建立连接.client向server 发送消息,server回应client,然后一次读写就完成了,这时候双方任何一个都可以发起close操作,不过一般都是client先发起 close操作.为什么呢,一般的server不会回复完client后立即关闭连接的,当然不排除有特殊的情况.从上面的描述看,短连接一般只会在 client/server间传递一次读写操作</p>
-<p><strong>短连接管理起来比较简单,存在的连接都是有用的连接,不需要额外的控制手段,但是频繁的创建大量的连接也很耗资源</strong></p>
-<h3 id="长连接"><a href="#长连接" class="headerlink" title="长连接"></a><strong>长连接</strong></h3><p>流程是:client向server发起连接,server接受client连接,双方建立连接.Client与server完成一次读写之后,它们之间的连接并不会主动关闭,后续的读写操作会继续使用这个连接.</p>
-<p>首先说一下TCP/IP详解上讲到的TCP保活功能,保活功能主要为服务器应用提供,服务器应用希望知道客户主机是否崩溃,从而可以代表客户使用资源.如果客户已经消失,使得服务器上保留一个半开放的连接,而服务器又在等待来自客户端的数据,则服务器将应远等待客户端的数据,保活功能就是试图在服务 器端检测到这种半开放的连接.</p>
-<p>如果一个给定的连接在两小时内没有任何的动作,服务器就向客户发一个探测报文段,客户主机必须处于以下4个状态之一:</p>
-<blockquote>
-<ul>
-<li>客户主机依然正常运行,并从服务器可达.客户的TCP响应正常,而服务器也知道对方是正常的,服务器在两小时后将保活定时器复位.</li>
-<li>客户主机已经崩溃,并且关闭或者正在重新启动.在任何一种情况下,客户的TCP都没有响应.服务端将不能收到对探测的响应,并在75秒后超时.服务器总共发送10个这样的探测 ,每个间隔75秒.如果服务器没有收到一个响应,它就认为客户主机已经关闭并终止连接.</li>
-<li>客户主机崩溃并已经重新启动.服务器将收到一个对其保活探测的响应,这个响应是一个复位,使得服务器终止这个连接.</li>
-</ul>
-</blockquote>
-<p>客户机正常运行,但是服务器不可达,这种情况与2类似,TCP能发现的就是没有收到探查的响应.</p>
-<p><strong>从上可以看出http要保持长连接需要做很多次的向客户端试探是否存活,这对性能是个很大的损耗,但是从另一方面来说长连接减少了很多的创关闭连接带来的开销,节约时间.</strong></p>
-<h3 id="场景"><a href="#场景" class="headerlink" title="场景"></a><strong>场景</strong></h3><p><code>长连接</code>多用于操作频繁,点对点的通讯,而且连接数不能太多情况,.每个TCP连接都需要三步握手,这需要时间,如果每个操作都是先连接,再操作的话那么处理速度会降低很多,所以每个操作完后都不断开,次处理时直接发送数据包就OK了,不用建立TCP连接.例如：数据库的连接用长连接, 如果用短连接频繁的通信会造成socket错误,而且频繁的socket 创建也是对资源的浪费. </p>
-<p>而像WEB网站的http服务一般都用<code>短链接</code>,因为长连接对于服务端来说会耗费一定的资源,而像WEB网站这么频繁的成千上万甚至上亿客户端的连接用短连接会更省一些资源,如果用长连接,而且同时有成千上万的用户,如果每个用户都占用一个连接的话,那可想而知吧.所以并发量大,但每个用户无需频繁操作情况下需用短连好.</p>
-<p><strong>没有哪一个更好,只有哪一个最适合,一切跟着场景走,总有一款适合你!</strong></p>
-<h3 id="转载请注明出处https-izsk-me"><a href="#转载请注明出处https-izsk-me" class="headerlink" title="转载请注明出处https://izsk.me"></a><strong>转载请注明出处<a href="https://izsk.me" target="_blank" rel="noopener">https://izsk.me</a></strong></h3><hr>
-]]></content>
-      <categories>
-        <category>Http-Tcp-Ip</category>
-      </categories>
-      <tags>
-        <tag>Http-Tcp-Ip</tag>
-      </tags>
-  </entry>
-  <entry>
     <title>flask学习二(flask应用)</title>
     <url>/2017/08/12/flask%E5%AD%A6%E4%B9%A0%E4%BA%8C(flask%E5%BA%94%E7%94%A8)/</url>
     <content><![CDATA[<p>距离<a href="https://izsk.me/2017/08/12/falsk%E5%AD%A6%E4%B9%A0(-" target="_blank" rel="noopener">上一篇</a>)有一段时间了,上次扯了点跟flask相关的内容,这次抽空记录下flask的机制.flask之所于上手容易,是因为我们对python语言稍微了解的话,简单几步就可以把一个小应用跑起来,不需要搭建额外的东西,所以对于并发量没有要求的话flask可以轻松应对.</p>
@@ -2098,6 +2123,63 @@
       <tags>
         <tag>Flask</tag>
         <tag>Python</tag>
+      </tags>
+  </entry>
+  <entry>
+    <title>HTTP之长连接及短连接</title>
+    <url>/2017/08/12/HTTP%E4%B9%8B%E9%95%BF%E8%BF%9E%E6%8E%A5%E5%8F%8A%E7%9F%AD%E8%BF%9E%E6%8E%A5/</url>
+    <content><![CDATA[<p>我们都说HTTP协议是无状态的,我们又都说HTTP分长连接及短连接,’无状态’到底是个什么意思？</p>
+<a id="more"></a>
+<h3 id="无状态"><a href="#无状态" class="headerlink" title="无状态"></a><strong>无状态</strong></h3><p>HTTP无状态其实指的是协议对于事务处理没有记忆能力,服务器不知道客户端是什么状态.也就是说,打开一个服务器上的网页和你之前打开这个服务器上的网页之间没有任何联系.HTTP是一个无状态的面向连接的协议,无状态不代表HTTP不能保持TCP连接,更不能代表HTTP使用的是UDP协议(无连接).</p>
+<p>那http又是如何保持长连接的呢?</p>
+<p>在<code>HTTP/1.0</code>中,默认使用的是短连接.也就是说,浏览器和服务器每进行一次HTTP操作,就建立一次连接,但任务结束就中断连接.如果客户端浏览器访问的某个HTML或其他类型的 Web页中包含有其他的Web资源,如JavaScript文件、图像文件、CSS文件等；当浏览器每遇到这样一个Web资源,就会建立一个HTTP会话.<br>但从<code>HTTP/1.1</code>起,默认使用长连接,用以保持连接特性.使用长连接的HTTP协议,会在响应头有加入这行代码:</p>
+<p><code>Connection:keep-alive</code></p>
+<p>　　在使用长连接的情况下,当一个网页打开完成后,客户端和服务器之间用于传输HTTP数据的 TCP连接不会关闭,如果客户端再次访问这个服务器上的网页,会继续使用这一条已经建立的连接.<code>Keep-Alive</code>不会永久保持连接,它有一个保持时间,可以在不同的服务器软件（如Apache）中设定这个时间.实现长连接要客户端和服务端都支持长连接.</p>
+<p>当然,在很多web服务器中可以设置这个keep-Alive的保持时间,比如nginx的配置文件nginx.conf中可直接使用:</p>
+<p><code>keepalive_timeout  60;</code></p>
+<p><strong>HTTP协议的长连接和短连接,实质上是TCP协议的长连接和短连接.</strong></p>
+<p>那长短连接各自对应的场景有哪些呢(各自的优缺点)?</p>
+<h3 id="短连接"><a href="#短连接" class="headerlink" title="短连接"></a><strong>短连接</strong></h3><p>场景: client向server发起连接请求,server接到请求,然后双方建立连接.client向server 发送消息,server回应client,然后一次读写就完成了,这时候双方任何一个都可以发起close操作,不过一般都是client先发起 close操作.为什么呢,一般的server不会回复完client后立即关闭连接的,当然不排除有特殊的情况.从上面的描述看,短连接一般只会在 client/server间传递一次读写操作</p>
+<p><strong>短连接管理起来比较简单,存在的连接都是有用的连接,不需要额外的控制手段,但是频繁的创建大量的连接也很耗资源</strong></p>
+<h3 id="长连接"><a href="#长连接" class="headerlink" title="长连接"></a><strong>长连接</strong></h3><p>流程是:client向server发起连接,server接受client连接,双方建立连接.Client与server完成一次读写之后,它们之间的连接并不会主动关闭,后续的读写操作会继续使用这个连接.</p>
+<p>首先说一下TCP/IP详解上讲到的TCP保活功能,保活功能主要为服务器应用提供,服务器应用希望知道客户主机是否崩溃,从而可以代表客户使用资源.如果客户已经消失,使得服务器上保留一个半开放的连接,而服务器又在等待来自客户端的数据,则服务器将应远等待客户端的数据,保活功能就是试图在服务 器端检测到这种半开放的连接.</p>
+<p>如果一个给定的连接在两小时内没有任何的动作,服务器就向客户发一个探测报文段,客户主机必须处于以下4个状态之一:</p>
+<blockquote>
+<ul>
+<li>客户主机依然正常运行,并从服务器可达.客户的TCP响应正常,而服务器也知道对方是正常的,服务器在两小时后将保活定时器复位.</li>
+<li>客户主机已经崩溃,并且关闭或者正在重新启动.在任何一种情况下,客户的TCP都没有响应.服务端将不能收到对探测的响应,并在75秒后超时.服务器总共发送10个这样的探测 ,每个间隔75秒.如果服务器没有收到一个响应,它就认为客户主机已经关闭并终止连接.</li>
+<li>客户主机崩溃并已经重新启动.服务器将收到一个对其保活探测的响应,这个响应是一个复位,使得服务器终止这个连接.</li>
+</ul>
+</blockquote>
+<p>客户机正常运行,但是服务器不可达,这种情况与2类似,TCP能发现的就是没有收到探查的响应.</p>
+<p><strong>从上可以看出http要保持长连接需要做很多次的向客户端试探是否存活,这对性能是个很大的损耗,但是从另一方面来说长连接减少了很多的创关闭连接带来的开销,节约时间.</strong></p>
+<h3 id="场景"><a href="#场景" class="headerlink" title="场景"></a><strong>场景</strong></h3><p><code>长连接</code>多用于操作频繁,点对点的通讯,而且连接数不能太多情况,.每个TCP连接都需要三步握手,这需要时间,如果每个操作都是先连接,再操作的话那么处理速度会降低很多,所以每个操作完后都不断开,次处理时直接发送数据包就OK了,不用建立TCP连接.例如：数据库的连接用长连接, 如果用短连接频繁的通信会造成socket错误,而且频繁的socket 创建也是对资源的浪费. </p>
+<p>而像WEB网站的http服务一般都用<code>短链接</code>,因为长连接对于服务端来说会耗费一定的资源,而像WEB网站这么频繁的成千上万甚至上亿客户端的连接用短连接会更省一些资源,如果用长连接,而且同时有成千上万的用户,如果每个用户都占用一个连接的话,那可想而知吧.所以并发量大,但每个用户无需频繁操作情况下需用短连好.</p>
+<p><strong>没有哪一个更好,只有哪一个最适合,一切跟着场景走,总有一款适合你!</strong></p>
+<h3 id="转载请注明出处https-izsk-me"><a href="#转载请注明出处https-izsk-me" class="headerlink" title="转载请注明出处https://izsk.me"></a><strong>转载请注明出处<a href="https://izsk.me" target="_blank" rel="noopener">https://izsk.me</a></strong></h3><hr>
+]]></content>
+      <categories>
+        <category>Http-Tcp-Ip</category>
+      </categories>
+      <tags>
+        <tag>Http-Tcp-Ip</tag>
+      </tags>
+  </entry>
+  <entry>
+    <title>python中调用sqlplus生成多实例oracle-awr-html报告</title>
+    <url>/2017/08/12/python%E4%B8%AD%E8%B0%83%E7%94%A8sqlplus%E7%94%9F%E6%88%90%E5%A4%9A%E5%AE%9E%E4%BE%8Boracle-awr-html%E6%8A%A5%E5%91%8A/</url>
+    <content><![CDATA[<p>这里不多说,说是稍微改了下官方的脚本,这里使用了subprocess调用sqlplus,关于subprocess,可以参考<a href="https://izsk.me/2017/04/08/python%E4%B8%AD%E8%B0%83%E7%94%A8sqlplus/" target="_blank" rel="noopener">这里</a></p>
+<a id="more"></a>
+<p>其中,包含了两个业务相关的参数,这里就不过多说明…</p>
+<figure class="highlight python"><table><tr><td class="code"><pre><span class="line"><span class="function"><span class="keyword">def</span> <span class="title">gen_sqlfile</span><span class="params">(_file)</span>:</span></span><br><span class="line">    <span class="keyword">with</span> open(_file,<span class="string">"w"</span>) <span class="keyword">as</span> f:</span><br><span class="line">        f.write(</span><br><span class="line"><span class="string">"""set define off</span></span><br><span class="line"><span class="string">set feedback off</span></span><br><span class="line"><span class="string">set termout off</span></span><br><span class="line"><span class="string">set pages 0</span></span><br><span class="line"><span class="string">set lines 120</span></span><br><span class="line"><span class="string">set serveroutput on </span></span><br><span class="line"><span class="string">spool oracle_awr_html.sql</span></span><br><span class="line"><span class="string">declare</span></span><br><span class="line"><span class="string">   v_str varchar2(180);</span></span><br><span class="line"><span class="string">   procedure p (l_str  varchar2)</span></span><br><span class="line"><span class="string">   is</span></span><br><span class="line"><span class="string">   begin</span></span><br><span class="line"><span class="string">     dbms_output.put_line(l_str);</span></span><br><span class="line"><span class="string">   end;</span></span><br><span class="line"><span class="string">begin</span></span><br><span class="line"><span class="string">	p('set pages 0');</span></span><br><span class="line"><span class="string">	p('variable dbid number');</span></span><br><span class="line"><span class="string">	p('variable inst_num number');</span></span><br><span class="line"><span class="string">	p('variable inst_name varchar2(20)');</span></span><br><span class="line"><span class="string">	p('variable bid number');</span></span><br><span class="line"><span class="string">	p('variable eid number');</span></span><br><span class="line"><span class="string">	p('variable rpt_options number');</span></span><br><span class="line"><span class="string">	p('variable ENABLE_ADDM number');</span></span><br><span class="line"><span class="string">	p('variable cur_date varchar2(20)');</span></span><br><span class="line"><span class="string">	p('variable city varchar2(20)');</span></span><br><span class="line"><span class="string">	p('');</span></span><br><span class="line"><span class="string">	p('declare');</span></span><br><span class="line"><span class="string">	p('begin');</span></span><br><span class="line"><span class="string">  	p('select distinct first_value (snap_id) over( ');</span></span><br><span class="line"><span class="string">	p('		order by snap_id desc rows between unbounded preceding and unbounded following) max_snap_id ');</span></span><br><span class="line"><span class="string">	p('into :eid ');</span></span><br><span class="line"><span class="string">  	p('	    from  dba_hist_snapshot;');</span></span><br><span class="line"><span class="string">	p('select dbid into :dbid from dba_hist_database_instance where rownum=1;');</span></span><br><span class="line"><span class="string">p('end;');</span></span><br><span class="line"><span class="string">p('/');</span></span><br><span class="line"><span class="string"></span></span><br><span class="line"><span class="string">p('exec :rpt_options :=0;');</span></span><br><span class="line"><span class="string">p('exec :ENABLE_ADDM :=8;');</span></span><br><span class="line"><span class="string">p('exec :cur_date :=to_char(sysdate,''yyyymmdd'');');</span></span><br><span class="line"><span class="string">p('exec :city :=''&amp;1'';');</span></span><br><span class="line"><span class="string">p('exec :bid :=:eid-to_number(''&amp;2'');');</span></span><br><span class="line"><span class="string">p('column rpt_name new_value rpt_name noprint;');</span></span><br><span class="line"><span class="string"></span></span><br><span class="line"><span class="string">for c1 in  (select instance_number,instance_name from gv$instance order by instance_number) </span></span><br><span class="line"><span class="string">loop   </span></span><br><span class="line"><span class="string">   p('exec :inst_num :='||c1.instance_number||';');</span></span><br><span class="line"><span class="string">   p('exec :inst_name :='''||c1.instance_name||''';');</span></span><br><span class="line"><span class="string">   v_str:= q'[select :cur_date||'_'||:city||'_'||:inst_name||'_'||:inst_num||'_'||:bid||'_'||:eid||'.html' rpt_name from dual;]';</span></span><br><span class="line"><span class="string">   p(v_str);</span></span><br><span class="line"><span class="string">   p('set lines 8000');</span></span><br><span class="line"><span class="string">   p('spool &amp;rpt_name');</span></span><br><span class="line"><span class="string">   p(' select output from table(sys.dbms_workload_repository.awr_report_html( :dbid,');</span></span><br><span class="line"><span class="string">   p('                                                         :inst_num,');</span></span><br><span class="line"><span class="string">   p('                                                         :bid, :eid,');</span></span><br><span class="line"><span class="string">   p('                                                         :rpt_options ));');</span></span><br><span class="line"><span class="string">   p('spool off');</span></span><br><span class="line"><span class="string">   v_str := q'[select :cur_date||'_'||:city||'_'||:inst_name||'_'||:inst_num||'_'||:bid||'_'||:eid||'.html' file_name from dual;]';</span></span><br><span class="line"><span class="string">   p(v_str);</span></span><br><span class="line"><span class="string">   p('set termout off');</span></span><br><span class="line"><span class="string">end loop;</span></span><br><span class="line"><span class="string">p('exit');</span></span><br><span class="line"><span class="string">end;</span></span><br><span class="line"><span class="string">/</span></span><br><span class="line"><span class="string">spool off</span></span><br><span class="line"><span class="string">set define on</span></span><br><span class="line"><span class="string">set feedback off</span></span><br><span class="line"><span class="string">set termout on</span></span><br><span class="line"><span class="string">set termout off</span></span><br><span class="line"><span class="string">@oracle_awr_html.sql &amp;1 &amp;2</span></span><br><span class="line"><span class="string">set termout on</span></span><br><span class="line"><span class="string">set pagesize 24</span></span><br><span class="line"><span class="string">"""</span>)</span><br><span class="line"></span><br><span class="line"><span class="class"><span class="keyword">class</span> <span class="title">callsqluldr</span><span class="params">()</span>:</span></span><br><span class="line">    <span class="function"><span class="keyword">def</span> <span class="title">__init__</span><span class="params">(self,username,password,databaseName,city,beforethis)</span>:</span></span><br><span class="line">        self.username = username</span><br><span class="line">        self.password = password</span><br><span class="line">        self.databaseName = databaseName</span><br><span class="line">        self.city = city</span><br><span class="line">        self.beforethis = beforethis</span><br><span class="line">    <span class="function"><span class="keyword">def</span> <span class="title">run</span><span class="params">(self)</span>:</span></span><br><span class="line">        <span class="keyword">try</span>:</span><br><span class="line">            command = <span class="string">"sqlplus "</span> + self.username + <span class="string">"/"</span> + self.password + <span class="string">"@"</span> + self.databaseName + <span class="string">" @gen_oracle_awr_html.sql "</span> + self.city + <span class="string">" "</span> + self.beforethis</span><br><span class="line">            child = subprocess.Popen(command,shell=<span class="literal">True</span>)</span><br><span class="line">            child.wait()</span><br><span class="line">            <span class="comment">#print("&lt;&lt;%s done.&gt;&gt;" %self.city)</span></span><br><span class="line">        <span class="keyword">except</span> Exception <span class="keyword">as</span> e:</span><br><span class="line">            err_txt = <span class="string">"ERROR: CALL ORACLE SQLPLUS ERROR!"</span></span><br><span class="line">            print(err_txt)</span><br><span class="line">            write_errtxt(err_txt)</span><br><span class="line">            </span><br><span class="line"><span class="function"><span class="keyword">def</span> <span class="title">write_errtxt</span><span class="params">(err_txt)</span>:</span></span><br><span class="line">    <span class="keyword">pass</span></span><br></pre></td></tr></table></figure>
+<h3 id="参考文章"><a href="#参考文章" class="headerlink" title="参考文章:"></a><strong>参考文章:</strong></h3><h3 id="转载请注明出处https-izsk-me"><a href="#转载请注明出处https-izsk-me" class="headerlink" title="转载请注明出处https://izsk.me"></a><strong>转载请注明出处<a href="https://izsk.me" target="_blank" rel="noopener">https://izsk.me</a></strong></h3><hr>
+]]></content>
+      <categories>
+        <category>Python</category>
+      </categories>
+      <tags>
+        <tag>Python</tag>
+        <tag>Oracle</tag>
       </tags>
   </entry>
   <entry>
