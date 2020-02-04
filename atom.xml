@@ -6,7 +6,7 @@
   <link href="/atom.xml" rel="self"/>
   
   <link href="https://zhoushuke.github.io/"/>
-  <updated>2020-01-19T07:09:31.605Z</updated>
+  <updated>2020-02-04T06:58:53.587Z</updated>
   <id>https://zhoushuke.github.io/</id>
   
   <author>
@@ -15,6 +15,29 @@
   </author>
   
   <generator uri="https://hexo.io/">Hexo</generator>
+  
+  <entry>
+    <title>Kubernetes学习(volume挂载情况汇总)</title>
+    <link href="https://zhoushuke.github.io/2020/02/04/Kubernetes-Volumes-Mount/"/>
+    <id>https://zhoushuke.github.io/2020/02/04/Kubernetes-Volumes-Mount/</id>
+    <published>2020-02-04T02:30:53.000Z</published>
+    <updated>2020-02-04T06:58:53.587Z</updated>
+    
+    <content type="html"><![CDATA[<p>在kubernetes中, 如果某个pod需要使用到volume, 且要将该volume挂载到宿主机上, 则需要注意存在被覆盖的情况，在这做一个汇总.</p><a id="more"></a><p>当挂载一个文件或者目录，宿主机或者容器存在与否, 所有情况如下:</p><table><thead><tr><th><strong>宿主机</strong></th><th><strong>容器</strong></th><th><strong>运行结果</strong></th></tr></thead><tbody><tr><td>文件存在</td><td>文件不存在</td><td>挂载成功，容器中新建文件</td></tr><tr><td>目录存在</td><td>目录不存在</td><td>挂载成功，容器中新建目录</td></tr><tr><td>文件不存在</td><td>文件存在</td><td>挂载成功，宿主机新建该文件，容器中的文件被覆盖为空</td></tr><tr><td>文件存在</td><td>文件存在</td><td>挂载成功，容器内的文件内容被覆盖</td></tr><tr><td>目录存在</td><td>目录存在</td><td>挂载成功，容器内目录内容被覆盖</td></tr><tr><td>——</td><td>——</td><td>——</td></tr><tr><td>文件存在</td><td>目录存在</td><td>容器启动失败</td></tr><tr><td>目录存在</td><td>文件存在</td><td>容器启动失败</td></tr><tr><td>——</td><td>——</td><td>——</td></tr><tr><td>目录不存在</td><td>目录不存在</td><td>挂载成功，docker会自动在宿主机和容器内新建此目录</td></tr><tr><td>目录不存在</td><td>文件存在</td><td>容器启动失败</td></tr><tr><td>目录不存在</td><td>目录存在</td><td>挂载成功，容器内目录内容被覆盖（空）</td></tr></tbody></table><p>除了使用volume之外，还经常使用到cofigmap对象，需要特别注意的是，如果使用configmap提示以下错误，</p><p>说明这次的挂载将一个路径挂载到了一个文件中, 这里需要使用subpath.</p><p><img src="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/2060F5C5-4E0F-4EC6-A4CD-1CF7AC3CCBAA.png" alt></p><h3 id="参考文章"><a href="#参考文章" class="headerlink" title="参考文章:"></a><strong>参考文章:</strong></h3><blockquote><ul><li><a href="https://kubernetes.io" target="_blank" rel="noopener">Kubernetes.io</a></li></ul></blockquote><h3 id="转载请注明出处https-izsk-me"><a href="#转载请注明出处https-izsk-me" class="headerlink" title="转载请注明出处https://izsk.me"></a><strong>转载请注明出处<a href="https://izsk.me" target="_blank" rel="noopener">https://izsk.me</a></strong></h3>]]></content>
+    
+    <summary type="html">
+    
+      &lt;p&gt;在kubernetes中, 如果某个pod需要使用到volume, 且要将该volume挂载到宿主机上, 则需要注意存在被覆盖的情况，在这做一个汇总.&lt;/p&gt;
+    
+    </summary>
+    
+    
+      <category term="Kubernetes" scheme="https://zhoushuke.github.io/categories/Kubernetes/"/>
+    
+    
+      <category term="Kubernetes" scheme="https://zhoushuke.github.io/tags/Kubernetes/"/>
+    
+  </entry>
   
   <entry>
     <title>Prometheus编写业务Exporter</title>
@@ -60,6 +83,29 @@
     
     
       <category term="Kubernetes" scheme="https://zhoushuke.github.io/tags/Kubernetes/"/>
+    
+  </entry>
+  
+  <entry>
+    <title>Nginx Ingress Authentication</title>
+    <link href="https://zhoushuke.github.io/2020/01/10/Nginx-Ingress-Authentication/"/>
+    <id>https://zhoushuke.github.io/2020/01/10/Nginx-Ingress-Authentication/</id>
+    <published>2020-01-10T13:10:53.000Z</published>
+    <updated>2020-02-04T06:58:53.607Z</updated>
+    
+    <content type="html"><![CDATA[<p>Kubernetes中经常使用ingress做为从外界访问kubernetes集群内服务的入口, 而nginx ingress则做为最常用的方式, 有时候会遇到暴露出来的页面是需要受限访问的, 在nginx ingress中同样提供了nginx原生的认证方式，项目中用到了<code>白名单</code>跟<code>用户密码认证</code>,一定程度上加强了安全性.</p><a id="more"></a><h3 id="Nginx-Ingress"><a href="#Nginx-Ingress" class="headerlink" title="Nginx Ingress"></a><strong>Nginx Ingress</strong></h3><p>定义一个最常用的ingress</p><figure class="highlight yaml"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br></pre></td><td class="code"><pre><span class="line"><span class="attr">apiVersion:</span> <span class="string">extensions/v1beta1</span></span><br><span class="line"><span class="attr">kind:</span> <span class="string">Ingress</span></span><br><span class="line"><span class="attr">metadata:</span></span><br><span class="line">  <span class="attr">annotations:</span></span><br><span class="line">    <span class="attr">nginx.ingress.kubernetes.io/rewrite-target:</span> <span class="string">/</span></span><br><span class="line">    <span class="attr">nginx.ingress.kubernetes.io/ssl-redirect:</span> <span class="string">"false"</span></span><br><span class="line">  <span class="attr">name:</span> <span class="string">ingress-withno-auth</span></span><br><span class="line"><span class="attr">spec:</span></span><br><span class="line">  <span class="attr">rules:</span></span><br><span class="line">  <span class="bullet">-</span> <span class="attr">host:</span> <span class="string">foo.bar.com</span></span><br><span class="line">    <span class="attr">http:</span></span><br><span class="line">      <span class="attr">paths:</span></span><br><span class="line">      <span class="bullet">-</span> <span class="attr">path:</span> <span class="string">/</span></span><br><span class="line">        <span class="attr">backend:</span></span><br><span class="line">          <span class="attr">serviceName:</span> <span class="string">http-svc</span></span><br><span class="line">          <span class="attr">servicePort:</span> <span class="number">80</span></span><br></pre></td></tr></table></figure><p>上述是个最简单的ingress, 当访问foo.bar.com时就会转到http-svc所指向的服务</p><p><strong>Nginx ingress中支持使用annotations来使用各种功能</strong>,可参考<a href="https://github.com/kubernetes/ingress-nginx/blob/master/docs/user-guide/nginx-configuration/annotations.md" target="_blank" rel="noopener">这里</a></p><p>如果我需要限定IP段才能访问这个网页, 那就需要使用到<code>whitelist-source-range</code></p><h3 id="whitelist-source-range"><a href="#whitelist-source-range" class="headerlink" title="whitelist-source-range"></a><strong>whitelist-source-range</strong></h3><p>在metadata.annotations中使用whitelist-source-range来对访问的ip做限定，只有指定的ip才能够访问，多个ip之间用逗号分隔</p><figure class="highlight yaml"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br></pre></td><td class="code"><pre><span class="line"><span class="attr">apiVersion:</span> <span class="string">extensions/v1beta1</span></span><br><span class="line"><span class="attr">kind:</span> <span class="string">Ingress</span></span><br><span class="line"><span class="attr">metadata:</span></span><br><span class="line">  <span class="attr">annotations:</span></span><br><span class="line">    <span class="attr">nginx.ingress.kubernetes.io/whitelist-source-range:</span> <span class="number">125.200</span><span class="number">.2</span><span class="number">.2</span><span class="string">,183.60.236.90</span></span><br><span class="line">    <span class="attr">nginx.ingress.kubernetes.io/rewrite-target:</span> <span class="string">/</span></span><br><span class="line">    <span class="attr">nginx.ingress.kubernetes.io/ssl-redirect:</span> <span class="string">"false"</span></span><br><span class="line">  <span class="attr">name:</span> <span class="string">ingress-with-whitelist</span></span><br><span class="line"><span class="attr">spec:</span></span><br><span class="line">  <span class="attr">rules:</span></span><br><span class="line">  <span class="bullet">-</span> <span class="attr">host:</span> <span class="string">foo.bar.com</span></span><br><span class="line">    <span class="attr">http:</span></span><br><span class="line">      <span class="attr">paths:</span></span><br><span class="line">      <span class="bullet">-</span> <span class="attr">path:</span> <span class="string">/</span></span><br><span class="line">        <span class="attr">backend:</span></span><br><span class="line">          <span class="attr">serviceName:</span> <span class="string">http-svc</span></span><br><span class="line">          <span class="attr">servicePort:</span> <span class="number">80</span></span><br></pre></td></tr></table></figure><p>这样，<strong>不在指定ip列表中的访问会提示403, access forbiden</strong></p><p>如果需要用户名密码访问呢</p><h3 id="Basic-Authentication"><a href="#Basic-Authentication" class="headerlink" title="Basic Authentication"></a><strong>Basic Authentication</strong></h3><p>可使用baisc authentication来进行难，这也是nginx本身提供的一种难方式</p><figure class="highlight yaml"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br></pre></td><td class="code"><pre><span class="line"><span class="attr">apiVersion:</span> <span class="string">extensions/v1beta1</span></span><br><span class="line"><span class="attr">kind:</span> <span class="string">Ingress</span></span><br><span class="line"><span class="attr">metadata:</span></span><br><span class="line">  <span class="attr">annotations:</span></span><br><span class="line">    <span class="comment"># type of authentication</span></span><br><span class="line">    <span class="attr">nginx.ingress.kubernetes.io/auth-type:</span> <span class="string">basic</span></span><br><span class="line">    <span class="comment"># name of the secret that contains the user/password definitions</span></span><br><span class="line">    <span class="attr">nginx.ingress.kubernetes.io/auth-secret:</span> <span class="string">basic-auth</span></span><br><span class="line">    <span class="comment"># message to display with an appropriate context why the authentication is required</span></span><br><span class="line">    <span class="attr">nginx.ingress.kubernetes.io/auth-realm:</span> <span class="string">'Authentication Required - foo'</span></span><br><span class="line">    <span class="attr">nginx.ingress.kubernetes.io/rewrite-target:</span> <span class="string">/</span></span><br><span class="line">    <span class="attr">nginx.ingress.kubernetes.io/ssl-redirect:</span> <span class="string">"false"</span></span><br><span class="line">  <span class="attr">name:</span> <span class="string">ingress-with-whitelist</span></span><br><span class="line"><span class="attr">spec:</span></span><br><span class="line">  <span class="attr">rules:</span></span><br><span class="line">  <span class="bullet">-</span> <span class="attr">host:</span> <span class="string">foo.bar.com</span></span><br><span class="line">    <span class="attr">http:</span></span><br><span class="line">      <span class="attr">paths:</span></span><br><span class="line">      <span class="bullet">-</span> <span class="attr">path:</span> <span class="string">/</span></span><br><span class="line">        <span class="attr">backend:</span></span><br><span class="line">          <span class="attr">serviceName:</span> <span class="string">http-svc</span></span><br><span class="line">          <span class="attr">servicePort:</span> <span class="number">80</span></span><br></pre></td></tr></table></figure><p>其中<code>basic-auth</code>是以<code>secret</code>的形式存在</p><p>先安装httpd工具</p><p><code>yum install -y httpd</code></p><p>使用htpasswd生成密码</p><p><code>htpasswd -c pass.wd foo</code></p><p>根据提示输入用户foo的密码</p><p>生成的密码文件会存在于pass.wd文件中，使用该文件生成secret</p><p><code>kubectl create secret generic basic-auth --from-file=pass.wd</code></p><p>这样, 在访问时就会弹出需要输入用户密码的界面了, <strong>如果密码错误，则会提示401 Unauthorized</strong></p><h3 id="参考文章"><a href="#参考文章" class="headerlink" title="参考文章:"></a><strong>参考文章:</strong></h3><blockquote><ul><li><a href="https://kubernetes.github.io/ingress-nginx/examples/auth/basic/" target="_blank" rel="noopener">https://kubernetes.github.io/ingress-nginx/examples/auth/basic/</a></li><li><a href="https://github.com/kubernetes/ingress-nginx/blob/master/docs/user-guide/nginx-configuration/annotations.md" target="_blank" rel="noopener">https://github.com/kubernetes/ingress-nginx/blob/master/docs/user-guide/nginx-configuration/annotations.md</a></li></ul></blockquote><h3 id="转载请注明出处https-izsk-me"><a href="#转载请注明出处https-izsk-me" class="headerlink" title="转载请注明出处https://izsk.me"></a><strong>转载请注明出处<a href="https://izsk.me" target="_blank" rel="noopener">https://izsk.me</a></strong></h3>]]></content>
+    
+    <summary type="html">
+    
+      &lt;p&gt;Kubernetes中经常使用ingress做为从外界访问kubernetes集群内服务的入口, 而nginx ingress则做为最常用的方式, 有时候会遇到暴露出来的页面是需要受限访问的, 在nginx ingress中同样提供了nginx原生的认证方式，项目中用到了&lt;code&gt;白名单&lt;/code&gt;跟&lt;code&gt;用户密码认证&lt;/code&gt;,一定程度上加强了安全性.&lt;/p&gt;
+    
+    </summary>
+    
+    
+      <category term="CloudNavi" scheme="https://zhoushuke.github.io/categories/CloudNavi/"/>
+    
+    
+      <category term="CloudNavi" scheme="https://zhoushuke.github.io/tags/CloudNavi/"/>
     
   </entry>
   
@@ -176,6 +222,27 @@
     
     
       <category term="CloudNavi" scheme="https://zhoushuke.github.io/tags/CloudNavi/"/>
+    
+  </entry>
+  
+  <entry>
+    <title>记一次排查ES FGC导致的集群宕机异常</title>
+    <link href="https://zhoushuke.github.io/2019/10/06/ES-FGC-Fix/"/>
+    <id>https://zhoushuke.github.io/2019/10/06/ES-FGC-Fix/</id>
+    <published>2019-10-06T12:10:53.000Z</published>
+    <updated>2020-02-04T06:58:53.571Z</updated>
+    
+    <content type="html"><![CDATA[<p>有一个私有云环境的运维同事反应项目中的ES集群无法查询, 由于是私有云环境, 没有直接运维权限, 所以没有接收到一线报警, 远程登录上去后发现ES集群已经宕机了, 这次的排查过程也发现了几个比较容易忽视的细节, 在此记录一下,比较有意思.</p><a id="more"></a><h3 id="集群状态"><a href="#集群状态" class="headerlink" title="集群状态"></a>集群状态</h3><p>ES集群为3节点.</p><p>首先肯定是查看集群状态</p><figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">curl <span class="string">'http://localhost:9200/_cluster/health?pretty'</span> -u xxx:yyy</span><br><span class="line"><span class="comment">#发现状态为Red</span></span><br></pre></td></tr></table></figure><p>查看节点状态</p><figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">curl <span class="string">'http://localhost:9200/_cat/node?v'</span> -u xxx:yyy</span><br><span class="line"><span class="comment">#节点数正常</span></span><br></pre></td></tr></table></figure><p>查看各节点使用的磁盘情况</p><figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">curl -XGET <span class="string">'localhost:9200/_cat/allocation?v&amp;pretty'</span> -u xxx:yyy</span><br><span class="line"><span class="comment">#未发现异常</span></span><br></pre></td></tr></table></figure><h3 id="集群日志"><a href="#集群日志" class="headerlink" title="集群日志"></a>集群日志</h3><p>登录一个ES节点查看日志，发现以下报错，查看其它2个节点，情况相同</p><p><img src="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20200204134510.png" alt></p><p>从日志来看, 可以发现几个问题:</p><blockquote><ul><li>Full GC很频繁, 而且时间也非常的长 </li><li>每次GC完之后所能释放的内存非常有限</li></ul></blockquote><p>到这，其它原因已经很明朗, <strong>内存不够导致的full gc 频繁，但是又不能释放太多的空间，又导致full gc的恶意循环</strong></p><p>如果大家对gc的日志不很了解的话, 这里解释下上面日志的各个字段含义, 假如有以下一条gc日志</p><figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">[2018-06-30T17:57:29,020][INFO ][o.e.m.j.JvmGcMonitorService] [qoo--ES] [gc][old][228385][160772] duration [5s], collections [1]/[5.1s], total [5s]/[4.4d], memory [945.4mb]-&gt;[958.5mb]/[1007.3mb], all_pools &#123;[young] [87.8mb]-&gt;[100.9mb]/[133.1mb]&#125;&#123;[survivor] [0b]-&gt;[0b]/[16.6mb]&#125;&#123;[old] [857.6mb]-&gt;[857.6mb]/[857.6mb]&#125;</span><br></pre></td></tr></table></figure><ul><li><strong>gc old</strong> 本次是 old GC 这是第228385次 GC 检查][从 JVM 启动至今发生的第 160772次 G]</li><li><strong>duration</strong> [本次检查到的 GC 总耗时 <strong>5</strong> 秒，可能是多次的加和</li><li><strong>collections</strong> [从上次检查至今总共发生<strong>1</strong>次GC]/[从上次检查至今已过去 <strong>5.1</strong> 秒],</li><li><strong>total</strong> [本次检查到的 GC 总耗时为 <strong>5</strong> 秒]/[从 JVM 启动至今发生的 GC 总耗时为 <strong>4.4</strong> 天]，</li><li><strong>memory</strong> [ GC 前 Heap memory 空间]-&gt;[GC 后 Heap memory 空间]/[Heap memory 总空间],</li><li><strong>all_pools</strong>(分代部分的详情) {young 区][GC 前 Memory ]-&gt;[GC后 Memory]/[young区 Memory 总大小] }</li><li><strong>survivor</strong> [GC 前 Memory ]-&gt;[GC后 Memory]/[Memory 总大小] }{old 区[GC 前 Memory ]-&gt;[GC后 Memory]/[old区 Memory 总大小] }</li></ul><p>那为何会内存不足呢, 想起前几天服务拓展，添加收集了几个服务的日志, 日志量不算小, 而且这3个ES节点所在的机器内存只分配了8个G, 显然, 加完这几个日志之后内存不够用了.</p><h3 id="Index-Mapping"><a href="#Index-Mapping" class="headerlink" title="Index Mapping"></a>Index Mapping</h3><p>而且，从日志中， 还发现几处很诡异的日志</p><p><img src="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20200204141415.png" alt></p><p>红框中的错误: <strong>object mapping for [msg] tried to pasrse field [msg] as object, but found a concrete</strong></p><p>翻译过来就是说, 日志中的msg这个字段的类型匹配不上, ES尽力把它解析为object类型，但是它却是个确切的值.</p><p>就好比你在python中定义了一个字典, 但是你给它赋值一个整形, 这确定要报错.</p><p>但是这个mapping是从何而来的呢.</p><p>经过网上搜索一翻, 终于明白:</p><p>ES中为了加强性能，对于索引中的<strong>第一条数据, ES会默认(可设置)按照这条数据建立index mapping, 相当于是一个索引模板, 好比是mysql中表的定义一个概念, 后续这个索引中的所有日志都按照该模板进行解析</strong></p><p>后来经过查看源码, 我们发现，出现上图中的问题是因为代码中的日志打印不规范, 有一个地方如果抛出异常时，打印的是一个单一字符串, 而正常情况下打印的是一个json, 所以当第一条正常的日志传递给ES时，ES建立的索引 模板记录这个字段为object类型(可以类比为python中的字典, 本身是可以新增元素的), 当应用抛出异常时，日志中又传递了一个单一字符串, 但是索引模板已经记录为object类型，所以无法匹配, 这就是问题所在</p><h3 id="Fix-Bug"><a href="#Fix-Bug" class="headerlink" title="Fix Bug"></a>Fix Bug</h3><p>从3个方面解决上面的问题</p><p>首先是修复代码中日志不规范问题, 这个充暴露了code view不严谨.</p><p>第2个是加大ES的内存,毕竟日志量确实是上来了, 从8G添加到12G</p><p>第3个是优化ES的gc问题, ES中有个逻辑是：<strong>默认情况下，主节点每30秒会去检查其他节点的状态，如果任何节点的垃圾回收时间超过30秒（Garbage collection duration）且在重复次数内都超时，则会导致主节点任务该节点脱离集群, 节点脱离集群后会引起分片的rebalance</strong></p><p>这个机制让ES节点频繁的脱离集群，而又引起整个集群的rebalance，ES本身的内存就不够，rebalance更是雪上加霜, 如此往复就导致整个ES集群宕机.</p><p>可修改主节点的检查时间及重复次数,让其它节点有充分的时间进行full gc.</p><p>在ES的配置文件中添加以下配置:</p><figure class="highlight yml"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line"><span class="attr">discovery.zen.fd.ping_timeout:</span> <span class="string">300s</span></span><br><span class="line"><span class="attr">discovery.zen.fd.ping_retriES:</span> <span class="number">10</span></span><br></pre></td></tr></table></figure><p>这样, 达到这两个条件时才能触发节点脱离集群</p><p>至此, 依次重启ES节点, 问题圆满解决.</p><h3 id="参考文章"><a href="#参考文章" class="headerlink" title="参考文章:"></a><strong>参考文章:</strong></h3><blockquote><ul><li><a href="https://www.elastic.co/guide/en/elasticsearch/reference/current/mapping.html" target="_blank" rel="noopener">elasticsearch index mapping</a></li><li><a href="https://blog.csdn.net/sinat_35930259/article/details/80354732" target="_blank" rel="noopener">elasticsearch篇之mapping</a></li><li><a href="https://segmentfault.com/a/1190000016494488" target="_blank" rel="noopener">你看懂 Elasticsearch Log 中的 GC 日志了吗？</a></li></ul></blockquote><h3 id="转载请注明出处https-izsk-me"><a href="#转载请注明出处https-izsk-me" class="headerlink" title="转载请注明出处https://izsk.me"></a><strong>转载请注明出处<a href="https://izsk.me" target="_blank" rel="noopener">https://izsk.me</a></strong></h3>]]></content>
+    
+    <summary type="html">
+    
+      &lt;p&gt;有一个私有云环境的运维同事反应项目中的ES集群无法查询, 由于是私有云环境, 没有直接运维权限, 所以没有接收到一线报警, 远程登录上去后发现ES集群已经宕机了, 这次的排查过程也发现了几个比较容易忽视的细节, 在此记录一下,比较有意思.&lt;/p&gt;
+    
+    </summary>
+    
+    
+    
+      <category term="FELK" scheme="https://zhoushuke.github.io/tags/FELK/"/>
     
   </entry>
   
@@ -417,83 +484,6 @@
     
     
       <category term="Kubernetes" scheme="https://zhoushuke.github.io/tags/Kubernetes/"/>
-    
-  </entry>
-  
-  <entry>
-    <title>nginx学习(防攻击)</title>
-    <link href="https://zhoushuke.github.io/2018/05/02/nginx%E5%AD%A6%E4%B9%A0(%E9%98%B2%E6%94%BB%E5%87%BB)/"/>
-    <id>https://zhoushuke.github.io/2018/05/02/nginx%E5%AD%A6%E4%B9%A0(%E9%98%B2%E6%94%BB%E5%87%BB)/</id>
-    <published>2018-05-02T02:15:51.000Z</published>
-    <updated>2020-01-14T12:12:54.308Z</updated>
-    
-    <content type="html"><![CDATA[<p>nginx常用的防攻击能力</p><a id="more"></a><h3 id="连接限制"><a href="#连接限制" class="headerlink" title="连接限制"></a><strong>连接限制</strong></h3><figure class="highlight shell"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br></pre></td><td class="code"><pre><span class="line">http域</span><br><span class="line">limit_conn_zone $binary_remote_addr zone=perip:10m;</span><br><span class="line">limit_conn_zone $server_name zone=perserver:10m;</span><br><span class="line"></span><br><span class="line">官网描述可以写在http域、server域、location域，实测只能写在http，否则会报错</span><br><span class="line">nginx: [emerg] "limit_conn_zone" directive is not allowed here in /export/server/nginx/conf/nginx.conf:131</span><br><span class="line"></span><br><span class="line">location域</span><br><span class="line">limit_conn perip 1;</span><br><span class="line">limit_conn perserver 10;</span><br><span class="line">limit_conn_status 403;</span><br></pre></td></tr></table></figure><h3 id="访问频率限制"><a href="#访问频率限制" class="headerlink" title="访问频率限制"></a><strong>访问频率限制</strong></h3><figure class="highlight shell"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br></pre></td><td class="code"><pre><span class="line">http域</span><br><span class="line">limit_req_zone $binary_remote_addr zone=perip_r:10m rate=1r/s;</span><br><span class="line">limit_req_zone $server_name zone=perserver_r:10m rate=10r/s;</span><br><span class="line"></span><br><span class="line">limit_req zone=perip_r burst=5 nodelay;</span><br><span class="line">limit_req zone=perserver_r burst=10;</span><br><span class="line">limit_req_status 503;</span><br><span class="line"></span><br><span class="line">while true;do curl -s 172.19.16.161/limit -I\|grep HTTP;sleep 0.1s;done</span><br><span class="line"></span><br><span class="line">HTTP/1.1 404 Not Found</span><br><span class="line"></span><br><span class="line">HTTP/1.1 404 Not Found</span><br><span class="line"></span><br><span class="line">HTTP/1.1 404 Not Found</span><br><span class="line"></span><br><span class="line">HTTP/1.1 404 Not Found</span><br><span class="line"></span><br><span class="line">HTTP/1.1 404 Not Found</span><br><span class="line"></span><br><span class="line">HTTP/1.1 404 Not Found</span><br><span class="line"></span><br><span class="line">HTTP/1.1 503 Service Temporarily Unavailable</span><br><span class="line"></span><br><span class="line">HTTP/1.1 503 Service Temporarily Unavailable</span><br><span class="line"></span><br><span class="line">HTTP/1.1 503 Service Temporarily Unavailable</span><br><span class="line"></span><br><span class="line">HTTP/1.1 503 Service Temporarily Unavailable</span><br><span class="line"></span><br><span class="line">HTTP/1.1 404 Not Found</span><br><span class="line"></span><br><span class="line">HTTP/1.1 503 Service Temporarily Unavailable</span><br><span class="line"></span><br><span class="line">HTTP/1.1 503 Service Temporarily Unavailable</span><br><span class="line"></span><br><span class="line">HTTP/1.1 503 Service Temporarily Unavailable</span><br><span class="line"></span><br><span class="line">HTTP/1.1 503 Service Temporarily Unavailable</span><br><span class="line"></span><br><span class="line">HTTP/1.1 503 Service Temporarily Unavailable</span><br><span class="line"></span><br><span class="line">HTTP/1.1 503 Service Temporarily Unavailable</span><br><span class="line"></span><br><span class="line">HTTP/1.1 503 Service Temporarily Unavailable</span><br><span class="line"></span><br><span class="line">HTTP/1.1 503 Service Temporarily Unavailable</span><br><span class="line"></span><br><span class="line">HTTP/1.1 404 Not Found</span><br><span class="line"></span><br><span class="line">HTTP/1.1 503 Service Temporarily Unavailable</span><br></pre></td></tr></table></figure><h3 id="限流白名单"><a href="#限流白名单" class="headerlink" title="限流白名单"></a><strong>限流白名单</strong></h3><figure class="highlight shell"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br></pre></td><td class="code"><pre><span class="line">geo  $whiteiplist  &#123; # the variable created is $limited </span><br><span class="line">   default       1;</span><br><span class="line">   127.0.0.1     0;</span><br><span class="line">   172.16.0.0/12 0;</span><br><span class="line"> &#125;</span><br><span class="line"> map $whiteiplist $limit &#123;</span><br><span class="line">   1 $binary_remote_addr;</span><br><span class="line">   0 "";</span><br><span class="line"> &#125;</span><br><span class="line">limit_req_zone $limit zone=perip_r:10m rate=1r/s;</span><br></pre></td></tr></table></figure><h3 id="参考文章"><a href="#参考文章" class="headerlink" title="参考文章:"></a><strong>参考文章:</strong></h3><h3 id="转载请注明出处https-izsk-me"><a href="#转载请注明出处https-izsk-me" class="headerlink" title="转载请注明出处https://izsk.me"></a><strong>转载请注明出处<a href="https://izsk.me" target="_blank" rel="noopener">https://izsk.me</a></strong></h3><hr>]]></content>
-    
-    <summary type="html">
-    
-      &lt;p&gt;nginx常用的防攻击能力&lt;/p&gt;
-    
-    </summary>
-    
-    
-      <category term="LNMP" scheme="https://zhoushuke.github.io/categories/LNMP/"/>
-    
-    
-      <category term="LNMP" scheme="https://zhoushuke.github.io/tags/LNMP/"/>
-    
-  </entry>
-  
-  <entry>
-    <title>Ceph学习(架构)</title>
-    <link href="https://zhoushuke.github.io/2018/04/28/Ceph%E5%AD%A6%E4%B9%A0(%E6%9E%B6%E6%9E%84)/"/>
-    <id>https://zhoushuke.github.io/2018/04/28/Ceph%E5%AD%A6%E4%B9%A0(%E6%9E%B6%E6%9E%84)/</id>
-    <published>2018-04-28T08:20:53.000Z</published>
-    <updated>2020-01-14T12:12:54.308Z</updated>
-    
-    <content type="html"><![CDATA[<h2 id="Ceph简介"><a href="#Ceph简介" class="headerlink" title="Ceph简介"></a>Ceph简介</h2><blockquote><p>Ceph is a unified, distributed storage system designed for excellent performance, reliability and scalability.<br>Ceph是统一分布式存储系统,具有优异的性能、可靠性、可扩展性.</p></blockquote><ul><li>存储系统: 提供对象存储,块存储,文件系统接口等服务</li><li>分布式:   无中心节点(Monitor-Paxos,类zookeeper)</li><li>统一:     所有服务基于统一的Rados</li></ul><a id="more"></a><p>Ceph的底层是RADOS(可靠、自动、分布式对象存储),可以通过LIBRADOS直接访问到RADOS的对象存储系统。<br>同时基于Rados提供RBD(块设备接口)、RADOS Gateway(对象存储接口)、Ceph File System(POSIX接口)等服务。</p><h3 id="架构介绍"><a href="#架构介绍" class="headerlink" title="架构介绍"></a>架构介绍</h3><p><img src="http://zskgithubblog.oss-cn-beijing.aliyuncs.com/blogpic/ceph-c2-1.jpg" alt="ceph-c2-1"></p><p>Ceph底层提供了Rados存储,用于支撑上层的librados和Rgw,Rbd,cephfs等服务.  </p><h3 id="概念介绍"><a href="#概念介绍" class="headerlink" title="概念介绍"></a>概念介绍</h3><ul><li>CRUSH算法: 类一致性哈希,Ceph的基础算法,用于动态计算数据块的存储位置(一个set)<strong>因为通过算法动态计算,不需要保存所有数据块和存储位置的对应关系</strong></li><li>Rados: Reliable, Autonomic Distributed Object Store, Ceph的核心存储,由Monitor及OSD组成.</li><li>Librados: 访问Rados的底层库,C/C++ 实现,提供Java/Python等的包装</li><li>OSD: Object Storage Device, Rados数据读写进程.一般每个Disk或分区对应一个OSD进程.</li><li>Rados Object: 任意保存至OSD的文件</li><li>Pool: 逻辑概念,Rados Object读写操作都是针对Pool的.</li><li>PG: Placement Group 放置组,Rados操作的最小粒度,由多个PG组成Pool,Object写入Pool时被指定到PG,具体由CRUSH算法计算.PG对应一到多个OSD.</li><li>Monitor: Ceph中的zookeeper,维护Cluster集群映射关系和配置/Auth等.当各模块有up/down等变化时,通知mon修改对应映射(osdmap,pgmap,poolmap等).<strong>这些映射和配置保存于Mon本地(leveldb),供客户端CRUSH计算</strong></li></ul><hr><ul><li>Rgw: Rados gateway,使Ceph对象存储兼容S3/Swift接口的进程</li><li>Rbd: Rados block device,Ceph对外提供的块设备服务(无实际进程),基于librados的服务协议</li><li>Librbd: 基于Librados的库,用于访问Ceph 块服务</li><li>MDS: Ceph Metadata Server,CephFS依赖的元数据处理进程</li><li>CephFS:  Ceph File System,Ceph对外提供的文件系统服务</li></ul><hr><ul><li>Mgr: Manager 将底层C/C++库封装为Python调用,旨在提供Plugin机制,鼓励用户开发插件满足特定需求.Dashboard/Restful-API</li></ul><p><img src="http://zskgithubblog.oss-cn-beijing.aliyuncs.com/blogpic/ceph-c2-2.jpg" alt="ceph-c2-2"></p>]]></content>
-    
-    <summary type="html">
-    
-      &lt;h2 id=&quot;Ceph简介&quot;&gt;&lt;a href=&quot;#Ceph简介&quot; class=&quot;headerlink&quot; title=&quot;Ceph简介&quot;&gt;&lt;/a&gt;Ceph简介&lt;/h2&gt;&lt;blockquote&gt;
-&lt;p&gt;Ceph is a unified, distributed storage system designed for excellent performance, reliability and scalability.&lt;br&gt;Ceph是统一分布式存储系统,具有优异的性能、可靠性、可扩展性.&lt;/p&gt;
-&lt;/blockquote&gt;
-&lt;ul&gt;
-&lt;li&gt;存储系统: 提供对象存储,块存储,文件系统接口等服务&lt;/li&gt;
-&lt;li&gt;分布式:   无中心节点(Monitor-Paxos,类zookeeper)&lt;/li&gt;
-&lt;li&gt;统一:     所有服务基于统一的Rados&lt;/li&gt;
-&lt;/ul&gt;
-    
-    </summary>
-    
-    
-      <category term="Ceph" scheme="https://zhoushuke.github.io/categories/Ceph/"/>
-    
-    
-      <category term="Ceph" scheme="https://zhoushuke.github.io/tags/Ceph/"/>
-    
-  </entry>
-  
-  <entry>
-    <title>Ceph学习(背景)</title>
-    <link href="https://zhoushuke.github.io/2018/04/08/Ceph%E5%AD%A6%E4%B9%A0(%E8%83%8C%E6%99%AF)/"/>
-    <id>https://zhoushuke.github.io/2018/04/08/Ceph%E5%AD%A6%E4%B9%A0(%E8%83%8C%E6%99%AF)/</id>
-    <published>2018-04-08T12:50:53.000Z</published>
-    <updated>2020-01-14T12:12:54.308Z</updated>
-    
-    <content type="html"><![CDATA[<p>Ceph是统一分布式存储系统,具有优异的性能、可靠性、可扩展性.  </p><h2 id="背景"><a href="#背景" class="headerlink" title="背景"></a>背景</h2><p>Ceph项目从2004年6月份启动,源于Sage Weil的博士论文,后由其创建的Inktank公司主导,目前已被Redhat收购.<br><a href="http://storage.jd.com/text/weil-thesis.pdf" target="_blank" rel="noopener">Ceph 论文</a></p><a id="more"></a><p><em>最近一个月的提交</em><br><img src="http://zskgithubblog.oss-cn-beijing.aliyuncs.com/blogpic/ceph-c1-1.png" alt="ceph-c1-1"></p><p><em>项目整体活跃度</em><br><img src="http://zskgithubblog.oss-cn-beijing.aliyuncs.com/blogpic/ceph-c1-2.png" alt="ceph-c1-2"></p><p><em>左侧为合作伙伴,右侧为用户</em><br><img src="http://zskgithubblog.oss-cn-beijing.aliyuncs.com/blogpic/ceph-c1-3.png" alt="ceph-c1-3"></p><p><em>国内主要公司</em></p><ul><li>华为</li><li>UnitedStack</li><li>XSKY</li><li>携程</li><li>联通研究院</li></ul><h2 id="其他系统的支持"><a href="#其他系统的支持" class="headerlink" title="其他系统的支持"></a>其他系统的支持</h2><ul><li>OpenStack</li><li>CloudStack </li><li>OpenNebula</li><li>Hadoop</li></ul><p><strong>主要在云计算相关领域</strong></p>]]></content>
-    
-    <summary type="html">
-    
-      &lt;p&gt;Ceph是统一分布式存储系统,具有优异的性能、可靠性、可扩展性.  &lt;/p&gt;
-&lt;h2 id=&quot;背景&quot;&gt;&lt;a href=&quot;#背景&quot; class=&quot;headerlink&quot; title=&quot;背景&quot;&gt;&lt;/a&gt;背景&lt;/h2&gt;&lt;p&gt;Ceph项目从2004年6月份启动,源于Sage Weil的博士论文,后由其创建的Inktank公司主导,目前已被Redhat收购.&lt;br&gt;&lt;a href=&quot;http://storage.jd.com/text/weil-thesis.pdf&quot; target=&quot;_blank&quot; rel=&quot;noopener&quot;&gt;Ceph 论文&lt;/a&gt;&lt;/p&gt;
-    
-    </summary>
-    
-    
-      <category term="Ceph" scheme="https://zhoushuke.github.io/categories/Ceph/"/>
-    
-    
-      <category term="Ceph" scheme="https://zhoushuke.github.io/tags/Ceph/"/>
     
   </entry>
   
