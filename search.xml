@@ -658,6 +658,60 @@
       </tags>
   </entry>
   <entry>
+    <title>Multi-Active Availability vs High Availability</title>
+    <url>/2019/07/16/HA-MA/</url>
+    <content><![CDATA[<p>当我们在讨论系统架构的时候经常听到HA(High Availability 高可用)如何如何保证, 在调研CockRoachDB时看到个MA(Multi-Active Availability 多活可用)的概念, 头一次听说, 比较新颖, 所以网上查了一上, 说到底还是CAP那一套.</p>
+<a id="more"></a>
+<h3 id="High-Availability"><a href="#High-Availability" class="headerlink" title="High Availability"></a>High Availability</h3><p>我们经常会错误的认为高可用就是一致性，其实并不然.</p>
+<p>高可用性，是指应用程序在其中一个服务的宿主系统发生故障的时候，仍然能够不停地运行。这是通过水平拓展应用程序服务的方式来实现的（例如在多台机器和系统上部署相同的服务）。如果它们当中的其中一个服务发生故障，其他服务能够接替并提供相同的服务内容</p>
+<p><strong>高可用强调的是在节点发生故障时, 系统仍然可以提供服务, 并不关心数据一致性的问题.</strong></p>
+<p>两种使用最频繁的高可用性设计方案：<strong>Active-Passive和Active-Active系统</strong></p>
+<h4 id="Active-Passive"><a href="#Active-Passive" class="headerlink" title="Active-Passive"></a>Active-Passive</h4><p>在Active-Passive系统中，所有流量会路由到一个“Active“的主副本。这个副本上状态的变化将同步到备份的“Passive”的从副本，系统尽可能地保证“Passive”副本与“Active”副本之间的一致性。</p>
+<p>很典型的是Oracle数据库.</p>
+<p>然而这种设计存在以下缺点：</p>
+<blockquote>
+<ul>
+<li>如果用户使用异步复制策略，将无法保证所有数据成功地同步到“Passive”的从副本。这就意味着用户可能丢失数据，在特定的应用场景下这可能导致非常可怕的后果。</li>
+<li>如果用户使用同步复制策略，在“Passive”的从副本出现故障的时候，用户不得不牺牲整个应用系统的可用性，否则将面临不一致的风险</li>
+</ul>
+</blockquote>
+<h4 id="Active-Active"><a href="#Active-Active" class="headerlink" title="Active-Active"></a>Active-Active</h4><p>在Active-Active系统中，多个副本各自运行着独立的服务。负载被路由到所有副本上。如果一个副本出现故障，其他副本可以继续处理原本应该路由到故障副本上的负载。</p>
+<p>对于数据库而言，Active-Active的系统对于大多数工作负载来说是难以实现的。例如：如果用户想让多个副本处理同一份数据的写操作，如何保证它们的一致性？</p>
+<p>打个比说:</p>
+<p>在Active-Active设计的高可用性集群当中有2个副本（<strong>A</strong>和<strong>B</strong>）。</p>
+<ol>
+<li><strong>A</strong>确认键<code>xyz</code>的写请求，值为<code>&#39;123&#39;</code>，随后发生故障。</li>
+<li><strong>B</strong>确认键<code>xyz</code>的读请求，因为没找到匹配键值对，返回<code>NULL</code>。</li>
+<li><strong>B</strong>确认键<code>xyz</code>的写请求，值为<code>&#39;456&#39;</code>。</li>
+<li><strong>A</strong>重启并尝试再次与<strong>B</strong>连接，此时如何处理<code>xyz</code>值的不同？在系统里面没有一个清晰的方式去处理这种数据不一致的情况。</li>
+</ol>
+<p><strong>在这个例子当中，集群在整个生命周期内保持Active状态。根据<a href="https://en.wikipedia.org/wiki/CAP_theorem" target="_blank" rel="noopener">CAP理论</a>，这是AP系统，它能够在分区发生时保证可用性，而不能保证一致性。</strong></p>
+<h3 id="Multi-Active-Availability"><a href="#Multi-Active-Availability" class="headerlink" title="Multi-Active Availability"></a>Multi-Active Availability</h3><p>像Active-Ative设计模式，具备多活可用性的系统当中的所有副本，都处理读和写的负载。CockroachDB在此基础上做了改进，使用“一致性副本”实现了数据之间一致性。在这种设计里，同步请求将发送到至少3个副本，且只有绝大多数副本响应了该请求，才能视作同步完成。这就意味着用户在系统不满足可用条件时仍然会遇到系统故障。</p>
+<p>为了避免冲突，保证数据的一致性，集群如果丢失了绝大多数副本，将停止响应。这是因为在故障系统里的副本丧失了使数据达成一致的能力。待到绝大多数副本重启以后，数据库将恢复可用。</p>
+<p>在一个多活可用的集群中有3个CockroachDB节点（<strong>A</strong>、<strong>B</strong>、<strong>C</strong>）。</p>
+<ol>
+<li><strong>A</strong>接收到键<code>xyz</code>的写请求，值为<code>&#39;123&#39;</code>。它与节点<strong>B</strong>和<strong>C</strong>同步写请求结果，确保它们确认了写请求结果。一旦<strong>A</strong>收到第一个确认，写请求完成。</li>
+<li><strong>A</strong>随后发生故障。</li>
+<li><strong>B</strong>接收到键<code>xyz</code>的读请求，返回值<code>&#39;123&#39;</code></li>
+<li><strong>C</strong>接收到键<code>xyz</code>的更新请求，修改值为<code>&#39;456&#39;</code>。它与节点<strong>B</strong>同步写请求结果，确保<strong>B</strong>确认了写请求结果。在<strong>C</strong>接收到来自节点<strong>B</strong>的确认之后，写请求完成。</li>
+<li><strong>A</strong>重启，再次加入集群。它接收到了键<code>xyz</code>的最新值，将旧值更新为<code>&#39;456&#39;</code>。</li>
+</ol>
+<p><strong>在这个例子当中，如果在A故障以后B或C发生故障，集群将停止响应。根据<a href="https://en.wikipedia.org/wiki/CAP_theorem" target="_blank" rel="noopener">CAP理论</a>，这是一个CP系统，它能够在分区发生时保证一致性，而不是保证可用性。</strong></p>
+<h3 id="参考文章"><a href="#参考文章" class="headerlink" title="参考文章:"></a><strong>参考文章:</strong></h3><blockquote>
+<ul>
+<li><a href="https://en.wikipedia.org/wiki/CAP_theorem" target="_blank" rel="noopener">CAP理论</a></li>
+<li><a href="http://doc.cockroachchina.baidu.com/#faqs/cockroachdb-features/multi-active-availability/" target="_blank" rel="noopener">cockroach.doc</a></li>
+</ul>
+</blockquote>
+<h3 id="转载请注明出处https-izsk-me"><a href="#转载请注明出处https-izsk-me" class="headerlink" title="转载请注明出处https://izsk.me"></a><strong>转载请注明出处<a href="https://izsk.me" target="_blank" rel="noopener">https://izsk.me</a></strong></h3>]]></content>
+      <categories>
+        <category>运维杂谈</category>
+      </categories>
+      <tags>
+        <tag>运维杂谈</tag>
+      </tags>
+  </entry>
+  <entry>
     <title>寻找重复数(python)</title>
     <url>/2019/04/21/%E6%9F%A5%E6%89%BE%E9%87%8D%E5%A4%8D%E5%85%83%E7%B4%A0(python)/</url>
     <content><![CDATA[<p>题目是: 给定一个包含 n + 1 个整数的数组 nums，其数字都在 1 到 n 之间（包括 1 和 n），可知至少存在一个重复的整数。假设只有一个重复的整数，找出这个重复的数</p>
@@ -2458,46 +2512,6 @@
       </tags>
   </entry>
   <entry>
-    <title>HTTP之长连接及短连接</title>
-    <url>/2017/08/12/HTTP%E4%B9%8B%E9%95%BF%E8%BF%9E%E6%8E%A5%E5%8F%8A%E7%9F%AD%E8%BF%9E%E6%8E%A5/</url>
-    <content><![CDATA[<p>我们都说HTTP协议是无状态的,我们又都说HTTP分长连接及短连接,’无状态’到底是个什么意思？</p>
-<a id="more"></a>
-<h3 id="无状态"><a href="#无状态" class="headerlink" title="无状态"></a><strong>无状态</strong></h3><p>HTTP无状态其实指的是协议对于事务处理没有记忆能力,服务器不知道客户端是什么状态.也就是说,打开一个服务器上的网页和你之前打开这个服务器上的网页之间没有任何联系.HTTP是一个无状态的面向连接的协议,无状态不代表HTTP不能保持TCP连接,更不能代表HTTP使用的是UDP协议(无连接).</p>
-<p>那http又是如何保持长连接的呢?</p>
-<p>在<code>HTTP/1.0</code>中,默认使用的是短连接.也就是说,浏览器和服务器每进行一次HTTP操作,就建立一次连接,但任务结束就中断连接.如果客户端浏览器访问的某个HTML或其他类型的 Web页中包含有其他的Web资源,如JavaScript文件、图像文件、CSS文件等；当浏览器每遇到这样一个Web资源,就会建立一个HTTP会话.<br>但从<code>HTTP/1.1</code>起,默认使用长连接,用以保持连接特性.使用长连接的HTTP协议,会在响应头有加入这行代码:</p>
-<p><code>Connection:keep-alive</code></p>
-<p>　　在使用长连接的情况下,当一个网页打开完成后,客户端和服务器之间用于传输HTTP数据的 TCP连接不会关闭,如果客户端再次访问这个服务器上的网页,会继续使用这一条已经建立的连接.<code>Keep-Alive</code>不会永久保持连接,它有一个保持时间,可以在不同的服务器软件（如Apache）中设定这个时间.实现长连接要客户端和服务端都支持长连接.</p>
-<p>当然,在很多web服务器中可以设置这个keep-Alive的保持时间,比如nginx的配置文件nginx.conf中可直接使用:</p>
-<p><code>keepalive_timeout  60;</code></p>
-<p><strong>HTTP协议的长连接和短连接,实质上是TCP协议的长连接和短连接.</strong></p>
-<p>那长短连接各自对应的场景有哪些呢(各自的优缺点)?</p>
-<h3 id="短连接"><a href="#短连接" class="headerlink" title="短连接"></a><strong>短连接</strong></h3><p>场景: client向server发起连接请求,server接到请求,然后双方建立连接.client向server 发送消息,server回应client,然后一次读写就完成了,这时候双方任何一个都可以发起close操作,不过一般都是client先发起 close操作.为什么呢,一般的server不会回复完client后立即关闭连接的,当然不排除有特殊的情况.从上面的描述看,短连接一般只会在 client/server间传递一次读写操作</p>
-<p><strong>短连接管理起来比较简单,存在的连接都是有用的连接,不需要额外的控制手段,但是频繁的创建大量的连接也很耗资源</strong></p>
-<h3 id="长连接"><a href="#长连接" class="headerlink" title="长连接"></a><strong>长连接</strong></h3><p>流程是:client向server发起连接,server接受client连接,双方建立连接.Client与server完成一次读写之后,它们之间的连接并不会主动关闭,后续的读写操作会继续使用这个连接.</p>
-<p>首先说一下TCP/IP详解上讲到的TCP保活功能,保活功能主要为服务器应用提供,服务器应用希望知道客户主机是否崩溃,从而可以代表客户使用资源.如果客户已经消失,使得服务器上保留一个半开放的连接,而服务器又在等待来自客户端的数据,则服务器将应远等待客户端的数据,保活功能就是试图在服务 器端检测到这种半开放的连接.</p>
-<p>如果一个给定的连接在两小时内没有任何的动作,服务器就向客户发一个探测报文段,客户主机必须处于以下4个状态之一:</p>
-<blockquote>
-<ul>
-<li>客户主机依然正常运行,并从服务器可达.客户的TCP响应正常,而服务器也知道对方是正常的,服务器在两小时后将保活定时器复位.</li>
-<li>客户主机已经崩溃,并且关闭或者正在重新启动.在任何一种情况下,客户的TCP都没有响应.服务端将不能收到对探测的响应,并在75秒后超时.服务器总共发送10个这样的探测 ,每个间隔75秒.如果服务器没有收到一个响应,它就认为客户主机已经关闭并终止连接.</li>
-<li>客户主机崩溃并已经重新启动.服务器将收到一个对其保活探测的响应,这个响应是一个复位,使得服务器终止这个连接.</li>
-</ul>
-</blockquote>
-<p>客户机正常运行,但是服务器不可达,这种情况与2类似,TCP能发现的就是没有收到探查的响应.</p>
-<p><strong>从上可以看出http要保持长连接需要做很多次的向客户端试探是否存活,这对性能是个很大的损耗,但是从另一方面来说长连接减少了很多的创关闭连接带来的开销,节约时间.</strong></p>
-<h3 id="场景"><a href="#场景" class="headerlink" title="场景"></a><strong>场景</strong></h3><p><code>长连接</code>多用于操作频繁,点对点的通讯,而且连接数不能太多情况,.每个TCP连接都需要三步握手,这需要时间,如果每个操作都是先连接,再操作的话那么处理速度会降低很多,所以每个操作完后都不断开,次处理时直接发送数据包就OK了,不用建立TCP连接.例如：数据库的连接用长连接, 如果用短连接频繁的通信会造成socket错误,而且频繁的socket 创建也是对资源的浪费. </p>
-<p>而像WEB网站的http服务一般都用<code>短链接</code>,因为长连接对于服务端来说会耗费一定的资源,而像WEB网站这么频繁的成千上万甚至上亿客户端的连接用短连接会更省一些资源,如果用长连接,而且同时有成千上万的用户,如果每个用户都占用一个连接的话,那可想而知吧.所以并发量大,但每个用户无需频繁操作情况下需用短连好.</p>
-<p><strong>没有哪一个更好,只有哪一个最适合,一切跟着场景走,总有一款适合你!</strong></p>
-<h3 id="转载请注明出处https-izsk-me"><a href="#转载请注明出处https-izsk-me" class="headerlink" title="转载请注明出处https://izsk.me"></a><strong>转载请注明出处<a href="https://izsk.me" target="_blank" rel="noopener">https://izsk.me</a></strong></h3><hr>
-]]></content>
-      <categories>
-        <category>Http-Tcp-Ip</category>
-      </categories>
-      <tags>
-        <tag>Http-Tcp-Ip</tag>
-      </tags>
-  </entry>
-  <entry>
     <title>flask学习二(flask应用)</title>
     <url>/2017/08/12/flask%E5%AD%A6%E4%B9%A0%E4%BA%8C(flask%E5%BA%94%E7%94%A8)/</url>
     <content><![CDATA[<p>距离<a href="https://izsk.me/2017/08/12/falsk%E5%AD%A6%E4%B9%A0(-" target="_blank" rel="noopener">上一篇</a>)有一段时间了,上次扯了点跟flask相关的内容,这次抽空记录下flask的机制.flask之所于上手容易,是因为我们对python语言稍微了解的话,简单几步就可以把一个小应用跑起来,不需要搭建额外的东西,所以对于并发量没有要求的话flask可以轻松应对.</p>
@@ -2563,6 +2577,46 @@
       <tags>
         <tag>Flask</tag>
         <tag>Python</tag>
+      </tags>
+  </entry>
+  <entry>
+    <title>HTTP之长连接及短连接</title>
+    <url>/2017/08/12/HTTP%E4%B9%8B%E9%95%BF%E8%BF%9E%E6%8E%A5%E5%8F%8A%E7%9F%AD%E8%BF%9E%E6%8E%A5/</url>
+    <content><![CDATA[<p>我们都说HTTP协议是无状态的,我们又都说HTTP分长连接及短连接,’无状态’到底是个什么意思？</p>
+<a id="more"></a>
+<h3 id="无状态"><a href="#无状态" class="headerlink" title="无状态"></a><strong>无状态</strong></h3><p>HTTP无状态其实指的是协议对于事务处理没有记忆能力,服务器不知道客户端是什么状态.也就是说,打开一个服务器上的网页和你之前打开这个服务器上的网页之间没有任何联系.HTTP是一个无状态的面向连接的协议,无状态不代表HTTP不能保持TCP连接,更不能代表HTTP使用的是UDP协议(无连接).</p>
+<p>那http又是如何保持长连接的呢?</p>
+<p>在<code>HTTP/1.0</code>中,默认使用的是短连接.也就是说,浏览器和服务器每进行一次HTTP操作,就建立一次连接,但任务结束就中断连接.如果客户端浏览器访问的某个HTML或其他类型的 Web页中包含有其他的Web资源,如JavaScript文件、图像文件、CSS文件等；当浏览器每遇到这样一个Web资源,就会建立一个HTTP会话.<br>但从<code>HTTP/1.1</code>起,默认使用长连接,用以保持连接特性.使用长连接的HTTP协议,会在响应头有加入这行代码:</p>
+<p><code>Connection:keep-alive</code></p>
+<p>　　在使用长连接的情况下,当一个网页打开完成后,客户端和服务器之间用于传输HTTP数据的 TCP连接不会关闭,如果客户端再次访问这个服务器上的网页,会继续使用这一条已经建立的连接.<code>Keep-Alive</code>不会永久保持连接,它有一个保持时间,可以在不同的服务器软件（如Apache）中设定这个时间.实现长连接要客户端和服务端都支持长连接.</p>
+<p>当然,在很多web服务器中可以设置这个keep-Alive的保持时间,比如nginx的配置文件nginx.conf中可直接使用:</p>
+<p><code>keepalive_timeout  60;</code></p>
+<p><strong>HTTP协议的长连接和短连接,实质上是TCP协议的长连接和短连接.</strong></p>
+<p>那长短连接各自对应的场景有哪些呢(各自的优缺点)?</p>
+<h3 id="短连接"><a href="#短连接" class="headerlink" title="短连接"></a><strong>短连接</strong></h3><p>场景: client向server发起连接请求,server接到请求,然后双方建立连接.client向server 发送消息,server回应client,然后一次读写就完成了,这时候双方任何一个都可以发起close操作,不过一般都是client先发起 close操作.为什么呢,一般的server不会回复完client后立即关闭连接的,当然不排除有特殊的情况.从上面的描述看,短连接一般只会在 client/server间传递一次读写操作</p>
+<p><strong>短连接管理起来比较简单,存在的连接都是有用的连接,不需要额外的控制手段,但是频繁的创建大量的连接也很耗资源</strong></p>
+<h3 id="长连接"><a href="#长连接" class="headerlink" title="长连接"></a><strong>长连接</strong></h3><p>流程是:client向server发起连接,server接受client连接,双方建立连接.Client与server完成一次读写之后,它们之间的连接并不会主动关闭,后续的读写操作会继续使用这个连接.</p>
+<p>首先说一下TCP/IP详解上讲到的TCP保活功能,保活功能主要为服务器应用提供,服务器应用希望知道客户主机是否崩溃,从而可以代表客户使用资源.如果客户已经消失,使得服务器上保留一个半开放的连接,而服务器又在等待来自客户端的数据,则服务器将应远等待客户端的数据,保活功能就是试图在服务 器端检测到这种半开放的连接.</p>
+<p>如果一个给定的连接在两小时内没有任何的动作,服务器就向客户发一个探测报文段,客户主机必须处于以下4个状态之一:</p>
+<blockquote>
+<ul>
+<li>客户主机依然正常运行,并从服务器可达.客户的TCP响应正常,而服务器也知道对方是正常的,服务器在两小时后将保活定时器复位.</li>
+<li>客户主机已经崩溃,并且关闭或者正在重新启动.在任何一种情况下,客户的TCP都没有响应.服务端将不能收到对探测的响应,并在75秒后超时.服务器总共发送10个这样的探测 ,每个间隔75秒.如果服务器没有收到一个响应,它就认为客户主机已经关闭并终止连接.</li>
+<li>客户主机崩溃并已经重新启动.服务器将收到一个对其保活探测的响应,这个响应是一个复位,使得服务器终止这个连接.</li>
+</ul>
+</blockquote>
+<p>客户机正常运行,但是服务器不可达,这种情况与2类似,TCP能发现的就是没有收到探查的响应.</p>
+<p><strong>从上可以看出http要保持长连接需要做很多次的向客户端试探是否存活,这对性能是个很大的损耗,但是从另一方面来说长连接减少了很多的创关闭连接带来的开销,节约时间.</strong></p>
+<h3 id="场景"><a href="#场景" class="headerlink" title="场景"></a><strong>场景</strong></h3><p><code>长连接</code>多用于操作频繁,点对点的通讯,而且连接数不能太多情况,.每个TCP连接都需要三步握手,这需要时间,如果每个操作都是先连接,再操作的话那么处理速度会降低很多,所以每个操作完后都不断开,次处理时直接发送数据包就OK了,不用建立TCP连接.例如：数据库的连接用长连接, 如果用短连接频繁的通信会造成socket错误,而且频繁的socket 创建也是对资源的浪费. </p>
+<p>而像WEB网站的http服务一般都用<code>短链接</code>,因为长连接对于服务端来说会耗费一定的资源,而像WEB网站这么频繁的成千上万甚至上亿客户端的连接用短连接会更省一些资源,如果用长连接,而且同时有成千上万的用户,如果每个用户都占用一个连接的话,那可想而知吧.所以并发量大,但每个用户无需频繁操作情况下需用短连好.</p>
+<p><strong>没有哪一个更好,只有哪一个最适合,一切跟着场景走,总有一款适合你!</strong></p>
+<h3 id="转载请注明出处https-izsk-me"><a href="#转载请注明出处https-izsk-me" class="headerlink" title="转载请注明出处https://izsk.me"></a><strong>转载请注明出处<a href="https://izsk.me" target="_blank" rel="noopener">https://izsk.me</a></strong></h3><hr>
+]]></content>
+      <categories>
+        <category>Http-Tcp-Ip</category>
+      </categories>
+      <tags>
+        <tag>Http-Tcp-Ip</tag>
       </tags>
   </entry>
   <entry>
@@ -2939,7 +2993,7 @@
 <h3 id="转载请注明出处https-izsk-me"><a href="#转载请注明出处https-izsk-me" class="headerlink" title="转载请注明出处https://izsk.me"></a><strong>转载请注明出处<a href="https://izsk.me" target="_blank" rel="noopener">https://izsk.me</a></strong></h3><hr>
 ]]></content>
       <categories>
-        <category>FFELK</category>
+        <category>FELK</category>
       </categories>
       <tags>
         <tag>FELK</tag>
