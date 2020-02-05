@@ -94,7 +94,7 @@
 <meta property="og:site_name" content="Z.S.K.&#39;s Records">
 <meta property="og:description" content="Kubernetes中经常使用ingress做为从外界访问kubernetes集群内服务的入口, 而nginx ingress则做为最常用的方式, 有时候会遇到暴露出来的页面是需要受限访问的, 在nginx ingress中同样提供了nginx原生的认证方式，项目中用到了白名单跟用户密码认证,一定程度上加强了安全性.">
 <meta property="og:locale" content="zh-Hans">
-<meta property="og:updated_time" content="2020-02-04T06:58:53.607Z">
+<meta property="og:updated_time" content="2020-02-05T09:24:02.284Z">
 <meta name="twitter:card" content="summary">
 <meta name="twitter:title" content="Nginx Ingress Authentication">
 <meta name="twitter:description" content="Kubernetes中经常使用ingress做为从外界访问kubernetes集群内服务的入口, 而nginx ingress则做为最常用的方式, 有时候会遇到暴露出来的页面是需要受限访问的, 在nginx ingress中同样提供了nginx原生的认证方式，项目中用到了白名单跟用户密码认证,一定程度上加强了安全性.">
@@ -415,6 +415,7 @@
 <p>根据提示输入用户foo的密码</p>
 <p>生成的密码文件会存在于pass.wd文件中，使用该文件生成secret</p>
 <p><code>kubectl create secret generic basic-auth --from-file=pass.wd</code></p>
+<p>或者, 也可以直接使用openssl来生成密码文件:<br><code>printf &quot;admin:$(openssl passwd -crypt 12345678)\n&quot; &gt;/tmp/auth</code><br><strong>注意: 使用openssl, 密码只能最长8位, 超过8位的会被截断</strong><br><strong>如果想使用kubernetes的secret来保存密码, 则生成的密码文件名一定要是auth, 否则的话访问会提示503错误.</strong><br><code>kubectl create secret generic basic-auth --from-file=/tmp/auth</code></p>
 <p>这样, 在访问时就会弹出需要输入用户密码的界面了, <strong>如果密码错误，则会提示401 Unauthorized</strong></p>
 <h3 id="参考文章"><a href="#参考文章" class="headerlink" title="参考文章:"></a><strong>参考文章:</strong></h3><blockquote>
 <ul>
@@ -560,7 +561,7 @@
           
             <div class="site-state-item site-state-posts">
               <a href="/archives">
-                <span class="site-state-item-count">69</span>
+                <span class="site-state-item-count">70</span>
                 <span class="site-state-item-name">日志</span>
               </a>
             </div>
