@@ -387,6 +387,29 @@
   </entry>
   
   <entry>
+    <title>CockRoachDB学习(无证书集群搭建)</title>
+    <link href="https://zhoushuke.github.io/2019/05/20/CockroachDB-Cluster-Build-No-CA/"/>
+    <id>https://zhoushuke.github.io/2019/05/20/CockroachDB-Cluster-Build-No-CA/</id>
+    <published>2019-05-20T12:10:53.000Z</published>
+    <updated>2020-02-06T13:13:07.803Z</updated>
+    
+    <content type="html"><![CDATA[<p>3节点的无证书CockroachDB 集群搭建, 由于CRDB只有一个单二进制文件, 所以部署也非常简单.</p><a id="more"></a><h3 id="物理机部署"><a href="#物理机部署" class="headerlink" title="物理机部署"></a>物理机部署</h3><p>将cockroach二进制包上传至服务器的目录/opt， 解压</p><p><code>tar zxf cockroach-v19.1.1.linux-amd64.tar.gz -C /opt</code></p><p><code>cd /opt</code></p><p><code>mv  cockroach-v19.1.1.linux-amd64 cockroach</code></p><p><code>cd cockroach</code></p><p>启动cockroach第一个节点</p><p><code>nohup /opt/cockroach/cockroach start --insecure --store=node --host=172.16.104.19 --port=26257 --http-port=18080 &amp;</code></p><p>查看状态</p><p><code>./cockroach node status --insecure --host=172.16.104.19</code></p><p>重复以上命令依次重启第二个,第三个节点，启动时使用–join加入第一个节点</p><p><code>nohup /opt/cockroach/cockroach start --insecure --store=node --host=172.16.104.20 --port=26257 --http-port=18080 --join 172.16.104.19 &amp;</code></p><p><code>nohup /opt/cockroach/cockroach start --insecure --store=node --host=172.16.104.21 --port=26257 --http-port=18080 --join 172.16.104.19 &amp;</code></p><p>查看集群信息, 3个节点已经组成了一个集群</p><p>测试集群</p><p><code>./cockroach node status --insecure --host=172.16.104.19</code></p><h3 id="Docker部署"><a href="#Docker部署" class="headerlink" title="Docker部署"></a>Docker部署</h3><p>第一个节点</p><p><code>docker run -d --name=roach1 --hostname=roach1 -p 26257:26257 -p 8080:8080  -v &quot;${PWD}/cockroach-data/roach1:/cockroach/cockroach-data&quot;  cockroachdb/cockroach:v2.0.5 start --insecure</code></p><p>上述命令创建了一个容器，并在其中启动了第一个CockroachDB集群节点。 涉及指令和参数的介绍：</p><ul><li><code>docker run</code>：用Docker命令启动一个容器</li><li><code>-d</code>： 指定容器运行在后台</li><li><code>--name</code>：指定容器的名字</li><li><code>--hostname</code>：指定容器的主机名，和<code>name</code>不同，这个是其他容器加入其所在集群的标签。</li><li><code>--net</code>：指定Step 1创建的网络名</li><li><code>-p  26257:26257 -p 8080:8080</code>：指定内部节点和客户端节点的通信端口（26257）映射以及Admin界面从容器到主机的HTTP访问端口映射。</li><li><code>-v &quot;${PWD}/cockroach-data/roach1:/cockroach/cockroach-data&quot;</code>： 挂载一个主机目录作为容器的磁盘，意味着数据和日志将会存在<code>${PWD}/cockroach-data/roach1</code></li><li><code>cockroachdb/cockroach:v2.0.5 start --insecure</code> ：启动CockroachDB节点命令</li></ul><p>添加节点二</p><p><code>docker run -d --name=roach2 --hostname=roach2 -v &quot;${PWD}/cockroach-data/roach2:/cockroach/cockroach-data&quot; cockroachdb/cockroach:v2.0.5 start --insecure --join=roach1</code></p><p>添加节点三</p><p><code>docker run -d --name=roach3 --hostname=roach3 -v &quot;${PWD}/cockroach-data/roach3:/cockroach/cockroach-data&quot; cockroachdb/cockroach:v2.0.5 start --insecure --join=roach1</code></p><p>测试集群</p><p><code>docker exec -it roach1 ./cockroach sql --insecure</code></p><h3 id="常用操作"><a href="#常用操作" class="headerlink" title="常用操作"></a>常用操作</h3><p>登录cockroach, 查看当前存在的数据库</p><p><code>./cockroach sql --insecure --host=172.16.104.19 --port=26257</code></p><p>新建数据库</p><p><code>CREATE database unicorn;</code></p><p>导入数据库表结构</p><p><code>./cockroach sql --insecure --host=172.16.104.19 --port=26257 --database=unicron &lt;unicron.sql</code></p><p>查看用户信息</p><p><code>./cockroach --insecure --host=172.16.104.19 --port=26257 user get root</code></p><p>停止一个节点</p><p><code>./cockroach quit --insecure --host=172.16.104.19</code></p><h3 id="参考文章"><a href="#参考文章" class="headerlink" title="参考文章:"></a><strong>参考文章:</strong></h3><blockquote><ul><li><a href="http://doc.cockroachchina.baidu.com/#maintain/remove-nodes/" target="_blank" rel="noopener">http://doc.cockroachchina.baidu.com/#maintain/remove-nodes/</a></li></ul></blockquote><h3 id="转载请注明出处https-izsk-me"><a href="#转载请注明出处https-izsk-me" class="headerlink" title="转载请注明出处https://izsk.me"></a><strong>转载请注明出处<a href="https://izsk.me" target="_blank" rel="noopener">https://izsk.me</a></strong></h3>]]></content>
+    
+    <summary type="html">
+    
+      &lt;p&gt;3节点的无证书CockroachDB 集群搭建, 由于CRDB只有一个单二进制文件, 所以部署也非常简单.&lt;/p&gt;
+    
+    </summary>
+    
+    
+      <category term="分布式架构" scheme="https://zhoushuke.github.io/categories/%E5%88%86%E5%B8%83%E5%BC%8F%E6%9E%B6%E6%9E%84/"/>
+    
+    
+      <category term="分布式架构" scheme="https://zhoushuke.github.io/tags/%E5%88%86%E5%B8%83%E5%BC%8F%E6%9E%B6%E6%9E%84/"/>
+    
+  </entry>
+  
+  <entry>
     <title>寻找重复数(python)</title>
     <link href="https://zhoushuke.github.io/2019/04/21/%E6%9F%A5%E6%89%BE%E9%87%8D%E5%A4%8D%E5%85%83%E7%B4%A0(python)/"/>
     <id>https://zhoushuke.github.io/2019/04/21/%E6%9F%A5%E6%89%BE%E9%87%8D%E5%A4%8D%E5%85%83%E7%B4%A0(python)/</id>
@@ -455,29 +478,6 @@
     
     
       <category term="Python" scheme="https://zhoushuke.github.io/tags/Python/"/>
-    
-  </entry>
-  
-  <entry>
-    <title>2019-努力奋斗</title>
-    <link href="https://zhoushuke.github.io/2018/12/31/2019-%E5%8A%AA%E5%8A%9B%E5%A5%8B%E6%96%97/"/>
-    <id>https://zhoushuke.github.io/2018/12/31/2019-%E5%8A%AA%E5%8A%9B%E5%A5%8B%E6%96%97/</id>
-    <published>2018-12-31T14:50:53.000Z</published>
-    <updated>2020-01-14T12:12:54.308Z</updated>
-    
-    <content type="html"><![CDATA[<h3 id="2019"><a href="#2019" class="headerlink" title="2019"></a><strong>2019</strong></h3><h1 id="努力奋斗"><a href="#努力奋斗" class="headerlink" title="努力奋斗"></a><strong>努力奋斗</strong></h1><a id="more"></a><h3 id="参考文章"><a href="#参考文章" class="headerlink" title="参考文章:"></a><strong>参考文章:</strong></h3><h3 id="转载请注明出处https-izsk-me"><a href="#转载请注明出处https-izsk-me" class="headerlink" title="转载请注明出处https://izsk.me"></a><strong>转载请注明出处<a href="https://izsk.me" target="_blank" rel="noopener">https://izsk.me</a></strong></h3><hr>]]></content>
-    
-    <summary type="html">
-    
-      &lt;h3 id=&quot;2019&quot;&gt;&lt;a href=&quot;#2019&quot; class=&quot;headerlink&quot; title=&quot;2019&quot;&gt;&lt;/a&gt;&lt;strong&gt;2019&lt;/strong&gt;&lt;/h3&gt;&lt;h1 id=&quot;努力奋斗&quot;&gt;&lt;a href=&quot;#努力奋斗&quot; class=&quot;headerlink&quot; title=&quot;努力奋斗&quot;&gt;&lt;/a&gt;&lt;strong&gt;努力奋斗&lt;/strong&gt;&lt;/h1&gt;
-    
-    </summary>
-    
-    
-      <category term="随淑笔记" scheme="https://zhoushuke.github.io/categories/%E9%9A%8F%E6%B7%91%E7%AC%94%E8%AE%B0/"/>
-    
-    
-      <category term="随淑笔记" scheme="https://zhoushuke.github.io/tags/%E9%9A%8F%E6%B7%91%E7%AC%94%E8%AE%B0/"/>
     
   </entry>
   
