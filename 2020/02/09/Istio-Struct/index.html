@@ -96,10 +96,10 @@
 <meta property="og:locale" content="zh-Hans">
 <meta property="og:image" content="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20200209153912.png">
 <meta property="og:image" content="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20200209154612.png">
-<meta property="og:image" content="https://zhoushuke.github.io/Users/zhoushuke/Downloads/software/istio/006tNc79ly1fz73sprcdlj31580u046j.jpg">
+<meta property="og:image" content="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20200209212447.png">
 <meta property="og:image" content="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20200209155817.png">
 <meta property="og:image" content="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20200209160002.png">
-<meta property="og:updated_time" content="2020-02-09T08:18:00.780Z">
+<meta property="og:updated_time" content="2020-02-09T13:25:47.608Z">
 <meta name="twitter:card" content="summary">
 <meta name="twitter:title" content="Istio学习(架构)">
 <meta name="twitter:description" content="上次在Kubernetes中安装好Istio之后, 忙了很长的时间在处理另一个事, 今天学习一下istio的架构及一些概念，后续分析整个数据的流向.">
@@ -417,7 +417,7 @@
 <h3 id="Struct"><a href="#Struct" class="headerlink" title="Struct"></a>Struct</h3><p>istio的整体架构图</p>
 <p><img src="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20200209154612.png" alt></p>
 <p>再细分, istio分为控制面及数据面, 如下: </p>
-<p><img src="/Users/zhoushuke/Downloads/software/istio/006tNc79ly1fz73sprcdlj31580u046j.jpg" alt="006tNc79ly1fz73sprcdlj31580u046j"></p>
+<p><img src="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20200209212447.png" alt></p>
 <p>从架构图可以看出几个很重要的信息</p>
 <blockquote>
 <ul>
@@ -428,7 +428,7 @@
 </blockquote>
 <p>具体sidecar是如何劫持流量并转发出去的，不在这篇说明. </p>
 <p>再来简单说明一下各个组件的作用.</p>
-<h3 id="Components"><a href="#Components" class="headerlink" title="Components"></a>Components</h3><h4 id="数据面"><a href="#数据面" class="headerlink" title="数据面"></a>数据面</h4><h6 id="envoy"><a href="#envoy" class="headerlink" title="envoy"></a>envoy</h6><p>数据面很简单, 就一个proxy(envoy)</p>
+<h3 id="Components"><a href="#Components" class="headerlink" title="Components"></a>Components</h3><h4 id="数据面"><a href="#数据面" class="headerlink" title="数据面"></a>数据面</h4><h5 id="envoy"><a href="#envoy" class="headerlink" title="envoy"></a>envoy</h5><p>数据面很简单, 就一个proxy(envoy)</p>
 <p>envoy有如下的特点:</p>
 <blockquote>
 <ul>
@@ -440,7 +440,7 @@
 </ul>
 </blockquote>
 <p><code>简单来说, istio通过注入(手工注入入自动注入)等方式将envoy加入到业务Pod中, 然后通过initContainer生成的iptables规则将所在进出业务容器的流量都进行劫持</code></p>
-<h4 id="控制面"><a href="#控制面" class="headerlink" title="控制面"></a>控制面</h4><h6 id="pilot"><a href="#pilot" class="headerlink" title="pilot"></a>pilot</h6><p><code>Pilot 是Istio实现流量管理的核心组件，它主要的作用是配置和管理Envoy代理</code></p>
+<h4 id="控制面"><a href="#控制面" class="headerlink" title="控制面"></a>控制面</h4><h5 id="pilot"><a href="#pilot" class="headerlink" title="pilot"></a>pilot</h5><p><code>Pilot 是Istio实现流量管理的核心组件，它主要的作用是配置和管理Envoy代理</code></p>
 <blockquote>
 <ul>
 <li>从平台（如Kubernetes）获取服务信息，完成服务发现</li>
@@ -449,11 +449,11 @@
 </blockquote>
 <p>piolt架构图:</p>
 <p><img src="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20200209155817.png" alt></p>
-<h6 id="Mixer"><a href="#Mixer" class="headerlink" title="Mixer"></a>Mixer</h6><p><code>Mixer的主要功能是提供策略控制，并从Envoy代理收集遥测数据</code>。每次网络通信时Envoy代理都会向Mixer发出预检要求，用来检测调用者的合法性。调用之后Envoy代理会发送遥测数据供Mixer收集。一般情况下Sidecar代理可以缓存这些数据，不需要频繁地调用Mixer.</p>
+<h5 id="Mixer"><a href="#Mixer" class="headerlink" title="Mixer"></a>Mixer</h5><p><code>Mixer的主要功能是提供策略控制，并从Envoy代理收集遥测数据</code>。每次网络通信时Envoy代理都会向Mixer发出预检要求，用来检测调用者的合法性。调用之后Envoy代理会发送遥测数据供Mixer收集。一般情况下Sidecar代理可以缓存这些数据，不需要频繁地调用Mixer.</p>
 <p>​    同时,<code>Mixer彩用配器模式</code>, 可以支持不同的后端，如日志后端，监控后端, 调用链后端.</p>
 <p><img src="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20200209160002.png" alt></p>
-<h6 id="Citadel"><a href="#Citadel" class="headerlink" title="Citadel"></a>Citadel</h6><p>Citadel是与安全相关的组件，主要负责密钥和证书的管理。它可以提供服务间和终端用户的身份认证，还可以加密服务网格中的流量。</p>
-<h6 id="gallely"><a href="#gallely" class="headerlink" title="gallely"></a>gallely</h6><p>在2019年3月份发布的1.1版本中，Galley作为一个独立的组件被添加到了架构当中（在此之前的版本中Galley并未独立出现），它现在是Istio主要的配置管理组件，负责配置的获取、处理和分发。Galley使用了一种叫作MCP（Mesh Configuration Protocol，网格配置协议）的协议与其他组件进行通信。</p>
+<h5 id="Citadel"><a href="#Citadel" class="headerlink" title="Citadel"></a>Citadel</h5><p>Citadel是与安全相关的组件，主要负责密钥和证书的管理。它可以提供服务间和终端用户的身份认证，还可以加密服务网格中的流量。</p>
+<h5 id="gallely"><a href="#gallely" class="headerlink" title="gallely"></a>gallely</h5><p>在2019年3月份发布的1.1版本中，Galley作为一个独立的组件被添加到了架构当中（在此之前的版本中Galley并未独立出现），它现在是Istio主要的配置管理组件，负责配置的获取、处理和分发。Galley使用了一种叫作MCP（Mesh Configuration Protocol，网格配置协议）的协议与其他组件进行通信。</p>
 <p>重点学习Pilot及Mix即可, citadel及gallely一般都不会变动频繁, 知道怎么一回事就可以了.</p>
 <p>上面主要学习了下istio整体的框架,没有说明地很详细, 至于istio如何注入sidecar, sidecar又是如何劫持流向转发, 又是如何找到对端的容器地址的，挺有意思, 后续再更.</p>
 <h3 id="参考文章"><a href="#参考文章" class="headerlink" title="参考文章:"></a><strong>参考文章:</strong></h3><blockquote>
@@ -659,7 +659,7 @@
             
 
             
-              <div class="post-toc-content"><ol class="nav"><li class="nav-item nav-level-3"><a class="nav-link" href="#WhatFor"><span class="nav-number">1.</span> <span class="nav-text">WhatFor</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#Struct"><span class="nav-number">2.</span> <span class="nav-text">Struct</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#Components"><span class="nav-number">3.</span> <span class="nav-text">Components</span></a><ol class="nav-child"><li class="nav-item nav-level-4"><a class="nav-link" href="#数据面"><span class="nav-number">3.1.</span> <span class="nav-text">数据面</span></a><ol class="nav-child"><li class="nav-item nav-level-6"><a class="nav-link" href="#envoy"><span class="nav-number">3.1.0.1.</span> <span class="nav-text">envoy</span></a></li></ol></li></ol></li><li class="nav-item nav-level-4"><a class="nav-link" href="#控制面"><span class="nav-number">3.2.</span> <span class="nav-text">控制面</span></a><ol class="nav-child"><li class="nav-item nav-level-6"><a class="nav-link" href="#pilot"><span class="nav-number">3.2.0.1.</span> <span class="nav-text">pilot</span></a></li><li class="nav-item nav-level-6"><a class="nav-link" href="#Mixer"><span class="nav-number">3.2.0.2.</span> <span class="nav-text">Mixer</span></a></li><li class="nav-item nav-level-6"><a class="nav-link" href="#Citadel"><span class="nav-number">3.2.0.3.</span> <span class="nav-text">Citadel</span></a></li><li class="nav-item nav-level-6"><a class="nav-link" href="#gallely"><span class="nav-number">3.2.0.4.</span> <span class="nav-text">gallely</span></a></li></ol></li></ol><li class="nav-item nav-level-3"><a class="nav-link" href="#参考文章"><span class="nav-number">4.</span> <span class="nav-text">参考文章:</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#转载请注明出处https-izsk-me"><span class="nav-number">5.</span> <span class="nav-text">转载请注明出处https://izsk.me</span></a></li></div>
+              <div class="post-toc-content"><ol class="nav"><li class="nav-item nav-level-3"><a class="nav-link" href="#WhatFor"><span class="nav-number">1.</span> <span class="nav-text">WhatFor</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#Struct"><span class="nav-number">2.</span> <span class="nav-text">Struct</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#Components"><span class="nav-number">3.</span> <span class="nav-text">Components</span></a><ol class="nav-child"><li class="nav-item nav-level-4"><a class="nav-link" href="#数据面"><span class="nav-number">3.1.</span> <span class="nav-text">数据面</span></a><ol class="nav-child"><li class="nav-item nav-level-5"><a class="nav-link" href="#envoy"><span class="nav-number">3.1.1.</span> <span class="nav-text">envoy</span></a></li></ol></li><li class="nav-item nav-level-4"><a class="nav-link" href="#控制面"><span class="nav-number">3.2.</span> <span class="nav-text">控制面</span></a><ol class="nav-child"><li class="nav-item nav-level-5"><a class="nav-link" href="#pilot"><span class="nav-number">3.2.1.</span> <span class="nav-text">pilot</span></a></li><li class="nav-item nav-level-5"><a class="nav-link" href="#Mixer"><span class="nav-number">3.2.2.</span> <span class="nav-text">Mixer</span></a></li><li class="nav-item nav-level-5"><a class="nav-link" href="#Citadel"><span class="nav-number">3.2.3.</span> <span class="nav-text">Citadel</span></a></li><li class="nav-item nav-level-5"><a class="nav-link" href="#gallely"><span class="nav-number">3.2.4.</span> <span class="nav-text">gallely</span></a></li></ol></li></ol></li><li class="nav-item nav-level-3"><a class="nav-link" href="#参考文章"><span class="nav-number">4.</span> <span class="nav-text">参考文章:</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#转载请注明出处https-izsk-me"><span class="nav-number">5.</span> <span class="nav-text">转载请注明出处https://izsk.me</span></a></li></ol></div>
             
 
           </div>
