@@ -409,6 +409,270 @@
       </tags>
   </entry>
   <entry>
+    <title>Istio学习(在Kubernetes集群中安装istio)</title>
+    <url>/2020/01/03/Istio-Install-Upon-Kubernetes/</url>
+    <content><![CDATA[<p>Istio做为ServiceMesh的事实标准, 越来越被广泛地使用, 特别是work on Kubernetes之后, 再加持Istio来做更加细度地诸如流量管理、访问控制、灰度发布等方面的事情，不要更爽. </p>
+<a id="more"></a>
+<h3 id="Download"><a href="#Download" class="headerlink" title="Download"></a>Download</h3><p>Istio的部署还是非常简单的, 先下载istioctl二进制文件进行安装, 参考<a href="https://istio.io/docs/setup/getting-started/" target="_blank" rel="noopener">这里</a></p>
+<figure class="highlight shell"><table><tr><td class="code"><pre><span class="line">curl -L https://istio.io/downloadIstio | sh -</span><br><span class="line">cd istio-1.4.2</span><br><span class="line">export PATH=$PWD/bin:$PATH</span><br><span class="line"><span class="meta">#</span><span class="bash">如果没有loadBalance需要修改发下文件:</span></span><br><span class="line"><span class="meta">#</span><span class="bash">install/kubernetes/istio-demo.yaml中istio-ingressgateway的service从loadBalance修改成NodePort</span></span><br></pre></td></tr></table></figure>
+<h3 id="默认Profile安装"><a href="#默认Profile安装" class="headerlink" title="默认Profile安装"></a>默认Profile安装</h3><p>istio内置几种默认的Profile, 某种Profile下有默认的manifest文件, 定义了需要安装的组件, 在安装的时候可以指定Profile进行安装, 各Profile如下, 详细的信息可查看<a href="https://istio.io/docs/setup/additional-setup/config-profiles/" target="_blank" rel="noopener">这里</a></p>
+<table>
+<thead>
+<tr>
+<th></th>
+<th>default</th>
+<th>demo</th>
+<th>minimal</th>
+<th>sds</th>
+<th>remote</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Core components</td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td><code>istio-citadel</code></td>
+<td>X</td>
+<td>X</td>
+<td></td>
+<td>X</td>
+<td>X</td>
+</tr>
+<tr>
+<td><code>istio-egressgateway</code></td>
+<td></td>
+<td>X</td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td><code>istio-galley</code></td>
+<td>X</td>
+<td>X</td>
+<td></td>
+<td>X</td>
+<td></td>
+</tr>
+<tr>
+<td><code>istio-ingressgateway</code></td>
+<td>X</td>
+<td>X</td>
+<td></td>
+<td>X</td>
+<td></td>
+</tr>
+<tr>
+<td><code>istio-nodeagent</code></td>
+<td></td>
+<td></td>
+<td></td>
+<td>X</td>
+<td></td>
+</tr>
+<tr>
+<td><code>istio-pilot</code></td>
+<td>X</td>
+<td>X</td>
+<td>X</td>
+<td>X</td>
+<td></td>
+</tr>
+<tr>
+<td><code>istio-policy</code></td>
+<td>X</td>
+<td>X</td>
+<td></td>
+<td>X</td>
+<td></td>
+</tr>
+<tr>
+<td><code>istio-sidecar-injector</code></td>
+<td>X</td>
+<td>X</td>
+<td></td>
+<td>X</td>
+<td>X</td>
+</tr>
+<tr>
+<td><code>istio-telemetry</code></td>
+<td>X</td>
+<td>X</td>
+<td></td>
+<td>X</td>
+<td></td>
+</tr>
+<tr>
+<td>Addons</td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td><code>grafana</code></td>
+<td></td>
+<td>X</td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td><code>istio-tracing</code></td>
+<td></td>
+<td>X</td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td><code>kiali</code></td>
+<td></td>
+<td>X</td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td><code>prometheus</code></td>
+<td>X</td>
+<td>X</td>
+<td></td>
+<td>X</td>
+</tr>
+</tbody>
+</table>
+<p>注: 显示X的为在该Profile模式下需要安装的组件.</p>
+<p>每种Profile说明如下:</p>
+<blockquote>
+<ul>
+<li><strong>default</strong>：根据<a href="https://istio.io/docs/reference/config/istio.operator.v1alpha12.pb/" target="_blank" rel="noopener"><code>IstioControlPlane</code>API</a>的默认设置启用组件 （建议用于生产部署）。您可以通过运行命令显示默认设置<code>istioctl profile dump</code></li>
+<li><strong>demo</strong>：旨在展示Istio功能且资源需求适中的配置。适合运行<a href="https://istio.io/docs/examples/bookinfo/" target="_blank" rel="noopener">Bookinfo</a>应用程序和相关任务。这是随<a href="https://istio.io/docs/setup/getting-started/" target="_blank" rel="noopener">快速入门</a>说明一起安装的配置，但是 如果您想探索更高级的任务，则可以稍后<a href="https://istio.io/docs/setup/install/istioctl/#customizing-the-configuration" target="_blank" rel="noopener">自定义配置</a>以启用其他功能此配置文件可实现高级别的跟踪和访问日志记录，因此不适合进行性能测试。</li>
+<li><strong>minimal</strong>：使用Istio的<a href="https://istio.io/docs/tasks/traffic-management/" target="_blank" rel="noopener">流量管理</a>功能所需的最少组件集。</li>
+<li><strong>sds</strong>：类似于<strong>默认</strong>配置文件，但也启用了Istio的<a href="https://istio.io/docs/tasks/security/citadel-config/auth-sds" target="_blank" rel="noopener">SDS（秘密发现服务）</a>。此配置文件具有默认情况下启用的其他身份验证功能（严格双向TLS）。</li>
+<li><strong>远程</strong>：用于配置的远程簇 <a href="https://istio.io/docs/ops/deployment/deployment-models/#multiple-clusters" target="_blank" rel="noopener">的多组啮合</a>与 <a href="https://istio.io/docs/setup/install/multicluster/shared-vpn/" target="_blank" rel="noopener">共享控制平面</a>配置。</li>
+</ul>
+</blockquote>
+<p>因为demo涉及到的组件最符合目前的需求, 使用以下命令生成manifest文件并按该manifest部署.</p>
+<figure class="highlight bash"><table><tr><td class="code"><pre><span class="line">istioctl manifest apply --<span class="built_in">set</span> profile=demo</span><br></pre></td></tr></table></figure>
+<p><img src="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20200209151532.png" alt></p>
+<p>在Kubernetes中查看生成的CRD的对象</p>
+<p><code>kubectl get CustomResourceDefinition</code></p>
+<p><img src="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20200209151612.png" alt></p>
+<p>生成的pod信息如下</p>
+<p><code>kubectl get pod -n istio-system</code></p>
+<p><img src="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20200209151644.png" alt></p>
+<p>以上pod的功能:</p>
+<blockquote>
+<ul>
+<li>grafana-*              //监控数据可视化工具</li>
+<li>istio-citadel－*    //证书管理</li>
+<li>istio-egressgateway-*  //出口流量网关</li>
+<li>istio-galley－*     //配置检查</li>
+<li>istio-ingressgateway-*  //入口流量网关</li>
+<li>istio-pilot-*         //Envoy 服务发现，外部化配置</li>
+<li>istio-policy-*      //Mixer 混合器策略检查</li>
+<li>istio-sidecar-injector-*         //边车注入</li>
+<li>istio-telemetry-*       //Mixer混合器指标收集</li>
+<li>Istio-tracing-*          // 全链路跟踪工具</li>
+<li>kiali-*                         //Service Mesh可视化工具</li>
+<li>prometheus-*          //监控报警</li>
+</ul>
+</blockquote>
+<h3 id="自定义安装"><a href="#自定义安装" class="headerlink" title="自定义安装"></a>自定义安装</h3><p>当默认的Profile无法满足业务需求的时候, 比如，目前系统中存在了<code>Prometheus</code>, 不想在istio再次安装，同时又需要<code>Tracing</code>跟<code>kiali</code>那上面的所有profile都无法满足, istio也提供了可自定义安装，使用<code>--set</code>开关</p>
+<p>比如可使用以下命令实现以下的需求</p>
+<p><code>istioctl manifest apply --set profile=demo --set telemetry.prometheus.enabled=false --set telemetry.prometheusOperator.enabled=false</code></p>
+<p>这样就从demo中把原本会安装的Prometheus修改为不安装</p>
+<p>组件的对应关系如下:</p>
+<table>
+<thead>
+<tr>
+<th>Feature</th>
+<th>Components</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>base</code></td>
+<td><code>CRDs</code></td>
+</tr>
+<tr>
+<td><code>trafficManagement</code></td>
+<td><code>pilot</code></td>
+</tr>
+<tr>
+<td><code>policy</code></td>
+<td><code>policy</code></td>
+</tr>
+<tr>
+<td><code>telemetry</code></td>
+<td><code>telemetry</code></td>
+</tr>
+<tr>
+<td><code>security</code></td>
+<td><code>citadel</code>, <code>nodeAgent</code>, <code>certManager</code></td>
+</tr>
+<tr>
+<td><code>configManagement</code></td>
+<td><code>galley</code></td>
+</tr>
+<tr>
+<td><code>gateways</code></td>
+<td><code>ingressGateway</code>, <code>egressGateway</code></td>
+</tr>
+<tr>
+<td><code>autoInjection</code></td>
+<td><code>injector</code></td>
+</tr>
+<tr>
+<td><code>coreDNS</code></td>
+<td><code>coreDNS</code></td>
+</tr>
+<tr>
+<td><code>thirdParty</code></td>
+<td><code>cni</code></td>
+</tr>
+</tbody>
+</table>
+<table>
+<thead>
+<tr>
+<th>Feature</th>
+<th>Components</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>telemetry</code></td>
+<td><code>prometheus</code>, <code>prometheusOperator</code>, <code>grafana</code>, <code>kiali</code>, <code>tracing</code></td>
+</tr>
+</tbody>
+</table>
+<p>至此, Istio已经在Kubernetes中安装完成.</p>
+<h3 id="参考文章"><a href="#参考文章" class="headerlink" title="参考文章:"></a><strong>参考文章:</strong></h3><blockquote>
+<ul>
+<li><a href="https://istio.io/docs/setup/additional-setup/config-profiles/" target="_blank" rel="noopener">https://istio.io/docs/setup/additional-setup/config-profiles/</a></li>
+<li><a href="https://juejin.im/post/5e0062ae6fb9a0163a483ea5" target="_blank" rel="noopener">https://juejin.im/post/5e0062ae6fb9a0163a483ea5</a></li>
+<li><a href="https://istio.io/docs/setup/getting-started/" target="_blank" rel="noopener">https://istio.io/docs/setup/getting-started/</a></li>
+<li><a href="https://istio.io/docs/setup/install/istioctl/#customizing-the-configuration" target="_blank" rel="noopener">https://istio.io/docs/setup/install/istioctl/#customizing-the-configuration</a></li>
+</ul>
+</blockquote>
+<h3 id="转载请注明出处https-izsk-me"><a href="#转载请注明出处https-izsk-me" class="headerlink" title="转载请注明出处https://izsk.me"></a><strong>转载请注明出处<a href="https://izsk.me" target="_blank" rel="noopener">https://izsk.me</a></strong></h3>]]></content>
+      <categories>
+        <category>ServiceMesh</category>
+      </categories>
+      <tags>
+        <tag>ServiceMesh</tag>
+      </tags>
+  </entry>
+  <entry>
     <title>2020-努力奋斗</title>
     <url>/2019/12/31/2020-%E5%8A%AA%E5%8A%9B%E5%A5%8B%E6%96%97/</url>
     <content><![CDATA[<h3 id="2020"><a href="#2020" class="headerlink" title="2020"></a><strong>2020</strong></h3><h1 id="努力奋斗"><a href="#努力奋斗" class="headerlink" title="努力奋斗"></a><strong>努力奋斗</strong></h1><a id="more"></a>
@@ -477,6 +741,74 @@
       </categories>
       <tags>
         <tag>CloudNavi</tag>
+      </tags>
+  </entry>
+  <entry>
+    <title>记一次排查ES FGC导致的集群宕机异常</title>
+    <url>/2019/10/06/ES-FGC-Fix/</url>
+    <content><![CDATA[<p>有一个私有云环境的运维同事反应项目中的ES集群无法查询, 由于是私有云环境, 没有直接运维权限, 所以没有接收到一线报警, 远程登录上去后发现ES集群已经宕机了, 这次的排查过程也发现了几个比较容易忽视的细节, 在此记录一下,比较有意思.</p>
+<a id="more"></a>
+<h3 id="集群状态"><a href="#集群状态" class="headerlink" title="集群状态"></a>集群状态</h3><p>ES集群为3节点.</p>
+<p>首先肯定是查看集群状态</p>
+<figure class="highlight bash"><table><tr><td class="code"><pre><span class="line">curl <span class="string">'http://localhost:9200/_cluster/health?pretty'</span> -u xxx:yyy</span><br><span class="line"><span class="comment">#发现状态为Red</span></span><br></pre></td></tr></table></figure>
+<p>查看节点状态</p>
+<figure class="highlight bash"><table><tr><td class="code"><pre><span class="line">curl <span class="string">'http://localhost:9200/_cat/node?v'</span> -u xxx:yyy</span><br><span class="line"><span class="comment">#节点数正常</span></span><br></pre></td></tr></table></figure>
+<p>查看各节点使用的磁盘情况</p>
+<figure class="highlight bash"><table><tr><td class="code"><pre><span class="line">curl -XGET <span class="string">'localhost:9200/_cat/allocation?v&amp;pretty'</span> -u xxx:yyy</span><br><span class="line"><span class="comment">#未发现异常</span></span><br></pre></td></tr></table></figure>
+<h3 id="集群日志"><a href="#集群日志" class="headerlink" title="集群日志"></a>集群日志</h3><p>登录一个ES节点查看日志，发现以下报错，查看其它2个节点，情况相同</p>
+<p><img src="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20200204134510.png" alt></p>
+<p>从日志来看, 可以发现几个问题:</p>
+<blockquote>
+<ul>
+<li>Full GC很频繁, 而且时间也非常的长 </li>
+<li>每次GC完之后所能释放的内存非常有限</li>
+</ul>
+</blockquote>
+<p>到这，其它原因已经很明朗, <strong>内存不够导致的full gc 频繁，但是又不能释放太多的空间，又导致full gc的恶意循环</strong></p>
+<p>如果大家对gc的日志不很了解的话, 这里解释下上面日志的各个字段含义, 假如有以下一条gc日志</p>
+<figure class="highlight bash"><table><tr><td class="code"><pre><span class="line">[2018-06-30T17:57:29,020][INFO ][o.e.m.j.JvmGcMonitorService] [qoo--ES] [gc][old][228385][160772] duration [5s], collections [1]/[5.1s], total [5s]/[4.4d], memory [945.4mb]-&gt;[958.5mb]/[1007.3mb], all_pools &#123;[young] [87.8mb]-&gt;[100.9mb]/[133.1mb]&#125;&#123;[survivor] [0b]-&gt;[0b]/[16.6mb]&#125;&#123;[old] [857.6mb]-&gt;[857.6mb]/[857.6mb]&#125;</span><br></pre></td></tr></table></figure>
+<ul>
+<li><strong>gc old</strong> 本次是 old GC 这是第228385次 GC 检查][从 JVM 启动至今发生的第 160772次 G]</li>
+<li><strong>duration</strong> [本次检查到的 GC 总耗时 <strong>5</strong> 秒，可能是多次的加和</li>
+<li><strong>collections</strong> [从上次检查至今总共发生<strong>1</strong>次GC]/[从上次检查至今已过去 <strong>5.1</strong> 秒],</li>
+<li><strong>total</strong> [本次检查到的 GC 总耗时为 <strong>5</strong> 秒]/[从 JVM 启动至今发生的 GC 总耗时为 <strong>4.4</strong> 天]，</li>
+<li><strong>memory</strong> [ GC 前 Heap memory 空间]-&gt;[GC 后 Heap memory 空间]/[Heap memory 总空间],</li>
+<li><strong>all_pools</strong>(分代部分的详情) {young 区][GC 前 Memory ]-&gt;[GC后 Memory]/[young区 Memory 总大小] }</li>
+<li><strong>survivor</strong> [GC 前 Memory ]-&gt;[GC后 Memory]/[Memory 总大小] }{old 区[GC 前 Memory ]-&gt;[GC后 Memory]/[old区 Memory 总大小] }</li>
+</ul>
+<p>那为何会内存不足呢, 想起前几天服务拓展，添加收集了几个服务的日志, 日志量不算小, 而且这3个ES节点所在的机器内存只分配了8个G, 显然, 加完这几个日志之后内存不够用了.</p>
+<h3 id="Index-Mapping"><a href="#Index-Mapping" class="headerlink" title="Index Mapping"></a>Index Mapping</h3><p>而且，从日志中， 还发现几处很诡异的日志</p>
+<p><img src="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20200204141415.png" alt></p>
+<p>红框中的错误: <strong>object mapping for [msg] tried to pasrse field [msg] as object, but found a concrete</strong></p>
+<p>翻译过来就是说, 日志中的msg这个字段的类型匹配不上, ES尽力把它解析为object类型，但是它却是个确切的值.</p>
+<p>就好比你在python中定义了一个字典, 但是你给它赋值一个整形, 这确定要报错.</p>
+<p>但是这个mapping是从何而来的呢.</p>
+<p>经过网上搜索一翻, 终于明白:</p>
+<p>ES中为了加强性能，对于索引中的<strong>第一条数据, ES会默认(可设置)按照这条数据建立index mapping, 相当于是一个索引模板, 好比是mysql中表的定义一个概念, 后续这个索引中的所有日志都按照该模板进行解析</strong></p>
+<p>后来经过查看源码, 我们发现，出现上图中的问题是因为代码中的日志打印不规范, 有一个地方如果抛出异常时，打印的是一个单一字符串, 而正常情况下打印的是一个json, 所以当第一条正常的日志传递给ES时，ES建立的索引 模板记录这个字段为object类型(可以类比为python中的字典, 本身是可以新增元素的), 当应用抛出异常时，日志中又传递了一个单一字符串, 但是索引模板已经记录为object类型，所以无法匹配, 这就是问题所在</p>
+<h3 id="Fix-Bug"><a href="#Fix-Bug" class="headerlink" title="Fix Bug"></a>Fix Bug</h3><p>从3个方面解决上面的问题</p>
+<p>首先是修复代码中日志不规范问题, 这个充暴露了code view不严谨.</p>
+<p>第2个是加大ES的内存,毕竟日志量确实是上来了, 从8G添加到12G</p>
+<p>第3个是优化ES的gc问题, ES中有个逻辑是：<strong>默认情况下，主节点每30秒会去检查其他节点的状态，如果任何节点的垃圾回收时间超过30秒（Garbage collection duration）且在重复次数内都超时，则会导致主节点任务该节点脱离集群, 节点脱离集群后会引起分片的rebalance</strong></p>
+<p>这个机制让ES节点频繁的脱离集群，而又引起整个集群的rebalance，ES本身的内存就不够，rebalance更是雪上加霜, 如此往复就导致整个ES集群宕机.</p>
+<p>可修改主节点的检查时间及重复次数,让其它节点有充分的时间进行full gc.</p>
+<p>在ES的配置文件中添加以下配置:</p>
+<figure class="highlight yml"><table><tr><td class="code"><pre><span class="line"><span class="attr">discovery.zen.fd.ping_timeout:</span> <span class="string">300s</span></span><br><span class="line"><span class="attr">discovery.zen.fd.ping_retriES:</span> <span class="number">10</span></span><br></pre></td></tr></table></figure>
+<p>这样, 达到这两个条件时才能触发节点脱离集群</p>
+<p>至此, 依次重启ES节点, 问题圆满解决.</p>
+<h3 id="参考文章"><a href="#参考文章" class="headerlink" title="参考文章:"></a><strong>参考文章:</strong></h3><blockquote>
+<ul>
+<li><a href="https://www.elastic.co/guide/en/elasticsearch/reference/current/mapping.html" target="_blank" rel="noopener">elasticsearch index mapping</a></li>
+<li><a href="https://blog.csdn.net/sinat_35930259/article/details/80354732" target="_blank" rel="noopener">elasticsearch篇之mapping</a></li>
+<li><a href="https://segmentfault.com/a/1190000016494488" target="_blank" rel="noopener">你看懂 Elasticsearch Log 中的 GC 日志了吗？</a></li>
+</ul>
+</blockquote>
+<h3 id="转载请注明出处https-izsk-me"><a href="#转载请注明出处https-izsk-me" class="headerlink" title="转载请注明出处https://izsk.me"></a><strong>转载请注明出处<a href="https://izsk.me" target="_blank" rel="noopener">https://izsk.me</a></strong></h3>]]></content>
+      <categories>
+        <category>FELK</category>
+      </categories>
+      <tags>
+        <tag>FELK</tag>
       </tags>
   </entry>
   <entry>
@@ -614,74 +946,6 @@
       </categories>
       <tags>
         <tag>分布式架构</tag>
-      </tags>
-  </entry>
-  <entry>
-    <title>记一次排查ES FGC导致的集群宕机异常</title>
-    <url>/2019/10/06/ES-FGC-Fix/</url>
-    <content><![CDATA[<p>有一个私有云环境的运维同事反应项目中的ES集群无法查询, 由于是私有云环境, 没有直接运维权限, 所以没有接收到一线报警, 远程登录上去后发现ES集群已经宕机了, 这次的排查过程也发现了几个比较容易忽视的细节, 在此记录一下,比较有意思.</p>
-<a id="more"></a>
-<h3 id="集群状态"><a href="#集群状态" class="headerlink" title="集群状态"></a>集群状态</h3><p>ES集群为3节点.</p>
-<p>首先肯定是查看集群状态</p>
-<figure class="highlight bash"><table><tr><td class="code"><pre><span class="line">curl <span class="string">'http://localhost:9200/_cluster/health?pretty'</span> -u xxx:yyy</span><br><span class="line"><span class="comment">#发现状态为Red</span></span><br></pre></td></tr></table></figure>
-<p>查看节点状态</p>
-<figure class="highlight bash"><table><tr><td class="code"><pre><span class="line">curl <span class="string">'http://localhost:9200/_cat/node?v'</span> -u xxx:yyy</span><br><span class="line"><span class="comment">#节点数正常</span></span><br></pre></td></tr></table></figure>
-<p>查看各节点使用的磁盘情况</p>
-<figure class="highlight bash"><table><tr><td class="code"><pre><span class="line">curl -XGET <span class="string">'localhost:9200/_cat/allocation?v&amp;pretty'</span> -u xxx:yyy</span><br><span class="line"><span class="comment">#未发现异常</span></span><br></pre></td></tr></table></figure>
-<h3 id="集群日志"><a href="#集群日志" class="headerlink" title="集群日志"></a>集群日志</h3><p>登录一个ES节点查看日志，发现以下报错，查看其它2个节点，情况相同</p>
-<p><img src="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20200204134510.png" alt></p>
-<p>从日志来看, 可以发现几个问题:</p>
-<blockquote>
-<ul>
-<li>Full GC很频繁, 而且时间也非常的长 </li>
-<li>每次GC完之后所能释放的内存非常有限</li>
-</ul>
-</blockquote>
-<p>到这，其它原因已经很明朗, <strong>内存不够导致的full gc 频繁，但是又不能释放太多的空间，又导致full gc的恶意循环</strong></p>
-<p>如果大家对gc的日志不很了解的话, 这里解释下上面日志的各个字段含义, 假如有以下一条gc日志</p>
-<figure class="highlight bash"><table><tr><td class="code"><pre><span class="line">[2018-06-30T17:57:29,020][INFO ][o.e.m.j.JvmGcMonitorService] [qoo--ES] [gc][old][228385][160772] duration [5s], collections [1]/[5.1s], total [5s]/[4.4d], memory [945.4mb]-&gt;[958.5mb]/[1007.3mb], all_pools &#123;[young] [87.8mb]-&gt;[100.9mb]/[133.1mb]&#125;&#123;[survivor] [0b]-&gt;[0b]/[16.6mb]&#125;&#123;[old] [857.6mb]-&gt;[857.6mb]/[857.6mb]&#125;</span><br></pre></td></tr></table></figure>
-<ul>
-<li><strong>gc old</strong> 本次是 old GC 这是第228385次 GC 检查][从 JVM 启动至今发生的第 160772次 G]</li>
-<li><strong>duration</strong> [本次检查到的 GC 总耗时 <strong>5</strong> 秒，可能是多次的加和</li>
-<li><strong>collections</strong> [从上次检查至今总共发生<strong>1</strong>次GC]/[从上次检查至今已过去 <strong>5.1</strong> 秒],</li>
-<li><strong>total</strong> [本次检查到的 GC 总耗时为 <strong>5</strong> 秒]/[从 JVM 启动至今发生的 GC 总耗时为 <strong>4.4</strong> 天]，</li>
-<li><strong>memory</strong> [ GC 前 Heap memory 空间]-&gt;[GC 后 Heap memory 空间]/[Heap memory 总空间],</li>
-<li><strong>all_pools</strong>(分代部分的详情) {young 区][GC 前 Memory ]-&gt;[GC后 Memory]/[young区 Memory 总大小] }</li>
-<li><strong>survivor</strong> [GC 前 Memory ]-&gt;[GC后 Memory]/[Memory 总大小] }{old 区[GC 前 Memory ]-&gt;[GC后 Memory]/[old区 Memory 总大小] }</li>
-</ul>
-<p>那为何会内存不足呢, 想起前几天服务拓展，添加收集了几个服务的日志, 日志量不算小, 而且这3个ES节点所在的机器内存只分配了8个G, 显然, 加完这几个日志之后内存不够用了.</p>
-<h3 id="Index-Mapping"><a href="#Index-Mapping" class="headerlink" title="Index Mapping"></a>Index Mapping</h3><p>而且，从日志中， 还发现几处很诡异的日志</p>
-<p><img src="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20200204141415.png" alt></p>
-<p>红框中的错误: <strong>object mapping for [msg] tried to pasrse field [msg] as object, but found a concrete</strong></p>
-<p>翻译过来就是说, 日志中的msg这个字段的类型匹配不上, ES尽力把它解析为object类型，但是它却是个确切的值.</p>
-<p>就好比你在python中定义了一个字典, 但是你给它赋值一个整形, 这确定要报错.</p>
-<p>但是这个mapping是从何而来的呢.</p>
-<p>经过网上搜索一翻, 终于明白:</p>
-<p>ES中为了加强性能，对于索引中的<strong>第一条数据, ES会默认(可设置)按照这条数据建立index mapping, 相当于是一个索引模板, 好比是mysql中表的定义一个概念, 后续这个索引中的所有日志都按照该模板进行解析</strong></p>
-<p>后来经过查看源码, 我们发现，出现上图中的问题是因为代码中的日志打印不规范, 有一个地方如果抛出异常时，打印的是一个单一字符串, 而正常情况下打印的是一个json, 所以当第一条正常的日志传递给ES时，ES建立的索引 模板记录这个字段为object类型(可以类比为python中的字典, 本身是可以新增元素的), 当应用抛出异常时，日志中又传递了一个单一字符串, 但是索引模板已经记录为object类型，所以无法匹配, 这就是问题所在</p>
-<h3 id="Fix-Bug"><a href="#Fix-Bug" class="headerlink" title="Fix Bug"></a>Fix Bug</h3><p>从3个方面解决上面的问题</p>
-<p>首先是修复代码中日志不规范问题, 这个充暴露了code view不严谨.</p>
-<p>第2个是加大ES的内存,毕竟日志量确实是上来了, 从8G添加到12G</p>
-<p>第3个是优化ES的gc问题, ES中有个逻辑是：<strong>默认情况下，主节点每30秒会去检查其他节点的状态，如果任何节点的垃圾回收时间超过30秒（Garbage collection duration）且在重复次数内都超时，则会导致主节点任务该节点脱离集群, 节点脱离集群后会引起分片的rebalance</strong></p>
-<p>这个机制让ES节点频繁的脱离集群，而又引起整个集群的rebalance，ES本身的内存就不够，rebalance更是雪上加霜, 如此往复就导致整个ES集群宕机.</p>
-<p>可修改主节点的检查时间及重复次数,让其它节点有充分的时间进行full gc.</p>
-<p>在ES的配置文件中添加以下配置:</p>
-<figure class="highlight yml"><table><tr><td class="code"><pre><span class="line"><span class="attr">discovery.zen.fd.ping_timeout:</span> <span class="string">300s</span></span><br><span class="line"><span class="attr">discovery.zen.fd.ping_retriES:</span> <span class="number">10</span></span><br></pre></td></tr></table></figure>
-<p>这样, 达到这两个条件时才能触发节点脱离集群</p>
-<p>至此, 依次重启ES节点, 问题圆满解决.</p>
-<h3 id="参考文章"><a href="#参考文章" class="headerlink" title="参考文章:"></a><strong>参考文章:</strong></h3><blockquote>
-<ul>
-<li><a href="https://www.elastic.co/guide/en/elasticsearch/reference/current/mapping.html" target="_blank" rel="noopener">elasticsearch index mapping</a></li>
-<li><a href="https://blog.csdn.net/sinat_35930259/article/details/80354732" target="_blank" rel="noopener">elasticsearch篇之mapping</a></li>
-<li><a href="https://segmentfault.com/a/1190000016494488" target="_blank" rel="noopener">你看懂 Elasticsearch Log 中的 GC 日志了吗？</a></li>
-</ul>
-</blockquote>
-<h3 id="转载请注明出处https-izsk-me"><a href="#转载请注明出处https-izsk-me" class="headerlink" title="转载请注明出处https://izsk.me"></a><strong>转载请注明出处<a href="https://izsk.me" target="_blank" rel="noopener">https://izsk.me</a></strong></h3>]]></content>
-      <categories>
-        <category>FELK</category>
-      </categories>
-      <tags>
-        <tag>FELK</tag>
       </tags>
   </entry>
   <entry>
@@ -873,10 +1137,10 @@
 </blockquote>
 <h3 id="转载请注明出处https-izsk-me"><a href="#转载请注明出处https-izsk-me" class="headerlink" title="转载请注明出处https://izsk.me"></a><strong>转载请注明出处<a href="https://izsk.me" target="_blank" rel="noopener">https://izsk.me</a></strong></h3>]]></content>
       <categories>
-        <category>运维杂谈</category>
+        <category>分布式架构</category>
       </categories>
       <tags>
-        <tag>运维杂谈</tag>
+        <tag>分布式架构</tag>
       </tags>
   </entry>
   <entry>
@@ -1818,10 +2082,10 @@
 <h3 id="转载请注明出处https-izsk-me"><a href="#转载请注明出处https-izsk-me" class="headerlink" title="转载请注明出处https://izsk.me"></a><strong>转载请注明出处<a href="https://izsk.me" target="_blank" rel="noopener">https://izsk.me</a></strong></h3><hr>
 ]]></content>
       <categories>
-        <category>Mysql</category>
+        <category>LNMP</category>
       </categories>
       <tags>
-        <tag>Mysql</tag>
+        <tag>LNMP</tag>
       </tags>
   </entry>
   <entry>
@@ -1946,10 +2210,10 @@
 <h3 id="转载请注明出处https-izsk-me"><a href="#转载请注明出处https-izsk-me" class="headerlink" title="转载请注明出处https://izsk.me"></a><strong>转载请注明出处<a href="https://izsk.me" target="_blank" rel="noopener">https://izsk.me</a></strong></h3><hr>
 ]]></content>
       <categories>
-        <category>Mysql</category>
+        <category>LNMP</category>
       </categories>
       <tags>
-        <tag>Mysql</tag>
+        <tag>LNMP</tag>
       </tags>
   </entry>
   <entry>
@@ -2462,11 +2726,10 @@
 <h3 id="转载请注明出处https-izsk-me"><a href="#转载请注明出处https-izsk-me" class="headerlink" title="转载请注明出处https://izsk.me"></a><strong>转载请注明出处<a href="https://izsk.me" target="_blank" rel="noopener">https://izsk.me</a></strong></h3><hr>
 ]]></content>
       <categories>
-        <category>Mysql</category>
+        <category>LNMP</category>
       </categories>
       <tags>
-        <tag>Mysql</tag>
-        <tag>Oracle</tag>
+        <tag>LNMP</tag>
       </tags>
   </entry>
   <entry>
@@ -2638,10 +2901,10 @@
 <h3 id="转载请注明出处https-izsk-me"><a href="#转载请注明出处https-izsk-me" class="headerlink" title="转载请注明出处https://izsk.me"></a><strong>转载请注明出处<a href="https://izsk.me" target="_blank" rel="noopener">https://izsk.me</a></strong></h3><hr>
 ]]></content>
       <categories>
-        <category>Mysql</category>
+        <category>LNMP</category>
       </categories>
       <tags>
-        <tag>Mysql</tag>
+        <tag>LNMP</tag>
       </tags>
   </entry>
   <entry>
@@ -2741,7 +3004,7 @@
       </tags>
   </entry>
   <entry>
-    <title>flask学习二(flask应用)</title>
+    <title>Flask学习(flask应用)</title>
     <url>/2017/08/12/flask%E5%AD%A6%E4%B9%A0%E4%BA%8C(flask%E5%BA%94%E7%94%A8)/</url>
     <content><![CDATA[<p>距离<a href="https://izsk.me/2017/08/12/falsk%E5%AD%A6%E4%B9%A0(-" target="_blank" rel="noopener">上一篇</a>)有一段时间了,上次扯了点跟flask相关的内容,这次抽空记录下flask的机制.flask之所于上手容易,是因为我们对python语言稍微了解的话,简单几步就可以把一个小应用跑起来,不需要搭建额外的东西,所以对于并发量没有要求的话flask可以轻松应对.</p>
 <a id="more"></a>
@@ -2801,11 +3064,10 @@
 <h3 id="转载请注明出处https-izsk-me"><a href="#转载请注明出处https-izsk-me" class="headerlink" title="转载请注明出处https://izsk.me"></a><strong>转载请注明出处<a href="https://izsk.me" target="_blank" rel="noopener">https://izsk.me</a></strong></h3><hr>
 ]]></content>
       <categories>
-        <category>Flask</category>
+        <category>Python</category>
       </categories>
       <tags>
         <tag>Python</tag>
-        <tag>Flask</tag>
       </tags>
   </entry>
   <entry>
@@ -2849,7 +3111,7 @@
       </tags>
   </entry>
   <entry>
-    <title>flask学习一(flask介绍)</title>
+    <title>Flask学习(flask介绍)</title>
     <url>/2017/08/04/flask%E5%AD%A6%E4%B9%A0%E4%B8%80(flask%E4%BB%8B%E7%BB%8D)/</url>
     <content><![CDATA[<p>Flask是由Python语言编写开发而成的轻量级的Web开发框架,它的作者Armin Ronacher是个大神级人物,同样也是jinja,werkzeug的作者,所以不奇怪flask使用jiaja做为模板渲染,使用werkzeub做为wsgi,flask非常的小巧,也够简单,上手很快,在用了一段时间flask之后反过来学习flask原理,之前很多不理解的地方有了一个更清晰的认识,收益坡多,这里也不过多的去剖析源码,毕竟不是专业研发人士,先理解几个概念:</p>
 <a id="more"></a>
@@ -2875,10 +3137,10 @@
 <h3 id="转载请注明出处https-izsk-me"><a href="#转载请注明出处https-izsk-me" class="headerlink" title="转载请注明出处https://izsk.me"></a><strong>转载请注明出处<a href="https://izsk.me" target="_blank" rel="noopener">https://izsk.me</a></strong></h3><hr>
 ]]></content>
       <categories>
-        <category>Flask</category>
+        <category>Python</category>
       </categories>
       <tags>
-        <tag>Flask</tag>
+        <tag>Python</tag>
       </tags>
   </entry>
   <entry>
@@ -2995,10 +3257,10 @@
 <h3 id="转载请注明出处https-izsk-me"><a href="#转载请注明出处https-izsk-me" class="headerlink" title="转载请注明出处https://izsk.me"></a><strong>转载请注明出处<a href="https://izsk.me" target="_blank" rel="noopener">https://izsk.me</a></strong></h3><hr>
 ]]></content>
       <categories>
-        <category>Oracle</category>
+        <category>LNMP</category>
       </categories>
       <tags>
-        <tag>Oracle</tag>
+        <tag>LNMP</tag>
       </tags>
   </entry>
   <entry>
@@ -3110,7 +3372,7 @@
       </tags>
   </entry>
   <entry>
-    <title>flask-login使用</title>
+    <title>Flask学习(flask-login使用)</title>
     <url>/2017/07/01/flask-login%E4%BD%BF%E7%94%A8/</url>
     <content><![CDATA[<p>近期在做一个数据库后台管理系统,功能非常简单,就是定时获取oracle数据库的awr性能报告数据,结合highcharts生成图表.因为之前已经用python写了个模块,这次有个功能刚好可以直接用,就也直接想用python写了,这种小系统当然是用python的flask框架了,简单轻便,项目中有用到用户登陆功能,使用了flask-login,对这种内部小型的不需要太复杂权限应用系统实乃必备</p>
 <a id="more"></a>
@@ -3187,10 +3449,10 @@
 <h3 id="转载请注明出处https-izsk-me"><a href="#转载请注明出处https-izsk-me" class="headerlink" title="转载请注明出处https://izsk.me"></a><strong>转载请注明出处<a href="https://izsk.me" target="_blank" rel="noopener">https://izsk.me</a></strong></h3><hr>
 ]]></content>
       <categories>
-        <category>Flask</category>
+        <category>Python</category>
       </categories>
       <tags>
-        <tag>Flask</tag>
+        <tag>Python</tag>
       </tags>
   </entry>
   <entry>
@@ -3616,11 +3878,10 @@
 <h3 id="转载请注明出处https-izsk-me"><a href="#转载请注明出处https-izsk-me" class="headerlink" title="转载请注明出处https://izsk.me"></a><strong>转载请注明出处<a href="https://izsk.me" target="_blank" rel="noopener">https://izsk.me</a></strong></h3><hr>
 ]]></content>
       <categories>
-        <category>Oracle</category>
+        <category>Python</category>
       </categories>
       <tags>
         <tag>Python</tag>
-        <tag>Oracle</tag>
       </tags>
   </entry>
   <entry>
@@ -3933,10 +4194,10 @@
 <h3 id="转载请注明出处https-izsk-me"><a href="#转载请注明出处https-izsk-me" class="headerlink" title="转载请注明出处https://izsk.me"></a><strong>转载请注明出处<a href="https://izsk.me" target="_blank" rel="noopener">https://izsk.me</a></strong></h3><hr>
 ]]></content>
       <categories>
-        <category>Docker</category>
+        <category>CloudNavi</category>
       </categories>
       <tags>
-        <tag>Docker</tag>
+        <tag>CloudNavi</tag>
       </tags>
   </entry>
   <entry>
@@ -4062,10 +4323,10 @@ echo &quot;2&quot; &gt;/proc/sys/net/ipv4/conf/eth0/arp_announce
 <h3 id="转载请注明出处https-izsk-me"><a href="#转载请注明出处https-izsk-me" class="headerlink" title="转载请注明出处https://izsk.me"></a><strong>转载请注明出处<a href="https://izsk.me" target="_blank" rel="noopener">https://izsk.me</a></strong></h3><hr>
 ]]></content>
       <categories>
-        <category>Docker</category>
+        <category>CloudNavi</category>
       </categories>
       <tags>
-        <tag>Docker</tag>
+        <tag>CloudNavi</tag>
       </tags>
   </entry>
   <entry>
