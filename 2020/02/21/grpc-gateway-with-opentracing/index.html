@@ -89,7 +89,7 @@
 <meta name="description" content="一直想把istio引入到业务中, 前期调研实操中发现istio完美解决了grpc在kubernetes中的负载均衡问题, 这次学习一下opentracing在istio中的应用, 这里主要是想看grpc-gateway的调用，目前业务中用的最多, 当然tcp就更没问题.">
 <meta name="keywords" content="ServiceMesh">
 <meta property="og:type" content="article">
-<meta property="og:title" content="使用jaeger实现grpc-gateway全链路追踪">
+<meta property="og:title" content="Istio学习(使用jaeger实现grpc-gateway全链路追踪)">
 <meta property="og:url" content="https://zhoushuke.github.io/2020/02/21/grpc-gateway-with-opentracing/index.html">
 <meta property="og:site_name" content="Z.S.K.&#39;s Records">
 <meta property="og:description" content="一直想把istio引入到业务中, 前期调研实操中发现istio完美解决了grpc在kubernetes中的负载均衡问题, 这次学习一下opentracing在istio中的应用, 这里主要是想看grpc-gateway的调用，目前业务中用的最多, 当然tcp就更没问题.">
@@ -98,9 +98,9 @@
 <meta property="og:image" content="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20200221174801.png">
 <meta property="og:image" content="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20200221180136.png">
 <meta property="og:image" content="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20200221180419.png">
-<meta property="og:updated_time" content="2020-02-21T10:15:21.293Z">
+<meta property="og:updated_time" content="2020-02-21T10:31:08.425Z">
 <meta name="twitter:card" content="summary">
-<meta name="twitter:title" content="使用jaeger实现grpc-gateway全链路追踪">
+<meta name="twitter:title" content="Istio学习(使用jaeger实现grpc-gateway全链路追踪)">
 <meta name="twitter:description" content="一直想把istio引入到业务中, 前期调研实操中发现istio完美解决了grpc在kubernetes中的负载均衡问题, 这次学习一下opentracing在istio中的应用, 这里主要是想看grpc-gateway的调用，目前业务中用的最多, 当然tcp就更没问题.">
 <meta name="twitter:image" content="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20200221174553.png">
 
@@ -136,7 +136,7 @@
 
 
 
-  <title> 使用jaeger实现grpc-gateway全链路追踪 | Z.S.K.'s Records </title>
+  <title> Istio学习(使用jaeger实现grpc-gateway全链路追踪) | Z.S.K.'s Records </title>
 </head>
 
 <body itemscope itemtype="http://schema.org/WebPage" lang="zh-Hans">
@@ -326,7 +326,7 @@
             
             
               
-                使用jaeger实现grpc-gateway全链路追踪
+                Istio学习(使用jaeger实现grpc-gateway全链路追踪)
               
             
           </h1>
@@ -439,6 +439,7 @@
 <p><img src="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20200221180419.png" alt></p>
 <p><code>8932e8b49bbddf3a</code> 为<code>c78400f5fce93775</code>的 <code>child_of</code>即孩子span</p>
 <p>通过这种父子关系就可以很容易确定谁调用谁，再结合traceID或者RequestID(通常这两者一样)的唯一性就能够定位所有调用过的服务了. </p>
+<p><strong>从上面也可以看出, 要使用jaeger实现全链路监控,还是需要业务代码做集成,, 尽管istio帮我们在业务上做了很多的事情, 但目前像上面的例子需要加入header的部分istio无法实现，因为它不知道service-a会去调用哪个服务. 当然 ，以后这部分的coding会越来越少</strong></p>
 <h3 id="参考文章"><a href="#参考文章" class="headerlink" title="参考文章:"></a><strong>参考文章:</strong></h3><blockquote>
 <ul>
 <li><a href="https://blog.csdn.net/dapangzi88/article/details/63686334" target="_blank" rel="noopener">https://blog.csdn.net/dapangzi88/article/details/63686334</a></li>
