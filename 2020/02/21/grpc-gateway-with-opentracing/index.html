@@ -68,7 +68,7 @@
 <link href="/css/main.css?v=5.1.0" rel="stylesheet" type="text/css">
 
 
-  <meta name="keywords" content="CloudNavi,">
+  <meta name="keywords" content="ServiceMesh,">
 
 
 
@@ -86,18 +86,23 @@
 
 
 
-<meta name="description" content="如果使用Prometheus做监控系统的话, node-exporter一定是不能绕过的采集工具, 开箱即用的实用性让运维同学节省很多时间, 最近也是发现了一个比较有意思的功能, NodeExporter可以采集额外的Metrics到Prometheus中">
-<meta name="keywords" content="CloudNavi">
+<meta name="description" content="一直想把istio引入到业务中, 前期调研实操中发现istio完美解决了grpc在kubernetes中的负载均衡问题, 这次学习一下opentracing在istio中的应用, 这里主要是想看grpc-gateway的调用，目前业务中用的最多, 当然tcp就更没问题.">
+<meta name="keywords" content="ServiceMesh">
 <meta property="og:type" content="article">
-<meta property="og:title" content="Node-Exporter采集自定义Metrics">
-<meta property="og:url" content="https://zhoushuke.github.io/2019/08/28/Node-Exporter采集自定义Metrics/index.html">
+<meta property="og:title" content="使用jaeger实现grpc-gateway全链路追踪">
+<meta property="og:url" content="https://zhoushuke.github.io/2020/02/21/grpc-gateway-with-opentracing/index.html">
 <meta property="og:site_name" content="Z.S.K.&#39;s Records">
-<meta property="og:description" content="如果使用Prometheus做监控系统的话, node-exporter一定是不能绕过的采集工具, 开箱即用的实用性让运维同学节省很多时间, 最近也是发现了一个比较有意思的功能, NodeExporter可以采集额外的Metrics到Prometheus中">
+<meta property="og:description" content="一直想把istio引入到业务中, 前期调研实操中发现istio完美解决了grpc在kubernetes中的负载均衡问题, 这次学习一下opentracing在istio中的应用, 这里主要是想看grpc-gateway的调用，目前业务中用的最多, 当然tcp就更没问题.">
 <meta property="og:locale" content="zh-Hans">
-<meta property="og:updated_time" content="2020-01-19T09:19:36.151Z">
+<meta property="og:image" content="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20200221174553.png">
+<meta property="og:image" content="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20200221174801.png">
+<meta property="og:image" content="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20200221180136.png">
+<meta property="og:image" content="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20200221180419.png">
+<meta property="og:updated_time" content="2020-02-21T10:15:21.293Z">
 <meta name="twitter:card" content="summary">
-<meta name="twitter:title" content="Node-Exporter采集自定义Metrics">
-<meta name="twitter:description" content="如果使用Prometheus做监控系统的话, node-exporter一定是不能绕过的采集工具, 开箱即用的实用性让运维同学节省很多时间, 最近也是发现了一个比较有意思的功能, NodeExporter可以采集额外的Metrics到Prometheus中">
+<meta name="twitter:title" content="使用jaeger实现grpc-gateway全链路追踪">
+<meta name="twitter:description" content="一直想把istio引入到业务中, 前期调研实操中发现istio完美解决了grpc在kubernetes中的负载均衡问题, 这次学习一下opentracing在istio中的应用, 这里主要是想看grpc-gateway的调用，目前业务中用的最多, 当然tcp就更没问题.">
+<meta name="twitter:image" content="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20200221174553.png">
 
 
 
@@ -125,13 +130,13 @@
 
 
 
-  <link rel="canonical" href="https://zhoushuke.github.io/2019/08/28/Node-Exporter采集自定义Metrics/">
+  <link rel="canonical" href="https://zhoushuke.github.io/2020/02/21/grpc-gateway-with-opentracing/">
 
 
 
 
 
-  <title> Node-Exporter采集自定义Metrics | Z.S.K.'s Records </title>
+  <title> 使用jaeger实现grpc-gateway全链路追踪 | Z.S.K.'s Records </title>
 </head>
 
 <body itemscope itemtype="http://schema.org/WebPage" lang="zh-Hans">
@@ -297,7 +302,7 @@
   
 
   <article class="post post-type-normal " itemscope itemtype="http://schema.org/Article">
-  <link itemprop="mainEntityOfPage" href="https://zhoushuke.github.io/2019/08/28/Node-Exporter采集自定义Metrics/">
+  <link itemprop="mainEntityOfPage" href="https://zhoushuke.github.io/2020/02/21/grpc-gateway-with-opentracing/">
 
   <span style="display:none" itemprop="author" itemscope itemtype="http://schema.org/Person">
     <meta itemprop="name" content="Z.S.K.">
@@ -321,7 +326,7 @@
             
             
               
-                Node-Exporter采集自定义Metrics
+                使用jaeger实现grpc-gateway全链路追踪
               
             
           </h1>
@@ -336,8 +341,8 @@
               
                 <span class="post-meta-item-text">发表于</span>
               
-              <time title="Post created" itemprop="dateCreated datePublished" datetime="2019-08-28T10:30:53+08:00">
-                2019-08-28
+              <time title="Post created" itemprop="dateCreated datePublished" datetime="2020-02-21T16:10:53+08:00">
+                2020-02-21
               </time>
             
 
@@ -359,8 +364,8 @@
               
               
                 <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
-                  <a href="/categories/CloudNavi/" itemprop="url" rel="index">
-                    <span itemprop="name">CloudNavi</span>
+                  <a href="/categories/ServiceMesh/" itemprop="url" rel="index">
+                    <span itemprop="name">ServiceMesh</span>
                   </a>
                 </span>
 
@@ -394,20 +399,54 @@
       
 
       
-        <p>如果使用Prometheus做监控系统的话, node-exporter一定是不能绕过的采集工具, 开箱即用的实用性让运维同学节省很多时间, 最近也是发现了一个比较有意思的功能, NodeExporter可以采集额外的Metrics到Prometheus中</p>
+        <p>一直想把istio引入到业务中, 前期调研实操中发现istio完美解决了grpc在kubernetes中的负载均衡<a href="https://izsk.me/2020/02/18/grpc-gateway-loadbalance-on-kubernetes-and-istio/" target="_blank" rel="noopener">问题</a>, 这次学习一下opentracing在istio中的应用, 这里主要是想看grpc-gateway的调用，目前业务中用的最多, 当然tcp就更没问题.</p>
 <a id="more"></a>
-<p>假如有时我们有自定义的Metrics需要上传到Promethues中，一般情况下, 我们会通过PushGateway来做采集，假如这个时候恰恰没有部署PushGateway, 有没有更快捷的办法, 这个时候NodeExporter就派上用场了.</p>
-<h3 id="启动参数"><a href="#启动参数" class="headerlink" title="启动参数"></a><strong>启动参数</strong></h3><p>查看node-exporter的github描述,node-exporter启动的时候指定–collector.textfile.directory=/opt/exporter/node_exporter/key 即可, 这个参数会解析指定目录下的所有以prom结尾的文件.</p>
-<p>即：</p>
-<p>我们只需要把自定义脚本的输出Metrics数据写入到指定目录下的文件,并以Prom结尾即可, Prometheus在定时采集node exporter获取数据的时候，也会把这份数据一同上传, 非常方便</p>
-<p><strong>需要注意的是，要保证在Prometheus在一个周期内，自定义脚本将最新的数据写入文件中即可, 每次写入都需要覆盖之前的Metrics.如果文件内的Metrics没有更新，则会一直拿到之前的旧数据, 所以最好在执行之前执行旧数据的清理</strong></p>
-<h3 id="自定义脚本"><a href="#自定义脚本" class="headerlink" title="自定义脚本"></a><strong>自定义脚本</strong></h3><figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">#! /bin/bash</span></span><br><span class="line">prom_file=/opt/exporter/node_exporter/key/key.prom</span><br><span class="line"> </span><br><span class="line">IFS=<span class="string">";"</span></span><br><span class="line"> </span><br><span class="line"><span class="built_in">export</span> TERM=vt100</span><br><span class="line"> </span><br><span class="line">key_value=<span class="string">"</span></span><br><span class="line"><span class="string">Logical_CPU_core_total  `cat /proc/cpuinfo| grep "</span>processor<span class="string">"| wc -l`;</span></span><br><span class="line"><span class="string">logined_users_total     `who | wc -l`;</span></span><br><span class="line"><span class="string">procs_total             `/bin/top -b -n 1|grep Tasks|sed 's/,/\n/g'|grep total|awk '&#123; print <span class="variable">$(NF-1)</span> &#125;'`;</span></span><br><span class="line"><span class="string">procs_zombie            `/bin/top -b -n 1|grep Tasks|sed 's/,/\n/g'|grep zombie|awk '&#123; print <span class="variable">$(NF-1)</span> &#125;'`"</span></span><br><span class="line"> </span><br><span class="line"><span class="keyword">for</span> i <span class="keyword">in</span> <span class="variable">$key_value</span></span><br><span class="line"><span class="keyword">do</span></span><br><span class="line">    IFS=<span class="string">" "</span></span><br><span class="line">    j=(`<span class="built_in">echo</span> <span class="variable">$i</span>`)</span><br><span class="line">    key=<span class="variable">$&#123;j[0]&#125;</span></span><br><span class="line">    value=<span class="variable">$&#123;j[1]&#125;</span></span><br><span class="line">    <span class="built_in">echo</span> <span class="variable">$key</span> <span class="variable">$value</span> &gt;&gt; <span class="string">"<span class="variable">$prom_file</span>"</span>.tmp</span><br><span class="line"><span class="keyword">done</span></span><br><span class="line"> </span><br><span class="line">cat <span class="string">"<span class="variable">$prom_file</span>"</span>.tmp &gt; <span class="variable">$prom_file</span></span><br><span class="line">rm -rf <span class="string">"<span class="variable">$prom_file</span>"</span>.tmp</span><br><span class="line">IFS=<span class="variable">$OLD_IFS</span></span><br></pre></td></tr></table></figure>
-<p>加上可执行权限.</p>
-<h3 id="Crontab"><a href="#Crontab" class="headerlink" title="Crontab "></a><strong>Crontab </strong></h3><p>在系统的crontab上加上定时执行脚本</p>
+<p>fork了一个大神的<a href="https://github.com/garystafford/k8s-istio-observe-backend" target="_blank" rel="noopener">demo</a>, 精简了部分流程, 把在google cloud上环境的搭建去除了，同时将grpc-gateway部分的代码改了,fork的源码中把grpc-gateway单独写成一个模块提供服务, 这里改成了跟真正的服务结合在一起，少一层中转, github在<a href="https://github.com/zhoushuke/grpc-gateway-with-opentracing.git" target="_blank" rel="noopener">这里</a></p>
+<h3 id="流程"><a href="#流程" class="headerlink" title="流程"></a>流程</h3><p>这个demo里涉及三个服务:</p>
+<p>​             —————————————————————-</p>
+<p>curl == |<strong>(grpc-gateway) http</strong> ==&gt; service-a == grpc| ==&gt; service-c == tcp ==&gt; mongodb</p>
+<p>​              —————————————————————-</p>
+<p><code>service-a服务中整合了grpc-gateway服务, 暴露出8088 http接口, 通过8088端口转到 grpc 50051端口调用 service-c</code></p>
+<p><code>service-c 通过tcp调用mongodb写入数据</code></p>
+<p><code>这里直接使用命令行curl service-a的8088端口</code></p>
+<p>grpc-gateway的实现过程可参考<a href="https://blog.csdn.net/dapangzi88/article/details/63686334" target="_blank" rel="noopener">这里</a></p>
+<h3 id="前提"><a href="#前提" class="headerlink" title="前提"></a>前提</h3><p>需要一个kubernetes集群,部署了istio及开启了jaeger和kiali, 这部分不在这里展开. 可参考<a href="https://izsk.me/2020/01/03/Istio-Install-Upon-Kubernetes/" target="_blank" rel="noopener">这里</a></p>
+<h3 id="部署"><a href="#部署" class="headerlink" title="部署"></a>部署</h3><h4 id="编译镜像"><a href="#编译镜像" class="headerlink" title="编译镜像"></a>编译镜像</h4><figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line"><span class="built_in">cd</span> grpc-gateway-with-opentracing/services</span><br><span class="line">bash build_images.sh</span><br></pre></td></tr></table></figure>
+<h4 id="发布"><a href="#发布" class="headerlink" title="发布"></a>发布</h4><figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line"><span class="built_in">cd</span> grpc-gateway-with-opentracing/deployments</span><br><span class="line">kubectl apply -f namespaces/middle.yaml</span><br><span class="line">kubectl apply -f secrets/go-srv-demo.yaml</span><br><span class="line">kubectl apply -f yaml/*</span><br><span class="line"><span class="comment">#其中, mongodb使用到的用户名及密码为forguest:VnximZWwED， 端口27017</span></span><br></pre></td></tr></table></figure>
+<p>这里为了方便， mongodb数据库没有使用持久卷, 数据库启动之后连接mongodb进行用户授权, </p>
+<p>安装mongo shell 命令行工具, ubuntu下进行以下操作</p>
+<p><strong>注意: 使用的mongodb server为4.2的版本, 请安装对应版本的客户端,不然问题一大堆</strong></p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line">wget -qO - https://www.mongodb.org/static/pgp/server-4.2.asc | sudo apt-key add -</span><br><span class="line"><span class="built_in">echo</span> <span class="string">"deb [ arch=amd64 ] https://repo.mongodb.org/apt/ubuntu xenial/mongodb-org/4.2 multiverse"</span> | sudo tee /etc/apt/sources.list.d/mongodb-org-4.2.list</span><br><span class="line"></span><br><span class="line">sudo apt-get update</span><br><span class="line">apt-get install -y mongodb-org-shell</span><br></pre></td></tr></table></figure>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">use admin;</span><br><span class="line">db.createUser(&#123;user: <span class="string">"forguest"</span> , <span class="built_in">pwd</span>: <span class="string">"VnximZWwED"</span>, roles: [  <span class="string">"userAdminAnyDatabase"</span>,<span class="string">"readWriteAnyDatabase"</span> ]&#125;)</span><br></pre></td></tr></table></figure>
+<h3 id="测试"><a href="#测试" class="headerlink" title="测试"></a>测试</h3><p>使用以下命令进行测试, 请对应替换service-a的集群ip.</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">for</span> x <span class="keyword">in</span> $(seq 1 100);<span class="keyword">do</span> sleep 5;curl -H<span class="string">'Content-Type: application/json'</span> <span class="string">'your-service-a-svc-clusterIP:8088/api/v1/greeting'</span>;<span class="keyword">done</span></span><br></pre></td></tr></table></figure>
+<p>Jaeger效果如下:</p>
+<p><img src="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20200221174553.png" alt></p>
+<p>kialiu效果如下:</p>
+<p><img src="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20200221174801.png" alt></p>
+<h3 id="Opentracing分析"><a href="#Opentracing分析" class="headerlink" title="Opentracing分析"></a>Opentracing分析</h3><p>在grpc-agteway-with-opentracing.go代码中, 定义了如下对象, </p>
+<figure class="highlight go"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">var</span> (</span><br><span class="line">        otHeaders = []<span class="keyword">string</span>&#123;</span><br><span class="line">                <span class="string">"x-request-id"</span>,</span><br><span class="line">                <span class="string">"x-b3-traceid"</span>,</span><br><span class="line">                <span class="string">"x-b3-spanid"</span>,</span><br><span class="line">                <span class="string">"x-b3-parentspanid"</span>,</span><br><span class="line">                <span class="string">"x-b3-sampled"</span>,</span><br><span class="line">                <span class="string">"x-b3-flags"</span>,</span><br><span class="line">                <span class="string">"x-ot-span-context"</span>&#125;</span><br><span class="line">)</span><br></pre></td></tr></table></figure>
+<p>在grpc调用时， istio会做如下的操作:</p>
+<ul>
+<li>Inbound 流量：对于经过 Sidecar 流入应用程序的流量，如果经过 Sidecar 时 Header 中没有任何跟踪相关的信息，则会在创建一个根 Span，TraceId 就是这个 SpanId，然后再将请求传递给业务容器的服务；如果请求中包含 Trace 相关的信息，则 Sidecar 从中提取 Trace 的上下文信息并发给应用程序。</li>
+<li>Outbound 流量：对于经过 Sidecar 流出的流量，如果经过 Sidecar 时 Header 中没有任何跟踪相关的信息，则会创建根 Span，并将该跟 Span 相关上下文信息放在请求头中传递给下一个调用的服务；当存在 Trace 信息时，Sidecar 从 Header 中提取 Span 相关信息，并基于这个 Span 创建子 Span，并将新的 Span 信息加在请求头中传递</li>
+</ul>
+<p>总结就是: <strong>每一次的调用, istio都会将请求中的header进行解析, 看header中是否包含上面声明的变量,如果不存在, 则创建一个root span, 如果存在, 则将spanid做为自己的parentid,如果还有调用, 则依次这样传递下去</strong></p>
+<p>可以来看一下jaeger上的header信息:</p>
+<p>首先，每一次请求istio都会生成一个唯一的<strong>traceID(x-b3-traceid)及requestID(x-request-id)</strong>, 这两个值在这次请求中不管经过几个服务都不会改变, 这样就能够通过这者查询出这次请求所经过的服务有哪一些，但是这两者无法确定经过的服务间的顺序是怎样的, 所以必须看<strong>x-b3-spanid及x-b3-parentspanid</strong></p>
+<p><img src="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20200221180136.png" alt></p>
+<p>从上图可以看出service-a(根请求)的spanID为traceID的后16位, 再通过这个spanID，可以看到</p>
+<p><img src="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20200221180419.png" alt></p>
+<p><code>8932e8b49bbddf3a</code> 为<code>c78400f5fce93775</code>的 <code>child_of</code>即孩子span</p>
+<p>通过这种父子关系就可以很容易确定谁调用谁，再结合traceID或者RequestID(通常这两者一样)的唯一性就能够定位所有调用过的服务了. </p>
 <h3 id="参考文章"><a href="#参考文章" class="headerlink" title="参考文章:"></a><strong>参考文章:</strong></h3><blockquote>
 <ul>
-<li><a href="https://github.com/prometheus/node_exporter" target="_blank" rel="noopener">node_exporter</a></li>
-<li><a href="https://www.cnblogs.com/momoyan/p/11520676.html" target="_blank" rel="noopener">node-exporter的安装与配置</a></li>
+<li><a href="https://blog.csdn.net/dapangzi88/article/details/63686334" target="_blank" rel="noopener">https://blog.csdn.net/dapangzi88/article/details/63686334</a></li>
+<li><a href="https://github.com/garystafford/k8s-istio-observe-backend" target="_blank" rel="noopener">https://github.com/garystafford/k8s-istio-observe-backend</a></li>
+<li><a href="https://izsk.me/2020/02/18/grpc-gateway-loadbalance-on-kubernetes-and-istio/" target="_blank" rel="noopener">https://izsk.me/2020/02/18/grpc-gateway-loadbalance-on-kubernetes-and-istio/</a></li>
+<li><a href="https://github.com/zhoushuke/grpc-gateway-with-opentracing" target="_blank" rel="noopener">https://github.com/zhoushuke/grpc-gateway-with-opentracing</a></li>
+<li><a href="https://izsk.me/2020/01/03/Istio-Install-Upon-Kubernetes/" target="_blank" rel="noopener">https://izsk.me/2020/01/03/Istio-Install-Upon-Kubernetes/</a></li>
+<li><a href="https://www.infoq.cn/article/pqy*PFPhox9OQQ9iCRTt" target="_blank" rel="noopener">https://www.infoq.cn/article/pqy*PFPhox9OQQ9iCRTt</a></li>
 </ul>
 </blockquote>
 <h3 id="转载请注明出处https-izsk-me"><a href="#转载请注明出处https-izsk-me" class="headerlink" title="转载请注明出处https://izsk.me"></a><strong>转载请注明出处<a href="https://izsk.me" target="_blank" rel="noopener">https://izsk.me</a></strong></h3>
@@ -459,7 +498,7 @@
       
         <div class="post-tags">
           
-            <a href="/tags/CloudNavi/" rel="tag"># CloudNavi</a>
+            <a href="/tags/ServiceMesh/" rel="tag"># ServiceMesh</a>
           
         </div>
       
@@ -468,8 +507,8 @@
         <div class="post-nav">
           <div class="post-nav-next post-nav-item">
             
-              <a href="/2019/07/16/HA-MA/" rel="next" title="Multi-Active Availability vs High Availability">
-                <i class="fa fa-chevron-left"></i> Multi-Active Availability vs High Availability
+              <a href="/2020/02/18/grpc-gateway-loadbalance-on-kubernetes-and-istio/" rel="next" title="Istio学习(grpc-gateway在istio(kubernetes)中的负载均衡)">
+                <i class="fa fa-chevron-left"></i> Istio学习(grpc-gateway在istio(kubernetes)中的负载均衡)
               </a>
             
           </div>
@@ -477,10 +516,6 @@
           <span class="post-nav-divider"></span>
 
           <div class="post-nav-prev post-nav-item">
-            
-              <a href="/2019/09/07/在Grafana中统计物理机上容器状态分类汇总/" rel="prev" title="在Grafana中统计物理机上容器状态分类汇总">
-                在Grafana中统计物理机上容器状态分类汇总 <i class="fa fa-chevron-right"></i>
-              </a>
             
           </div>
         </div>
@@ -608,7 +643,7 @@
             
 
             
-              <div class="post-toc-content"><ol class="nav"><li class="nav-item nav-level-3"><a class="nav-link" href="#启动参数"><span class="nav-number">1.</span> <span class="nav-text">启动参数</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#自定义脚本"><span class="nav-number">2.</span> <span class="nav-text">自定义脚本</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#Crontab"><span class="nav-number">3.</span> <span class="nav-text">Crontab </span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#参考文章"><span class="nav-number">4.</span> <span class="nav-text">参考文章:</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#转载请注明出处https-izsk-me"><span class="nav-number">5.</span> <span class="nav-text">转载请注明出处https://izsk.me</span></a></li></ol></div>
+              <div class="post-toc-content"><ol class="nav"><li class="nav-item nav-level-3"><a class="nav-link" href="#流程"><span class="nav-number">1.</span> <span class="nav-text">流程</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#前提"><span class="nav-number">2.</span> <span class="nav-text">前提</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#部署"><span class="nav-number">3.</span> <span class="nav-text">部署</span></a><ol class="nav-child"><li class="nav-item nav-level-4"><a class="nav-link" href="#编译镜像"><span class="nav-number">3.1.</span> <span class="nav-text">编译镜像</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#发布"><span class="nav-number">3.2.</span> <span class="nav-text">发布</span></a></li></ol></li><li class="nav-item nav-level-3"><a class="nav-link" href="#测试"><span class="nav-number">4.</span> <span class="nav-text">测试</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#Opentracing分析"><span class="nav-number">5.</span> <span class="nav-text">Opentracing分析</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#参考文章"><span class="nav-number">6.</span> <span class="nav-text">参考文章:</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#转载请注明出处https-izsk-me"><span class="nav-number">7.</span> <span class="nav-text">转载请注明出处https://izsk.me</span></a></li></ol></div>
             
 
           </div>
