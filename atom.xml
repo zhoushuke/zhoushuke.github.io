@@ -6,7 +6,7 @@
   <link href="/atom.xml" rel="self"/>
   
   <link href="https://zhoushuke.github.io/"/>
-  <updated>2020-02-23T13:32:01.493Z</updated>
+  <updated>2020-02-21T10:31:08.425Z</updated>
   <id>https://zhoushuke.github.io/</id>
   
   <author>
@@ -15,52 +15,6 @@
   </author>
   
   <generator uri="https://hexo.io/">Hexo</generator>
-  
-  <entry>
-    <title></title>
-    <link href="https://zhoushuke.github.io/2020/02/23/second/"/>
-    <id>https://zhoushuke.github.io/2020/02/23/second/</id>
-    <published>2020-02-23T13:32:01.493Z</published>
-    <updated>2020-02-23T13:32:01.493Z</updated>
-    
-    <content type="html"><![CDATA[<p>a test</p>]]></content>
-    
-    <summary type="html">
-    
-      
-      
-        &lt;p&gt;a test&lt;/p&gt;
-
-      
-    
-    </summary>
-    
-    
-    
-  </entry>
-  
-  <entry>
-    <title></title>
-    <link href="https://zhoushuke.github.io/2020/02/23/test/"/>
-    <id>https://zhoushuke.github.io/2020/02/23/test/</id>
-    <published>2020-02-23T13:32:01.477Z</published>
-    <updated>2020-02-23T13:32:01.477Z</updated>
-    
-    <content type="html"><![CDATA[<p>a test</p>]]></content>
-    
-    <summary type="html">
-    
-      
-      
-        &lt;p&gt;a test&lt;/p&gt;
-
-      
-    
-    </summary>
-    
-    
-    
-  </entry>
   
   <entry>
     <title>Istio学习(使用jaeger实现grpc-gateway全链路追踪)</title>
@@ -457,6 +411,29 @@
   </entry>
   
   <entry>
+    <title>记一次排查ES FGC导致的集群宕机异常</title>
+    <link href="https://zhoushuke.github.io/2019/10/06/ES-FGC-Fix/"/>
+    <id>https://zhoushuke.github.io/2019/10/06/ES-FGC-Fix/</id>
+    <published>2019-10-06T12:10:53.000Z</published>
+    <updated>2020-02-04T08:18:12.941Z</updated>
+    
+    <content type="html"><![CDATA[<p>有一个私有云环境的运维同事反应项目中的ES集群无法查询, 由于是私有云环境, 没有直接运维权限, 所以没有接收到一线报警, 远程登录上去后发现ES集群已经宕机了, 这次的排查过程也发现了几个比较容易忽视的细节, 在此记录一下,比较有意思.</p><a id="more"></a><h3 id="集群状态"><a href="#集群状态" class="headerlink" title="集群状态"></a>集群状态</h3><p>ES集群为3节点.</p><p>首先肯定是查看集群状态</p><figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">curl <span class="string">'http://localhost:9200/_cluster/health?pretty'</span> -u xxx:yyy</span><br><span class="line"><span class="comment">#发现状态为Red</span></span><br></pre></td></tr></table></figure><p>查看节点状态</p><figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">curl <span class="string">'http://localhost:9200/_cat/node?v'</span> -u xxx:yyy</span><br><span class="line"><span class="comment">#节点数正常</span></span><br></pre></td></tr></table></figure><p>查看各节点使用的磁盘情况</p><figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">curl -XGET <span class="string">'localhost:9200/_cat/allocation?v&amp;pretty'</span> -u xxx:yyy</span><br><span class="line"><span class="comment">#未发现异常</span></span><br></pre></td></tr></table></figure><h3 id="集群日志"><a href="#集群日志" class="headerlink" title="集群日志"></a>集群日志</h3><p>登录一个ES节点查看日志，发现以下报错，查看其它2个节点，情况相同</p><p><img src="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20200204134510.png" alt></p><p>从日志来看, 可以发现几个问题:</p><blockquote><ul><li>Full GC很频繁, 而且时间也非常的长 </li><li>每次GC完之后所能释放的内存非常有限</li></ul></blockquote><p>到这，其它原因已经很明朗, <strong>内存不够导致的full gc 频繁，但是又不能释放太多的空间，又导致full gc的恶意循环</strong></p><p>如果大家对gc的日志不很了解的话, 这里解释下上面日志的各个字段含义, 假如有以下一条gc日志</p><figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">[2018-06-30T17:57:29,020][INFO ][o.e.m.j.JvmGcMonitorService] [qoo--ES] [gc][old][228385][160772] duration [5s], collections [1]/[5.1s], total [5s]/[4.4d], memory [945.4mb]-&gt;[958.5mb]/[1007.3mb], all_pools &#123;[young] [87.8mb]-&gt;[100.9mb]/[133.1mb]&#125;&#123;[survivor] [0b]-&gt;[0b]/[16.6mb]&#125;&#123;[old] [857.6mb]-&gt;[857.6mb]/[857.6mb]&#125;</span><br></pre></td></tr></table></figure><ul><li><strong>gc old</strong> 本次是 old GC 这是第228385次 GC 检查][从 JVM 启动至今发生的第 160772次 G]</li><li><strong>duration</strong> [本次检查到的 GC 总耗时 <strong>5</strong> 秒，可能是多次的加和</li><li><strong>collections</strong> [从上次检查至今总共发生<strong>1</strong>次GC]/[从上次检查至今已过去 <strong>5.1</strong> 秒],</li><li><strong>total</strong> [本次检查到的 GC 总耗时为 <strong>5</strong> 秒]/[从 JVM 启动至今发生的 GC 总耗时为 <strong>4.4</strong> 天]，</li><li><strong>memory</strong> [ GC 前 Heap memory 空间]-&gt;[GC 后 Heap memory 空间]/[Heap memory 总空间],</li><li><strong>all_pools</strong>(分代部分的详情) {young 区][GC 前 Memory ]-&gt;[GC后 Memory]/[young区 Memory 总大小] }</li><li><strong>survivor</strong> [GC 前 Memory ]-&gt;[GC后 Memory]/[Memory 总大小] }{old 区[GC 前 Memory ]-&gt;[GC后 Memory]/[old区 Memory 总大小] }</li></ul><p>那为何会内存不足呢, 想起前几天服务拓展，添加收集了几个服务的日志, 日志量不算小, 而且这3个ES节点所在的机器内存只分配了8个G, 显然, 加完这几个日志之后内存不够用了.</p><h3 id="Index-Mapping"><a href="#Index-Mapping" class="headerlink" title="Index Mapping"></a>Index Mapping</h3><p>而且，从日志中， 还发现几处很诡异的日志</p><p><img src="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20200204141415.png" alt></p><p>红框中的错误: <strong>object mapping for [msg] tried to pasrse field [msg] as object, but found a concrete</strong></p><p>翻译过来就是说, 日志中的msg这个字段的类型匹配不上, ES尽力把它解析为object类型，但是它却是个确切的值.</p><p>就好比你在python中定义了一个字典, 但是你给它赋值一个整形, 这确定要报错.</p><p>但是这个mapping是从何而来的呢.</p><p>经过网上搜索一翻, 终于明白:</p><p>ES中为了加强性能，对于索引中的<strong>第一条数据, ES会默认(可设置)按照这条数据建立index mapping, 相当于是一个索引模板, 好比是mysql中表的定义一个概念, 后续这个索引中的所有日志都按照该模板进行解析</strong></p><p>后来经过查看源码, 我们发现，出现上图中的问题是因为代码中的日志打印不规范, 有一个地方如果抛出异常时，打印的是一个单一字符串, 而正常情况下打印的是一个json, 所以当第一条正常的日志传递给ES时，ES建立的索引 模板记录这个字段为object类型(可以类比为python中的字典, 本身是可以新增元素的), 当应用抛出异常时，日志中又传递了一个单一字符串, 但是索引模板已经记录为object类型，所以无法匹配, 这就是问题所在</p><h3 id="Fix-Bug"><a href="#Fix-Bug" class="headerlink" title="Fix Bug"></a>Fix Bug</h3><p>从3个方面解决上面的问题</p><p>首先是修复代码中日志不规范问题, 这个充暴露了code view不严谨.</p><p>第2个是加大ES的内存,毕竟日志量确实是上来了, 从8G添加到12G</p><p>第3个是优化ES的gc问题, ES中有个逻辑是：<strong>默认情况下，主节点每30秒会去检查其他节点的状态，如果任何节点的垃圾回收时间超过30秒（Garbage collection duration）且在重复次数内都超时，则会导致主节点任务该节点脱离集群, 节点脱离集群后会引起分片的rebalance</strong></p><p>这个机制让ES节点频繁的脱离集群，而又引起整个集群的rebalance，ES本身的内存就不够，rebalance更是雪上加霜, 如此往复就导致整个ES集群宕机.</p><p>可修改主节点的检查时间及重复次数,让其它节点有充分的时间进行full gc.</p><p>在ES的配置文件中添加以下配置:</p><figure class="highlight yml"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line"><span class="attr">discovery.zen.fd.ping_timeout:</span> <span class="string">300s</span></span><br><span class="line"><span class="attr">discovery.zen.fd.ping_retriES:</span> <span class="number">10</span></span><br></pre></td></tr></table></figure><p>这样, 达到这两个条件时才能触发节点脱离集群</p><p>至此, 依次重启ES节点, 问题圆满解决.</p><h3 id="参考文章"><a href="#参考文章" class="headerlink" title="参考文章:"></a><strong>参考文章:</strong></h3><blockquote><ul><li><a href="https://www.elastic.co/guide/en/elasticsearch/reference/current/mapping.html" target="_blank" rel="noopener">elasticsearch index mapping</a></li><li><a href="https://blog.csdn.net/sinat_35930259/article/details/80354732" target="_blank" rel="noopener">elasticsearch篇之mapping</a></li><li><a href="https://segmentfault.com/a/1190000016494488" target="_blank" rel="noopener">你看懂 Elasticsearch Log 中的 GC 日志了吗？</a></li></ul></blockquote><h3 id="转载请注明出处https-izsk-me"><a href="#转载请注明出处https-izsk-me" class="headerlink" title="转载请注明出处https://izsk.me"></a><strong>转载请注明出处<a href="https://izsk.me" target="_blank" rel="noopener">https://izsk.me</a></strong></h3>]]></content>
+    
+    <summary type="html">
+    
+      &lt;p&gt;有一个私有云环境的运维同事反应项目中的ES集群无法查询, 由于是私有云环境, 没有直接运维权限, 所以没有接收到一线报警, 远程登录上去后发现ES集群已经宕机了, 这次的排查过程也发现了几个比较容易忽视的细节, 在此记录一下,比较有意思.&lt;/p&gt;
+    
+    </summary>
+    
+    
+      <category term="FELK" scheme="https://zhoushuke.github.io/categories/FELK/"/>
+    
+    
+      <category term="FELK" scheme="https://zhoushuke.github.io/tags/FELK/"/>
+    
+  </entry>
+  
+  <entry>
     <title>CockRoachDB学习(架构)</title>
     <link href="https://zhoushuke.github.io/2019/10/06/CockroachDB-Struct/"/>
     <id>https://zhoushuke.github.io/2019/10/06/CockroachDB-Struct/</id>
@@ -476,6 +453,29 @@
     
     
       <category term="分布式架构" scheme="https://zhoushuke.github.io/tags/%E5%88%86%E5%B8%83%E5%BC%8F%E6%9E%B6%E6%9E%84/"/>
+    
+  </entry>
+  
+  <entry>
+    <title>supervisor使用自定义邮件报警模板</title>
+    <link href="https://zhoushuke.github.io/2019/09/10/supervisor-alert-mail-template-customize/"/>
+    <id>https://zhoushuke.github.io/2019/09/10/supervisor-alert-mail-template-customize/</id>
+    <published>2019-09-10T03:45:53.000Z</published>
+    <updated>2020-01-21T07:56:40.372Z</updated>
+    
+    <content type="html"><![CDATA[<p>生产中由于历史遗留问题，有些程序还是二进制部署, 对于这类程序需要使用守护进程进行托管，常用的能实现对程序进行守护的用的多的有如systemd, supervisor,monit等工具, monit其实更好用一些，拓展性也很强，但是因为线上已经有一些使用了supervisor，为了工具统一化，就都使用了supervisor了，这次讲一讲supervisor使用<strong>自定义邮件模板</strong>实现报警的实现</p><a id="more"></a><h3 id="supervisor"><a href="#supervisor" class="headerlink" title="supervisor"></a><strong>supervisor</strong></h3><p>需要说明一下,  <strong>supervisor只能管理在前台运行的程序, 所以如果应用事先是以nohup &amp;的方式启动的,则需要先停止该应用,然后使用supervisor守护启动</strong></p><p>supervisor的安装及使用很简单，大家可直接参考supervisor的<a href="http://supervisord.org/" target="_blank" rel="noopener">官网</a></p><h3 id="superlance"><a href="#superlance" class="headerlink" title="superlance"></a><strong>superlance</strong></h3><p>supervisor本身是没有邮件报警的, 好在它有上拓展插件可以直接使用, 但是它自带的邮件没有格式，非常难看，因此需要修改源码来使用我们自己的邮件模板</p><p>superlane的gitlab在<a href="https://github.com/Supervisor/superlance" target="_blank" rel="noopener">这里</a></p><p>superlance中提供了多种报警场景, 这里使用<strong>crashmail</strong></p><p>直接通过<code>python setup.py install</code></p><p>这里安装的是已经被我修改了源码，集成了自定义邮件模板后的包, 修改后的包在<a href="https://github.com/zhoushuke/superlanceX" target="_blank" rel="noopener">这里</a></p><p>自定义邮件模块在<a href="https://github.com/zhoushuke/superlanceX/blob/master/superlance/sendxmail.py" target="_blank" rel="noopener">这个文件</a></p><h3 id="启用crashmail"><a href="#启用crashmail" class="headerlink" title="启用crashmail"></a><strong>启用crashmail</strong></h3><p>在supervisor中加入一个配置文件,以开启crashmail</p><figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line">[eventlistener:crashmail-exited]</span><br><span class="line"><span class="built_in">command</span>=crashmail -a -f <span class="string">"http://your.mail.domain"</span> -t <span class="string">"xx@your.email.com"</span></span><br><span class="line">events=PROCESS_STATE_EXITED</span><br><span class="line">redirect_stderr=<span class="literal">false</span></span><br><span class="line">stdout_logfile=/etc/supervisor/logs/crashmail-exited-stdout.log</span><br><span class="line">stderr_logfile=/etc/supervisor/logs/crashmail-exited-stderr.log</span><br></pre></td></tr></table></figure><p><code>http://your.mail.domain</code>是一个用golang写的一个邮件接口,通过restfulapi暴露出来后,可直接调用.大家也可以使用自己的邮件服务.</p><p><code>events=PROCESS_STATE_EXITED</code>指定当程序异常退出时产生事件.</p><p>Crashmail的参数大家可以参考<a href="https://github.com/zhoushuke/superlanceX/blob/master/superlance/crashmail.py" target="_blank" rel="noopener">github</a></p><h3 id="安装守护进程"><a href="#安装守护进程" class="headerlink" title="安装守护进程"></a><strong>安装守护进程</strong></h3><p>假设要守护的进程为influxdb, 增加以下配置文件至 /etc/supervisor/conf.d/influxdb.conf</p><p><code>新配置文件的配置文件一定要以conf结尾</code></p><figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line">[program:influxdb]</span><br><span class="line">directory = /usr/bin</span><br><span class="line"><span class="built_in">command</span> = /usr/bin/influxd -config /etc/influxdb/influxdb.conf</span><br><span class="line">startsecs = 5</span><br><span class="line">autostart = <span class="literal">true</span></span><br><span class="line">autorestart = <span class="literal">true</span></span><br><span class="line">stdout_logfile = /etc/supervisor/logs/supervisor-influxdb-stdout.log</span><br><span class="line">stderr_logfile = /etc/supervisor/logs/supervisor-influxdb-stderr.log</span><br></pre></td></tr></table></figure><p>说明: 某些软件如果直接是从apt-get上下载安装的,可能会存在下载安装完之后已经被systemd托管了,这种情况下supervisor无法接管,可先从systemd中把该应用disable掉, 再使用supervisor托管</p><p>查看是否被systemd托管</p><p><code>systemctl status influxd.service</code></p><p>如果状态为active则说明已被托管.</p><p>从systemd去除托管状态</p><p><code>systemctl stop influxd.service</code></p><p><code>systemctl disable influxd.service</code></p><p>最后使用以下命令将新增的配置文件加入到supervisor中托管</p><p><code>supervisorctl update</code></p><p>可使用<code>supervisorctl status</code>查看influxdb是否启动成功.</p><h3 id="最终效果"><a href="#最终效果" class="headerlink" title="最终效果"></a><strong>最终效果</strong></h3><p>supervisor检测到程序发生异常退出后，即会通过邮件发送报警</p><p><img src="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20200121115221.png" alt></p><p>superlance自定义模块在<a href="https://github.com/zhoushuke/superlanceX" target="_blank" rel="noopener">这里</a>可以找到</p><p>自定义邮件模块在<a href="https://github.com/zhoushuke/superlanceX/blob/master/superlance/sendxmail.py" target="_blank" rel="noopener">这个文件</a></p><h3 id="supervisor常用命令"><a href="#supervisor常用命令" class="headerlink" title="supervisor常用命令"></a><strong>supervisor常用命令</strong></h3><p>#重启supervisor </p><p>supervisorctl reload </p><p>#查看当前守护的进程 </p><p>supervisorctl status </p><p>#加入新增加的配置文件 </p><p>supervisorctl update </p><p>#只会读取有更新的配置文件，不会启动新增加的配置文件 </p><p>supervisorctl reread </p><p>#关闭某一进程守护 </p><p>supervisorctl stop cassandra </p><h3 id="参考文章"><a href="#参考文章" class="headerlink" title="参考文章:"></a><strong>参考文章:</strong></h3><blockquote><ul><li><a href="http://supervisord.org/" target="_blank" rel="noopener">supervisor</a></li><li><a href="https://github.com/Supervisor/superlance" target="_blank" rel="noopener">superlance</a></li></ul></blockquote><h3 id="转载请注明出处https-izsk-me"><a href="#转载请注明出处https-izsk-me" class="headerlink" title="转载请注明出处https://izsk.me"></a><strong>转载请注明出处<a href="https://izsk.me" target="_blank" rel="noopener">https://izsk.me</a></strong></h3>]]></content>
+    
+    <summary type="html">
+    
+      &lt;p&gt;生产中由于历史遗留问题，有些程序还是二进制部署, 对于这类程序需要使用守护进程进行托管，常用的能实现对程序进行守护的用的多的有如systemd, supervisor,monit等工具, monit其实更好用一些，拓展性也很强，但是因为线上已经有一些使用了supervisor，为了工具统一化，就都使用了supervisor了，这次讲一讲supervisor使用&lt;strong&gt;自定义邮件模板&lt;/strong&gt;实现报警的实现&lt;/p&gt;
+    
+    </summary>
+    
+    
+      <category term="Python" scheme="https://zhoushuke.github.io/categories/Python/"/>
+    
+    
+      <category term="Python" scheme="https://zhoushuke.github.io/tags/Python/"/>
     
   </entry>
   
