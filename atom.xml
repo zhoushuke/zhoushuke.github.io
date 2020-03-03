@@ -6,7 +6,7 @@
   <link href="/atom.xml" rel="self"/>
   
   <link href="https://zhoushuke.github.io/"/>
-  <updated>2020-03-02T03:08:12.665Z</updated>
+  <updated>2020-03-03T06:34:23.805Z</updated>
   <id>https://zhoushuke.github.io/</id>
   
   <author>
@@ -15,6 +15,29 @@
   </author>
   
   <generator uri="https://hexo.io/">Hexo</generator>
+  
+  <entry>
+    <title>使用Prometheus监控consul提示415 Unsupported Media Type错误</title>
+    <link href="https://zhoushuke.github.io/2020/03/03/consul-415-error/"/>
+    <id>https://zhoushuke.github.io/2020/03/03/consul-415-error/</id>
+    <published>2020-03-03T05:10:53.000Z</published>
+    <updated>2020-03-03T06:34:23.805Z</updated>
+    
+    <content type="html"><![CDATA[<p>虽然现业务架构上了kubernetes，因为历史遗留问题, 现在还存在着使用consul来做service discovery组件, 预计还得在生产中存在一段时间, 因此配上了Prometheus监控, 在部署过程中出现了一个Unsupported Media Type错</p><a id="more"></a><p>当然, 因为consul的3个节点都是二进制部署的, 因此在这里是直接使用了static discovery，很简单, 只需要在prometheus的配置文件中加入节点即可，consul官网也是很清楚的说明,参考<a href="https://www.consul.io/docs/" target="_blank" rel="noopener">这里</a></p><figure class="highlight yaml"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br></pre></td><td class="code"><pre><span class="line"><span class="bullet">-</span> <span class="attr">job_name:</span> <span class="string">consul-k8s</span></span><br><span class="line">  <span class="attr">params:</span></span><br><span class="line">    <span class="attr">format:</span></span><br><span class="line">    <span class="bullet">-</span> <span class="string">prometheus</span></span><br><span class="line">  <span class="attr">scrape_interval:</span> <span class="string">20s</span></span><br><span class="line">  <span class="attr">scrape_timeout:</span> <span class="string">10s</span></span><br><span class="line">  <span class="attr">metrics_path:</span> <span class="string">/v1/agent/metrics</span></span><br><span class="line">  <span class="attr">scheme:</span> <span class="string">http</span></span><br><span class="line">  <span class="attr">static_configs:</span></span><br><span class="line">  <span class="bullet">-</span> <span class="attr">targets:</span></span><br><span class="line">    <span class="bullet">-</span> <span class="number">172.16</span><span class="number">.104</span><span class="number">.220</span><span class="string">:8500</span></span><br><span class="line">    <span class="bullet">-</span> <span class="number">172.16</span><span class="number">.104</span><span class="number">.222</span><span class="string">:8500</span></span><br><span class="line">    <span class="bullet">-</span> <span class="number">172.16</span><span class="number">.104</span><span class="number">.224</span><span class="string">:8500</span></span><br></pre></td></tr></table></figure><p>需要注意的是必须要指定format为Prometheus. 热启动Prometheus后，在Prometheus发现3个节点都是Down.</p><p><img src="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/7EE1F24A-8789-4D6E-BE25-B4D19BBDCE06.png" alt></p><p><strong>415 Unsupported Media Type</strong>, 直接翻译就是说, 返回的response是不支持的类型</p><p>登录一个consul节点使用以下命令查看是否有数据返回.</p><figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">curl <span class="string">'localhost:8500/v1/agent/metrics?format=prometheus'</span></span><br></pre></td></tr></table></figure><p>结果:</p><p><img src="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/21BAAB63-A351-4C2A-90B9-7794E18F15C7.png" alt></p><p>这就很奇怪了, 从提示来看, 是因为 <strong>retention time</strong></p><p>从consul的官网查看这个信息, 发现有个<strong>prometheus_retention_time</strong><a href="https://www.consul.io/docs/agent/options.html" target="_blank" rel="noopener">配置</a>, 该参数目前节点的配置是没有配置的</p><figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">prometheus_retention_time If the value is greater than 0s (the default), this enables Prometheus <span class="built_in">export</span> of metrics. The duration can be expressed using the duration semantics and will aggregates all counters <span class="keyword">for</span> the duration specified (it might have an impact on Consul<span class="string">'s memory usage). A good value for this parameter is at least 2 times the interval of scrape of Prometheus, but you might also put a very high retention time such as a few days (for instance 744h to enable retention to 31 days). Fetching the metrics using prometheus can then be performed using the /v1/agent/metrics?format=prometheus endpoint. The format is compatible natively with prometheus. When running in this mode, it is recommended to also enable the option disable_hostname to avoid having prefixed metrics with hostname. Consul does not use the default Prometheus path, so Prometheus must be configured as follows. Note that using ?format=prometheus in the path won'</span>t work as ? will be escaped, so it must be specified as a parameter</span><br></pre></td></tr></table></figure><p>也就是说, 如果要用prometheus来监控consul, 则必须将这个值配置成大小0的值, 否则就会出现如上的错误</p><p>那这个值到底有何用呢, 从上面的解释来看, 这个参数指定了prometheus指标在内存中保存的时间, 如果不设置的话, 默认为0, 即不存在轮转时间, 上面还建议这个时间要是prometheus抓取的2倍, 当然这个时间越长, 使用的内存越多, 因此可酌情处理. </p><p>根据这个, 在consul原有配置文件的基础上加入以下配置, 然后再重启consul</p><figure class="highlight yaml"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line"><span class="attr">"telemetry":</span> <span class="string">&#123;</span></span><br><span class="line">  <span class="attr">"prometheus_retention_time":</span> <span class="string">"744h"</span><span class="string">,</span></span><br><span class="line">  <span class="attr">"disable_hostname":</span> <span class="literal">true</span></span><br><span class="line"><span class="string">&#125;</span></span><br></pre></td></tr></table></figure><p>注意: 在实践过程中发现使用consul reload命令重启consul发现配置不生效, 最好能够kill掉再启动, 或者systemd</p><p>重启之后再看prometheus发现就正常了.</p><p><img src="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20200303141730.png" alt></p><p>grafana上抓取的数据也正常了.</p><p><img src="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20200303141856.png" alt></p><h3 id="参考文章"><a href="#参考文章" class="headerlink" title="参考文章:"></a><strong>参考文章:</strong></h3><blockquote><ul><li><a href="https://www.consul.io/docs/" target="_blank" rel="noopener">https://www.consul.io/docs/</a></li></ul></blockquote><h3 id="转载请注明出处https-izsk-me"><a href="#转载请注明出处https-izsk-me" class="headerlink" title="转载请注明出处https://izsk.me"></a><strong>转载请注明出处<a href="https://izsk.me" target="_blank" rel="noopener">https://izsk.me</a></strong></h3>]]></content>
+    
+    <summary type="html">
+    
+      &lt;p&gt;虽然现业务架构上了kubernetes，因为历史遗留问题, 现在还存在着使用consul来做service discovery组件, 预计还得在生产中存在一段时间, 因此配上了Prometheus监控, 在部署过程中出现了一个Unsupported Media Type错&lt;/p&gt;
+    
+    </summary>
+    
+    
+      <category term="分布式架构" scheme="https://zhoushuke.github.io/categories/%E5%88%86%E5%B8%83%E5%BC%8F%E6%9E%B6%E6%9E%84/"/>
+    
+    
+      <category term="分布式架构" scheme="https://zhoushuke.github.io/tags/%E5%88%86%E5%B8%83%E5%BC%8F%E6%9E%B6%E6%9E%84/"/>
+    
+  </entry>
   
   <entry>
     <title>Istio学习(VirtualService and DestinationRule流量管理)</title>
@@ -453,29 +476,6 @@
     
     
       <category term="Kubernetes" scheme="https://zhoushuke.github.io/tags/Kubernetes/"/>
-    
-  </entry>
-  
-  <entry>
-    <title>Grafana数据备份工具</title>
-    <link href="https://zhoushuke.github.io/2019/11/15/Grafana%E6%95%B0%E6%8D%AE%E5%A4%87%E4%BB%BD%E5%B7%A5%E5%85%B7/"/>
-    <id>https://zhoushuke.github.io/2019/11/15/Grafana%E6%95%B0%E6%8D%AE%E5%A4%87%E4%BB%BD%E5%B7%A5%E5%85%B7/</id>
-    <published>2019-11-15T05:30:53.000Z</published>
-    <updated>2020-01-19T09:25:38.728Z</updated>
-    
-    <content type="html"><![CDATA[<p>目前，Grafana是使用statefulset的形式部署的, 单实例，底层存储也没有使用分布式容灾, 里面有很配置好的模板，整天提醒吊胆地怕这个实例磁盘出问题,在不给分配更多资源的情况下，必须要找个合适的备份方案, 当然，可以直接备份整个目录, 这里介绍下使用kubernetes的cronjob进行定时备份</p><a id="more"></a><h3 id="Grafana-backup-tool"><a href="#Grafana-backup-tool" class="headerlink" title="Grafana-backup-tool"></a><strong>Grafana-backup-tool</strong></h3><p>在github上找到一个比较好用的grafana数据的备份工具, 用python写的, 地址在<a href="https://github.com/ysde/grafana-backup-tool" target="_blank" rel="noopener">这里</a>, ReadMe写的挺详细，一看就明白, 这个工具能备份 datasource, dashboard及配置的alert. 需要备份的也就这些数据了,其它的数据用处不大,</p><p>也有直接的docker 镜像可用，我们发布到kubernetes中,在发布之前需要一个Grafana的token来访问数据</p><h3 id="Grafana-Token"><a href="#Grafana-Token" class="headerlink" title="Grafana Token"></a><strong>Grafana Token</strong></h3><p>新建一个grafana token，这个token需要配置到备份工具脚本中，使用这个token通过api访问grafana的数据</p><p><img src="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20200119164352.png" alt></p><p>在新建的时候可以限定角色, 需要注意的是这个token只有在第一次新建的时候会显示，所以最好保存在其它地方，要不然后续都无法再显示.</p><h3 id="CronJob"><a href="#CronJob" class="headerlink" title="CronJob"></a><strong>CronJob</strong></h3><p>将该容器在Kubernetes集群中发布成CronJob定时执行, 详细的CronJob，大家可参考<a href="https://kubernetes.io/docs/concepts/workloads/controllers/cron-jobs/" target="_blank" rel="noopener">这里</a></p><p>yaml文件中需要指定两个环境变量</p><p><img src="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20200119165403.png" alt></p><p>同时，最好也指定successfulJobsHistoryLimit 及failedJobsHistoryLimit, 不然会遗留很多的pod.</p><p>指定备份目录,因为我这里使用了NodeName直接让该pod定向调度到指定机器，每次执行完之后都会在该机器的目录下生成备份数据，之后通过rsync工具同步到其它机器上，实现灾备.</p><p><img src="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20200119165704.png" alt></p><p>确认部署成功后:</p><p><img src="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20200119172338.png" alt></p><p>至此, 每天的22:33即会备份一次数据.</p><h3 id="参考文章"><a href="#参考文章" class="headerlink" title="参考文章:"></a><strong>参考文章:</strong></h3><blockquote><ul><li><a href="https://github.com/ysde/grafana-backup-tool" target="_blank" rel="noopener">grafana-backup-tool</a></li></ul></blockquote><h3 id="转载请注明出处https-izsk-me"><a href="#转载请注明出处https-izsk-me" class="headerlink" title="转载请注明出处https://izsk.me"></a><strong>转载请注明出处<a href="https://izsk.me" target="_blank" rel="noopener">https://izsk.me</a></strong></h3>]]></content>
-    
-    <summary type="html">
-    
-      &lt;p&gt;目前，Grafana是使用statefulset的形式部署的, 单实例，底层存储也没有使用分布式容灾, 里面有很配置好的模板，整天提醒吊胆地怕这个实例磁盘出问题,在不给分配更多资源的情况下，必须要找个合适的备份方案, 当然，可以直接备份整个目录, 这里介绍下使用kubernetes的cronjob进行定时备份&lt;/p&gt;
-    
-    </summary>
-    
-    
-      <category term="CloudNavi" scheme="https://zhoushuke.github.io/categories/CloudNavi/"/>
-    
-    
-      <category term="CloudNavi" scheme="https://zhoushuke.github.io/tags/CloudNavi/"/>
     
   </entry>
   
