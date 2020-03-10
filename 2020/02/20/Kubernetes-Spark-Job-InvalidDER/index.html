@@ -89,16 +89,17 @@
 <meta name="description" content="最近有个同事说他在测试kubernetes中跑spark，在运行spark-job时提示Invalid DER: object is not integer，但是如果在线上环境跑同样的任务就没问题, 束手无措，想让我帮看一下什么问题">
 <meta name="keywords" content="Kubernetes">
 <meta property="og:type" content="article">
-<meta property="og:title" content="kubernetes学习(Kubernetes集群运行Spark-Job提示Invalid\ DER:\ object\ is\ not\ integer的解决办法)">
+<meta property="og:title" content="kubernetes学习(Kubernetes集群运行Spark-Job提示Invalid-DER:-object-is-not-integer错误的解决办法)">
 <meta property="og:url" content="https://zhoushuke.github.io/2020/02/20/Kubernetes-Spark-Job-InvalidDER/index.html">
 <meta property="og:site_name" content="Z.S.K.&#39;s Records">
 <meta property="og:description" content="最近有个同事说他在测试kubernetes中跑spark，在运行spark-job时提示Invalid DER: object is not integer，但是如果在线上环境跑同样的任务就没问题, 束手无措，想让我帮看一下什么问题">
 <meta property="og:locale" content="zh-Hans">
 <meta property="og:image" content="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20200309123610.png">
 <meta property="og:image" content="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20200309141145.png">
-<meta property="og:updated_time" content="2020-03-09T06:30:28.440Z">
+<meta property="og:image" content="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20200310103152.png">
+<meta property="og:updated_time" content="2020-03-10T02:34:19.769Z">
 <meta name="twitter:card" content="summary">
-<meta name="twitter:title" content="kubernetes学习(Kubernetes集群运行Spark-Job提示Invalid\ DER:\ object\ is\ not\ integer的解决办法)">
+<meta name="twitter:title" content="kubernetes学习(Kubernetes集群运行Spark-Job提示Invalid-DER:-object-is-not-integer错误的解决办法)">
 <meta name="twitter:description" content="最近有个同事说他在测试kubernetes中跑spark，在运行spark-job时提示Invalid DER: object is not integer，但是如果在线上环境跑同样的任务就没问题, 束手无措，想让我帮看一下什么问题">
 <meta name="twitter:image" content="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20200309123610.png">
 
@@ -134,7 +135,7 @@
 
 
 
-  <title> kubernetes学习(Kubernetes集群运行Spark-Job提示Invalid\ DER:\ object\ is\ not\ integer的解决办法) | Z.S.K.'s Records </title>
+  <title> kubernetes学习(Kubernetes集群运行Spark-Job提示Invalid-DER:-object-is-not-integer错误的解决办法) | Z.S.K.'s Records </title>
 </head>
 
 <body itemscope itemtype="http://schema.org/WebPage" lang="zh-Hans">
@@ -324,7 +325,7 @@
             
             
               
-                kubernetes学习(Kubernetes集群运行Spark-Job提示Invalid\ DER:\ object\ is\ not\ integer的解决办法)
+                kubernetes学习(Kubernetes集群运行Spark-Job提示Invalid-DER:-object-is-not-integer错误的解决办法)
               
             
           </h1>
@@ -411,7 +412,8 @@
 <p>再根据提交的代码记录发现问题:</p>
 <p>在kubernetes的java client早版本的代码里</p>
 <p><img src="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20200309141145.png" alt></p>
-<p>在ClientCertificateAuthentication.java这个文件中, 是写死了证书的加密类型只能是RSA, 而测试的kubernetes使用的是minikube搭建的, 默认情况下使用的证书加密类型为EC(Eliptical Curve), 而测试的kubernetes并不支持</p>
+<p>在ClientCertificateAuthentication.java这个文件中, 是写死了证书的加密类型只能是RSA, 而测试的kubernetes使用的是minikube搭建的, 默认情况下使用的证书加密类型为EC(Eliptical Curve), 而测试的kubernetes并不支持, 如何查看证书的类型呢, 很简单, cat ca-key.pem, 第一行都标注了证书加密类型. </p>
+<p><img src="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20200310103152.png" alt></p>
 <p>线上环境没问题是因为kubernetes使用的版本已经支持了EC这种加密类型</p>
 <h3 id="解决"><a href="#解决" class="headerlink" title="解决"></a>解决</h3><p>所以，问题就很清晰了,有两个解决方案, <strong>要么升级java client, 要么使用RSA的证书类型.</strong>由于spark已经是最新版本的了, 因此只能切换到RSA证书，这其实还是比较麻烦的, 我建议直接使用新版本的kubernetes重新搭建, 也比换证书要快, 比较minikube、kubeadm一键式还是很爽的.</p>
 <p>所以, <strong>多多查找对应project的issue, 你遇到的问题, 大概率别人都遇到过.</strong></p>
