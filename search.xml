@@ -820,7 +820,7 @@
       </tags>
   </entry>
   <entry>
-    <title>Prometheus编写业务Exporter</title>
+    <title>Prometheus学习(编写业务Exporter)</title>
     <url>/2020/01/19/Prometheus-Write-Exporter/</url>
     <content><![CDATA[<p>Prometheus官网维护了大量的Exporter, 很多都是开箱即用，非常方便，但有时业务要接入Prometheus时, 还需要业务端开发Exporter,好在Prometheus定制了一套流程的Client开发流程，非常容易接入.</p>
 <a id="more"></a>
@@ -1575,8 +1575,8 @@
       </tags>
   </entry>
   <entry>
-    <title>Grafana数据备份工具</title>
-    <url>/2019/11/15/Grafana%E6%95%B0%E6%8D%AE%E5%A4%87%E4%BB%BD%E5%B7%A5%E5%85%B7/</url>
+    <title>Grafana学习(grafana资源备份工具)</title>
+    <url>/2019/11/15/grafana-source-backup-tools/</url>
     <content><![CDATA[<p>目前，Grafana是使用statefulset的形式部署的, 单实例，底层存储也没有使用分布式容灾, 里面有很配置好的模板，整天提醒吊胆地怕这个实例磁盘出问题,在不给分配更多资源的情况下，必须要找个合适的备份方案, 当然，可以直接备份整个目录, 这里介绍下使用kubernetes的cronjob进行定时备份</p>
 <a id="more"></a>
 <h3 id="Grafana-backup-tool"><a href="#Grafana-backup-tool" class="headerlink" title="Grafana-backup-tool"></a><strong>Grafana-backup-tool</strong></h3><p>在github上找到一个比较好用的grafana数据的备份工具, 用python写的, 地址在<a href="https://github.com/ysde/grafana-backup-tool" target="_blank" rel="noopener">这里</a>, ReadMe写的挺详细，一看就明白, 这个工具能备份 datasource, dashboard及配置的alert. 需要备份的也就这些数据了,其它的数据用处不大,</p>
@@ -1649,6 +1649,74 @@
       </categories>
       <tags>
         <tag>Golang</tag>
+      </tags>
+  </entry>
+  <entry>
+    <title>记一次排查ES FGC导致的集群宕机异常</title>
+    <url>/2019/10/06/ES-FGC-Fix/</url>
+    <content><![CDATA[<p>有一个私有云环境的运维同事反应项目中的ES集群无法查询, 由于是私有云环境, 没有直接运维权限, 所以没有接收到一线报警, 远程登录上去后发现ES集群已经宕机了, 这次的排查过程也发现了几个比较容易忽视的细节, 在此记录一下,比较有意思.</p>
+<a id="more"></a>
+<h3 id="集群状态"><a href="#集群状态" class="headerlink" title="集群状态"></a>集群状态</h3><p>ES集群为3节点.</p>
+<p>首先肯定是查看集群状态</p>
+<figure class="highlight bash"><table><tr><td class="code"><pre><span class="line">curl <span class="string">'http://localhost:9200/_cluster/health?pretty'</span> -u xxx:yyy</span><br><span class="line"><span class="comment">#发现状态为Red</span></span><br></pre></td></tr></table></figure>
+<p>查看节点状态</p>
+<figure class="highlight bash"><table><tr><td class="code"><pre><span class="line">curl <span class="string">'http://localhost:9200/_cat/node?v'</span> -u xxx:yyy</span><br><span class="line"><span class="comment">#节点数正常</span></span><br></pre></td></tr></table></figure>
+<p>查看各节点使用的磁盘情况</p>
+<figure class="highlight bash"><table><tr><td class="code"><pre><span class="line">curl -XGET <span class="string">'localhost:9200/_cat/allocation?v&amp;pretty'</span> -u xxx:yyy</span><br><span class="line"><span class="comment">#未发现异常</span></span><br></pre></td></tr></table></figure>
+<h3 id="集群日志"><a href="#集群日志" class="headerlink" title="集群日志"></a>集群日志</h3><p>登录一个ES节点查看日志，发现以下报错，查看其它2个节点，情况相同</p>
+<p><img src="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20200204134510.png" alt></p>
+<p>从日志来看, 可以发现几个问题:</p>
+<blockquote>
+<ul>
+<li>Full GC很频繁, 而且时间也非常的长 </li>
+<li>每次GC完之后所能释放的内存非常有限</li>
+</ul>
+</blockquote>
+<p>到这，其它原因已经很明朗, <strong>内存不够导致的full gc 频繁，但是又不能释放太多的空间，又导致full gc的恶意循环</strong></p>
+<p>如果大家对gc的日志不很了解的话, 这里解释下上面日志的各个字段含义, 假如有以下一条gc日志</p>
+<figure class="highlight bash"><table><tr><td class="code"><pre><span class="line">[2018-06-30T17:57:29,020][INFO ][o.e.m.j.JvmGcMonitorService] [qoo--ES] [gc][old][228385][160772] duration [5s], collections [1]/[5.1s], total [5s]/[4.4d], memory [945.4mb]-&gt;[958.5mb]/[1007.3mb], all_pools &#123;[young] [87.8mb]-&gt;[100.9mb]/[133.1mb]&#125;&#123;[survivor] [0b]-&gt;[0b]/[16.6mb]&#125;&#123;[old] [857.6mb]-&gt;[857.6mb]/[857.6mb]&#125;</span><br></pre></td></tr></table></figure>
+<ul>
+<li><strong>gc old</strong> 本次是 old GC 这是第228385次 GC 检查][从 JVM 启动至今发生的第 160772次 G]</li>
+<li><strong>duration</strong> [本次检查到的 GC 总耗时 <strong>5</strong> 秒，可能是多次的加和</li>
+<li><strong>collections</strong> [从上次检查至今总共发生<strong>1</strong>次GC]/[从上次检查至今已过去 <strong>5.1</strong> 秒],</li>
+<li><strong>total</strong> [本次检查到的 GC 总耗时为 <strong>5</strong> 秒]/[从 JVM 启动至今发生的 GC 总耗时为 <strong>4.4</strong> 天]，</li>
+<li><strong>memory</strong> [ GC 前 Heap memory 空间]-&gt;[GC 后 Heap memory 空间]/[Heap memory 总空间],</li>
+<li><strong>all_pools</strong>(分代部分的详情) {young 区][GC 前 Memory ]-&gt;[GC后 Memory]/[young区 Memory 总大小] }</li>
+<li><strong>survivor</strong> [GC 前 Memory ]-&gt;[GC后 Memory]/[Memory 总大小] }{old 区[GC 前 Memory ]-&gt;[GC后 Memory]/[old区 Memory 总大小] }</li>
+</ul>
+<p>那为何会内存不足呢, 想起前几天服务拓展，添加收集了几个服务的日志, 日志量不算小, 而且这3个ES节点所在的机器内存只分配了8个G, 显然, 加完这几个日志之后内存不够用了.</p>
+<h3 id="Index-Mapping"><a href="#Index-Mapping" class="headerlink" title="Index Mapping"></a>Index Mapping</h3><p>而且，从日志中， 还发现几处很诡异的日志</p>
+<p><img src="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20200204141415.png" alt></p>
+<p>红框中的错误: <strong>object mapping for [msg] tried to pasrse field [msg] as object, but found a concrete</strong></p>
+<p>翻译过来就是说, 日志中的msg这个字段的类型匹配不上, ES尽力把它解析为object类型，但是它却是个确切的值.</p>
+<p>就好比你在python中定义了一个字典, 但是你给它赋值一个整形, 这确定要报错.</p>
+<p>但是这个mapping是从何而来的呢.</p>
+<p>经过网上搜索一翻, 终于明白:</p>
+<p>ES中为了加强性能，对于索引中的<strong>第一条数据, ES会默认(可设置)按照这条数据建立index mapping, 相当于是一个索引模板, 好比是mysql中表的定义一个概念, 后续这个索引中的所有日志都按照该模板进行解析</strong></p>
+<p>后来经过查看源码, 我们发现，出现上图中的问题是因为代码中的日志打印不规范, 有一个地方如果抛出异常时，打印的是一个单一字符串, 而正常情况下打印的是一个json, 所以当第一条正常的日志传递给ES时，ES建立的索引 模板记录这个字段为object类型(可以类比为python中的字典, 本身是可以新增元素的), 当应用抛出异常时，日志中又传递了一个单一字符串, 但是索引模板已经记录为object类型，所以无法匹配, 这就是问题所在</p>
+<h3 id="Fix-Bug"><a href="#Fix-Bug" class="headerlink" title="Fix Bug"></a>Fix Bug</h3><p>从3个方面解决上面的问题</p>
+<p>首先是修复代码中日志不规范问题, 这个充暴露了code view不严谨.</p>
+<p>第2个是加大ES的内存,毕竟日志量确实是上来了, 从8G添加到12G</p>
+<p>第3个是优化ES的gc问题, ES中有个逻辑是：<strong>默认情况下，主节点每30秒会去检查其他节点的状态，如果任何节点的垃圾回收时间超过30秒（Garbage collection duration）且在重复次数内都超时，则会导致主节点任务该节点脱离集群, 节点脱离集群后会引起分片的rebalance</strong></p>
+<p>这个机制让ES节点频繁的脱离集群，而又引起整个集群的rebalance，ES本身的内存就不够，rebalance更是雪上加霜, 如此往复就导致整个ES集群宕机.</p>
+<p>可修改主节点的检查时间及重复次数,让其它节点有充分的时间进行full gc.</p>
+<p>在ES的配置文件中添加以下配置:</p>
+<figure class="highlight yml"><table><tr><td class="code"><pre><span class="line"><span class="attr">discovery.zen.fd.ping_timeout:</span> <span class="string">300s</span></span><br><span class="line"><span class="attr">discovery.zen.fd.ping_retriES:</span> <span class="number">10</span></span><br></pre></td></tr></table></figure>
+<p>这样, 达到这两个条件时才能触发节点脱离集群</p>
+<p>至此, 依次重启ES节点, 问题圆满解决.</p>
+<h3 id="参考文章"><a href="#参考文章" class="headerlink" title="参考文章:"></a><strong>参考文章:</strong></h3><blockquote>
+<ul>
+<li><a href="https://www.elastic.co/guide/en/elasticsearch/reference/current/mapping.html" target="_blank" rel="noopener">elasticsearch index mapping</a></li>
+<li><a href="https://blog.csdn.net/sinat_35930259/article/details/80354732" target="_blank" rel="noopener">elasticsearch篇之mapping</a></li>
+<li><a href="https://segmentfault.com/a/1190000016494488" target="_blank" rel="noopener">你看懂 Elasticsearch Log 中的 GC 日志了吗？</a></li>
+</ul>
+</blockquote>
+<h3 id="转载请注明出处https-izsk-me"><a href="#转载请注明出处https-izsk-me" class="headerlink" title="转载请注明出处https://izsk.me"></a><strong>转载请注明出处<a href="https://izsk.me" target="_blank" rel="noopener">https://izsk.me</a></strong></h3>]]></content>
+      <categories>
+        <category>FELK</category>
+      </categories>
+      <tags>
+        <tag>FELK</tag>
       </tags>
   </entry>
   <entry>
@@ -1789,74 +1857,6 @@
       </tags>
   </entry>
   <entry>
-    <title>记一次排查ES FGC导致的集群宕机异常</title>
-    <url>/2019/10/06/ES-FGC-Fix/</url>
-    <content><![CDATA[<p>有一个私有云环境的运维同事反应项目中的ES集群无法查询, 由于是私有云环境, 没有直接运维权限, 所以没有接收到一线报警, 远程登录上去后发现ES集群已经宕机了, 这次的排查过程也发现了几个比较容易忽视的细节, 在此记录一下,比较有意思.</p>
-<a id="more"></a>
-<h3 id="集群状态"><a href="#集群状态" class="headerlink" title="集群状态"></a>集群状态</h3><p>ES集群为3节点.</p>
-<p>首先肯定是查看集群状态</p>
-<figure class="highlight bash"><table><tr><td class="code"><pre><span class="line">curl <span class="string">'http://localhost:9200/_cluster/health?pretty'</span> -u xxx:yyy</span><br><span class="line"><span class="comment">#发现状态为Red</span></span><br></pre></td></tr></table></figure>
-<p>查看节点状态</p>
-<figure class="highlight bash"><table><tr><td class="code"><pre><span class="line">curl <span class="string">'http://localhost:9200/_cat/node?v'</span> -u xxx:yyy</span><br><span class="line"><span class="comment">#节点数正常</span></span><br></pre></td></tr></table></figure>
-<p>查看各节点使用的磁盘情况</p>
-<figure class="highlight bash"><table><tr><td class="code"><pre><span class="line">curl -XGET <span class="string">'localhost:9200/_cat/allocation?v&amp;pretty'</span> -u xxx:yyy</span><br><span class="line"><span class="comment">#未发现异常</span></span><br></pre></td></tr></table></figure>
-<h3 id="集群日志"><a href="#集群日志" class="headerlink" title="集群日志"></a>集群日志</h3><p>登录一个ES节点查看日志，发现以下报错，查看其它2个节点，情况相同</p>
-<p><img src="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20200204134510.png" alt></p>
-<p>从日志来看, 可以发现几个问题:</p>
-<blockquote>
-<ul>
-<li>Full GC很频繁, 而且时间也非常的长 </li>
-<li>每次GC完之后所能释放的内存非常有限</li>
-</ul>
-</blockquote>
-<p>到这，其它原因已经很明朗, <strong>内存不够导致的full gc 频繁，但是又不能释放太多的空间，又导致full gc的恶意循环</strong></p>
-<p>如果大家对gc的日志不很了解的话, 这里解释下上面日志的各个字段含义, 假如有以下一条gc日志</p>
-<figure class="highlight bash"><table><tr><td class="code"><pre><span class="line">[2018-06-30T17:57:29,020][INFO ][o.e.m.j.JvmGcMonitorService] [qoo--ES] [gc][old][228385][160772] duration [5s], collections [1]/[5.1s], total [5s]/[4.4d], memory [945.4mb]-&gt;[958.5mb]/[1007.3mb], all_pools &#123;[young] [87.8mb]-&gt;[100.9mb]/[133.1mb]&#125;&#123;[survivor] [0b]-&gt;[0b]/[16.6mb]&#125;&#123;[old] [857.6mb]-&gt;[857.6mb]/[857.6mb]&#125;</span><br></pre></td></tr></table></figure>
-<ul>
-<li><strong>gc old</strong> 本次是 old GC 这是第228385次 GC 检查][从 JVM 启动至今发生的第 160772次 G]</li>
-<li><strong>duration</strong> [本次检查到的 GC 总耗时 <strong>5</strong> 秒，可能是多次的加和</li>
-<li><strong>collections</strong> [从上次检查至今总共发生<strong>1</strong>次GC]/[从上次检查至今已过去 <strong>5.1</strong> 秒],</li>
-<li><strong>total</strong> [本次检查到的 GC 总耗时为 <strong>5</strong> 秒]/[从 JVM 启动至今发生的 GC 总耗时为 <strong>4.4</strong> 天]，</li>
-<li><strong>memory</strong> [ GC 前 Heap memory 空间]-&gt;[GC 后 Heap memory 空间]/[Heap memory 总空间],</li>
-<li><strong>all_pools</strong>(分代部分的详情) {young 区][GC 前 Memory ]-&gt;[GC后 Memory]/[young区 Memory 总大小] }</li>
-<li><strong>survivor</strong> [GC 前 Memory ]-&gt;[GC后 Memory]/[Memory 总大小] }{old 区[GC 前 Memory ]-&gt;[GC后 Memory]/[old区 Memory 总大小] }</li>
-</ul>
-<p>那为何会内存不足呢, 想起前几天服务拓展，添加收集了几个服务的日志, 日志量不算小, 而且这3个ES节点所在的机器内存只分配了8个G, 显然, 加完这几个日志之后内存不够用了.</p>
-<h3 id="Index-Mapping"><a href="#Index-Mapping" class="headerlink" title="Index Mapping"></a>Index Mapping</h3><p>而且，从日志中， 还发现几处很诡异的日志</p>
-<p><img src="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20200204141415.png" alt></p>
-<p>红框中的错误: <strong>object mapping for [msg] tried to pasrse field [msg] as object, but found a concrete</strong></p>
-<p>翻译过来就是说, 日志中的msg这个字段的类型匹配不上, ES尽力把它解析为object类型，但是它却是个确切的值.</p>
-<p>就好比你在python中定义了一个字典, 但是你给它赋值一个整形, 这确定要报错.</p>
-<p>但是这个mapping是从何而来的呢.</p>
-<p>经过网上搜索一翻, 终于明白:</p>
-<p>ES中为了加强性能，对于索引中的<strong>第一条数据, ES会默认(可设置)按照这条数据建立index mapping, 相当于是一个索引模板, 好比是mysql中表的定义一个概念, 后续这个索引中的所有日志都按照该模板进行解析</strong></p>
-<p>后来经过查看源码, 我们发现，出现上图中的问题是因为代码中的日志打印不规范, 有一个地方如果抛出异常时，打印的是一个单一字符串, 而正常情况下打印的是一个json, 所以当第一条正常的日志传递给ES时，ES建立的索引 模板记录这个字段为object类型(可以类比为python中的字典, 本身是可以新增元素的), 当应用抛出异常时，日志中又传递了一个单一字符串, 但是索引模板已经记录为object类型，所以无法匹配, 这就是问题所在</p>
-<h3 id="Fix-Bug"><a href="#Fix-Bug" class="headerlink" title="Fix Bug"></a>Fix Bug</h3><p>从3个方面解决上面的问题</p>
-<p>首先是修复代码中日志不规范问题, 这个充暴露了code view不严谨.</p>
-<p>第2个是加大ES的内存,毕竟日志量确实是上来了, 从8G添加到12G</p>
-<p>第3个是优化ES的gc问题, ES中有个逻辑是：<strong>默认情况下，主节点每30秒会去检查其他节点的状态，如果任何节点的垃圾回收时间超过30秒（Garbage collection duration）且在重复次数内都超时，则会导致主节点任务该节点脱离集群, 节点脱离集群后会引起分片的rebalance</strong></p>
-<p>这个机制让ES节点频繁的脱离集群，而又引起整个集群的rebalance，ES本身的内存就不够，rebalance更是雪上加霜, 如此往复就导致整个ES集群宕机.</p>
-<p>可修改主节点的检查时间及重复次数,让其它节点有充分的时间进行full gc.</p>
-<p>在ES的配置文件中添加以下配置:</p>
-<figure class="highlight yml"><table><tr><td class="code"><pre><span class="line"><span class="attr">discovery.zen.fd.ping_timeout:</span> <span class="string">300s</span></span><br><span class="line"><span class="attr">discovery.zen.fd.ping_retriES:</span> <span class="number">10</span></span><br></pre></td></tr></table></figure>
-<p>这样, 达到这两个条件时才能触发节点脱离集群</p>
-<p>至此, 依次重启ES节点, 问题圆满解决.</p>
-<h3 id="参考文章"><a href="#参考文章" class="headerlink" title="参考文章:"></a><strong>参考文章:</strong></h3><blockquote>
-<ul>
-<li><a href="https://www.elastic.co/guide/en/elasticsearch/reference/current/mapping.html" target="_blank" rel="noopener">elasticsearch index mapping</a></li>
-<li><a href="https://blog.csdn.net/sinat_35930259/article/details/80354732" target="_blank" rel="noopener">elasticsearch篇之mapping</a></li>
-<li><a href="https://segmentfault.com/a/1190000016494488" target="_blank" rel="noopener">你看懂 Elasticsearch Log 中的 GC 日志了吗？</a></li>
-</ul>
-</blockquote>
-<h3 id="转载请注明出处https-izsk-me"><a href="#转载请注明出处https-izsk-me" class="headerlink" title="转载请注明出处https://izsk.me"></a><strong>转载请注明出处<a href="https://izsk.me" target="_blank" rel="noopener">https://izsk.me</a></strong></h3>]]></content>
-      <categories>
-        <category>FELK</category>
-      </categories>
-      <tags>
-        <tag>FELK</tag>
-      </tags>
-  </entry>
-  <entry>
     <title>supervisor使用自定义邮件报警模板</title>
     <url>/2019/09/10/supervisor-alert-mail-template-customize/</url>
     <content><![CDATA[<p>生产中由于历史遗留问题，有些程序还是二进制部署, 对于这类程序需要使用守护进程进行托管，常用的能实现对程序进行守护的用的多的有如systemd, supervisor,monit等工具, monit其实更好用一些，拓展性也很强，但是因为线上已经有一些使用了supervisor，为了工具统一化，就都使用了supervisor了，这次讲一讲supervisor使用<strong>自定义邮件模板</strong>实现报警的实现</p>
@@ -1916,8 +1916,8 @@
       </tags>
   </entry>
   <entry>
-    <title>在Grafana中统计物理机上容器状态分类汇总</title>
-    <url>/2019/09/07/%E5%9C%A8Grafana%E4%B8%AD%E7%BB%9F%E8%AE%A1%E7%89%A9%E7%90%86%E6%9C%BA%E4%B8%8A%E5%AE%B9%E5%99%A8%E7%8A%B6%E6%80%81%E5%88%86%E7%B1%BB%E6%B1%87%E6%80%BB/</url>
+    <title>Grafana学习(在Grafana中统计物理机上容器状态分类汇总)</title>
+    <url>/2019/09/07/grafana-statisty-containers-status-on-hosts/</url>
     <content><![CDATA[<p>Kubernetes集群中的容器监控数据已经通过Prometheus采集上来，在Grafana上配置可视化的时候，发现了个很有意思的需求，即：<strong>按物理机展示各种状态下的容器占比情况</strong></p>
 <a id="more"></a>
 <p>当然，是可以在Prometheus采集的时候对原始数据进行relabel，因为不好再回去做调整, 目前采集上来的数据不能直接实现上面的需求，所以只能在Prometheus上用提供的函数对数据做各种操作，最终达到效果,因为grafana直接支持prom语法，所以可以直接对prometheus的数据做sql.</p>
@@ -1971,8 +1971,8 @@
       </tags>
   </entry>
   <entry>
-    <title>Node-Exporter采集自定义Metrics</title>
-    <url>/2019/08/28/Node-Exporter%E9%87%87%E9%9B%86%E8%87%AA%E5%AE%9A%E4%B9%89Metrics/</url>
+    <title>Prometheus学习(Node-Exporter采集自定义Metrics)</title>
+    <url>/2019/08/28/prometheus-nodeexporter-customized-metrics/</url>
     <content><![CDATA[<p>如果使用Prometheus做监控系统的话, node-exporter一定是不能绕过的采集工具, 开箱即用的实用性让运维同学节省很多时间, 最近也是发现了一个比较有意思的功能, NodeExporter可以采集额外的Metrics到Prometheus中</p>
 <a id="more"></a>
 <p>假如有时我们有自定义的Metrics需要上传到Promethues中，一般情况下, 我们会通过PushGateway来做采集，假如这个时候恰恰没有部署PushGateway, 有没有更快捷的办法, 这个时候NodeExporter就派上用场了.</p>
@@ -2049,6 +2049,95 @@
       </categories>
       <tags>
         <tag>Golang</tag>
+      </tags>
+  </entry>
+  <entry>
+    <title>Prometheus学习(prometheus基本原理)</title>
+    <url>/2019/08/21/prometheus-basic-theory/</url>
+    <content><![CDATA[<p>Prometheus做为CNCF的第二个项目，被给予厚望,  现已然成为监控系统设计的标杆. 特别是对于Kubernetes的支持,可谓天衣无缝. 使用kubernetes，很难跳过prometheus不说.</p>
+<a id="more"></a>
+<h3 id="系统架构"><a href="#系统架构" class="headerlink" title="系统架构"></a>系统架构</h3><p><img src="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/prometheus-architecture.png" alt></p>
+<p>Prometheus由多个组件组成，但是其中许多组件是可选的:</p>
+<blockquote>
+<ul>
+<li>Prometheus Server: 用于抓取指标、存储时间序列数据</li>
+<li>Service discovery: 通过服务发现机制获取需要scrape目标</li>
+<li>Pushgateway: push的方式将指标数据推送到网关</li>
+<li>alertmanager: 处理报警的报警组件</li>
+<li>DataVisualization: 支持多种数据可视化UI</li>
+<li>PromQL: 数据查询语言</li>
+</ul>
+</blockquote>
+<h3 id="数据抓取"><a href="#数据抓取" class="headerlink" title="数据抓取"></a>数据抓取</h3><p><strong>PULL</strong>: prometheus<strong>主动</strong>地按照配置的时间周期去<strong>需要抓取的</strong>目标对象获取metrics</p>
+<p><strong>PUSH</strong>: 程序按照配置的时间周期将metrics<strong>推送</strong>到pushgateway, pushgateway本地存储数据, prometheus<strong>主动</strong>去pushgateway<strong>抓取</strong>.</p>
+<p><strong>规则:</strong> </p>
+<blockquote>
+<ul>
+<li>按照promethus定义的<strong>metric数据类型</strong>及规则组织数据<strong>格式</strong>. </li>
+<li>暴露指定的端口供prometheus scrape且表明自己需要被scrape</li>
+</ul>
+</blockquote>
+<p><strong>metrics</strong>: key-value对</p>
+<p><img src="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/image-20191121135817702.png" alt></p>
+<p>一条metrics中<code>{}</code>引起来的部分为label, 可用于聚合/查询条件等.</p>
+<p><strong>数据类型:</strong></p>
+<blockquote>
+<ul>
+<li>counter: 只增不减,允许重置为0</li>
+<li>gauge: 没有规律的数值</li>
+<li>histogram: 用于统计一些数据分布的情况，用于计算在一定范围内的分布情况，同时还提供了度量指标值的总和</li>
+<li>Summary: 主要用于计算在一定时间窗口范围内度量指标对象的总数以及所有对量指标值的总和，计算过程是在client端完成,计算结果存在server。因为没有最初的metric数据，所以summary不支持数据聚合</li>
+</ul>
+</blockquote>
+<p><strong>scrape</strong></p>
+<p>对于scrape, 一个比较重要的指标是scrape timeout, 这个要根据具体场景来设置,过大或者过小都可能造成问题</p>
+<p>关于如何发现scrape目标, 见<a href="#ServiceDiscovery">ServiceDiscovery</a></p>
+<p><strong>PromSQL</strong></p>
+<p>prometheus中查询中使用了自有的查询语言,PromSQL,时间关系, 这节也不展开讲了,大家可参考<a href="https://prometheus.io/docs/prometheus/latest/querying/basics/" target="_blank" rel="noopener">官网</a></p>
+<p><strong>exporter</strong></p>
+<p>exporter是prometheus一类数据采集组件的总称, 随着prometheus逐渐流行, 并不是所有的第三方软件都支持prometheus的metric格式, 如果本身不改造的话,那无法使用prometheus进行scrapek,因此需要额外的一个东西从目标处收集数据, 将其转化为prometheus支持的格式.</p>
+<h3 id="服务发现"><a href="#服务发现" class="headerlink" title="服务发现"></a>服务发现</h3><p>所有的监控对象(基础设施、应用、服务)都在动态的变化, 显然无法静态的定义监控目标。而对于Prometheus而言其解决方案就是引入一个中间的代理人（服务注册中心），这个代理人掌握着当前所有监控目标的访问信息，Prometheus只需要向这个代理人询问有哪些监控目标控即可， 这种模式被称为<strong>服务发现</strong></p>
+<p><img src="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/image-20191121135214878.png" alt></p>
+<p>摘取prometheus配置文件部分, 完整的配置见<a href="https://prometheus.io/docs/prometheus/latest/configuration/configuration/" target="_blank" rel="noopener">官网</a>:</p>
+<figure class="highlight yaml"><table><tr><td class="code"><pre><span class="line"><span class="attr">global:</span></span><br><span class="line">  <span class="comment"># How frequently to scrape targets by default.</span></span><br><span class="line">  <span class="string">[</span> <span class="attr">scrape_interval:</span> <span class="string">&lt;duration&gt;</span> <span class="string">|</span> <span class="string">default</span> <span class="string">=</span> <span class="string">1m</span> <span class="string">]</span></span><br><span class="line">  <span class="comment"># How long until a scrape request times out.</span></span><br><span class="line">  <span class="string">[</span> <span class="attr">scrape_timeout:</span> <span class="string">&lt;duration&gt;</span> <span class="string">|</span> <span class="string">default</span> <span class="string">=</span> <span class="string">10s</span> <span class="string">]</span></span><br><span class="line">  <span class="comment"># How frequently to evaluate rules.</span></span><br><span class="line">  <span class="string">[</span> <span class="attr">evaluation_interval:</span> <span class="string">&lt;duration&gt;</span> <span class="string">|</span> <span class="string">default</span> <span class="string">=</span> <span class="string">1m</span> <span class="string">]</span></span><br><span class="line">  <span class="comment"># The labels to add to any time series or alerts when communicating with</span></span><br><span class="line">  <span class="comment"># external systems (federation, remote storage, Alertmanager).</span></span><br><span class="line">  <span class="attr">external_labels:</span></span><br><span class="line">    <span class="string">[</span> <span class="string">&lt;labelname&gt;:</span> <span class="string">&lt;labelvalue&gt;</span> <span class="string">...</span> <span class="string">]</span></span><br><span class="line"><span class="attr">scrape_configs:</span></span><br><span class="line"><span class="bullet">-</span> <span class="attr">job_name:</span> <span class="string">prometheus</span></span><br><span class="line">  <span class="attr">scrape_interval:</span> <span class="string">20s</span></span><br><span class="line">  <span class="attr">scrape_timeout:</span> <span class="string">10s</span></span><br><span class="line">  <span class="attr">metrics_path:</span> <span class="string">/metrics</span></span><br><span class="line">  <span class="attr">scheme:</span> <span class="string">http</span></span><br><span class="line">  <span class="attr">static_configs:</span></span><br><span class="line">  <span class="bullet">-</span> <span class="attr">targets:</span></span><br><span class="line">    <span class="bullet">-</span> <span class="string">localhost:9090</span></span><br><span class="line"><span class="bullet">-</span> <span class="attr">job_name:</span> <span class="string">kubernetes-service-endpoints</span></span><br><span class="line">  <span class="attr">scrape_interval:</span> <span class="string">20s</span></span><br><span class="line">  <span class="attr">scrape_timeout:</span> <span class="string">10s</span></span><br><span class="line">  <span class="attr">metrics_path:</span> <span class="string">/metrics</span></span><br><span class="line">  <span class="attr">scheme:</span> <span class="string">http</span></span><br><span class="line">  <span class="attr">kubernetes_sd_configs:</span></span><br><span class="line">  <span class="bullet">-</span> <span class="attr">api_server:</span> <span class="literal">null</span></span><br><span class="line">    <span class="attr">role:</span> <span class="string">endpoints</span></span><br><span class="line">    <span class="attr">namespaces:</span></span><br><span class="line">      <span class="attr">names:</span> <span class="string">[]</span></span><br><span class="line">  <span class="attr">relabel_configs:</span></span><br><span class="line">  <span class="bullet">-</span> <span class="attr">source_labels:</span> <span class="string">[__meta_kubernetes_service_annotation_prometheus_io_scrape]</span></span><br><span class="line">    <span class="attr">separator:</span> <span class="string">;</span></span><br><span class="line">    <span class="attr">regex:</span> <span class="string">"true"</span></span><br><span class="line">    <span class="attr">replacement:</span> <span class="string">$1</span></span><br><span class="line">    <span class="attr">action:</span> <span class="string">keep</span>   <span class="comment">#keep, drop</span></span><br><span class="line">  <span class="comment">#其它relabel规则省略...</span></span><br><span class="line">  <span class="comment">#...</span></span><br></pre></td></tr></table></figure>
+<p>对应的service主动expose metrics:</p>
+<figure class="highlight yaml"><table><tr><td class="code"><pre><span class="line"><span class="attr">kind:</span> <span class="string">Service</span></span><br><span class="line"><span class="attr">apiVersion:</span> <span class="string">v1</span></span><br><span class="line"><span class="attr">metadata:</span></span><br><span class="line">  <span class="attr">name:</span> <span class="string">prometheus-logging</span></span><br><span class="line">  <span class="attr">namespace:</span> <span class="string">logging</span></span><br><span class="line">  <span class="attr">labels:</span></span><br><span class="line">    <span class="attr">prometheus.io/port:</span> <span class="string">"9090"</span></span><br><span class="line">    <span class="attr">prometheus.io/scrape:</span> <span class="string">"true"</span></span><br><span class="line"><span class="attr">spec:</span></span><br><span class="line">  <span class="attr">ports:</span></span><br><span class="line">    <span class="bullet">-</span> <span class="attr">name:</span> <span class="string">http</span></span><br><span class="line">      <span class="attr">port:</span> <span class="number">9090</span></span><br><span class="line">      <span class="attr">protocol:</span> <span class="string">TCP</span></span><br><span class="line">      <span class="attr">targetPort:</span> <span class="number">9090</span></span><br><span class="line">  <span class="attr">selector:</span></span><br><span class="line">    <span class="attr">k8s-app:</span> <span class="string">prometheus-logging</span></span><br></pre></td></tr></table></figure>
+<p><code>一般情况下, 为避免抓取数据量太大对prometheus造成压力, 最佳实践是只抓取对监控有益的对象,</code></p>
+<p><code>prometheus配置文件中对指定某组目标使用了relabel_configs</code></p>
+<figure class="highlight yaml"><table><tr><td class="code"><pre><span class="line"><span class="attr">source_labels:</span> <span class="string">__meta_kubernetes_service_annotation_prometheus_io_scrape</span></span><br><span class="line"><span class="attr">action:</span> <span class="string">keep</span></span><br></pre></td></tr></table></figure>
+<p><code>该场景下: 只有当prometheus能通过服务发现机制找到抓取对象且抓取对象定义了prometheus.io/scrape: &quot;true&quot;时, prometheus才会进行抓取.</code></p>
+<p>抓取的数据格式如下:</p>
+<p><img src="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/image-20191125104649435.png" alt></p>
+<h3 id="报警规则"><a href="#报警规则" class="headerlink" title="报警规则"></a>报警规则</h3><p>这里举两个例子:</p>
+<p>连续5分钟之内, 如果存在容器的启动时间一直小于180s的,则认为容器发生重启,则报警</p>
+<figure class="highlight shell"><table><tr><td class="code"><pre><span class="line">alert: container_restart</span><br><span class="line">expr: (time()</span><br><span class="line">  - (avg by(name) (container_start_time_seconds))) &lt; 180</span><br><span class="line">for: 5m</span><br><span class="line">labels:</span><br><span class="line">  severity: warning</span><br><span class="line">annotations:</span><br><span class="line">  description: container &#123;&#123;$labels.name&#125;&#125; restart in 5 minutes.</span><br></pre></td></tr></table></figure>
+<p>连续5分钟之内,如果node的可用使用内存大于90%且可用内存小于2G的, 则报警</p>
+<figure class="highlight yaml"><table><tr><td class="code"><pre><span class="line"><span class="attr">alert:</span> <span class="string">node_memory_usage_higher_0.9</span></span><br><span class="line"><span class="attr">expr:</span> <span class="string">(((node_memory_MemTotal</span></span><br><span class="line">  <span class="bullet">-</span> <span class="string">node_memory_MemFree</span> <span class="bullet">-</span> <span class="string">node_memory_Cached)</span> <span class="string">/</span> <span class="string">(node_memory_MemTotal))</span> <span class="string">*</span> <span class="number">100</span><span class="string">)</span> <span class="string">&gt;</span></span><br><span class="line">  <span class="number">90</span> <span class="string">and</span> <span class="string">(node_memory_MemFree</span> <span class="string">+</span> <span class="string">node_memory_Cached)</span> <span class="string">&lt;</span> <span class="number">2</span> <span class="string">*</span> <span class="number">1024</span> <span class="string">*</span> <span class="number">1024</span> <span class="string">*</span> <span class="number">1024</span></span><br><span class="line"><span class="attr">for:</span> <span class="string">5m</span></span><br><span class="line"><span class="attr">labels:</span></span><br><span class="line">  <span class="attr">severity:</span> <span class="string">warning</span></span><br><span class="line"><span class="attr">annotations:</span></span><br><span class="line">  <span class="attr">description:</span> <span class="string">Host</span> <span class="string">avg</span> <span class="string">memory</span> <span class="string">usage</span> <span class="string">in</span> <span class="string">5m</span> <span class="string">is</span> <span class="string">&#123;&#123;</span> <span class="string">$value</span> <span class="string">&#125;&#125;%</span> <span class="string">(&gt;90%).</span> <span class="string">Reported</span> <span class="string">by</span></span><br><span class="line">    <span class="string">instance</span> <span class="string">&#123;&#123;</span> <span class="string">$labels.instance</span> <span class="string">&#125;&#125;</span> <span class="string">of</span> <span class="string">job</span> <span class="string">&#123;&#123;</span> <span class="string">$labels.job</span> <span class="string">&#125;&#125;.</span></span><br></pre></td></tr></table></figure>
+<h3 id="报警管理"><a href="#报警管理" class="headerlink" title="报警管理"></a>报警管理</h3><p>prometheus中处理metric是否符合定义的报警规则,然后通过alertmanager组件实现了, alertmanager充当中间人,后端对接多种报警介质</p>
+<p>prometheus将<code>异常事件</code>发送给alertmanager, alertmanager中我们可以设置各种报警规则等</p>
+<blockquote>
+<ul>
+<li>报警静默</li>
+<li>报警抑制</li>
+<li>报警分类</li>
+<li>报警聚合</li>
+</ul>
+</blockquote>
+<p>alertmanager的使用也相对容器, 不过Prometheus原生不支持某些实用的功能, 比如最大报警次数,因此, 如果产生报警, 如果不处理的话, prometheus会一直产生报警, prometheus开发者认为既然产生报警，那必然要尽快解决,因此觉得没必要支持设置最大报警次数，不过，可以直接通过修改prometheus的源码定制该功能.</p>
+<p>###可视化</p>
+<p>prometheus/alertmanager自带的webui实在是<code>太过于丑陋</code>, 一般只用于<code>debug数据</code>时使用, 数据可视化都会结合grafana进行展示</p>
+<p>grafana支持alertmanager.</p>
+<h3 id="参考文章"><a href="#参考文章" class="headerlink" title="参考文章:"></a><strong>参考文章:</strong></h3><blockquote>
+<ul>
+<li><a href="https://prometheus.io/" target="_blank" rel="noopener">https://prometheus.io/</a></li>
+</ul>
+</blockquote>
+<h3 id="转载请注明出处https-izsk-me"><a href="#转载请注明出处https-izsk-me" class="headerlink" title="转载请注明出处https://izsk.me"></a><strong>转载请注明出处<a href="https://izsk.me" target="_blank" rel="noopener">https://izsk.me</a></strong></h3>]]></content>
+      <categories>
+        <category>CloudNavi</category>
+      </categories>
+      <tags>
+        <tag>CloudNavi</tag>
       </tags>
   </entry>
   <entry>
@@ -4085,6 +4174,46 @@
       </tags>
   </entry>
   <entry>
+    <title>HTTP之长连接及短连接</title>
+    <url>/2017/08/12/HTTP%E4%B9%8B%E9%95%BF%E8%BF%9E%E6%8E%A5%E5%8F%8A%E7%9F%AD%E8%BF%9E%E6%8E%A5/</url>
+    <content><![CDATA[<p>我们都说HTTP协议是无状态的,我们又都说HTTP分长连接及短连接,’无状态’到底是个什么意思？</p>
+<a id="more"></a>
+<h3 id="无状态"><a href="#无状态" class="headerlink" title="无状态"></a><strong>无状态</strong></h3><p>HTTP无状态其实指的是协议对于事务处理没有记忆能力,服务器不知道客户端是什么状态.也就是说,打开一个服务器上的网页和你之前打开这个服务器上的网页之间没有任何联系.HTTP是一个无状态的面向连接的协议,无状态不代表HTTP不能保持TCP连接,更不能代表HTTP使用的是UDP协议(无连接).</p>
+<p>那http又是如何保持长连接的呢?</p>
+<p>在<code>HTTP/1.0</code>中,默认使用的是短连接.也就是说,浏览器和服务器每进行一次HTTP操作,就建立一次连接,但任务结束就中断连接.如果客户端浏览器访问的某个HTML或其他类型的 Web页中包含有其他的Web资源,如JavaScript文件、图像文件、CSS文件等；当浏览器每遇到这样一个Web资源,就会建立一个HTTP会话.<br>但从<code>HTTP/1.1</code>起,默认使用长连接,用以保持连接特性.使用长连接的HTTP协议,会在响应头有加入这行代码:</p>
+<p><code>Connection:keep-alive</code></p>
+<p>　　在使用长连接的情况下,当一个网页打开完成后,客户端和服务器之间用于传输HTTP数据的 TCP连接不会关闭,如果客户端再次访问这个服务器上的网页,会继续使用这一条已经建立的连接.<code>Keep-Alive</code>不会永久保持连接,它有一个保持时间,可以在不同的服务器软件（如Apache）中设定这个时间.实现长连接要客户端和服务端都支持长连接.</p>
+<p>当然,在很多web服务器中可以设置这个keep-Alive的保持时间,比如nginx的配置文件nginx.conf中可直接使用:</p>
+<p><code>keepalive_timeout  60;</code></p>
+<p><strong>HTTP协议的长连接和短连接,实质上是TCP协议的长连接和短连接.</strong></p>
+<p>那长短连接各自对应的场景有哪些呢(各自的优缺点)?</p>
+<h3 id="短连接"><a href="#短连接" class="headerlink" title="短连接"></a><strong>短连接</strong></h3><p>场景: client向server发起连接请求,server接到请求,然后双方建立连接.client向server 发送消息,server回应client,然后一次读写就完成了,这时候双方任何一个都可以发起close操作,不过一般都是client先发起 close操作.为什么呢,一般的server不会回复完client后立即关闭连接的,当然不排除有特殊的情况.从上面的描述看,短连接一般只会在 client/server间传递一次读写操作</p>
+<p><strong>短连接管理起来比较简单,存在的连接都是有用的连接,不需要额外的控制手段,但是频繁的创建大量的连接也很耗资源</strong></p>
+<h3 id="长连接"><a href="#长连接" class="headerlink" title="长连接"></a><strong>长连接</strong></h3><p>流程是:client向server发起连接,server接受client连接,双方建立连接.Client与server完成一次读写之后,它们之间的连接并不会主动关闭,后续的读写操作会继续使用这个连接.</p>
+<p>首先说一下TCP/IP详解上讲到的TCP保活功能,保活功能主要为服务器应用提供,服务器应用希望知道客户主机是否崩溃,从而可以代表客户使用资源.如果客户已经消失,使得服务器上保留一个半开放的连接,而服务器又在等待来自客户端的数据,则服务器将应远等待客户端的数据,保活功能就是试图在服务 器端检测到这种半开放的连接.</p>
+<p>如果一个给定的连接在两小时内没有任何的动作,服务器就向客户发一个探测报文段,客户主机必须处于以下4个状态之一:</p>
+<blockquote>
+<ul>
+<li>客户主机依然正常运行,并从服务器可达.客户的TCP响应正常,而服务器也知道对方是正常的,服务器在两小时后将保活定时器复位.</li>
+<li>客户主机已经崩溃,并且关闭或者正在重新启动.在任何一种情况下,客户的TCP都没有响应.服务端将不能收到对探测的响应,并在75秒后超时.服务器总共发送10个这样的探测 ,每个间隔75秒.如果服务器没有收到一个响应,它就认为客户主机已经关闭并终止连接.</li>
+<li>客户主机崩溃并已经重新启动.服务器将收到一个对其保活探测的响应,这个响应是一个复位,使得服务器终止这个连接.</li>
+</ul>
+</blockquote>
+<p>客户机正常运行,但是服务器不可达,这种情况与2类似,TCP能发现的就是没有收到探查的响应.</p>
+<p><strong>从上可以看出http要保持长连接需要做很多次的向客户端试探是否存活,这对性能是个很大的损耗,但是从另一方面来说长连接减少了很多的创关闭连接带来的开销,节约时间.</strong></p>
+<h3 id="场景"><a href="#场景" class="headerlink" title="场景"></a><strong>场景</strong></h3><p><code>长连接</code>多用于操作频繁,点对点的通讯,而且连接数不能太多情况,.每个TCP连接都需要三步握手,这需要时间,如果每个操作都是先连接,再操作的话那么处理速度会降低很多,所以每个操作完后都不断开,次处理时直接发送数据包就OK了,不用建立TCP连接.例如：数据库的连接用长连接, 如果用短连接频繁的通信会造成socket错误,而且频繁的socket 创建也是对资源的浪费. </p>
+<p>而像WEB网站的http服务一般都用<code>短链接</code>,因为长连接对于服务端来说会耗费一定的资源,而像WEB网站这么频繁的成千上万甚至上亿客户端的连接用短连接会更省一些资源,如果用长连接,而且同时有成千上万的用户,如果每个用户都占用一个连接的话,那可想而知吧.所以并发量大,但每个用户无需频繁操作情况下需用短连好.</p>
+<p><strong>没有哪一个更好,只有哪一个最适合,一切跟着场景走,总有一款适合你!</strong></p>
+<h3 id="转载请注明出处https-izsk-me"><a href="#转载请注明出处https-izsk-me" class="headerlink" title="转载请注明出处https://izsk.me"></a><strong>转载请注明出处<a href="https://izsk.me" target="_blank" rel="noopener">https://izsk.me</a></strong></h3><hr>
+]]></content>
+      <categories>
+        <category>Http-Tcp-Ip</category>
+      </categories>
+      <tags>
+        <tag>Http-Tcp-Ip</tag>
+      </tags>
+  </entry>
+  <entry>
     <title>Flask学习(flask应用)</title>
     <url>/2017/08/12/flask%E5%AD%A6%E4%B9%A0%E4%BA%8C(flask%E5%BA%94%E7%94%A8)/</url>
     <content><![CDATA[<p>距离<a href="https://izsk.me/2017/08/12/falsk%E5%AD%A6%E4%B9%A0(-" target="_blank" rel="noopener">上一篇</a>)有一段时间了,上次扯了点跟flask相关的内容,这次抽空记录下flask的机制.flask之所于上手容易,是因为我们对python语言稍微了解的话,简单几步就可以把一个小应用跑起来,不需要搭建额外的东西,所以对于并发量没有要求的话flask可以轻松应对.</p>
@@ -4149,46 +4278,6 @@
       </categories>
       <tags>
         <tag>Python</tag>
-      </tags>
-  </entry>
-  <entry>
-    <title>HTTP之长连接及短连接</title>
-    <url>/2017/08/12/HTTP%E4%B9%8B%E9%95%BF%E8%BF%9E%E6%8E%A5%E5%8F%8A%E7%9F%AD%E8%BF%9E%E6%8E%A5/</url>
-    <content><![CDATA[<p>我们都说HTTP协议是无状态的,我们又都说HTTP分长连接及短连接,’无状态’到底是个什么意思？</p>
-<a id="more"></a>
-<h3 id="无状态"><a href="#无状态" class="headerlink" title="无状态"></a><strong>无状态</strong></h3><p>HTTP无状态其实指的是协议对于事务处理没有记忆能力,服务器不知道客户端是什么状态.也就是说,打开一个服务器上的网页和你之前打开这个服务器上的网页之间没有任何联系.HTTP是一个无状态的面向连接的协议,无状态不代表HTTP不能保持TCP连接,更不能代表HTTP使用的是UDP协议(无连接).</p>
-<p>那http又是如何保持长连接的呢?</p>
-<p>在<code>HTTP/1.0</code>中,默认使用的是短连接.也就是说,浏览器和服务器每进行一次HTTP操作,就建立一次连接,但任务结束就中断连接.如果客户端浏览器访问的某个HTML或其他类型的 Web页中包含有其他的Web资源,如JavaScript文件、图像文件、CSS文件等；当浏览器每遇到这样一个Web资源,就会建立一个HTTP会话.<br>但从<code>HTTP/1.1</code>起,默认使用长连接,用以保持连接特性.使用长连接的HTTP协议,会在响应头有加入这行代码:</p>
-<p><code>Connection:keep-alive</code></p>
-<p>　　在使用长连接的情况下,当一个网页打开完成后,客户端和服务器之间用于传输HTTP数据的 TCP连接不会关闭,如果客户端再次访问这个服务器上的网页,会继续使用这一条已经建立的连接.<code>Keep-Alive</code>不会永久保持连接,它有一个保持时间,可以在不同的服务器软件（如Apache）中设定这个时间.实现长连接要客户端和服务端都支持长连接.</p>
-<p>当然,在很多web服务器中可以设置这个keep-Alive的保持时间,比如nginx的配置文件nginx.conf中可直接使用:</p>
-<p><code>keepalive_timeout  60;</code></p>
-<p><strong>HTTP协议的长连接和短连接,实质上是TCP协议的长连接和短连接.</strong></p>
-<p>那长短连接各自对应的场景有哪些呢(各自的优缺点)?</p>
-<h3 id="短连接"><a href="#短连接" class="headerlink" title="短连接"></a><strong>短连接</strong></h3><p>场景: client向server发起连接请求,server接到请求,然后双方建立连接.client向server 发送消息,server回应client,然后一次读写就完成了,这时候双方任何一个都可以发起close操作,不过一般都是client先发起 close操作.为什么呢,一般的server不会回复完client后立即关闭连接的,当然不排除有特殊的情况.从上面的描述看,短连接一般只会在 client/server间传递一次读写操作</p>
-<p><strong>短连接管理起来比较简单,存在的连接都是有用的连接,不需要额外的控制手段,但是频繁的创建大量的连接也很耗资源</strong></p>
-<h3 id="长连接"><a href="#长连接" class="headerlink" title="长连接"></a><strong>长连接</strong></h3><p>流程是:client向server发起连接,server接受client连接,双方建立连接.Client与server完成一次读写之后,它们之间的连接并不会主动关闭,后续的读写操作会继续使用这个连接.</p>
-<p>首先说一下TCP/IP详解上讲到的TCP保活功能,保活功能主要为服务器应用提供,服务器应用希望知道客户主机是否崩溃,从而可以代表客户使用资源.如果客户已经消失,使得服务器上保留一个半开放的连接,而服务器又在等待来自客户端的数据,则服务器将应远等待客户端的数据,保活功能就是试图在服务 器端检测到这种半开放的连接.</p>
-<p>如果一个给定的连接在两小时内没有任何的动作,服务器就向客户发一个探测报文段,客户主机必须处于以下4个状态之一:</p>
-<blockquote>
-<ul>
-<li>客户主机依然正常运行,并从服务器可达.客户的TCP响应正常,而服务器也知道对方是正常的,服务器在两小时后将保活定时器复位.</li>
-<li>客户主机已经崩溃,并且关闭或者正在重新启动.在任何一种情况下,客户的TCP都没有响应.服务端将不能收到对探测的响应,并在75秒后超时.服务器总共发送10个这样的探测 ,每个间隔75秒.如果服务器没有收到一个响应,它就认为客户主机已经关闭并终止连接.</li>
-<li>客户主机崩溃并已经重新启动.服务器将收到一个对其保活探测的响应,这个响应是一个复位,使得服务器终止这个连接.</li>
-</ul>
-</blockquote>
-<p>客户机正常运行,但是服务器不可达,这种情况与2类似,TCP能发现的就是没有收到探查的响应.</p>
-<p><strong>从上可以看出http要保持长连接需要做很多次的向客户端试探是否存活,这对性能是个很大的损耗,但是从另一方面来说长连接减少了很多的创关闭连接带来的开销,节约时间.</strong></p>
-<h3 id="场景"><a href="#场景" class="headerlink" title="场景"></a><strong>场景</strong></h3><p><code>长连接</code>多用于操作频繁,点对点的通讯,而且连接数不能太多情况,.每个TCP连接都需要三步握手,这需要时间,如果每个操作都是先连接,再操作的话那么处理速度会降低很多,所以每个操作完后都不断开,次处理时直接发送数据包就OK了,不用建立TCP连接.例如：数据库的连接用长连接, 如果用短连接频繁的通信会造成socket错误,而且频繁的socket 创建也是对资源的浪费. </p>
-<p>而像WEB网站的http服务一般都用<code>短链接</code>,因为长连接对于服务端来说会耗费一定的资源,而像WEB网站这么频繁的成千上万甚至上亿客户端的连接用短连接会更省一些资源,如果用长连接,而且同时有成千上万的用户,如果每个用户都占用一个连接的话,那可想而知吧.所以并发量大,但每个用户无需频繁操作情况下需用短连好.</p>
-<p><strong>没有哪一个更好,只有哪一个最适合,一切跟着场景走,总有一款适合你!</strong></p>
-<h3 id="转载请注明出处https-izsk-me"><a href="#转载请注明出处https-izsk-me" class="headerlink" title="转载请注明出处https://izsk.me"></a><strong>转载请注明出处<a href="https://izsk.me" target="_blank" rel="noopener">https://izsk.me</a></strong></h3><hr>
-]]></content>
-      <categories>
-        <category>Http-Tcp-Ip</category>
-      </categories>
-      <tags>
-        <tag>Http-Tcp-Ip</tag>
       </tags>
   </entry>
   <entry>
