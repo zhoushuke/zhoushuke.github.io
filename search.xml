@@ -2774,6 +2774,128 @@
       </tags>
   </entry>
   <entry>
+    <title>Ansible学习(ansible基础使用)</title>
+    <url>/2019/02/23/ansible-basic-theory/</url>
+    <content><![CDATA[<p>Ansible is a radically simple IT automation engine that automates cloud provisioning, configuration management, application deployment, intra-service orchestration, and many other IT needs.</p>
+<a id="more"></a>
+<ul>
+<li><a href="#Ansible">Ansible</a><ul>
+<li><a href="#工作架构">工作架构</a></li>
+<li><a href="#基本使用">基本使用</a></li>
+<li><a href="#Playbook/Role">Playbook/Role</a></li>
+<li><a href="#执行机制">执行机制</a></li>
+</ul>
+</li>
+</ul>
+<p><code>Ansible is a radically simple IT automation engine that automates cloud provisioning, configuration management, application deployment, intra-service orchestration, and many other IT needs.</code></p>
+<blockquote>
+<ul>
+<li>simple, based on python/jinja</li>
+<li>no agent, based on ssh(default)</li>
+<li>modular design</li>
+<li>idempotency</li>
+</ul>
+</blockquote>
+<h4 id="工作架构"><a href="#工作架构" class="headerlink" title="工作架构"></a><strong>工作架构</strong></h4><p><img src="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/image-20191122154626140.png" alt></p>
+<p><code>ansible只是一种框架</code>, 真正执行任务是各种模块:</p>
+<blockquote>
+<ul>
+<li>connection plugins：连接插件，负责和被监控端实现通信</li>
+<li>host inventory：主机清单，是一个配置文件里面定义监控的主机</li>
+<li>modules：ansible自身核心模块、自定义模块</li>
+<li>Plugins：借助于插件完成记录日志邮件等功能</li>
+<li>playbook：剧本执行多个任务</li>
+</ul>
+</blockquote>
+<h4 id="基本使用"><a href="#基本使用" class="headerlink" title="基本使用"></a><strong>基本使用</strong></h4><p><code>在实际使用中, 为了安全一般不会直接在配置中使用明文, 都会提前配置好免密登录.</code></p>
+<p>常用ansible的执行有以下两种方式(<strong>ansible-galaxy没用过,不讨论</strong>):</p>
+<h5 id="ad-hoc"><a href="#ad-hoc" class="headerlink" title="ad-hoc"></a><strong>ad-hoc</strong></h5><figure class="highlight bash"><table><tr><td class="code"><pre><span class="line">ansible  [ -i  inventory文件 ]  分组名  -m  模块名  -a <span class="string">'模块参数'</span>  ansible参数</span><br></pre></td></tr></table></figure>
+<p><a href="https://docs.ansible.com/ansible/latest/modules/modules_by_category.html" target="_blank" rel="noopener">官方模块列表</a></p>
+<p>示例：</p>
+<p><code>cat /etc/ansible/hosts</code></p>
+<figure class="highlight yaml"><table><tr><td class="code"><pre><span class="line"><span class="string">[all-machines]</span></span><br><span class="line"><span class="number">172.16</span><span class="number">.104</span><span class="number">.210</span></span><br><span class="line"><span class="number">172.16</span><span class="number">.104</span><span class="number">.211</span></span><br><span class="line"></span><br><span class="line"><span class="string">[echo_date]</span></span><br><span class="line"><span class="number">172.16</span><span class="number">.104</span><span class="number">.210</span></span><br></pre></td></tr></table></figure>
+<p>Hosts文件称之为<code>host inventory</code>文件, 该文件指定机器组别.</p>
+<p><code>ansible -i /etc/ansible/hosts echo_date -m shell -a &#39;echo $(ifconfig|grep eth0)&#39;</code></p>
+<p><img src="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/image-20191122161721880.png" alt></p>
+<p>这里使用了免密登录, 所以可以直接执行, 如果没有免密登录的情况下, 可以在执行时输入密码(由于只能输入一次密码，这种情况要求所有机器上所使用的密码一致)或者直接在主机清单文件中直接指定用户名密码</p>
+<figure class="highlight yaml"><table><tr><td class="code"><pre><span class="line"><span class="string">k8snode-1</span> <span class="string">ansible_host=172.16.104.210</span> <span class="string">ansible_user=root</span> <span class="string">ansible_ssh_pass='xxxx'</span></span><br><span class="line"><span class="string">[echo_date]</span></span><br><span class="line"><span class="string">k8snode-1</span></span><br></pre></td></tr></table></figure>
+<h5 id="playbook"><a href="#playbook" class="headerlink" title="playbook"></a><strong>playbook</strong></h5><p><code>cat prepare.yaml</code></p>
+<figure class="highlight yaml"><table><tr><td class="code"><pre><span class="line"><span class="bullet">-</span> <span class="attr">hosts:</span> <span class="string">echo_date</span></span><br><span class="line"> <span class="attr">roles:</span></span><br><span class="line">   <span class="bullet">-</span> <span class="string">&#123;</span> <span class="attr">role:</span> <span class="string">common</span> <span class="string">&#125;</span></span><br></pre></td></tr></table></figure>
+<p><code>ansible-playbook prepare.yml</code></p>
+<p>playbook详见下文</p>
+<h4 id="Playbook-Role"><a href="#Playbook-Role" class="headerlink" title="Playbook/Role"></a><strong>Playbook/Role</strong></h4><p><code>Playbook及role是ansible为了实现更加复杂的编排任务及更好地组织对象而设定的抽象对象.</code></p>
+<p>role主要将整个任务进行封装从而实现复用</p>
+<p>playbook则明确定义要完成这个任务需要执行哪些步骤</p>
+<h5 id="一个role的标准目录"><a href="#一个role的标准目录" class="headerlink" title="一个role的标准目录"></a><strong>一个role的<code>标准目录</code></strong></h5><p><img src="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/unknown-4411877.png" alt></p>
+<p>那么在其它有需要执行这个工作的地方则可以直接引用这个角色(或者角色中的部分步骤).</p>
+<p>playbook则明确定义了完成这个role需要执行的tasks.</p>
+<h5 id="playbook的样例"><a href="#playbook的样例" class="headerlink" title="playbook的样例"></a><strong>playbook的样例</strong></h5><p><code>cat roles/common/tasks/main.yml</code></p>
+<figure class="highlight yaml"><table><tr><td class="code"><pre><span class="line"><span class="meta">---</span></span><br><span class="line"><span class="bullet">-</span> <span class="attr">name:</span> <span class="string">"make sure system:public-info-viewer cluster role manifests"</span></span><br><span class="line">  <span class="attr">template:</span></span><br><span class="line">    <span class="attr">src:</span> <span class="string">"system-public-info-viewer-cluster-role.yml"</span></span><br><span class="line">    <span class="attr">dest:</span> <span class="string">"<span class="template-variable">&#123;&#123; kube_config_dir &#125;&#125;</span>/kubernetes-api-system-public-info-viewer-cluster-role.yml"</span></span><br><span class="line"></span><br><span class="line"><span class="bullet">-</span> <span class="attr">name:</span> <span class="string">"enabled kubernetes api /version,/version/ auth"</span></span><br><span class="line">  <span class="attr">shell:</span> <span class="string">"<span class="template-variable">&#123;&#123; kubectl &#125;&#125;</span> apply -f <span class="template-variable">&#123;&#123; kube_config_dir &#125;&#125;</span>/kubernetes-api-system-public-info-viewer-cluster-role.yml"</span></span><br><span class="line"> <span class="string">...</span></span><br></pre></td></tr></table></figure>
+<p>两个大括号代表的是变量,在执行playbook前由jinja语法进行渲染, 执行时会被真正的value替换.</p>
+<p>当然,playbook中配合各类module,可以实现更加复杂的逻辑</p>
+<p><a href="https://docs.ansible.com/ansible/latest/modules/modules_by_category.html" target="_blank" rel="noopener">官方模块列表</a></p>
+<h6 id="var"><a href="#var" class="headerlink" title="var"></a><strong>var</strong></h6><p>ansible中的变量规则比较灵活, 允许我们在<code>多处定义同一个变量</code>, 再根据优先级决定执行时使用哪个变量.</p>
+<p>常用的有以下几种定义变量方式(<code>优先级从高到低</code>):</p>
+<blockquote>
+<ul>
+<li>set_fact/registry_vars</li>
+<li>roles/vars/main.yml    </li>
+<li>group_vars/all.yaml</li>
+<li>roles/defaults/main.yml</li>
+</ul>
+</blockquote>
+<p>其它方式定义的变量优先级参考<a href="https://docs.ansible.com/ansible/latest/user_guide/playbooks_variables.html#variable-precedence-where-should-i-put-a-variable" target="_blank" rel="noopener">官方文档</a></p>
+<h6 id="tag"><a href="#tag" class="headerlink" title="tag"></a><strong>tag</strong></h6><p><code>cat roles/common/tasks/main.yml</code></p>
+<figure class="highlight yaml"><table><tr><td class="code"><pre><span class="line"><span class="meta">---</span></span><br><span class="line"><span class="bullet">-</span> <span class="attr">name:</span> <span class="string">"make sure system:public-info-viewer cluster role manifests"</span></span><br><span class="line">  <span class="attr">template:</span></span><br><span class="line">    <span class="attr">src:</span> <span class="string">"system-public-info-viewer-cluster-role.yml"</span></span><br><span class="line">    <span class="attr">dest:</span> <span class="string">"<span class="template-variable">&#123;&#123; kube_config_dir &#125;&#125;</span>/kubernetes-api-system-public-info-viewer-cluster-role.yml"</span></span><br><span class="line"></span><br><span class="line"><span class="bullet">-</span> <span class="attr">name:</span> <span class="string">"enabled kubernetes api /version,/version/ auth"</span></span><br><span class="line">  <span class="attr">shell:</span> <span class="string">"<span class="template-variable">&#123;&#123; kubectl &#125;&#125;</span> apply -f <span class="template-variable">&#123;&#123; kube_config_dir &#125;&#125;</span>/kubernetes-api-system-public-info-viewer-cluster-role.yml"</span></span><br><span class="line">  <span class="attr">tag:</span> <span class="string">enabled_kubernetes</span></span><br></pre></td></tr></table></figure>
+<p>进行引用时可以指定存在tag的是执行还是跳过</p>
+<figure class="highlight yaml"><table><tr><td class="code"><pre><span class="line"><span class="bullet">-</span> <span class="attr">hosts:</span> <span class="string">kube-master[0]</span></span><br><span class="line">  <span class="attr">roles:</span></span><br><span class="line">    <span class="bullet">-</span> <span class="string">&#123;</span> <span class="attr">role:</span> <span class="string">common</span> <span class="string">&#125;</span></span><br><span class="line">  <span class="attr">tags:</span> <span class="string">enabled_kubernetes</span></span><br></pre></td></tr></table></figure>
+<p>ansible中内置4种tag: always、tagged、untagged、all 是四个系统内置的tag，有自己的特殊意义</p>
+<blockquote>
+<ul>
+<li>always: 指定这个tag 后，task任务将永远被执行，除非明确使用–skip-tags always标记</li>
+<li>tagged: 当 –tags 指定为它时，则只要有tags标记的task都将被执行</li>
+<li>untagged: 当 –tags 指定为它时，则所有没有tag标记的task 将被执行</li>
+<li>all: 这个标记无需指定，ansible-playbook 默认执行的时候就是这个标记.所有task都被执行</li>
+</ul>
+</blockquote>
+<p><code>通过tag机制可以实现执行部分role功能.</code></p>
+<h6 id="template"><a href="#template" class="headerlink" title="template"></a><strong>template</strong></h6><p><code>cat roles/common/template/docker_auth.j2</code></p>
+<figure class="highlight yaml"><table><tr><td class="code"><pre><span class="line"><span class="string">&#123;</span></span><br><span class="line">	<span class="attr">"auths":</span> <span class="string">&#123;</span></span><br><span class="line">		<span class="string">"<span class="template-variable">&#123;&#123; docker_registry &#125;&#125;</span>"</span><span class="string">:</span> <span class="string">&#123;</span></span><br><span class="line">			<span class="attr">"auth":</span> <span class="string">"<span class="template-variable">&#123;&#123; docker_auth &#125;&#125;</span>"</span></span><br><span class="line">		<span class="string">&#125;</span></span><br><span class="line">	<span class="string">&#125;</span></span><br><span class="line"><span class="string">&#125;</span></span><br></pre></td></tr></table></figure>
+<p>template通过jinja2语法进行渲染, 模块中的变量由参数传递过来, 参数<a href="#var">var</a></p>
+<p>templates机制可以让我们把共性的部分固定,将可变的部分由参数传递进模块,实现参数化.</p>
+<h4 id="执行机制"><a href="#执行机制" class="headerlink" title="执行机制"></a><strong>执行机制</strong></h4><p>ansible执行分为同步和异步:</p>
+<h5 id="同步模式"><a href="#同步模式" class="headerlink" title="同步模式"></a><strong>同步模式</strong></h5><p>也是默认值,<code>按批执行</code>, 即<code>先在一批机器上(取决于fork的数量)执行playbook中第一个任务, 直到这批机器都执行完(默认配置下就算有机器提前执行完也需要等待所有机器都执行完这个任务)之后再在下一批机器执行第一个任务,待该任务在所有的机器上都执行完成之后，然后重新回到第一批机器开始执行playbook的下一个动作,依次循环</code></p>
+<p><strong>ansible2.0+可指定<code>strategy=free</code> 即可让提前完成的机器无需等待同批机器一同完成而快速地让下批机器执行.</strong></p>
+<p>默认情况下的playbook执行过程:</p>
+<p>从这里也可以看出<code>playbook中的task是所有机器都执行完之后再执行下一个task</code></p>
+<p><img src="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/ansible-tasks.jpg" alt></p>
+<h5 id="异步模式"><a href="#异步模式" class="headerlink" title="异步模式"></a><strong>异步模式</strong></h5><p>ansible直接将机器的任务(取决于fork的数量)放在后台执行, 并每隔一段时间去检查这些节点的执行完成情况(通过job-id),同样直到这批机器都执行完(就算有机器提前执行完也需要等待所有机器执行完),ansible才会将下一批机器放在后台执行. 异步通过<code>async跟poll</code>两个参数决定</p>
+<p><code>同步跟异步的主要区别就是异步是通过轮询状态来判断任务是否执行成功的.</code></p>
+<p><code>特殊地: 如果poll参数被指定为0, 则ansible在将机器的任务放在后台执行后立刻返回, 迅速地在下一批机器开始执行</code></p>
+<p><code>也就是说ansible此时并不会管各机器的任务是否执行成功.</code></p>
+<p>通过以上我们知道ansible默认是通过ssh远程登录执行的, 这个时间其实是受ssh的timeout控制, 如果任务的执行时间超过ssh的timeout时间, ssh会被断开, ansible会认为该任务失败.</p>
+<p>因此, 我们可以直接将任务放到后台执行, 后续定时地去轮询任务执行完成与否. 这样即不受ssh Timeout限制.</p>
+<figure class="highlight yaml"><table><tr><td class="code"><pre><span class="line"><span class="meta">---</span></span><br><span class="line"><span class="attr">host:</span> <span class="string">all</span></span><br><span class="line"><span class="comment">#strategy: free/linear</span></span><br><span class="line"><span class="attr">max_fail_percentage:</span> <span class="number">30</span>    <span class="comment">#serial指定的节点个数中执行失败的host大于这个百分比,则终止这个任务.</span></span><br><span class="line"><span class="attr">serial:</span> <span class="number">5</span>    <span class="comment">#指定一次执行多少host</span></span><br><span class="line"><span class="attr">tasks:</span></span><br><span class="line">    <span class="bullet">-</span> <span class="attr">name:</span> <span class="string">'YUM - async task'</span></span><br><span class="line">      <span class="attr">yum:</span></span><br><span class="line">        <span class="attr">name:</span> <span class="string">docker-io</span></span><br><span class="line">        <span class="attr">state:</span> <span class="string">present</span></span><br><span class="line">      <span class="attr">async:</span> <span class="number">100</span>     <span class="comment">#参数值代表了这个任务执行时间的上限值。即任务执行所用时间如果超出这个时间，则认为任务失败</span></span><br><span class="line">      <span class="attr">poll:</span> <span class="number">0</span>        <span class="comment">#任务异步执行时轮询的时间间隔,默认为10s,如果为0, 则表示不关心任务执行结果,只将任务推送到机器上执行，然后立即执行下一个任务</span></span><br><span class="line">      <span class="attr">register:</span> <span class="string">yum_sleeper</span></span><br><span class="line"></span><br><span class="line">    <span class="bullet">-</span> <span class="attr">name:</span> <span class="string">'YUM - check on async task'</span></span><br><span class="line">      <span class="attr">async_status:</span>   <span class="comment">#根据job_id获取任务执行状态</span></span><br><span class="line">        <span class="attr">jid:</span> <span class="string">"<span class="template-variable">&#123;&#123; yum_sleeper.ansible_job_id &#125;&#125;</span>"</span></span><br><span class="line">      <span class="attr">register:</span> <span class="string">job_result</span></span><br><span class="line">      <span class="attr">until:</span> <span class="string">job_result.finished</span></span><br><span class="line">      <span class="attr">retries:</span> <span class="number">30</span></span><br></pre></td></tr></table></figure>
+<p><code>--fork指定了同一时刻一个task能在多少个host上执行</code></p>
+<p><code>--serial指定了同一时刻能够有多少个host执行完整个playbook(在strategy=free效果明显)</code></p>
+<h5 id="错误处理"><a href="#错误处理" class="headerlink" title="错误处理"></a><strong>错误处理</strong></h5><p>正常情况下, playbook中的任何一个任务失败都将导致整个playbook终止运行, 我们可以使用<code>ignore_errors: true</code>来忽略这种场景, 即产生了错误也继续执行.</p>
+<p>同时,也可使用fail/failed_when来捕获错误异常</p>
+<figure class="highlight shell"><table><tr><td class="code"><pre><span class="line">---</span><br><span class="line">- hosts: xxx</span><br><span class="line">  remote_user: root</span><br><span class="line">  tasks:</span><br><span class="line">  - debug:</span><br><span class="line">      msg: "I execute normally"</span><br><span class="line">    ignore_errors: true</span><br><span class="line">  - shell: "echo 'This is a string for testing error'"</span><br><span class="line">    register: return_value  #保留命令执行结果.</span><br><span class="line">    failed_when: ' "error" in return_value.stdout'</span><br><span class="line">  - debug: </span><br><span class="line">      msg: "I never execute,Because the playbook has stopped"</span><br></pre></td></tr></table></figure>
+<p>最后的debug不会被执行.因为第2个task failed了.</p>
+<h3 id="参考文章"><a href="#参考文章" class="headerlink" title="参考文章:"></a><strong>参考文章:</strong></h3><blockquote>
+<ul>
+<li><a href="http://docs.ansible.com/ansible/latest/modules_by_category.html" target="_blank" rel="noopener">http://docs.ansible.com/ansible/latest/modules_by_category.html</a></li>
+</ul>
+</blockquote>
+<h3 id="转载请注明出处https-izsk-me"><a href="#转载请注明出处https-izsk-me" class="headerlink" title="转载请注明出处https://izsk.me"></a><strong>转载请注明出处<a href="https://izsk.me" target="_blank" rel="noopener">https://izsk.me</a></strong></h3>]]></content>
+      <categories>
+        <category>分布式架构</category>
+      </categories>
+      <tags>
+        <tag>分布式架构</tag>
+      </tags>
+  </entry>
+  <entry>
     <title>2019-努力奋斗</title>
     <url>/2018/12/31/2019-%E5%8A%AA%E5%8A%9B%E5%A5%8B%E6%96%97/</url>
     <content><![CDATA[<h3 id="2019"><a href="#2019" class="headerlink" title="2019"></a><strong>2019</strong></h3><h1 id="努力奋斗"><a href="#努力奋斗" class="headerlink" title="努力奋斗"></a><strong>努力奋斗</strong></h1><a id="more"></a>
@@ -4357,6 +4479,46 @@
       </tags>
   </entry>
   <entry>
+    <title>HTTP之长连接及短连接</title>
+    <url>/2017/08/12/HTTP%E4%B9%8B%E9%95%BF%E8%BF%9E%E6%8E%A5%E5%8F%8A%E7%9F%AD%E8%BF%9E%E6%8E%A5/</url>
+    <content><![CDATA[<p>我们都说HTTP协议是无状态的,我们又都说HTTP分长连接及短连接,’无状态’到底是个什么意思？</p>
+<a id="more"></a>
+<h3 id="无状态"><a href="#无状态" class="headerlink" title="无状态"></a><strong>无状态</strong></h3><p>HTTP无状态其实指的是协议对于事务处理没有记忆能力,服务器不知道客户端是什么状态.也就是说,打开一个服务器上的网页和你之前打开这个服务器上的网页之间没有任何联系.HTTP是一个无状态的面向连接的协议,无状态不代表HTTP不能保持TCP连接,更不能代表HTTP使用的是UDP协议(无连接).</p>
+<p>那http又是如何保持长连接的呢?</p>
+<p>在<code>HTTP/1.0</code>中,默认使用的是短连接.也就是说,浏览器和服务器每进行一次HTTP操作,就建立一次连接,但任务结束就中断连接.如果客户端浏览器访问的某个HTML或其他类型的 Web页中包含有其他的Web资源,如JavaScript文件、图像文件、CSS文件等；当浏览器每遇到这样一个Web资源,就会建立一个HTTP会话.<br>但从<code>HTTP/1.1</code>起,默认使用长连接,用以保持连接特性.使用长连接的HTTP协议,会在响应头有加入这行代码:</p>
+<p><code>Connection:keep-alive</code></p>
+<p>　　在使用长连接的情况下,当一个网页打开完成后,客户端和服务器之间用于传输HTTP数据的 TCP连接不会关闭,如果客户端再次访问这个服务器上的网页,会继续使用这一条已经建立的连接.<code>Keep-Alive</code>不会永久保持连接,它有一个保持时间,可以在不同的服务器软件（如Apache）中设定这个时间.实现长连接要客户端和服务端都支持长连接.</p>
+<p>当然,在很多web服务器中可以设置这个keep-Alive的保持时间,比如nginx的配置文件nginx.conf中可直接使用:</p>
+<p><code>keepalive_timeout  60;</code></p>
+<p><strong>HTTP协议的长连接和短连接,实质上是TCP协议的长连接和短连接.</strong></p>
+<p>那长短连接各自对应的场景有哪些呢(各自的优缺点)?</p>
+<h3 id="短连接"><a href="#短连接" class="headerlink" title="短连接"></a><strong>短连接</strong></h3><p>场景: client向server发起连接请求,server接到请求,然后双方建立连接.client向server 发送消息,server回应client,然后一次读写就完成了,这时候双方任何一个都可以发起close操作,不过一般都是client先发起 close操作.为什么呢,一般的server不会回复完client后立即关闭连接的,当然不排除有特殊的情况.从上面的描述看,短连接一般只会在 client/server间传递一次读写操作</p>
+<p><strong>短连接管理起来比较简单,存在的连接都是有用的连接,不需要额外的控制手段,但是频繁的创建大量的连接也很耗资源</strong></p>
+<h3 id="长连接"><a href="#长连接" class="headerlink" title="长连接"></a><strong>长连接</strong></h3><p>流程是:client向server发起连接,server接受client连接,双方建立连接.Client与server完成一次读写之后,它们之间的连接并不会主动关闭,后续的读写操作会继续使用这个连接.</p>
+<p>首先说一下TCP/IP详解上讲到的TCP保活功能,保活功能主要为服务器应用提供,服务器应用希望知道客户主机是否崩溃,从而可以代表客户使用资源.如果客户已经消失,使得服务器上保留一个半开放的连接,而服务器又在等待来自客户端的数据,则服务器将应远等待客户端的数据,保活功能就是试图在服务 器端检测到这种半开放的连接.</p>
+<p>如果一个给定的连接在两小时内没有任何的动作,服务器就向客户发一个探测报文段,客户主机必须处于以下4个状态之一:</p>
+<blockquote>
+<ul>
+<li>客户主机依然正常运行,并从服务器可达.客户的TCP响应正常,而服务器也知道对方是正常的,服务器在两小时后将保活定时器复位.</li>
+<li>客户主机已经崩溃,并且关闭或者正在重新启动.在任何一种情况下,客户的TCP都没有响应.服务端将不能收到对探测的响应,并在75秒后超时.服务器总共发送10个这样的探测 ,每个间隔75秒.如果服务器没有收到一个响应,它就认为客户主机已经关闭并终止连接.</li>
+<li>客户主机崩溃并已经重新启动.服务器将收到一个对其保活探测的响应,这个响应是一个复位,使得服务器终止这个连接.</li>
+</ul>
+</blockquote>
+<p>客户机正常运行,但是服务器不可达,这种情况与2类似,TCP能发现的就是没有收到探查的响应.</p>
+<p><strong>从上可以看出http要保持长连接需要做很多次的向客户端试探是否存活,这对性能是个很大的损耗,但是从另一方面来说长连接减少了很多的创关闭连接带来的开销,节约时间.</strong></p>
+<h3 id="场景"><a href="#场景" class="headerlink" title="场景"></a><strong>场景</strong></h3><p><code>长连接</code>多用于操作频繁,点对点的通讯,而且连接数不能太多情况,.每个TCP连接都需要三步握手,这需要时间,如果每个操作都是先连接,再操作的话那么处理速度会降低很多,所以每个操作完后都不断开,次处理时直接发送数据包就OK了,不用建立TCP连接.例如：数据库的连接用长连接, 如果用短连接频繁的通信会造成socket错误,而且频繁的socket 创建也是对资源的浪费. </p>
+<p>而像WEB网站的http服务一般都用<code>短链接</code>,因为长连接对于服务端来说会耗费一定的资源,而像WEB网站这么频繁的成千上万甚至上亿客户端的连接用短连接会更省一些资源,如果用长连接,而且同时有成千上万的用户,如果每个用户都占用一个连接的话,那可想而知吧.所以并发量大,但每个用户无需频繁操作情况下需用短连好.</p>
+<p><strong>没有哪一个更好,只有哪一个最适合,一切跟着场景走,总有一款适合你!</strong></p>
+<h3 id="转载请注明出处https-izsk-me"><a href="#转载请注明出处https-izsk-me" class="headerlink" title="转载请注明出处https://izsk.me"></a><strong>转载请注明出处<a href="https://izsk.me" target="_blank" rel="noopener">https://izsk.me</a></strong></h3><hr>
+]]></content>
+      <categories>
+        <category>Http-Tcp-Ip</category>
+      </categories>
+      <tags>
+        <tag>Http-Tcp-Ip</tag>
+      </tags>
+  </entry>
+  <entry>
     <title>python中调用sqlplus生成多实例oracle-awr-html报告</title>
     <url>/2017/08/12/python%E4%B8%AD%E8%B0%83%E7%94%A8sqlplus%E7%94%9F%E6%88%90%E5%A4%9A%E5%AE%9E%E4%BE%8Boracle-awr-html%E6%8A%A5%E5%91%8A/</url>
     <content><![CDATA[<p>这里不多说,说是稍微改了下官方的脚本,这里使用了subprocess调用sqlplus,关于subprocess,可以参考<a href="https://izsk.me/2017/04/08/python%E4%B8%AD%E8%B0%83%E7%94%A8sqlplus/" target="_blank" rel="noopener">这里</a></p>
@@ -4438,46 +4600,6 @@
       </categories>
       <tags>
         <tag>Python</tag>
-      </tags>
-  </entry>
-  <entry>
-    <title>HTTP之长连接及短连接</title>
-    <url>/2017/08/12/HTTP%E4%B9%8B%E9%95%BF%E8%BF%9E%E6%8E%A5%E5%8F%8A%E7%9F%AD%E8%BF%9E%E6%8E%A5/</url>
-    <content><![CDATA[<p>我们都说HTTP协议是无状态的,我们又都说HTTP分长连接及短连接,’无状态’到底是个什么意思？</p>
-<a id="more"></a>
-<h3 id="无状态"><a href="#无状态" class="headerlink" title="无状态"></a><strong>无状态</strong></h3><p>HTTP无状态其实指的是协议对于事务处理没有记忆能力,服务器不知道客户端是什么状态.也就是说,打开一个服务器上的网页和你之前打开这个服务器上的网页之间没有任何联系.HTTP是一个无状态的面向连接的协议,无状态不代表HTTP不能保持TCP连接,更不能代表HTTP使用的是UDP协议(无连接).</p>
-<p>那http又是如何保持长连接的呢?</p>
-<p>在<code>HTTP/1.0</code>中,默认使用的是短连接.也就是说,浏览器和服务器每进行一次HTTP操作,就建立一次连接,但任务结束就中断连接.如果客户端浏览器访问的某个HTML或其他类型的 Web页中包含有其他的Web资源,如JavaScript文件、图像文件、CSS文件等；当浏览器每遇到这样一个Web资源,就会建立一个HTTP会话.<br>但从<code>HTTP/1.1</code>起,默认使用长连接,用以保持连接特性.使用长连接的HTTP协议,会在响应头有加入这行代码:</p>
-<p><code>Connection:keep-alive</code></p>
-<p>　　在使用长连接的情况下,当一个网页打开完成后,客户端和服务器之间用于传输HTTP数据的 TCP连接不会关闭,如果客户端再次访问这个服务器上的网页,会继续使用这一条已经建立的连接.<code>Keep-Alive</code>不会永久保持连接,它有一个保持时间,可以在不同的服务器软件（如Apache）中设定这个时间.实现长连接要客户端和服务端都支持长连接.</p>
-<p>当然,在很多web服务器中可以设置这个keep-Alive的保持时间,比如nginx的配置文件nginx.conf中可直接使用:</p>
-<p><code>keepalive_timeout  60;</code></p>
-<p><strong>HTTP协议的长连接和短连接,实质上是TCP协议的长连接和短连接.</strong></p>
-<p>那长短连接各自对应的场景有哪些呢(各自的优缺点)?</p>
-<h3 id="短连接"><a href="#短连接" class="headerlink" title="短连接"></a><strong>短连接</strong></h3><p>场景: client向server发起连接请求,server接到请求,然后双方建立连接.client向server 发送消息,server回应client,然后一次读写就完成了,这时候双方任何一个都可以发起close操作,不过一般都是client先发起 close操作.为什么呢,一般的server不会回复完client后立即关闭连接的,当然不排除有特殊的情况.从上面的描述看,短连接一般只会在 client/server间传递一次读写操作</p>
-<p><strong>短连接管理起来比较简单,存在的连接都是有用的连接,不需要额外的控制手段,但是频繁的创建大量的连接也很耗资源</strong></p>
-<h3 id="长连接"><a href="#长连接" class="headerlink" title="长连接"></a><strong>长连接</strong></h3><p>流程是:client向server发起连接,server接受client连接,双方建立连接.Client与server完成一次读写之后,它们之间的连接并不会主动关闭,后续的读写操作会继续使用这个连接.</p>
-<p>首先说一下TCP/IP详解上讲到的TCP保活功能,保活功能主要为服务器应用提供,服务器应用希望知道客户主机是否崩溃,从而可以代表客户使用资源.如果客户已经消失,使得服务器上保留一个半开放的连接,而服务器又在等待来自客户端的数据,则服务器将应远等待客户端的数据,保活功能就是试图在服务 器端检测到这种半开放的连接.</p>
-<p>如果一个给定的连接在两小时内没有任何的动作,服务器就向客户发一个探测报文段,客户主机必须处于以下4个状态之一:</p>
-<blockquote>
-<ul>
-<li>客户主机依然正常运行,并从服务器可达.客户的TCP响应正常,而服务器也知道对方是正常的,服务器在两小时后将保活定时器复位.</li>
-<li>客户主机已经崩溃,并且关闭或者正在重新启动.在任何一种情况下,客户的TCP都没有响应.服务端将不能收到对探测的响应,并在75秒后超时.服务器总共发送10个这样的探测 ,每个间隔75秒.如果服务器没有收到一个响应,它就认为客户主机已经关闭并终止连接.</li>
-<li>客户主机崩溃并已经重新启动.服务器将收到一个对其保活探测的响应,这个响应是一个复位,使得服务器终止这个连接.</li>
-</ul>
-</blockquote>
-<p>客户机正常运行,但是服务器不可达,这种情况与2类似,TCP能发现的就是没有收到探查的响应.</p>
-<p><strong>从上可以看出http要保持长连接需要做很多次的向客户端试探是否存活,这对性能是个很大的损耗,但是从另一方面来说长连接减少了很多的创关闭连接带来的开销,节约时间.</strong></p>
-<h3 id="场景"><a href="#场景" class="headerlink" title="场景"></a><strong>场景</strong></h3><p><code>长连接</code>多用于操作频繁,点对点的通讯,而且连接数不能太多情况,.每个TCP连接都需要三步握手,这需要时间,如果每个操作都是先连接,再操作的话那么处理速度会降低很多,所以每个操作完后都不断开,次处理时直接发送数据包就OK了,不用建立TCP连接.例如：数据库的连接用长连接, 如果用短连接频繁的通信会造成socket错误,而且频繁的socket 创建也是对资源的浪费. </p>
-<p>而像WEB网站的http服务一般都用<code>短链接</code>,因为长连接对于服务端来说会耗费一定的资源,而像WEB网站这么频繁的成千上万甚至上亿客户端的连接用短连接会更省一些资源,如果用长连接,而且同时有成千上万的用户,如果每个用户都占用一个连接的话,那可想而知吧.所以并发量大,但每个用户无需频繁操作情况下需用短连好.</p>
-<p><strong>没有哪一个更好,只有哪一个最适合,一切跟着场景走,总有一款适合你!</strong></p>
-<h3 id="转载请注明出处https-izsk-me"><a href="#转载请注明出处https-izsk-me" class="headerlink" title="转载请注明出处https://izsk.me"></a><strong>转载请注明出处<a href="https://izsk.me" target="_blank" rel="noopener">https://izsk.me</a></strong></h3><hr>
-]]></content>
-      <categories>
-        <category>Http-Tcp-Ip</category>
-      </categories>
-      <tags>
-        <tag>Http-Tcp-Ip</tag>
       </tags>
   </entry>
   <entry>
