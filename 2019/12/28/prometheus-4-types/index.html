@@ -68,7 +68,7 @@
 <link href="/css/main.css?v=5.1.0" rel="stylesheet" type="text/css">
 
 
-  <meta name="keywords" content="Python,">
+  <meta name="keywords" content="CloudNavi,">
 
 
 
@@ -86,18 +86,29 @@
 
 
 
-<meta name="description" content="代码调试结果再一次被自己已有的认知打败,恶补基础,今天扯一扯python的闭包及装饰器.">
-<meta name="keywords" content="Python">
+<meta name="description" content="在学习prometheus的时候，相信大家也会对prometheus里的各种数据类型及内置函数有很多疑惑, 为了加深印象来记录下工作中常用到的函数，在这之前, 先来温故下prometheus中的4种metric types.">
+<meta name="keywords" content="CloudNavi">
 <meta property="og:type" content="article">
-<meta property="og:title" content="python闭包及装饰器">
-<meta property="og:url" content="https://zhoushuke.github.io/2017/10/10/python闭包及装饰器/index.html">
+<meta property="og:title" content="Prometheus学习(MetricTypes)">
+<meta property="og:url" content="https://zhoushuke.github.io/2019/12/28/prometheus-4-types/index.html">
 <meta property="og:site_name" content="Z.S.K.&#39;s Records">
-<meta property="og:description" content="代码调试结果再一次被自己已有的认知打败,恶补基础,今天扯一扯python的闭包及装饰器.">
+<meta property="og:description" content="在学习prometheus的时候，相信大家也会对prometheus里的各种数据类型及内置函数有很多疑惑, 为了加深印象来记录下工作中常用到的函数，在这之前, 先来温故下prometheus中的4种metric types.">
 <meta property="og:locale" content="zh-Hans">
-<meta property="og:updated_time" content="2020-01-14T12:12:54.308Z">
+<meta property="og:image" content="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20200408212749.png">
+<meta property="og:image" content="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20200408213836.png">
+<meta property="og:image" content="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20200408214317.png">
+<meta property="og:image" content="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20200408215430.png">
+<meta property="og:image" content="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/image-20200409111003966.png">
+<meta property="og:image" content="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20200409112322.png">
+<meta property="og:image" content="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20200409115919.png">
+<meta property="og:image" content="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20200409112817.png">
+<meta property="og:image" content="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20200409114922.png">
+<meta property="og:image" content="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20200409114941.png">
+<meta property="og:updated_time" content="2020-04-09T05:56:06.858Z">
 <meta name="twitter:card" content="summary">
-<meta name="twitter:title" content="python闭包及装饰器">
-<meta name="twitter:description" content="代码调试结果再一次被自己已有的认知打败,恶补基础,今天扯一扯python的闭包及装饰器.">
+<meta name="twitter:title" content="Prometheus学习(MetricTypes)">
+<meta name="twitter:description" content="在学习prometheus的时候，相信大家也会对prometheus里的各种数据类型及内置函数有很多疑惑, 为了加深印象来记录下工作中常用到的函数，在这之前, 先来温故下prometheus中的4种metric types.">
+<meta name="twitter:image" content="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20200408212749.png">
 
 
 
@@ -125,13 +136,13 @@
 
 
 
-  <link rel="canonical" href="https://zhoushuke.github.io/2017/10/10/python闭包及装饰器/">
+  <link rel="canonical" href="https://zhoushuke.github.io/2019/12/28/prometheus-4-types/">
 
 
 
 
 
-  <title> python闭包及装饰器 | Z.S.K.'s Records </title>
+  <title> Prometheus学习(MetricTypes) | Z.S.K.'s Records </title>
 </head>
 
 <body itemscope itemtype="http://schema.org/WebPage" lang="zh-Hans">
@@ -297,7 +308,7 @@
   
 
   <article class="post post-type-normal " itemscope itemtype="http://schema.org/Article">
-  <link itemprop="mainEntityOfPage" href="https://zhoushuke.github.io/2017/10/10/python闭包及装饰器/">
+  <link itemprop="mainEntityOfPage" href="https://zhoushuke.github.io/2019/12/28/prometheus-4-types/">
 
   <span style="display:none" itemprop="author" itemscope itemtype="http://schema.org/Person">
     <meta itemprop="name" content="Z.S.K.">
@@ -321,7 +332,7 @@
             
             
               
-                python闭包及装饰器
+                Prometheus学习(MetricTypes)
               
             
           </h1>
@@ -336,8 +347,8 @@
               
                 <span class="post-meta-item-text">发表于</span>
               
-              <time title="Post created" itemprop="dateCreated datePublished" datetime="2017-10-10T14:50:53+08:00">
-                2017-10-10
+              <time title="Post created" itemprop="dateCreated datePublished" datetime="2019-12-28T19:30:53+08:00">
+                2019-12-28
               </time>
             
 
@@ -359,8 +370,8 @@
               
               
                 <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
-                  <a href="/categories/Python/" itemprop="url" rel="index">
-                    <span itemprop="name">Python</span>
+                  <a href="/categories/CloudNavi/" itemprop="url" rel="index">
+                    <span itemprop="name">CloudNavi</span>
                   </a>
                 </span>
 
@@ -394,38 +405,102 @@
       
 
       
-        <p>代码调试结果再一次被自己已有的认知打败,恶补基础,今天扯一扯python的闭包及装饰器.</p>
+        <p>在学习prometheus的时候，相信大家也会对prometheus里的各种数据类型及内置函数有很多疑惑, 为了加深印象来记录下工作中常用到的函数，在这之前, 先来温故下prometheus中的4种metric types.</p>
 <a id="more"></a>
-<h3 id="有意思的代码"><a href="#有意思的代码" class="headerlink" title="有意思的代码"></a><strong>有意思的代码</strong></h3><figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">def</span> <span class="title">f</span><span class="params">()</span>:</span></span><br><span class="line">    <span class="keyword">return</span> [<span class="keyword">lambda</span> x:i*x <span class="keyword">for</span> i <span class="keyword">in</span> range(<span class="number">4</span>)]</span><br><span class="line"></span><br><span class="line">print([m(<span class="number">2</span>) <span class="keyword">for</span> m <span class="keyword">in</span> f()])</span><br></pre></td></tr></table></figure>
-<p>大家很快能得到答案: <code>[0,2,4,6]</code>,但是这真的对吗？</p>
-<p>正确答案为<code>[6,6,6,6]</code>,<strong>我也一脸蒙蔽: But How?</strong></p>
-<p>首先可以肯定的是函数f返回一个列表解析,列表里的对象是4个lambda对象</p>
-<p>当使用f()调用f函数时,f返回了一个列表,列表里也确实是4个lambda对象,<strong>这个问题的关键在于i的值,对于lambda来说,变量i的值 永远都是for循环里最后一次i的值,也就是3,4个lambda都是如此</strong></p>
-<p>再看这段代码</p>
-<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br></pre></td><td class="code"><pre><span class="line">data = range(<span class="number">4</span>)</span><br><span class="line"></span><br><span class="line">funcs = []</span><br><span class="line"><span class="keyword">for</span> i <span class="keyword">in</span> data:</span><br><span class="line">    l = <span class="keyword">lambda</span> x: i * x</span><br><span class="line">    funcs.append(l)</span><br><span class="line"></span><br><span class="line">i = <span class="number">21</span></span><br><span class="line"><span class="keyword">for</span> func <span class="keyword">in</span> funcs:</span><br><span class="line">    print(func(<span class="number">2</span>))</span><br><span class="line"><span class="comment">#输出:42,42,42,42</span></span><br></pre></td></tr></table></figure>
-<p><code>Python的闭包(lambda和function等)会保存变量的名字(i)和scoping(global)。当你调用的时候才会去找具体的对象。所以你给i赋不同的值，在那之后的调用都会去取新的i = 21,for i in data中的i值显然不是最新值.</code></p>
-<h3 id="python闭包"><a href="#python闭包" class="headerlink" title="python闭包"></a><strong>python闭包</strong></h3><p><strong>python中的闭包从表现形式上定义为:如果在一个内部函数里,对在外部作用域（但不是在全局作用域）的变量进行引用，那么内部函数就被认为是闭包(closure)</strong></p>
-<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">def</span> <span class="title">func1</span><span class="params">(args)</span>:</span></span><br><span class="line">    <span class="function"><span class="keyword">def</span> <span class="title">inner_func</span><span class="params">(inner_args)</span>:</span></span><br><span class="line">        <span class="keyword">return</span> (args + inner_args) </span><br><span class="line">    <span class="keyword">return</span> inner_func</span><br><span class="line"></span><br><span class="line"><span class="comment">#在func1中嵌套了另一函数inner_func,而在inner_func中引用了args</span></span><br><span class="line">aa = func1(<span class="number">10</span>)    <span class="comment">#此时 args = 10</span></span><br><span class="line"><span class="keyword">print</span> aa</span><br><span class="line"><span class="comment">#输出 &lt;function func1.&lt;locals&gt;.inner_func at 0x00000000038DC400&gt;</span></span><br><span class="line"><span class="comment">#从这里可以看出 aa = func1(10),aa指向了函数inner_func</span></span><br><span class="line">print(aa(<span class="number">20</span>))    <span class="comment">#此时 inner_args = 20</span></span><br><span class="line"><span class="comment">#输出 30</span></span><br></pre></td></tr></table></figure>
-<p>inner_func中使用了args,但是inner_func中并没有定义args,此时python解析器会向上查找,在func1找到使用.</p>
-<p><strong>全局作用域无法访问局部作用域，而局部作用域能够访问全局作用域就这这个原因。而当我在局部作用域创建了一个和外面同名的变量时，python在找这个变量的时候首先会在当前作用域中找,找到了,就不继续往上一级找了</strong></p>
-<p><strong>当函数存在嵌套,并且子函数引用了父函数中的变量,可以访问这些变量的作用域就形成闭包,如果子函数没有访问父函数中的变量,就不存在闭包</strong></p>
-<p>内部函数inner_func引用了外部func1的变量,所有inner_func是闭包.</p>
-<p>那第一段代码如何才能得到结果为<code>[0,2,4,6]</code>呢,可以这样</p>
-<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">#方法一:</span></span><br><span class="line"><span class="function"><span class="keyword">def</span> <span class="title">f</span><span class="params">()</span>:</span></span><br><span class="line">    <span class="keyword">return</span> [<span class="keyword">lambda</span> x,i = i:i*x <span class="keyword">for</span> i <span class="keyword">in</span> range(<span class="number">4</span>)]</span><br><span class="line">    <span class="comment">#添加一个i = i,这样就能够直接使用for i 局部变更的 i 值</span></span><br><span class="line"></span><br><span class="line">print([m(<span class="number">2</span>) <span class="keyword">for</span> m <span class="keyword">in</span> f()])</span><br><span class="line"><span class="comment">#输出</span></span><br><span class="line">[<span class="number">0</span>,<span class="number">2</span>,<span class="number">4</span>,<span class="number">6</span>]</span><br><span class="line"></span><br><span class="line"><span class="comment">#方法二:</span></span><br><span class="line"><span class="function"><span class="keyword">def</span> <span class="title">f</span><span class="params">()</span>:</span></span><br><span class="line">    <span class="keyword">return</span> (<span class="keyword">lambda</span> x:i*x <span class="keyword">for</span> i <span class="keyword">in</span> range(<span class="number">4</span>))</span><br><span class="line">    <span class="comment">#把[] 换成 (),变成一个生成器,生成器则是先生一个值,应用于lambda后再生成一个值,不会像列表解析一样一次性生成</span></span><br><span class="line"></span><br><span class="line">print([m(<span class="number">2</span>) <span class="keyword">for</span> m <span class="keyword">in</span> f()])</span><br><span class="line"><span class="comment">#输出</span></span><br><span class="line">[<span class="number">0</span>,<span class="number">2</span>,<span class="number">4</span>,<span class="number">6</span>]</span><br></pre></td></tr></table></figure>
-<p>闭包的最常用的使用场景即是装饰器</p>
-<h3 id="python装饰器"><a href="#python装饰器" class="headerlink" title="python装饰器"></a><strong>python装饰器</strong></h3><p>因为python中一切皆对象,函数也是对象,所以也可以将函数做为参数传递,我们将上面的例子改一改,将函数做为参数传递</p>
-<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">def</span> <span class="title">func1</span><span class="params">(func)</span>:</span></span><br><span class="line">    <span class="function"><span class="keyword">def</span> <span class="title">inner_func</span><span class="params">()</span>:</span></span><br><span class="line">        print(<span class="string">"开始执行前"</span>)</span><br><span class="line">        func()</span><br><span class="line">        print(<span class="string">"执行结束"</span>)</span><br><span class="line">    <span class="keyword">return</span> inner_func</span><br><span class="line"></span><br><span class="line"><span class="function"><span class="keyword">def</span> <span class="title">func2</span><span class="params">()</span>:</span></span><br><span class="line">    print(<span class="string">"我执行了func2"</span>)</span><br><span class="line">    </span><br><span class="line">a = func1(func2)</span><br><span class="line"><span class="comment">#这里将func2做为参数传递给func1,此时func=func1</span></span><br><span class="line"><span class="comment">#相当于func1返回了inner_func给a</span></span><br><span class="line"><span class="comment">#时刻牢记func2 与 func2()的区别</span></span><br><span class="line">a()</span><br><span class="line"><span class="comment">#这里调用了inner_func</span></span><br><span class="line"><span class="comment">#输出:</span></span><br><span class="line"><span class="comment">#开始执行前</span></span><br><span class="line"><span class="comment">#我执行了func2</span></span><br><span class="line"><span class="comment">#执行结束</span></span><br></pre></td></tr></table></figure>
-<p><strong>应该就能明白装饰器是什么了.所谓装饰器就是在闭包的基础上传递了一个函数,然后覆盖原来函数的执行入口,以后调用这个函数的时候,就可以额外实现一些功能了.装饰器的存在主要是为了不修改原函数的代码,也不修改其他调用这个函数的代码,就能实现功能的拓展.</strong></p>
-<p>当然装饰器还有更简介的写法,<strong>使用@语法糖</strong></p>
-<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">def</span> <span class="title">func1</span><span class="params">(func)</span>:</span></span><br><span class="line">    <span class="function"><span class="keyword">def</span> <span class="title">inner_func</span><span class="params">()</span>:</span></span><br><span class="line">        print(<span class="string">"开始执行前"</span>)</span><br><span class="line">        func()</span><br><span class="line">        print(<span class="string">"执行结束"</span>)</span><br><span class="line">    <span class="keyword">return</span> inner_func</span><br><span class="line"></span><br><span class="line"><span class="meta">@func1</span></span><br><span class="line"><span class="function"><span class="keyword">def</span> <span class="title">func2</span><span class="params">()</span>:</span></span><br><span class="line">    print(<span class="string">"我执行了func2"</span>)</span><br><span class="line"></span><br><span class="line">func2</span><br><span class="line"><span class="comment">#输出 &lt;function func1.&lt;locals&gt;.inner_func at 0x00000000038DC268&gt;</span></span><br><span class="line">func2()</span><br><span class="line"><span class="comment">#这里相当于func2 = func1(func2)</span></span><br><span class="line"><span class="comment">#输出:</span></span><br><span class="line"><span class="comment">#开始执行前</span></span><br><span class="line"><span class="comment">#我执行了func2</span></span><br><span class="line"><span class="comment">#执行结束</span></span><br></pre></td></tr></table></figure>
-<p>装饰器还有很多其它特性,下次再另起一篇,这里算是开个头,困了,就到这里吧.</p>
+<h3 id="数据模型"><a href="#数据模型" class="headerlink" title="数据模型"></a>数据模型</h3><p>prometheus中所有的数据都是时序流, 我们在prometheus的ui中看到的数据虽然没有看到时间戳, 但在prometheus底层存储中是存在时间戳与之对应, 简单来说, prometheus的数据模型就是<code>Metrics+labels+timestamp</code></p>
+<p><img src="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20200408212749.png" alt></p>
+<p><code>alertmanager_alerts</code>为<code>metrics key</code></p>
+<p><code>instance</code>、<code>job</code>等这些都是<code>labels</code>，可以理解为查询时的条件</p>
+<p><code>value</code>为这条metric的值</p>
+<p>注意: <strong>在prometheus中value只能是float类型的数值, 不可以是其它值</strong></p>
+<h3 id="监控项类型"><a href="#监控项类型" class="headerlink" title="监控项类型"></a>监控项类型</h3><p>虽然prometheus的value只能是float类型的数值, 但是这个value是有一种数据类型与之对应的, prometheus中存在4种监控项类型, 官方文档在<a href="https://prometheus.io/docs/concepts/metric_types/" target="_blank" rel="noopener">这里</a></p>
+<h4 id="gauge"><a href="#gauge" class="headerlink" title="gauge"></a>gauge</h4><p>gauge表示<strong>可以任意波动的单一值, 没有规律</strong>, 直观的例子就是可以表示机器的网卡流量, 因为你无法预料在下一秒的有多少入口流量 或多或少.</p>
+<p><img src="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20200408213836.png" alt></p>
+<h4 id="counter"><a href="#counter" class="headerlink" title="counter"></a>counter</h4><p>counter为<strong>计数器,只增不减</strong> 用于只增不减的场合,直观的例子机器的开机时t、长nginx的请求数等, 在某个时刻之后, 这个数只会一直增长而不会减少, 但是可以允许被重置为0</p>
+<p><img src="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20200408214317.png" alt></p>
+<p>上面两个类型比较好理解, 难理解的histogram与summary.</p>
+<h4 id="histogram"><a href="#histogram" class="headerlink" title="histogram"></a>histogram</h4><p>histogram表示<strong>累积直方图</strong>， 主要用于表示一段时间范围内对数据进行采样（通常是请求持续时间或响应大小),并将其计入可配置的存储桶（bucket）中，并能够对其指定区间以及总数进行统计</p>
+<p>所以, 在很多的metric key中如果看到xxx_bucket时, 大部分表示这条记录的类型为histogram.</p>
+<p>很直观的一个例子, 统计ingress_nginx中请求的响应时间(单位:秒)</p>
+<p><code>nginx_ingress_controller_response_duration_seconds_bucket</code></p>
+<p><img src="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20200408215430.png" alt></p>
+<p>看到这可能会有人问, 这个结果是不是有问题, 这个<code>le</code>是什么意思?</p>
+<p>首先说一下这个<code>le</code>,它并不是一个单位,而是表示bucket的一个区间, 这个le是在ingress_nginx的代码中定义的.</p>
+<p>另一个要明白的是, histogram是<code>累积直方图</code></p>
+<p>因此上图就很容易理解了</p>
+<p>Ingress_nginx代码中定义了所有bucket的区间值(当然，作者可以随便定义), 所有请求产生的响应时间都会落在这些区间之内。</p>
+<ol>
+<li>响应时间&lt;0.005的请求个数为24</li>
+<li>响应时间&lt;0.01的请求个数为24, 包括&lt;0.005,也就是说没有请求的响应时间在 0.005与0.01之间</li>
+<li>响应时间&lt;0.025的请求个数为24,包含&lt;0.01的区间, 也就是说没有请求的响应时间在0.01与0.025之间</li>
+<li>响应时间&lt;0.05的请求个数为30, 包含&lt;0.025的区间, 也就是说请求的响应时间有6个落在0.025与0.05之间</li>
+<li>…</li>
+<li>响应时间&lt;0.25的请求个数为27034, 包含&lt;0.1的区间</li>
+<li>…</li>
+</ol>
+<p>从这个过程就可以知道为什么叫<code>累积直方图了</code>, 从上面的例子来总结,<strong>大部分的请求都落在0.1s到0.25s之间</strong></p>
+<p>这里要注意一下<code>le=+lnf</code>这条记录, 这个其实表示所有的记录, <code>lnf</code>表示最大的bucket的往上, 这里是10s以上的记录,从上图可以看到, 不存在响应时间大于10s, 正常也不应该有</p>
+<p>同时histogram也提供\&lt;basename>_sum，\&lt;basename>_count这两个指标</p>
+<p>总结来就: </p>
+<p><strong>\&lt;basename>_count就是一个计数器, 它只会增加,表示次数</strong></p>
+<p><strong>\&lt;basename>_sum也可以是一个计数器,它表示监控项对应的值的总和</strong></p>
+<p>先来看一下<code>nginx_ingress_controller_response_duration_seconds_count</code></p>
+<p><img src="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/image-20200409111003966.png" alt></p>
+<p> 会发现这3条记录value之和与<code>le={+lnf}</code>的值是相等的, 因此count表示<code>对采样点的次数累计和</code>,这里也就是请求总数</p>
+<p>而<code></code>nginx_ingress_controller_response_duration_seconds_sum`</p>
+<p><img src="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20200409112322.png" alt></p>
+<p>sum表示的是<code>所有value的总和</code>,这个很好理解</p>
+<p>因此，如果想计算最近5分钟内的平均请求持续时间</p>
+<p>可以使用以下表达式:</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">rate(nginx_ingress_controller_response_duration_seconds_sum[5m]) / rate(nginx_ingress_controller_response_duration_seconds_count[5m])</span><br></pre></td></tr></table></figure>
+<p>同时 histogram也是可以计算分位数, 使用<code>histogram_quantile</code></p>
+<p>Prometheus 通过 <code>histogram_quantile</code> 函数来计算分位数（quantile），而且是一个预估值，并不完全准确，因为这个函数是假定每个区间内的样本分布是线性分布来计算结果值的。预估的准确度取决于 bucket 区间划分的粒度，粒度越大，准确度越低</p>
+<p><code>histogram_quantile(φ float, b instant-vector)</code></p>
+<p>假如，要计算95%的响应时间落在哪个区间可以使用以下命令</p>
+<p><code>histogram_quantile(0.95, sum(rate(nginx_ingress_controller_response_duration_seconds_bucket{path=~&quot;/sensego/v2.0/mingyuan&quot;,status=&quot;200&quot;}[1800m])) by (le))</code></p>
+<p><img src="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20200409115919.png" alt></p>
+<p>会发现大约在0.23s</p>
+<p>注意: 在数据量大的情况下，<code>histogram_quantile</code>计算可能会消耗大量CPU, 因为它是在服务端实时计算的.</p>
+<p>这个函数的源码在<a href="https://github.com/prometheus/prometheus/blob/master/promql/quantile.go" target="_blank" rel="noopener">这里</a></p>
+<h4 id="summary"><a href="#summary" class="headerlink" title="summary"></a>summary</h4><p>summary表示摘要数据, 这个跟histogram比较想像, 反映的都是统计类数据</p>
+<p>summary主要用于表示一段时间内数据采样结果（通常是请求持续时间或响应大小），<code>它直接存储了 quantile 数据，而不是根据统计区间计算出来的</code>。</p>
+<p><code>prometheus_target_interval_length_seconds</code>表示目标抓取所用时间</p>
+<p><img src="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20200409112817.png" alt></p>
+<p>很大的一个区别是<code>quantile</code>, 翻译过来就是分位数, 这个区间也是在源码里定义</p>
+<p>上面的图表示的含义是:</p>
+<ol>
+<li>有1%的目标抓取时间为19.936946996</li>
+<li>有5%的目标抓取时间为19.999956628</li>
+<li>有50%的目标抓取时间为20.000021361</li>
+<li>有90%的目标抓取时间为20.00006137</li>
+<li>有99%的目标抓取时间为20.071892568</li>
+</ol>
+<p>从这里可以看出,99%的时间都是20s内, 跟设置的interval=20s基本符合.</p>
+<p>同时summary也提供\&lt;basename>_sum，\&lt;basename>_count这两个指标,这个跟histogram差不多</p>
+<p><code>prometheus_target_interval_length_seconds_sum</code></p>
+<p><img src="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20200409114922.png" alt></p>
+<p><code>prometheus_target_interval_length_seconds_count</code></p>
+<p><img src="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20200409114941.png" alt></p>
+<p>需要注意的是: <strong>不能对Summary产生的quantile值进行aggregation运算（例如sum, avg等）</strong></p>
+<h4 id="summary与histogram区别"><a href="#summary与histogram区别" class="headerlink" title="summary与histogram区别"></a>summary与histogram区别</h4><p>从上面可以发现Summary和histogram是比较类似，在使用上要如何区分呢？prometheus上有篇post专门解释了这两个的区别, <a href="https://prometheus.io/docs/practices/histograms/" target="_blank" rel="noopener">详情</a></p>
+<p>首先要明白是Summary的quantile计算是在数据上报的时候(简单来说就是在客户端就计算好的)就已经计算好的，需要在定义数据指标的时候就指定quantile的值，因为是数据上报计算的quantile，所以不支持包含数据过滤和聚合的quantile计算</p>
+<p>因此对于分位数的计算而言，Summary在通过PromQL进行查询时有更好的性能表现，而Histogram则会消耗更多的资源。反之对于客户端而言Histogram消耗的资源更少。在选择这两种方式时用户应该按照自己的实际场景进行选择.  Summary 结构有频繁的全局锁操作，对高并发程序性能存在一定影响。histogram仅仅是给每个桶做一个原子变量的计数就可以了，而summary要每次执行算法计算出最新的X分位value是多少，算法需要并发保护。会占用客户端的cpu和内存</p>
+<p>histogram不能得到精确的分为数，设置的bucket不合理的话，误差会非常大</p>
+<p>两条经验法则：</p>
+<ol>
+<li>如果需要汇总，请选择直方图。</li>
+<li>否则，如果您对将要观察的值的范围和分布有所了解，请选择直方图。无论值的范围和分布如何，如果需要准确的分位数，请选择摘要</li>
+</ol>
 <h3 id="参考文章"><a href="#参考文章" class="headerlink" title="参考文章:"></a><strong>参考文章:</strong></h3><blockquote>
 <ul>
-<li><a href="http://www.wklken.me/posts/2013/07/19/python-translate-decorator.html" target="_blank" rel="noopener">理解PYTHON中的装饰器</a></li>
+<li><a href="https://prometheus.io/docs/concepts/metric_types/" target="_blank" rel="noopener">https://prometheus.io/docs/concepts/metric_types/</a></li>
+<li><a href="https://prometheus.io/docs/practices/histograms/" target="_blank" rel="noopener">https://prometheus.io/docs/practices/histograms/</a></li>
+<li><a href="https://www.yangcs.net/posts/prometheus-histograms/" target="_blank" rel="noopener">https://www.yangcs.net/posts/prometheus-histograms/</a></li>
+<li><a href="https://cloud.tencent.com/developer/news/319419" target="_blank" rel="noopener">https://cloud.tencent.com/developer/news/319419</a></li>
+<li><a href="https://github.com/prometheus/prometheus/blob/master/promql/quantile.go" target="_blank" rel="noopener">https://github.com/prometheus/prometheus/blob/master/promql/quantile.go</a></li>
 </ul>
 </blockquote>
-<h3 id="转载请注明出处https-izsk-me"><a href="#转载请注明出处https-izsk-me" class="headerlink" title="转载请注明出处https://izsk.me"></a><strong>转载请注明出处<a href="https://izsk.me" target="_blank" rel="noopener">https://izsk.me</a></strong></h3><hr>
-
+<h3 id="转载请注明出处https-izsk-me"><a href="#转载请注明出处https-izsk-me" class="headerlink" title="转载请注明出处https://izsk.me"></a><strong>转载请注明出处<a href="https://izsk.me" target="_blank" rel="noopener">https://izsk.me</a></strong></h3>
       
     </div>
 
@@ -474,7 +549,7 @@
       
         <div class="post-tags">
           
-            <a href="/tags/Python/" rel="tag"># Python</a>
+            <a href="/tags/CloudNavi/" rel="tag"># CloudNavi</a>
           
         </div>
       
@@ -483,8 +558,8 @@
         <div class="post-nav">
           <div class="post-nav-next post-nav-item">
             
-              <a href="/2017/10/08/pyinstaller打包Flask(二)/" rel="next" title="pyinstaller打包flask(二)">
-                <i class="fa fa-chevron-left"></i> pyinstaller打包flask(二)
+              <a href="/2019/12/17/container-log-fluentd-elasticsearch/" rel="next" title="使用fluentd收集Kubernetes容器日志">
+                <i class="fa fa-chevron-left"></i> 使用fluentd收集Kubernetes容器日志
               </a>
             
           </div>
@@ -493,8 +568,8 @@
 
           <div class="post-nav-prev post-nav-item">
             
-              <a href="/2017/10/12/iptables学习一(iptables介绍)/" rel="prev" title="iptables学习一(iptables介绍)">
-                iptables学习一(iptables介绍) <i class="fa fa-chevron-right"></i>
+              <a href="/2019/12/31/2020-努力奋斗/" rel="prev" title="2020-努力奋斗">
+                2020-努力奋斗 <i class="fa fa-chevron-right"></i>
               </a>
             
           </div>
@@ -623,7 +698,7 @@
             
 
             
-              <div class="post-toc-content"><ol class="nav"><li class="nav-item nav-level-3"><a class="nav-link" href="#有意思的代码"><span class="nav-number">1.</span> <span class="nav-text">有意思的代码</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#python闭包"><span class="nav-number">2.</span> <span class="nav-text">python闭包</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#python装饰器"><span class="nav-number">3.</span> <span class="nav-text">python装饰器</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#参考文章"><span class="nav-number">4.</span> <span class="nav-text">参考文章:</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#转载请注明出处https-izsk-me"><span class="nav-number">5.</span> <span class="nav-text">转载请注明出处https://izsk.me</span></a></li></ol></div>
+              <div class="post-toc-content"><ol class="nav"><li class="nav-item nav-level-3"><a class="nav-link" href="#数据模型"><span class="nav-number">1.</span> <span class="nav-text">数据模型</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#监控项类型"><span class="nav-number">2.</span> <span class="nav-text">监控项类型</span></a><ol class="nav-child"><li class="nav-item nav-level-4"><a class="nav-link" href="#gauge"><span class="nav-number">2.1.</span> <span class="nav-text">gauge</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#counter"><span class="nav-number">2.2.</span> <span class="nav-text">counter</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#histogram"><span class="nav-number">2.3.</span> <span class="nav-text">histogram</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#summary"><span class="nav-number">2.4.</span> <span class="nav-text">summary</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#summary与histogram区别"><span class="nav-number">2.5.</span> <span class="nav-text">summary与histogram区别</span></a></li></ol></li><li class="nav-item nav-level-3"><a class="nav-link" href="#参考文章"><span class="nav-number">3.</span> <span class="nav-text">参考文章:</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#转载请注明出处https-izsk-me"><span class="nav-number">4.</span> <span class="nav-text">转载请注明出处https://izsk.me</span></a></li></ol></div>
             
 
           </div>
