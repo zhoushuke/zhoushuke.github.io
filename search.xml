@@ -1891,6 +1891,93 @@
       </tags>
   </entry>
   <entry>
+    <title>Kubernetes学习(使用PodSecurityPolicy)</title>
+    <url>/2019/12/13/Kubernetes-PSP/</url>
+    <content><![CDATA[<p>PodSecurityPolicy是kubernetes中提供的一种安全策略, 默认情况下，Kubernetes 允许创建一个有特权容器的 Pod，这些容器很可能会危机系统安全，而 Pod 安全策略（PSP）则通过确保请求者有权限按配置来创建 Pod，从而来保护集群免受特权 Pod 的影响</p>
+<a id="more"></a>
+<p><code>PodSecurityPolicy</code> 是 Kubernetes API 对象，你可以在不对 Kubernetes 进行任何修改的情况下创建它们，但是，默认情况下不会强制执行我们创建的一些策略，我们需要一个准入控制器、kube-controller-manager 配置以及 RBAC 权限配置</p>
+<p>注: <strong>kubeadm搭建的集群默认情况下没有开启PodSecurityPolicy, 需要在api-erver的启动参数中开启, 直接修改api-erver的静态yaml文件, –enable-admission-plugins=NodeRestriction,PodSecurityPolicy</strong></p>
+<p>下面通过一个例子来说明<code>PodSecurityPolicy</code>的使用</p>
+<p>在指定namespace下, 先增加一个禁止pod使用hostNetwork,然后添加一个serviceaccount,可以使用这个特定的serviceaccount能够使用hostNetwork, 其它pod则不可以</p>
+<p>在默认情况下，所有pod可以直接指定 hostNetwork=true,要想禁止使用,则需要增加一个psp</p>
+<p>因此， 我们将创建2个策略，第一个是提供限制访问的“默认”策略，保证使用特权设置（例如使用 hostNetwork）无法创建 Pod。第二种是一个“提升”的许可策略，允许将特权设置用于某些 Pod</p>
+<h3 id="Admission-Controller"><a href="#Admission-Controller" class="headerlink" title="Admission Controller"></a>Admission Controller</h3><p>Admission Controller（准入控制器）<code>拦截</code>对 kube-apiserver 的请求，拦截发生在请求的对象被持久化之前，但是在请求被验证和授权之后.</p>
+<p> 将<code>PodSecurityPolicy</code>添加到 kube-apiserver 上的<code>--enabled-admission-plugins</code>参数中，然后重启 kube-apiserver, 目前参数如下:</p>
+<figure class="highlight bash"><table><tr><td class="code"><pre><span class="line">--<span class="built_in">enable</span>-admission-plugins=NamespaceLifecycle,LimitRanger,ServiceAccount,DefaultStorageClass,DefaultTolerationSeconds,MutatingAdmissionWebhook,ValidatingAdmissionWebhook,ResourceQuota,NodeRestriction,PersistentVolumeLabel</span><br></pre></td></tr></table></figure>
+<h3 id="用于禁止使用hostNetwork的PodSecurityPolicy"><a href="#用于禁止使用hostNetwork的PodSecurityPolicy" class="headerlink" title="用于禁止使用hostNetwork的PodSecurityPolicy"></a>用于禁止使用hostNetwork的PodSecurityPolicy</h3><h4 id="新建PodSecurityPolicy"><a href="#新建PodSecurityPolicy" class="headerlink" title="新建PodSecurityPolicy"></a>新建PodSecurityPolicy</h4><figure class="highlight yaml"><table><tr><td class="code"><pre><span class="line"><span class="attr">apiVersion:</span> <span class="string">policy/v1beta1</span></span><br><span class="line"><span class="attr">kind:</span> <span class="string">PodSecurityPolicy</span></span><br><span class="line"><span class="attr">metadata:</span></span><br><span class="line">  <span class="attr">name:</span> <span class="string">restrictive</span></span><br><span class="line"><span class="attr">spec:</span></span><br><span class="line">  <span class="attr">privileged:</span> <span class="literal">false</span></span><br><span class="line">  <span class="attr">hostNetwork:</span> <span class="literal">false</span></span><br><span class="line">  <span class="attr">allowPrivilegeEscalation:</span> <span class="literal">false</span></span><br><span class="line">  <span class="attr">defaultAllowPrivilegeEscalation:</span> <span class="literal">false</span></span><br><span class="line">  <span class="attr">hostPID:</span> <span class="literal">false</span></span><br><span class="line">  <span class="attr">hostIPC:</span> <span class="literal">false</span></span><br><span class="line">  <span class="attr">runAsUser:</span></span><br><span class="line">    <span class="attr">rule:</span> <span class="string">RunAsAny</span></span><br><span class="line">  <span class="attr">fsGroup:</span></span><br><span class="line">    <span class="attr">rule:</span> <span class="string">RunAsAny</span></span><br><span class="line">  <span class="attr">seLinux:</span></span><br><span class="line">    <span class="attr">rule:</span> <span class="string">RunAsAny</span></span><br><span class="line">  <span class="attr">supplementalGroups:</span></span><br><span class="line">    <span class="attr">rule:</span> <span class="string">RunAsAny</span></span><br><span class="line">  <span class="attr">volumes:</span></span><br><span class="line">  <span class="bullet">-</span> <span class="string">'configMap'</span></span><br><span class="line">  <span class="bullet">-</span> <span class="string">'downwardAPI'</span></span><br><span class="line">  <span class="bullet">-</span> <span class="string">'emptyDir'</span></span><br><span class="line">  <span class="bullet">-</span> <span class="string">'persistentVolumeClaim'</span></span><br><span class="line">  <span class="bullet">-</span> <span class="string">'secret'</span></span><br><span class="line">  <span class="bullet">-</span> <span class="string">'projected'</span></span><br><span class="line">  <span class="attr">allowedCapabilities:</span></span><br><span class="line">  <span class="bullet">-</span> <span class="string">'*'</span></span><br></pre></td></tr></table></figure>
+<h4 id="创建clusterrole"><a href="#创建clusterrole" class="headerlink" title="创建clusterrole"></a>创建clusterrole</h4><figure class="highlight yaml"><table><tr><td class="code"><pre><span class="line"><span class="attr">kind:</span> <span class="string">ClusterRole</span></span><br><span class="line"><span class="attr">apiVersion:</span> <span class="string">rbac.authorization.k8s.io/v1</span></span><br><span class="line"><span class="attr">metadata:</span></span><br><span class="line">  <span class="attr">name:</span> <span class="string">psp-restrictive</span></span><br><span class="line"><span class="attr">rules:</span></span><br><span class="line"><span class="bullet">-</span> <span class="attr">apiGroups:</span></span><br><span class="line">  <span class="bullet">-</span> <span class="string">extensions</span></span><br><span class="line">  <span class="attr">resources:</span></span><br><span class="line">  <span class="bullet">-</span> <span class="string">podsecuritypolicies</span></span><br><span class="line">  <span class="attr">resourceNames:</span></span><br><span class="line">  <span class="bullet">-</span> <span class="string">restrictive</span></span><br><span class="line">  <span class="attr">verbs:</span></span><br><span class="line">  <span class="bullet">-</span> <span class="string">use</span></span><br></pre></td></tr></table></figure>
+<h4 id="创建rolebinding"><a href="#创建rolebinding" class="headerlink" title="创建rolebinding"></a>创建rolebinding</h4><figure class="highlight yaml"><table><tr><td class="code"><pre><span class="line"><span class="attr">kind:</span> <span class="string">ClusterRoleBinding</span></span><br><span class="line"><span class="attr">apiVersion:</span> <span class="string">rbac.authorization.k8s.io/v1</span></span><br><span class="line"><span class="attr">metadata:</span></span><br><span class="line">  <span class="attr">name:</span> <span class="string">psp-default</span></span><br><span class="line"><span class="attr">subjects:</span></span><br><span class="line"><span class="bullet">-</span> <span class="attr">kind:</span> <span class="string">Group</span></span><br><span class="line">  <span class="attr">name:</span> <span class="string">system:serviceaccounts</span></span><br><span class="line">  <span class="attr">namespace:</span> <span class="string">kube-system</span></span><br><span class="line"><span class="attr">roleRef:</span></span><br><span class="line">  <span class="attr">kind:</span> <span class="string">ClusterRole</span></span><br><span class="line">  <span class="attr">name:</span> <span class="string">psp-restrictive</span></span><br><span class="line">  <span class="attr">apiGroup:</span> <span class="string">rbac.authorization.k8s.io</span></span><br></pre></td></tr></table></figure>
+<p>上述的对象实现restrictive策略和系统中所有的控制器（对象加在system:serviceaccounts下） ServiceAccount 进行绑定， 这样，所有pod在使用sa时都将会禁止使用hostNetwork. </p>
+<p>kubectl apply 之后，对于新生成的pod对象(如果是deployment对象, deployment对象可以创建成功，但是pod的event log会提示以下错误信息)，是无法指定hostNetwork, 对于已经使用的pod不影响</p>
+<figure class="highlight yaml"><table><tr><td class="code"><pre><span class="line"><span class="comment">#提示的错误信息如下: </span></span><br><span class="line"><span class="attr">Error creating:</span> <span class="string">pods</span> <span class="string">"nginx-hostnetwork-deploy-6647d65899-"</span> <span class="attr">is forbidden:</span> <span class="string">unable</span> <span class="string">to</span></span><br><span class="line"><span class="attr">validate against any pod security policy:</span> <span class="string">[spec.securityContext.hostNetwork:</span> <span class="attr">Invalid value: true:</span> <span class="string">Host</span> <span class="string">network</span> <span class="string">is</span> <span class="string">not</span> <span class="string">allowed</span> <span class="string">to</span> <span class="string">be</span> <span class="string">used]</span></span><br></pre></td></tr></table></figure>
+<h3 id="用于允许使用hostNetwork的PodSecurityPolicy"><a href="#用于允许使用hostNetwork的PodSecurityPolicy" class="headerlink" title="用于允许使用hostNetwork的PodSecurityPolicy"></a>用于允许使用hostNetwork的PodSecurityPolicy</h3><h4 id="新建PodSecurityPolicy-1"><a href="#新建PodSecurityPolicy-1" class="headerlink" title="新建PodSecurityPolicy"></a>新建PodSecurityPolicy</h4><figure class="highlight yaml"><table><tr><td class="code"><pre><span class="line"><span class="attr">apiVersion:</span> <span class="string">policy/v1beta1</span></span><br><span class="line"><span class="attr">kind:</span> <span class="string">PodSecurityPolicy</span></span><br><span class="line"><span class="attr">metadata:</span></span><br><span class="line">  <span class="attr">name:</span> <span class="string">permissive</span></span><br><span class="line"><span class="attr">spec:</span></span><br><span class="line">  <span class="attr">privileged:</span> <span class="literal">true</span></span><br><span class="line">  <span class="attr">hostNetwork:</span> <span class="literal">true</span></span><br><span class="line">  <span class="attr">hostIPC:</span> <span class="literal">true</span></span><br><span class="line">  <span class="attr">hostPID:</span> <span class="literal">true</span></span><br><span class="line">  <span class="attr">seLinux:</span></span><br><span class="line">    <span class="attr">rule:</span> <span class="string">RunAsAny</span></span><br><span class="line">  <span class="attr">supplementalGroups:</span></span><br><span class="line">    <span class="attr">rule:</span> <span class="string">RunAsAny</span></span><br><span class="line">  <span class="attr">runAsUser:</span></span><br><span class="line">    <span class="attr">rule:</span> <span class="string">RunAsAny</span></span><br><span class="line">  <span class="attr">fsGroup:</span></span><br><span class="line">    <span class="attr">rule:</span> <span class="string">RunAsAny</span></span><br><span class="line">  <span class="attr">hostPorts:</span></span><br><span class="line">  <span class="bullet">-</span> <span class="attr">min:</span> <span class="number">0</span></span><br><span class="line">    <span class="attr">max:</span> <span class="number">65535</span></span><br><span class="line">  <span class="attr">volumes:</span></span><br><span class="line">  <span class="bullet">-</span> <span class="string">'*'</span></span><br></pre></td></tr></table></figure>
+<h4 id="创建sa"><a href="#创建sa" class="headerlink" title="创建sa"></a>创建sa</h4><figure class="highlight yaml"><table><tr><td class="code"><pre><span class="line"><span class="string">kubectl</span> <span class="string">create</span> <span class="string">sa</span> <span class="string">psp-sa</span></span><br></pre></td></tr></table></figure>
+<h4 id="创建clusterrole-1"><a href="#创建clusterrole-1" class="headerlink" title="创建clusterrole"></a>创建clusterrole</h4><figure class="highlight yaml"><table><tr><td class="code"><pre><span class="line"><span class="attr">kind:</span> <span class="string">ClusterRole</span></span><br><span class="line"><span class="attr">apiVersion:</span> <span class="string">rbac.authorization.k8s.io/v1</span></span><br><span class="line"><span class="attr">metadata:</span></span><br><span class="line">  <span class="attr">name:</span> <span class="string">psp-permissive</span></span><br><span class="line"><span class="attr">rules:</span></span><br><span class="line"><span class="bullet">-</span> <span class="attr">apiGroups:</span></span><br><span class="line">  <span class="bullet">-</span> <span class="string">extensions</span></span><br><span class="line">  <span class="attr">resources:</span></span><br><span class="line">  <span class="bullet">-</span> <span class="string">podsecuritypolicies</span></span><br><span class="line">  <span class="attr">resourceNames:</span></span><br><span class="line">  <span class="bullet">-</span> <span class="string">permissive</span></span><br><span class="line">  <span class="attr">verbs:</span></span><br><span class="line">  <span class="bullet">-</span> <span class="string">use</span></span><br></pre></td></tr></table></figure>
+<h4 id="创建clusterrolebinding"><a href="#创建clusterrolebinding" class="headerlink" title="创建clusterrolebinding"></a>创建clusterrolebinding</h4><figure class="highlight yaml"><table><tr><td class="code"><pre><span class="line"><span class="attr">apiVersion:</span> <span class="string">rbac.authorization.k8s.io/v1beta1</span></span><br><span class="line"><span class="attr">kind:</span> <span class="string">RoleBinding</span></span><br><span class="line"><span class="attr">metadata:</span></span><br><span class="line">  <span class="attr">name:</span> <span class="string">specialsa-psp-permissive</span></span><br><span class="line">  <span class="attr">namespace:</span> <span class="string">default</span></span><br><span class="line"><span class="attr">roleRef:</span></span><br><span class="line">  <span class="attr">apiGroup:</span> <span class="string">rbac.authorization.k8s.io</span></span><br><span class="line">  <span class="attr">kind:</span> <span class="string">ClusterRole</span></span><br><span class="line">  <span class="attr">name:</span> <span class="string">psp-permissive</span></span><br><span class="line"><span class="attr">subjects:</span></span><br><span class="line"><span class="bullet">-</span> <span class="attr">kind:</span> <span class="string">ServiceAccount</span></span><br><span class="line">  <span class="attr">name:</span> <span class="string">psp-sa</span></span><br><span class="line">  <span class="attr">namespace:</span> <span class="string">default</span></span><br></pre></td></tr></table></figure>
+<h3 id="测试"><a href="#测试" class="headerlink" title="测试"></a>测试</h3><p>pod中使用该psp-sa的就可指定hostNetwork,没有使用该sa的无法使用hostNetwork</p>
+<figure class="highlight yaml"><table><tr><td class="code"><pre><span class="line"><span class="attr">apiVersion:</span> <span class="string">apps/v1</span></span><br><span class="line"><span class="attr">kind:</span> <span class="string">Deployment</span></span><br><span class="line"><span class="attr">metadata:</span></span><br><span class="line">  <span class="attr">name:</span> <span class="string">nginx-hostnetwork-deploy</span></span><br><span class="line">  <span class="attr">namespace:</span> <span class="string">default</span></span><br><span class="line">  <span class="attr">labels:</span></span><br><span class="line">    <span class="attr">app:</span> <span class="string">nginx</span></span><br><span class="line"><span class="attr">spec:</span></span><br><span class="line">  <span class="attr">replicas:</span> <span class="number">1</span></span><br><span class="line">  <span class="attr">selector:</span></span><br><span class="line">    <span class="attr">matchLabels:</span></span><br><span class="line">      <span class="attr">app:</span> <span class="string">nginx</span></span><br><span class="line">  <span class="attr">template:</span></span><br><span class="line">    <span class="attr">metadata:</span></span><br><span class="line">      <span class="attr">labels:</span></span><br><span class="line">        <span class="attr">app:</span> <span class="string">nginx</span></span><br><span class="line">    <span class="attr">spec:</span></span><br><span class="line">      <span class="attr">containers:</span></span><br><span class="line">      <span class="bullet">-</span> <span class="attr">name:</span> <span class="string">nginx</span></span><br><span class="line">        <span class="attr">image:</span> <span class="string">nginx:1.15.4</span></span><br><span class="line">      <span class="attr">hostNetwork:</span> <span class="literal">true</span></span><br><span class="line">      <span class="attr">serviceAccount:</span> <span class="string">psp-sa</span> <span class="comment">#指定sa</span></span><br></pre></td></tr></table></figure>
+<p>如果没有指定serviceAccount=psp-sa, 则会提示以下错误</p>
+<figure class="highlight bash"><table><tr><td class="code"><pre><span class="line">$ kubectl describe rs nginx-hostnetwork-deploy-74c8fbd687</span><br><span class="line">Name:           nginx-hostnetwork-deploy-74c8fbd687</span><br><span class="line">......</span><br><span class="line">Events:</span><br><span class="line">  Type     Reason        Age                   From                   Message</span><br><span class="line">  ----     ------        ----                  ----                   -------</span><br><span class="line">  Warning  FailedCreate  80s (x15 over 2m42s)  replicaset-controller  Error creating: pods <span class="string">"nginx-hostnetwork-deploy-74c8fbd687-"</span> is forbidden: unable to validate against any pod security policy: [spec.securityContext.hostNetwork: Invalid value: <span class="literal">true</span>: Host network is not allowed to be used]</span><br></pre></td></tr></table></figure>
+<h3 id="参考文章"><a href="#参考文章" class="headerlink" title="参考文章:"></a><strong>参考文章:</strong></h3><blockquote>
+<ul>
+<li><a href="https://www.qikqiak.com/post/setup-psp-in-k8s/" target="_blank" rel="noopener">https://www.qikqiak.com/post/setup-psp-in-k8s/</a></li>
+<li><a href="https://kubernetes.io/docs/concepts/policy/pod-security-policy/#policy-reference" target="_blank" rel="noopener">https://kubernetes.io/docs/concepts/policy/pod-security-policy/#policy-reference</a></li>
+<li><a href="https://kubernetes.io/docs/admin/authorization/" target="_blank" rel="noopener">https://kubernetes.io/docs/admin/authorization/</a></li>
+<li><a href="https://kubernetes.io/docs/admin/admission-controllers/" target="_blank" rel="noopener">https://kubernetes.io/docs/admin/admission-controllers/</a></li>
+</ul>
+</blockquote>
+<h3 id="转载请注明出处https-izsk-me"><a href="#转载请注明出处https-izsk-me" class="headerlink" title="转载请注明出处https://izsk.me"></a><strong>转载请注明出处<a href="https://izsk.me" target="_blank" rel="noopener">https://izsk.me</a></strong></h3>]]></content>
+      <categories>
+        <category>Kubernetes</category>
+      </categories>
+      <tags>
+        <tag>Kubernetes</tag>
+      </tags>
+  </entry>
+  <entry>
+    <title>Kubernetes学习(业务程序使用serviceaccount获取kubernetes集群资源)</title>
+    <url>/2019/12/11/Kubernetes-sa-handle-resources/</url>
+    <content><![CDATA[<p>有时我们的业务程序也有获取kubernetes集群资源的需求, serviceaccount(简写sa)就是专门给pod用的一种鉴权机制, 在搭建Prometheus或者是fluentd时都会有创建serviceaccount的命令, 如何创建一个serviceaccount, 使其只能操作kube-system下的pods.</p>
+<a id="more"></a>
+<p>什么是service account? 顾名思义，相对于user account（比如：kubectl访问APIServer时用的就是user account），service account就是Pod中的Process用于访问Kubernetes API的account，它为Pod中的Process提供了一种身份标识。相比于user account的全局性权限，service account更适合一些轻量级的task，更聚焦于授权给某些特定Pod中的Process所使用.</p>
+<h3 id="在kube-system下创建一个sa"><a href="#在kube-system下创建一个sa" class="headerlink" title="在kube-system下创建一个sa"></a>在kube-system下创建一个sa</h3><figure class="highlight bash"><table><tr><td class="code"><pre><span class="line">kubectl create sa pod-reader -n kube-system</span><br></pre></td></tr></table></figure>
+<p>该sa会绑定一个secret, 下面需要从该secret中获取token信息</p>
+<p>假如该secret 名为<code>pod-reader-token-95cwp</code></p>
+<h3 id="创建role"><a href="#创建role" class="headerlink" title="创建role"></a>创建role</h3><figure class="highlight yaml"><table><tr><td class="code"><pre><span class="line"><span class="attr">apiVersion:</span> <span class="string">rbac.authorization.k8s.io/v1</span></span><br><span class="line"><span class="attr">kind:</span> <span class="string">Role</span></span><br><span class="line"><span class="attr">metadata:</span></span><br><span class="line">  <span class="attr">namespace:</span> <span class="string">kube-system</span></span><br><span class="line">  <span class="attr">name:</span> <span class="string">pod-reader</span></span><br><span class="line"><span class="attr">rules:</span></span><br><span class="line"><span class="bullet">-</span> <span class="attr">apiGroups:</span> <span class="string">[""]</span> <span class="comment"># "" indicates the core API group</span></span><br><span class="line">  <span class="attr">resources:</span> <span class="string">["pods"]</span></span><br><span class="line">  <span class="attr">verbs:</span> <span class="string">["get",</span> <span class="string">"watch"</span><span class="string">,</span> <span class="string">"list"</span><span class="string">]</span></span><br></pre></td></tr></table></figure>
+<h3 id="创建rolebinding"><a href="#创建rolebinding" class="headerlink" title="创建rolebinding"></a>创建rolebinding</h3><figure class="highlight yaml"><table><tr><td class="code"><pre><span class="line"><span class="attr">apiVersion:</span> <span class="string">rbac.authorization.k8s.io/v1</span></span><br><span class="line"><span class="attr">kind:</span> <span class="string">RoleBinding</span></span><br><span class="line"><span class="attr">metadata:</span></span><br><span class="line">  <span class="attr">name:</span> <span class="string">pod-reader</span></span><br><span class="line">  <span class="attr">namespace:</span> <span class="string">kube-system</span></span><br><span class="line"><span class="attr">subjects:</span></span><br><span class="line"><span class="bullet">-</span> <span class="attr">kind:</span> <span class="string">ServiceAccount</span></span><br><span class="line">  <span class="attr">name:</span> <span class="string">pod-reader</span> <span class="comment"># Name is case sensitive</span></span><br><span class="line">  <span class="attr">namespace:</span> <span class="string">kube-system</span></span><br><span class="line"><span class="attr">roleRef:</span></span><br><span class="line">  <span class="attr">kind:</span> <span class="string">Role</span></span><br><span class="line">  <span class="attr">name:</span> <span class="string">pod-reader</span></span><br><span class="line">  <span class="attr">apiGroup:</span> <span class="string">rbac.authorization.k8s.io</span></span><br></pre></td></tr></table></figure>
+<h3 id="创建集群信息"><a href="#创建集群信息" class="headerlink" title="创建集群信息"></a>创建集群信息</h3><figure class="highlight bash"><table><tr><td class="code"><pre><span class="line"><span class="comment"># kubectl命令行下操作</span></span><br><span class="line"><span class="comment">#指定名字空间</span></span><br><span class="line">namespace=kube-system</span><br><span class="line"><span class="comment">#指定secret</span></span><br><span class="line">name=pod-reader-token-95cwp</span><br><span class="line"><span class="comment">#获取ca信息</span></span><br><span class="line">ca=$(kubectl get secret/<span class="variable">$name</span> -n <span class="variable">$namespace</span> -o jsonpath=<span class="string">'&#123;.data.ca\.crt&#125;'</span>)</span><br><span class="line"><span class="comment">#获取token</span></span><br><span class="line">token=$(kubectl get secret/<span class="variable">$name</span> -n <span class="variable">$namespace</span> -o jsonpath=<span class="string">'&#123;.data.token&#125;'</span> | base64 -d)</span><br><span class="line"><span class="comment">#namespace=$(kubectl get secret/$name -o jsonpath='&#123;.data.namespace&#125;' | base64 --decode)</span></span><br><span class="line"></span><br><span class="line"><span class="comment">#添加集群信息，集群名为cfc</span></span><br><span class="line"><span class="comment">#kubectl config set-cluster cfc --server=https://kubernetes-cluster.local:6443 --certificate-authority-data=$&#123;ca&#125; 这种方式新版本不支持, 只能指定ca文件的路径</span></span><br><span class="line"></span><br><span class="line">kubectl config <span class="built_in">set</span>-cluster cfc --server=https://kubernetes-cluster.local:6443 --certificate-authority=/etc/kubernetes/pki/ca.crt</span><br><span class="line"></span><br><span class="line"><span class="comment">#添加上下文为cfc,对应集群为cfc,以下4步并没有先后顺序</span></span><br><span class="line">kubectl config <span class="built_in">set</span>-context cfc --cluster=cfc --user=sa_user</span><br><span class="line"></span><br><span class="line"><span class="comment">#添加认证信息,名为sa_user</span></span><br><span class="line">kubectl config <span class="built_in">set</span>-credentials sa_user --token=<span class="variable">$&#123;token&#125;</span></span><br><span class="line"></span><br><span class="line"><span class="comment">#设置当前的上下文为cfc, 后续所有的操作都是以这个集群的内容进行操作</span></span><br><span class="line">kubectl config use-context cfc</span><br><span class="line"></span><br><span class="line"><span class="comment">#后续可以使用以下命令切换集群</span></span><br><span class="line">kubectl config use-context kubernetes-admin</span><br><span class="line"></span><br><span class="line"><span class="comment">#使用以下命令查看当前的集群</span></span><br><span class="line">kubectl config current-context</span><br></pre></td></tr></table></figure>
+<p>我们看到service account并不复杂，只是关联了一个secret资源作为token，该token也叫service-account-<code>token</code>，该token才是真正在API Server验证(authentication)环节起作用的</p>
+<h3 id="在pod-yaml中使用serviceaccount"><a href="#在pod-yaml中使用serviceaccount" class="headerlink" title="在pod yaml中使用serviceaccount"></a>在pod yaml中使用serviceaccount</h3><figure class="highlight yaml"><table><tr><td class="code"><pre><span class="line"><span class="attr">apiVersion:</span> <span class="string">extensions/v1beta1</span></span><br><span class="line"><span class="attr">kind:</span> <span class="string">Deployment</span></span><br><span class="line"><span class="attr">metadata:</span></span><br><span class="line">  <span class="attr">name:</span> <span class="string">k8s-example1</span></span><br><span class="line"><span class="attr">spec:</span></span><br><span class="line">  <span class="attr">replicas:</span> <span class="number">1</span></span><br><span class="line">  <span class="attr">template:</span></span><br><span class="line">    <span class="attr">metadata:</span></span><br><span class="line">      <span class="attr">labels:</span></span><br><span class="line">        <span class="attr">run:</span> <span class="string">k8s-example1</span></span><br><span class="line">    <span class="attr">spec:</span></span><br><span class="line">      <span class="attr">serviceAccount:</span> <span class="string">pod-reader</span> <span class="comment">#指定上面创建的sa</span></span><br><span class="line">      <span class="attr">containers:</span></span><br><span class="line">      <span class="bullet">-</span> <span class="attr">name:</span> <span class="string">k8s-example1</span></span><br><span class="line">        <span class="attr">image:</span> <span class="string">k8s/example1:latest</span></span><br><span class="line">        <span class="attr">imagePullPolicy:</span> <span class="string">IfNotPresent</span></span><br><span class="line">        <span class="string">...</span></span><br></pre></td></tr></table></figure>
+<p>在大多数情况下，我们上线应用并没有手工地指定这个serviceAccount，那又是为何呢?</p>
+<h3 id="默认的serviceaccount"><a href="#默认的serviceaccount" class="headerlink" title="默认的serviceaccount"></a>默认的serviceaccount</h3><p>在默认情况下, kubernetes会为每一个namespace创建个一个默认的sa, 而且会默认地给所有在该namespace下的pod都自动挂载到<code>/var/run/secrets/kubernetes.io/serviceaccount</code>下</p>
+<p>随便查看一个运行的pod的yaml文件</p>
+<p><img src="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20200410164958.png" alt></p>
+<p>在pod内查看</p>
+<p><img src="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20200410164825.png" alt></p>
+<p>这三个文件与上面提到的service account的token中的数据是一一对应的</p>
+<p>那么这个pod内的应用就能通过这3个文件与api-server通信了, 根据这个sa具有的权限获取资源.</p>
+<h3 id="原理"><a href="#原理" class="headerlink" title="原理"></a>原理</h3><p>service account为Pod中的Process提供了一种身份标识，在Kubernetes的身份校验(authenticating)环节，以某个service account提供身份的Pod的用户名为：</p>
+<figure class="highlight bash"><table><tr><td class="code"><pre><span class="line">system:serviceaccount:(NAMESPACE):(SERVICEACCOUNT)</span><br></pre></td></tr></table></figure>
+<p>以kube-system namespace下的“default” service account为例，使用它的Pod的username全称为：</p>
+<figure class="highlight bash"><table><tr><td class="code"><pre><span class="line">system:serviceaccount:kube-system:default</span><br></pre></td></tr></table></figure>
+<p>有了username，那么credentials呢？就是上面提到的service-account-token中的token。API Server的authenticating环节支持多种身份校验方式：client cert、bearer token、static password auth等，这些方式中有一种方式通过authenticating（Kubernetes API Server会逐个方式尝试），那么身份校验就会通过。一旦API Server发现client发起的request使用的是service account token的方式，API Server就会自动采用signed bearer token方式进行身份校验。而request就会使用携带的service account token参与验证。该token是API Server在创建service account时用API server启动参数：–service-account-key-file的值签署(sign)生成的。如果–service-account-key-file未传入任何值，那么将默认使用–tls-private-key-file的值，即API Server的私钥（server.key）。</p>
+<p>通过authenticating后，API Server将根据<code>Pod username</code>所在的<code>group：system:serviceaccounts</code>和<code>system:serviceaccounts:(NAMESPACE)</code>的权限对其进行<a href="https://kubernetes.io/docs/admin/authorization/" target="_blank" rel="noopener">authority</a>和<a href="https://kubernetes.io/docs/admin/admission-controllers/" target="_blank" rel="noopener">admission control</a>两个环节的处理, 最终通过验证及鉴权.</p>
+<h3 id="参考文章"><a href="#参考文章" class="headerlink" title="参考文章:"></a><strong>参考文章:</strong></h3><blockquote>
+<ul>
+<li><a href="https://github.com/kubernetes/client-go" target="_blank" rel="noopener">https://github.com/kubernetes/client-go</a></li>
+<li><a href="https://kubernetes.io/docs/admin/authorization/" target="_blank" rel="noopener">https://kubernetes.io/docs/admin/authorization/</a></li>
+<li><a href="https://kubernetes.io/docs/admin/admission-controllers/" target="_blank" rel="noopener">https://kubernetes.io/docs/admin/admission-controllers/</a></li>
+</ul>
+</blockquote>
+<h3 id="转载请注明出处https-izsk-me"><a href="#转载请注明出处https-izsk-me" class="headerlink" title="转载请注明出处https://izsk.me"></a><strong>转载请注明出处<a href="https://izsk.me" target="_blank" rel="noopener">https://izsk.me</a></strong></h3>]]></content>
+      <categories>
+        <category>Kubernetes</category>
+      </categories>
+      <tags>
+        <tag>Kubernetes</tag>
+      </tags>
+  </entry>
+  <entry>
     <title>Kubernetes学习(CKA及CKAD考试)</title>
     <url>/2019/12/08/Kubernetes%E5%AD%A6%E4%B9%A0(CKA%E5%8F%8ACKAD%E8%80%83%E8%AF%95)/</url>
     <content><![CDATA[<p>CKA及CKAD是CNCF专门为Kubernetes认证考虑，考试通过即被认为能熟练使用Kubernetes.</p>
@@ -2379,6 +2466,74 @@
       </tags>
   </entry>
   <entry>
+    <title>记一次排查ES FGC导致的集群宕机异常</title>
+    <url>/2019/10/06/ES-FGC-Fix/</url>
+    <content><![CDATA[<p>有一个私有云环境的运维同事反应项目中的ES集群无法查询, 由于是私有云环境, 没有直接运维权限, 所以没有接收到一线报警, 远程登录上去后发现ES集群已经宕机了, 这次的排查过程也发现了几个比较容易忽视的细节, 在此记录一下,比较有意思.</p>
+<a id="more"></a>
+<h3 id="集群状态"><a href="#集群状态" class="headerlink" title="集群状态"></a>集群状态</h3><p>ES集群为3节点.</p>
+<p>首先肯定是查看集群状态</p>
+<figure class="highlight bash"><table><tr><td class="code"><pre><span class="line">curl <span class="string">'http://localhost:9200/_cluster/health?pretty'</span> -u xxx:yyy</span><br><span class="line"><span class="comment">#发现状态为Red</span></span><br></pre></td></tr></table></figure>
+<p>查看节点状态</p>
+<figure class="highlight bash"><table><tr><td class="code"><pre><span class="line">curl <span class="string">'http://localhost:9200/_cat/node?v'</span> -u xxx:yyy</span><br><span class="line"><span class="comment">#节点数正常</span></span><br></pre></td></tr></table></figure>
+<p>查看各节点使用的磁盘情况</p>
+<figure class="highlight bash"><table><tr><td class="code"><pre><span class="line">curl -XGET <span class="string">'localhost:9200/_cat/allocation?v&amp;pretty'</span> -u xxx:yyy</span><br><span class="line"><span class="comment">#未发现异常</span></span><br></pre></td></tr></table></figure>
+<h3 id="集群日志"><a href="#集群日志" class="headerlink" title="集群日志"></a>集群日志</h3><p>登录一个ES节点查看日志，发现以下报错，查看其它2个节点，情况相同</p>
+<p><img src="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20200204134510.png" alt></p>
+<p>从日志来看, 可以发现几个问题:</p>
+<blockquote>
+<ul>
+<li>Full GC很频繁, 而且时间也非常的长 </li>
+<li>每次GC完之后所能释放的内存非常有限</li>
+</ul>
+</blockquote>
+<p>到这，其它原因已经很明朗, <strong>内存不够导致的full gc 频繁，但是又不能释放太多的空间，又导致full gc的恶意循环</strong></p>
+<p>如果大家对gc的日志不很了解的话, 这里解释下上面日志的各个字段含义, 假如有以下一条gc日志</p>
+<figure class="highlight bash"><table><tr><td class="code"><pre><span class="line">[2018-06-30T17:57:29,020][INFO ][o.e.m.j.JvmGcMonitorService] [qoo--ES] [gc][old][228385][160772] duration [5s], collections [1]/[5.1s], total [5s]/[4.4d], memory [945.4mb]-&gt;[958.5mb]/[1007.3mb], all_pools &#123;[young] [87.8mb]-&gt;[100.9mb]/[133.1mb]&#125;&#123;[survivor] [0b]-&gt;[0b]/[16.6mb]&#125;&#123;[old] [857.6mb]-&gt;[857.6mb]/[857.6mb]&#125;</span><br></pre></td></tr></table></figure>
+<ul>
+<li><strong>gc old</strong> 本次是 old GC 这是第228385次 GC 检查][从 JVM 启动至今发生的第 160772次 G]</li>
+<li><strong>duration</strong> [本次检查到的 GC 总耗时 <strong>5</strong> 秒，可能是多次的加和</li>
+<li><strong>collections</strong> [从上次检查至今总共发生<strong>1</strong>次GC]/[从上次检查至今已过去 <strong>5.1</strong> 秒],</li>
+<li><strong>total</strong> [本次检查到的 GC 总耗时为 <strong>5</strong> 秒]/[从 JVM 启动至今发生的 GC 总耗时为 <strong>4.4</strong> 天]，</li>
+<li><strong>memory</strong> [ GC 前 Heap memory 空间]-&gt;[GC 后 Heap memory 空间]/[Heap memory 总空间],</li>
+<li><strong>all_pools</strong>(分代部分的详情) {young 区][GC 前 Memory ]-&gt;[GC后 Memory]/[young区 Memory 总大小] }</li>
+<li><strong>survivor</strong> [GC 前 Memory ]-&gt;[GC后 Memory]/[Memory 总大小] }{old 区[GC 前 Memory ]-&gt;[GC后 Memory]/[old区 Memory 总大小] }</li>
+</ul>
+<p>那为何会内存不足呢, 想起前几天服务拓展，添加收集了几个服务的日志, 日志量不算小, 而且这3个ES节点所在的机器内存只分配了8个G, 显然, 加完这几个日志之后内存不够用了.</p>
+<h3 id="Index-Mapping"><a href="#Index-Mapping" class="headerlink" title="Index Mapping"></a>Index Mapping</h3><p>而且，从日志中， 还发现几处很诡异的日志</p>
+<p><img src="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20200204141415.png" alt></p>
+<p>红框中的错误: <strong>object mapping for [msg] tried to pasrse field [msg] as object, but found a concrete</strong></p>
+<p>翻译过来就是说, 日志中的msg这个字段的类型匹配不上, ES尽力把它解析为object类型，但是它却是个确切的值.</p>
+<p>就好比你在python中定义了一个字典, 但是你给它赋值一个整形, 这确定要报错.</p>
+<p>但是这个mapping是从何而来的呢.</p>
+<p>经过网上搜索一翻, 终于明白:</p>
+<p>ES中为了加强性能，对于索引中的<strong>第一条数据, ES会默认(可设置)按照这条数据建立index mapping, 相当于是一个索引模板, 好比是mysql中表的定义一个概念, 后续这个索引中的所有日志都按照该模板进行解析</strong></p>
+<p>后来经过查看源码, 我们发现，出现上图中的问题是因为代码中的日志打印不规范, 有一个地方如果抛出异常时，打印的是一个单一字符串, 而正常情况下打印的是一个json, 所以当第一条正常的日志传递给ES时，ES建立的索引 模板记录这个字段为object类型(可以类比为python中的字典, 本身是可以新增元素的), 当应用抛出异常时，日志中又传递了一个单一字符串, 但是索引模板已经记录为object类型，所以无法匹配, 这就是问题所在</p>
+<h3 id="Fix-Bug"><a href="#Fix-Bug" class="headerlink" title="Fix Bug"></a>Fix Bug</h3><p>从3个方面解决上面的问题</p>
+<p>首先是修复代码中日志不规范问题, 这个充暴露了code view不严谨.</p>
+<p>第2个是加大ES的内存,毕竟日志量确实是上来了, 从8G添加到12G</p>
+<p>第3个是优化ES的gc问题, ES中有个逻辑是：<strong>默认情况下，主节点每30秒会去检查其他节点的状态，如果任何节点的垃圾回收时间超过30秒（Garbage collection duration）且在重复次数内都超时，则会导致主节点任务该节点脱离集群, 节点脱离集群后会引起分片的rebalance</strong></p>
+<p>这个机制让ES节点频繁的脱离集群，而又引起整个集群的rebalance，ES本身的内存就不够，rebalance更是雪上加霜, 如此往复就导致整个ES集群宕机.</p>
+<p>可修改主节点的检查时间及重复次数,让其它节点有充分的时间进行full gc.</p>
+<p>在ES的配置文件中添加以下配置:</p>
+<figure class="highlight yml"><table><tr><td class="code"><pre><span class="line"><span class="attr">discovery.zen.fd.ping_timeout:</span> <span class="string">300s</span></span><br><span class="line"><span class="attr">discovery.zen.fd.ping_retriES:</span> <span class="number">10</span></span><br></pre></td></tr></table></figure>
+<p>这样, 达到这两个条件时才能触发节点脱离集群</p>
+<p>至此, 依次重启ES节点, 问题圆满解决.</p>
+<h3 id="参考文章"><a href="#参考文章" class="headerlink" title="参考文章:"></a><strong>参考文章:</strong></h3><blockquote>
+<ul>
+<li><a href="https://www.elastic.co/guide/en/elasticsearch/reference/current/mapping.html" target="_blank" rel="noopener">elasticsearch index mapping</a></li>
+<li><a href="https://blog.csdn.net/sinat_35930259/article/details/80354732" target="_blank" rel="noopener">elasticsearch篇之mapping</a></li>
+<li><a href="https://segmentfault.com/a/1190000016494488" target="_blank" rel="noopener">你看懂 Elasticsearch Log 中的 GC 日志了吗？</a></li>
+</ul>
+</blockquote>
+<h3 id="转载请注明出处https-izsk-me"><a href="#转载请注明出处https-izsk-me" class="headerlink" title="转载请注明出处https://izsk.me"></a><strong>转载请注明出处<a href="https://izsk.me" target="_blank" rel="noopener">https://izsk.me</a></strong></h3>]]></content>
+      <categories>
+        <category>FELK</category>
+      </categories>
+      <tags>
+        <tag>FELK</tag>
+      </tags>
+  </entry>
+  <entry>
     <title>CockRoachDB学习(架构)</title>
     <url>/2019/10/06/CockroachDB-Struct/</url>
     <content><![CDATA[<p>项目中需要一个分布式数据库用于存储业务的KV数据, 在前期项目调研结合业务比对了业界常用的KV数据库模型后, 最后选择了CockRoachDB(CRDB).</p>
@@ -2513,74 +2668,6 @@
       </categories>
       <tags>
         <tag>分布式架构</tag>
-      </tags>
-  </entry>
-  <entry>
-    <title>记一次排查ES FGC导致的集群宕机异常</title>
-    <url>/2019/10/06/ES-FGC-Fix/</url>
-    <content><![CDATA[<p>有一个私有云环境的运维同事反应项目中的ES集群无法查询, 由于是私有云环境, 没有直接运维权限, 所以没有接收到一线报警, 远程登录上去后发现ES集群已经宕机了, 这次的排查过程也发现了几个比较容易忽视的细节, 在此记录一下,比较有意思.</p>
-<a id="more"></a>
-<h3 id="集群状态"><a href="#集群状态" class="headerlink" title="集群状态"></a>集群状态</h3><p>ES集群为3节点.</p>
-<p>首先肯定是查看集群状态</p>
-<figure class="highlight bash"><table><tr><td class="code"><pre><span class="line">curl <span class="string">'http://localhost:9200/_cluster/health?pretty'</span> -u xxx:yyy</span><br><span class="line"><span class="comment">#发现状态为Red</span></span><br></pre></td></tr></table></figure>
-<p>查看节点状态</p>
-<figure class="highlight bash"><table><tr><td class="code"><pre><span class="line">curl <span class="string">'http://localhost:9200/_cat/node?v'</span> -u xxx:yyy</span><br><span class="line"><span class="comment">#节点数正常</span></span><br></pre></td></tr></table></figure>
-<p>查看各节点使用的磁盘情况</p>
-<figure class="highlight bash"><table><tr><td class="code"><pre><span class="line">curl -XGET <span class="string">'localhost:9200/_cat/allocation?v&amp;pretty'</span> -u xxx:yyy</span><br><span class="line"><span class="comment">#未发现异常</span></span><br></pre></td></tr></table></figure>
-<h3 id="集群日志"><a href="#集群日志" class="headerlink" title="集群日志"></a>集群日志</h3><p>登录一个ES节点查看日志，发现以下报错，查看其它2个节点，情况相同</p>
-<p><img src="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20200204134510.png" alt></p>
-<p>从日志来看, 可以发现几个问题:</p>
-<blockquote>
-<ul>
-<li>Full GC很频繁, 而且时间也非常的长 </li>
-<li>每次GC完之后所能释放的内存非常有限</li>
-</ul>
-</blockquote>
-<p>到这，其它原因已经很明朗, <strong>内存不够导致的full gc 频繁，但是又不能释放太多的空间，又导致full gc的恶意循环</strong></p>
-<p>如果大家对gc的日志不很了解的话, 这里解释下上面日志的各个字段含义, 假如有以下一条gc日志</p>
-<figure class="highlight bash"><table><tr><td class="code"><pre><span class="line">[2018-06-30T17:57:29,020][INFO ][o.e.m.j.JvmGcMonitorService] [qoo--ES] [gc][old][228385][160772] duration [5s], collections [1]/[5.1s], total [5s]/[4.4d], memory [945.4mb]-&gt;[958.5mb]/[1007.3mb], all_pools &#123;[young] [87.8mb]-&gt;[100.9mb]/[133.1mb]&#125;&#123;[survivor] [0b]-&gt;[0b]/[16.6mb]&#125;&#123;[old] [857.6mb]-&gt;[857.6mb]/[857.6mb]&#125;</span><br></pre></td></tr></table></figure>
-<ul>
-<li><strong>gc old</strong> 本次是 old GC 这是第228385次 GC 检查][从 JVM 启动至今发生的第 160772次 G]</li>
-<li><strong>duration</strong> [本次检查到的 GC 总耗时 <strong>5</strong> 秒，可能是多次的加和</li>
-<li><strong>collections</strong> [从上次检查至今总共发生<strong>1</strong>次GC]/[从上次检查至今已过去 <strong>5.1</strong> 秒],</li>
-<li><strong>total</strong> [本次检查到的 GC 总耗时为 <strong>5</strong> 秒]/[从 JVM 启动至今发生的 GC 总耗时为 <strong>4.4</strong> 天]，</li>
-<li><strong>memory</strong> [ GC 前 Heap memory 空间]-&gt;[GC 后 Heap memory 空间]/[Heap memory 总空间],</li>
-<li><strong>all_pools</strong>(分代部分的详情) {young 区][GC 前 Memory ]-&gt;[GC后 Memory]/[young区 Memory 总大小] }</li>
-<li><strong>survivor</strong> [GC 前 Memory ]-&gt;[GC后 Memory]/[Memory 总大小] }{old 区[GC 前 Memory ]-&gt;[GC后 Memory]/[old区 Memory 总大小] }</li>
-</ul>
-<p>那为何会内存不足呢, 想起前几天服务拓展，添加收集了几个服务的日志, 日志量不算小, 而且这3个ES节点所在的机器内存只分配了8个G, 显然, 加完这几个日志之后内存不够用了.</p>
-<h3 id="Index-Mapping"><a href="#Index-Mapping" class="headerlink" title="Index Mapping"></a>Index Mapping</h3><p>而且，从日志中， 还发现几处很诡异的日志</p>
-<p><img src="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20200204141415.png" alt></p>
-<p>红框中的错误: <strong>object mapping for [msg] tried to pasrse field [msg] as object, but found a concrete</strong></p>
-<p>翻译过来就是说, 日志中的msg这个字段的类型匹配不上, ES尽力把它解析为object类型，但是它却是个确切的值.</p>
-<p>就好比你在python中定义了一个字典, 但是你给它赋值一个整形, 这确定要报错.</p>
-<p>但是这个mapping是从何而来的呢.</p>
-<p>经过网上搜索一翻, 终于明白:</p>
-<p>ES中为了加强性能，对于索引中的<strong>第一条数据, ES会默认(可设置)按照这条数据建立index mapping, 相当于是一个索引模板, 好比是mysql中表的定义一个概念, 后续这个索引中的所有日志都按照该模板进行解析</strong></p>
-<p>后来经过查看源码, 我们发现，出现上图中的问题是因为代码中的日志打印不规范, 有一个地方如果抛出异常时，打印的是一个单一字符串, 而正常情况下打印的是一个json, 所以当第一条正常的日志传递给ES时，ES建立的索引 模板记录这个字段为object类型(可以类比为python中的字典, 本身是可以新增元素的), 当应用抛出异常时，日志中又传递了一个单一字符串, 但是索引模板已经记录为object类型，所以无法匹配, 这就是问题所在</p>
-<h3 id="Fix-Bug"><a href="#Fix-Bug" class="headerlink" title="Fix Bug"></a>Fix Bug</h3><p>从3个方面解决上面的问题</p>
-<p>首先是修复代码中日志不规范问题, 这个充暴露了code view不严谨.</p>
-<p>第2个是加大ES的内存,毕竟日志量确实是上来了, 从8G添加到12G</p>
-<p>第3个是优化ES的gc问题, ES中有个逻辑是：<strong>默认情况下，主节点每30秒会去检查其他节点的状态，如果任何节点的垃圾回收时间超过30秒（Garbage collection duration）且在重复次数内都超时，则会导致主节点任务该节点脱离集群, 节点脱离集群后会引起分片的rebalance</strong></p>
-<p>这个机制让ES节点频繁的脱离集群，而又引起整个集群的rebalance，ES本身的内存就不够，rebalance更是雪上加霜, 如此往复就导致整个ES集群宕机.</p>
-<p>可修改主节点的检查时间及重复次数,让其它节点有充分的时间进行full gc.</p>
-<p>在ES的配置文件中添加以下配置:</p>
-<figure class="highlight yml"><table><tr><td class="code"><pre><span class="line"><span class="attr">discovery.zen.fd.ping_timeout:</span> <span class="string">300s</span></span><br><span class="line"><span class="attr">discovery.zen.fd.ping_retriES:</span> <span class="number">10</span></span><br></pre></td></tr></table></figure>
-<p>这样, 达到这两个条件时才能触发节点脱离集群</p>
-<p>至此, 依次重启ES节点, 问题圆满解决.</p>
-<h3 id="参考文章"><a href="#参考文章" class="headerlink" title="参考文章:"></a><strong>参考文章:</strong></h3><blockquote>
-<ul>
-<li><a href="https://www.elastic.co/guide/en/elasticsearch/reference/current/mapping.html" target="_blank" rel="noopener">elasticsearch index mapping</a></li>
-<li><a href="https://blog.csdn.net/sinat_35930259/article/details/80354732" target="_blank" rel="noopener">elasticsearch篇之mapping</a></li>
-<li><a href="https://segmentfault.com/a/1190000016494488" target="_blank" rel="noopener">你看懂 Elasticsearch Log 中的 GC 日志了吗？</a></li>
-</ul>
-</blockquote>
-<h3 id="转载请注明出处https-izsk-me"><a href="#转载请注明出处https-izsk-me" class="headerlink" title="转载请注明出处https://izsk.me"></a><strong>转载请注明出处<a href="https://izsk.me" target="_blank" rel="noopener">https://izsk.me</a></strong></h3>]]></content>
-      <categories>
-        <category>FELK</category>
-      </categories>
-      <tags>
-        <tag>FELK</tag>
       </tags>
   </entry>
   <entry>
