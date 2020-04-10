@@ -86,18 +86,18 @@
 
 
 
-<meta name="description" content="PodSecurityPolicy是kubernetes中提供的一种安全策略, 默认情况下，Kubernetes 允许创建一个有特权容器的 Pod，这些容器很可能会危机系统安全，而 Pod 安全策略（PSP）则通过确保请求者有权限按配置来创建 Pod，从而来保护集群免受特权 Pod 的影响">
+<meta name="description" content="PodSecurityPolicy(psp)是kubernetes中提供的一种安全策略, 默认情况下，Kubernetes 允许创建一个有特权容器的 Pod，这些容器很可能会危机系统安全，而 Pod 安全策略（PSP）则通过确保请求者有权限按配置来创建 Pod，从而来保护集群免受特权 Pod 的影响">
 <meta name="keywords" content="Kubernetes">
 <meta property="og:type" content="article">
 <meta property="og:title" content="Kubernetes学习(使用PodSecurityPolicy)">
 <meta property="og:url" content="https://zhoushuke.github.io/2019/12/13/Kubernetes-PSP/index.html">
 <meta property="og:site_name" content="Z.S.K.&#39;s Records">
-<meta property="og:description" content="PodSecurityPolicy是kubernetes中提供的一种安全策略, 默认情况下，Kubernetes 允许创建一个有特权容器的 Pod，这些容器很可能会危机系统安全，而 Pod 安全策略（PSP）则通过确保请求者有权限按配置来创建 Pod，从而来保护集群免受特权 Pod 的影响">
+<meta property="og:description" content="PodSecurityPolicy(psp)是kubernetes中提供的一种安全策略, 默认情况下，Kubernetes 允许创建一个有特权容器的 Pod，这些容器很可能会危机系统安全，而 Pod 安全策略（PSP）则通过确保请求者有权限按配置来创建 Pod，从而来保护集群免受特权 Pod 的影响">
 <meta property="og:locale" content="zh-Hans">
-<meta property="og:updated_time" content="2020-04-10T09:42:01.646Z">
+<meta property="og:updated_time" content="2020-04-10T09:46:28.766Z">
 <meta name="twitter:card" content="summary">
 <meta name="twitter:title" content="Kubernetes学习(使用PodSecurityPolicy)">
-<meta name="twitter:description" content="PodSecurityPolicy是kubernetes中提供的一种安全策略, 默认情况下，Kubernetes 允许创建一个有特权容器的 Pod，这些容器很可能会危机系统安全，而 Pod 安全策略（PSP）则通过确保请求者有权限按配置来创建 Pod，从而来保护集群免受特权 Pod 的影响">
+<meta name="twitter:description" content="PodSecurityPolicy(psp)是kubernetes中提供的一种安全策略, 默认情况下，Kubernetes 允许创建一个有特权容器的 Pod，这些容器很可能会危机系统安全，而 Pod 安全策略（PSP）则通过确保请求者有权限按配置来创建 Pod，从而来保护集群免受特权 Pod 的影响">
 
 
 
@@ -394,7 +394,7 @@
       
 
       
-        <p>PodSecurityPolicy是kubernetes中提供的一种安全策略, 默认情况下，Kubernetes 允许创建一个有特权容器的 Pod，这些容器很可能会危机系统安全，而 Pod 安全策略（PSP）则通过确保请求者有权限按配置来创建 Pod，从而来保护集群免受特权 Pod 的影响</p>
+        <p>PodSecurityPolicy(psp)是kubernetes中提供的一种安全策略, 默认情况下，Kubernetes 允许创建一个有特权容器的 Pod，这些容器很可能会危机系统安全，而 Pod 安全策略（PSP）则通过确保请求者有权限按配置来创建 Pod，从而来保护集群免受特权 Pod 的影响</p>
 <a id="more"></a>
 <p><code>PodSecurityPolicy</code> 是 Kubernetes API 对象，你可以在不对 Kubernetes 进行任何修改的情况下创建它们，但是，默认情况下不会强制执行我们创建的一些策略，我们需要一个准入控制器、kube-controller-manager 配置以及 RBAC 权限配置</p>
 <p>注: <strong>kubeadm搭建的集群默认情况下没有开启PodSecurityPolicy, 需要在api-erver的启动参数中开启, 直接修改api-erver的静态yaml文件, –enable-admission-plugins=NodeRestriction,PodSecurityPolicy</strong></p>
@@ -419,6 +419,7 @@
 <figure class="highlight yaml"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br></pre></td><td class="code"><pre><span class="line"><span class="attr">apiVersion:</span> <span class="string">apps/v1</span></span><br><span class="line"><span class="attr">kind:</span> <span class="string">Deployment</span></span><br><span class="line"><span class="attr">metadata:</span></span><br><span class="line">  <span class="attr">name:</span> <span class="string">nginx-hostnetwork-deploy</span></span><br><span class="line">  <span class="attr">namespace:</span> <span class="string">default</span></span><br><span class="line">  <span class="attr">labels:</span></span><br><span class="line">    <span class="attr">app:</span> <span class="string">nginx</span></span><br><span class="line"><span class="attr">spec:</span></span><br><span class="line">  <span class="attr">replicas:</span> <span class="number">1</span></span><br><span class="line">  <span class="attr">selector:</span></span><br><span class="line">    <span class="attr">matchLabels:</span></span><br><span class="line">      <span class="attr">app:</span> <span class="string">nginx</span></span><br><span class="line">  <span class="attr">template:</span></span><br><span class="line">    <span class="attr">metadata:</span></span><br><span class="line">      <span class="attr">labels:</span></span><br><span class="line">        <span class="attr">app:</span> <span class="string">nginx</span></span><br><span class="line">    <span class="attr">spec:</span></span><br><span class="line">      <span class="attr">containers:</span></span><br><span class="line">      <span class="bullet">-</span> <span class="attr">name:</span> <span class="string">nginx</span></span><br><span class="line">        <span class="attr">image:</span> <span class="string">nginx:1.15.4</span></span><br><span class="line">      <span class="attr">hostNetwork:</span> <span class="literal">true</span></span><br><span class="line">      <span class="attr">serviceAccount:</span> <span class="string">psp-sa</span> <span class="comment">#指定sa</span></span><br></pre></td></tr></table></figure>
 <p>如果没有指定serviceAccount=psp-sa, 则会提示以下错误</p>
 <figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line">$ kubectl describe rs nginx-hostnetwork-deploy-74c8fbd687</span><br><span class="line">Name:           nginx-hostnetwork-deploy-74c8fbd687</span><br><span class="line">......</span><br><span class="line">Events:</span><br><span class="line">  Type     Reason        Age                   From                   Message</span><br><span class="line">  ----     ------        ----                  ----                   -------</span><br><span class="line">  Warning  FailedCreate  80s (x15 over 2m42s)  replicaset-controller  Error creating: pods <span class="string">"nginx-hostnetwork-deploy-74c8fbd687-"</span> is forbidden: unable to validate against any pod security policy: [spec.securityContext.hostNetwork: Invalid value: <span class="literal">true</span>: Host network is not allowed to be used]</span><br></pre></td></tr></table></figure>
+<p>从这个例子可以了现, psp虽然能够在pod之间做一些限制, 但是力度还是非常粗糙的，如果需要更加细粒度地对流量进行控制,psp做不到, 可以考虑服务网格.</p>
 <h3 id="参考文章"><a href="#参考文章" class="headerlink" title="参考文章:"></a><strong>参考文章:</strong></h3><blockquote>
 <ul>
 <li><a href="https://www.qikqiak.com/post/setup-psp-in-k8s/" target="_blank" rel="noopener">https://www.qikqiak.com/post/setup-psp-in-k8s/</a></li>
