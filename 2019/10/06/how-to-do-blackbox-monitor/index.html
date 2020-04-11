@@ -68,7 +68,7 @@
 <link href="/css/main.css?v=5.1.0" rel="stylesheet" type="text/css">
 
 
-  <meta name="keywords" content="运维杂谈,">
+  <meta name="keywords" content="方法论,">
 
 
 
@@ -87,14 +87,14 @@
 
 
 <meta name="description" content="经常听到运维前辈说到方法论这个词, 之前觉得很高深, 后来想想, 其实也就是经验多了, 把对某类事务的处理沉淀或者抽象为一种统一的方法. 就像下面我要说一个例子来讲一讲">
-<meta name="keywords" content="运维杂谈">
+<meta name="keywords" content="方法论">
 <meta property="og:type" content="article">
 <meta property="og:title" content="做黑盒监控引发的思考">
 <meta property="og:url" content="https://zhoushuke.github.io/2019/10/06/how-to-do-blackbox-monitor/index.html">
 <meta property="og:site_name" content="Z.S.K.&#39;s Records">
 <meta property="og:description" content="经常听到运维前辈说到方法论这个词, 之前觉得很高深, 后来想想, 其实也就是经验多了, 把对某类事务的处理沉淀或者抽象为一种统一的方法. 就像下面我要说一个例子来讲一讲">
 <meta property="og:locale" content="zh-Hans">
-<meta property="og:updated_time" content="2020-04-10T07:46:35.845Z">
+<meta property="og:updated_time" content="2020-04-11T06:54:21.377Z">
 <meta name="twitter:card" content="summary">
 <meta name="twitter:title" content="做黑盒监控引发的思考">
 <meta name="twitter:description" content="经常听到运维前辈说到方法论这个词, 之前觉得很高深, 后来想想, 其实也就是经验多了, 把对某类事务的处理沉淀或者抽象为一种统一的方法. 就像下面我要说一个例子来讲一讲">
@@ -359,8 +359,8 @@
               
               
                 <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
-                  <a href="/categories/运维杂谈/" itemprop="url" rel="index">
-                    <span itemprop="name">运维杂谈</span>
+                  <a href="/categories/方法论/" itemprop="url" rel="index">
+                    <span itemprop="name">方法论</span>
                   </a>
                 </span>
 
@@ -398,16 +398,15 @@
 <a id="more"></a>
 <p>线上有个基于gitlab二次开发的使用的模块要正式应用到公有云环境, 做为sre，如何对gitlab的<code>clone --&gt; commit --&gt; push</code>进行黑盒监控?</p>
 <p>当然, 可以通过gitlab本身的一些性能指标进行采集分析, 但这些性能指标可能是分散的, 无法准确地反应clone –&gt; commit –&gt;push这条操作是否存在异常, 那么更好的办法就是模拟这3个操作, 不间断地对gitlab进行改操作, 如果gitlab在某个环节出现问题导致命令不成功, 则必然会产生报警.</p>
-<p>实现流程:</p>
-<ol>
+<h3 id="监控目的"><a href="#监控目的" class="headerlink" title="监控目的"></a>监控目的</h3><p>实现对gitlab的黑盒监控</p>
+<h3 id="实现流程"><a href="#实现流程" class="headerlink" title="实现流程"></a>实现流程</h3><ol>
 <li>在gitlab上新建一个监控使用git仓库, 用于不断操作</li>
 <li>git clone该仓库, 验证是否正常</li>
 <li>git add 一个时间戳文件, 然后使用git commit进行提示, 验证是否正常</li>
 <li>git push到仓库, 验证是否正常</li>
 </ol>
 <p>如果在预设的超时时间(当然，这个时间由运维根据情况而定, 跟gitlab性能有一定关系)内这几个步骤都没问题的话,那基本上可以说gitla服务是正常 </p>
-<p>伪代码如下:</p>
-<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">#!/bin/bash</span></span><br><span class="line"></span><br><span class="line"><span class="built_in">cd</span> <span class="string">"<span class="variable">$(dirname $0)</span>"</span> || <span class="built_in">exit</span> 1</span><br><span class="line">WORKSPACE=<span class="string">"<span class="variable">$(pwd)</span>"</span></span><br><span class="line">GIT_URL=<span class="string">"git@code-commit-tpmonitor-auto.git"</span></span><br><span class="line">TIME_OUT=5</span><br><span class="line"></span><br><span class="line"><span class="keyword">function</span> <span class="function"><span class="title">check_gitstatus</span></span>()&#123;</span><br><span class="line">    start_time=$(date +%s)</span><br><span class="line">    timeout <span class="variable">$TIME_OUT</span> \</span><br><span class="line">    git <span class="built_in">clone</span> <span class="variable">$GIT_URL</span> &gt; <span class="variable">$WORKSPACE</span>/git_clone.log 2&gt;&amp;1 &amp;&amp; \</span><br><span class="line">    <span class="built_in">cd</span> <span class="variable">$WORKSPACE</span>/code-commit-tpmonitor-auto &amp;&amp; \</span><br><span class="line">    [ -f <span class="variable">$WORKSPACE</span>/code-commit-tpmonitor-auto/timestamps.time ] &amp;&amp; \</span><br><span class="line">    gap=$(cat timestamps.time) &amp;&amp; \</span><br><span class="line">    <span class="built_in">echo</span> <span class="variable">$&#123;start_time&#125;</span> &gt; timestamps.time &amp;&amp; \</span><br><span class="line">    git add timestamps.time &amp;&amp; \</span><br><span class="line">    git commit -m <span class="string">"<span class="variable">$&#123;start_time&#125;</span>"</span> &gt; <span class="variable">$WORKSPACE</span>/git_commit.log 2&gt;&amp;1 &amp;&amp; \</span><br><span class="line">    git push &gt; <span class="variable">$WORKSPACE</span>/git_push.log 2&gt;&amp;1</span><br><span class="line">    <span class="keyword">if</span> [ <span class="string">"$?"</span> -eq <span class="string">"0"</span> ]; <span class="keyword">then</span></span><br><span class="line">        <span class="built_in">echo</span> <span class="string">"gap_time:$[<span class="variable">$&#123;start_time&#125;</span>-<span class="variable">$&#123;gap&#125;</span>]"</span></span><br><span class="line">        <span class="built_in">echo</span> <span class="string">"run_time:$[<span class="variable">$(date +%s)</span>-<span class="variable">$&#123;start_time&#125;</span>]"</span></span><br><span class="line">        rm -rf <span class="variable">$WORKSPACE</span>/code-commit-tpmonitor-auto </span><br><span class="line">        <span class="built_in">echo</span> rnt:0</span><br><span class="line">    <span class="keyword">else</span></span><br><span class="line">        <span class="built_in">echo</span> rnt:1</span><br><span class="line">    <span class="keyword">fi</span></span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="keyword">function</span> <span class="function"><span class="title">main</span></span>()&#123;</span><br><span class="line">    rm -rf <span class="variable">$WORKSPACE</span>/code-commit-tpmonitor-auto</span><br><span class="line">    check_gitstatus</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line">main <span class="string">"<span class="variable">$@</span>"</span></span><br></pre></td></tr></table></figure>
+<h3 id="伪代码"><a href="#伪代码" class="headerlink" title="伪代码"></a>伪代码</h3><figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">#!/bin/bash</span></span><br><span class="line"></span><br><span class="line"><span class="built_in">cd</span> <span class="string">"<span class="variable">$(dirname $0)</span>"</span> || <span class="built_in">exit</span> 1</span><br><span class="line">WORKSPACE=<span class="string">"<span class="variable">$(pwd)</span>"</span></span><br><span class="line">GIT_URL=<span class="string">"git@code-commit-tpmonitor-auto.git"</span></span><br><span class="line">TIME_OUT=5</span><br><span class="line"></span><br><span class="line"><span class="keyword">function</span> <span class="function"><span class="title">check_gitstatus</span></span>()&#123;</span><br><span class="line">    start_time=$(date +%s)</span><br><span class="line">    timeout <span class="variable">$TIME_OUT</span> \</span><br><span class="line">    git <span class="built_in">clone</span> <span class="variable">$GIT_URL</span> &gt; <span class="variable">$WORKSPACE</span>/git_clone.log 2&gt;&amp;1 &amp;&amp; \</span><br><span class="line">    <span class="built_in">cd</span> <span class="variable">$WORKSPACE</span>/code-commit-tpmonitor-auto &amp;&amp; \</span><br><span class="line">    [ -f <span class="variable">$WORKSPACE</span>/code-commit-tpmonitor-auto/timestamps.time ] &amp;&amp; \</span><br><span class="line">    gap=$(cat timestamps.time) &amp;&amp; \</span><br><span class="line">    <span class="built_in">echo</span> <span class="variable">$&#123;start_time&#125;</span> &gt; timestamps.time &amp;&amp; \</span><br><span class="line">    git add timestamps.time &amp;&amp; \</span><br><span class="line">    git commit -m <span class="string">"<span class="variable">$&#123;start_time&#125;</span>"</span> &gt; <span class="variable">$WORKSPACE</span>/git_commit.log 2&gt;&amp;1 &amp;&amp; \</span><br><span class="line">    git push &gt; <span class="variable">$WORKSPACE</span>/git_push.log 2&gt;&amp;1</span><br><span class="line">    <span class="keyword">if</span> [ <span class="string">"$?"</span> -eq <span class="string">"0"</span> ]; <span class="keyword">then</span></span><br><span class="line">        <span class="built_in">echo</span> <span class="string">"gap_time:$[<span class="variable">$&#123;start_time&#125;</span>-<span class="variable">$&#123;gap&#125;</span>]"</span></span><br><span class="line">        <span class="built_in">echo</span> <span class="string">"run_time:$[<span class="variable">$(date +%s)</span>-<span class="variable">$&#123;start_time&#125;</span>]"</span></span><br><span class="line">        rm -rf <span class="variable">$WORKSPACE</span>/code-commit-tpmonitor-auto </span><br><span class="line">        <span class="built_in">echo</span> rnt:0</span><br><span class="line">    <span class="keyword">else</span></span><br><span class="line">        <span class="built_in">echo</span> rnt:1</span><br><span class="line">    <span class="keyword">fi</span></span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="keyword">function</span> <span class="function"><span class="title">main</span></span>()&#123;</span><br><span class="line">    rm -rf <span class="variable">$WORKSPACE</span>/code-commit-tpmonitor-auto</span><br><span class="line">    check_gitstatus</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line">main <span class="string">"<span class="variable">$@</span>"</span></span><br></pre></td></tr></table></figure>
 <p>有人可能会好奇为何需要计算一个<code>gap_time</code>,这其实也是在监控gitlab的一个性能</p>
 <p>想像这么一种情况, 使用git clone下来的文件如果不是我上一次push的, 那么其实也是有问题, 有可能是push虽然成功了, 但接着使用clone时发现clone下来的文件居然没有包含上次push的文件, 那么就有可能gitlab来不及处理海量的小文件导致出现性能问题.</p>
 <p>通过计算一个gap_time是非常有必要了, 每一次都push一个文件, 这个文件非常简单, 只包含一行时间戳, 在下一次clone下来时用当前时间跟这个文件里的时间戳进行比较, 假如这个脚本每隔5分钟运行一次, 那么这个这个时间差值一定会在5分钟左右, 那么就可以添加一个报警规则: 这个时间差如果超过6分钟, 则说明有问题.</p>
@@ -465,7 +464,7 @@
       
         <div class="post-tags">
           
-            <a href="/tags/运维杂谈/" rel="tag"># 运维杂谈</a>
+            <a href="/tags/方法论/" rel="tag"># 方法论</a>
           
         </div>
       
@@ -614,7 +613,7 @@
             
 
             
-              <div class="post-toc-content"><ol class="nav"><li class="nav-item nav-level-3"><a class="nav-link" href="#参考文章"><span class="nav-number">1.</span> <span class="nav-text">参考文章:</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#转载请注明出处https-izsk-me"><span class="nav-number">2.</span> <span class="nav-text">转载请注明出处https://izsk.me</span></a></li></ol></div>
+              <div class="post-toc-content"><ol class="nav"><li class="nav-item nav-level-3"><a class="nav-link" href="#监控目的"><span class="nav-number">1.</span> <span class="nav-text">监控目的</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#实现流程"><span class="nav-number">2.</span> <span class="nav-text">实现流程</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#伪代码"><span class="nav-number">3.</span> <span class="nav-text">伪代码</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#参考文章"><span class="nav-number">4.</span> <span class="nav-text">参考文章:</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#转载请注明出处https-izsk-me"><span class="nav-number">5.</span> <span class="nav-text">转载请注明出处https://izsk.me</span></a></li></ol></div>
             
 
           </div>
