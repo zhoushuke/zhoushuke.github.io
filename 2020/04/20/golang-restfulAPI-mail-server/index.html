@@ -68,7 +68,7 @@
 <link href="/css/main.css?v=5.1.0" rel="stylesheet" type="text/css">
 
 
-  <meta name="keywords" content="ServiceMesh,">
+  <meta name="keywords" content="Golang,">
 
 
 
@@ -86,23 +86,20 @@
 
 
 
-<meta name="description" content="一直想把istio引入到业务中, 前期调研实操中发现istio完美解决了grpc在kubernetes中的负载均衡问题, 这次学习一下opentracing在istio中的应用, 这里主要是想看grpc-gateway的调用，目前业务中用的最多, 当然tcp就更没问题.">
-<meta name="keywords" content="ServiceMesh">
+<meta name="description" content="最近在搞一个邮件RestfulAPI的邮件系统, 通过接口可直接发送邮件, 后端使用的是outlook,在测试过程发现会提示 Unrecognized authentication type错误, 折腾一下终于解决了, 记录一下.">
+<meta name="keywords" content="Golang">
 <meta property="og:type" content="article">
-<meta property="og:title" content="Istio学习(使用jaeger实现grpc-gateway全链路追踪)">
-<meta property="og:url" content="https://zhoushuke.github.io/2020/02/21/grpc-gateway-with-opentracing/index.html">
+<meta property="og:title" content="golang学习(golang搭建邮件系统解决Unrecognized authentication type)">
+<meta property="og:url" content="https://zhoushuke.github.io/2020/04/20/golang-restfulAPI-mail-server/index.html">
 <meta property="og:site_name" content="Z.S.K.&#39;s Records">
-<meta property="og:description" content="一直想把istio引入到业务中, 前期调研实操中发现istio完美解决了grpc在kubernetes中的负载均衡问题, 这次学习一下opentracing在istio中的应用, 这里主要是想看grpc-gateway的调用，目前业务中用的最多, 当然tcp就更没问题.">
+<meta property="og:description" content="最近在搞一个邮件RestfulAPI的邮件系统, 通过接口可直接发送邮件, 后端使用的是outlook,在测试过程发现会提示 Unrecognized authentication type错误, 折腾一下终于解决了, 记录一下.">
 <meta property="og:locale" content="zh-Hans">
-<meta property="og:image" content="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20200221174553.png">
-<meta property="og:image" content="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20200221174801.png">
-<meta property="og:image" content="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20200221180136.png">
-<meta property="og:image" content="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20200221180419.png">
-<meta property="og:updated_time" content="2020-02-21T10:31:08.425Z">
+<meta property="og:image" content="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20200421141715.png">
+<meta property="og:updated_time" content="2020-04-21T08:30:35.263Z">
 <meta name="twitter:card" content="summary">
-<meta name="twitter:title" content="Istio学习(使用jaeger实现grpc-gateway全链路追踪)">
-<meta name="twitter:description" content="一直想把istio引入到业务中, 前期调研实操中发现istio完美解决了grpc在kubernetes中的负载均衡问题, 这次学习一下opentracing在istio中的应用, 这里主要是想看grpc-gateway的调用，目前业务中用的最多, 当然tcp就更没问题.">
-<meta name="twitter:image" content="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20200221174553.png">
+<meta name="twitter:title" content="golang学习(golang搭建邮件系统解决Unrecognized authentication type)">
+<meta name="twitter:description" content="最近在搞一个邮件RestfulAPI的邮件系统, 通过接口可直接发送邮件, 后端使用的是outlook,在测试过程发现会提示 Unrecognized authentication type错误, 折腾一下终于解决了, 记录一下.">
+<meta name="twitter:image" content="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20200421141715.png">
 
 
 
@@ -130,13 +127,13 @@
 
 
 
-  <link rel="canonical" href="https://zhoushuke.github.io/2020/02/21/grpc-gateway-with-opentracing/">
+  <link rel="canonical" href="https://zhoushuke.github.io/2020/04/20/golang-restfulAPI-mail-server/">
 
 
 
 
 
-  <title> Istio学习(使用jaeger实现grpc-gateway全链路追踪) | Z.S.K.'s Records </title>
+  <title> golang学习(golang搭建邮件系统解决Unrecognized authentication type) | Z.S.K.'s Records </title>
 </head>
 
 <body itemscope itemtype="http://schema.org/WebPage" lang="zh-Hans">
@@ -302,7 +299,7 @@
   
 
   <article class="post post-type-normal " itemscope itemtype="http://schema.org/Article">
-  <link itemprop="mainEntityOfPage" href="https://zhoushuke.github.io/2020/02/21/grpc-gateway-with-opentracing/">
+  <link itemprop="mainEntityOfPage" href="https://zhoushuke.github.io/2020/04/20/golang-restfulAPI-mail-server/">
 
   <span style="display:none" itemprop="author" itemscope itemtype="http://schema.org/Person">
     <meta itemprop="name" content="Z.S.K.">
@@ -326,7 +323,7 @@
             
             
               
-                Istio学习(使用jaeger实现grpc-gateway全链路追踪)
+                golang学习(golang搭建邮件系统解决Unrecognized authentication type)
               
             
           </h1>
@@ -341,8 +338,8 @@
               
                 <span class="post-meta-item-text">发表于</span>
               
-              <time title="Post created" itemprop="dateCreated datePublished" datetime="2020-02-21T16:10:53+08:00">
-                2020-02-21
+              <time title="Post created" itemprop="dateCreated datePublished" datetime="2020-04-20T18:30:53+08:00">
+                2020-04-20
               </time>
             
 
@@ -364,8 +361,8 @@
               
               
                 <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
-                  <a href="/categories/ServiceMesh/" itemprop="url" rel="index">
-                    <span itemprop="name">ServiceMesh</span>
+                  <a href="/categories/Golang/" itemprop="url" rel="index">
+                    <span itemprop="name">Golang</span>
                   </a>
                 </span>
 
@@ -399,55 +396,25 @@
       
 
       
-        <p>一直想把istio引入到业务中, 前期调研实操中发现istio完美解决了grpc在kubernetes中的负载均衡<a href="https://izsk.me/2020/02/18/grpc-gateway-loadbalance-on-kubernetes-and-istio/" target="_blank" rel="noopener">问题</a>, 这次学习一下opentracing在istio中的应用, 这里主要是想看grpc-gateway的调用，目前业务中用的最多, 当然tcp就更没问题.</p>
+        <p>最近在搞一个邮件RestfulAPI的邮件系统, 通过接口可直接发送邮件, 后端使用的是outlook,在测试过程发现会提示 Unrecognized authentication type错误, 折腾一下终于解决了, 记录一下.</p>
 <a id="more"></a>
-<p>fork了一个大神的<a href="https://github.com/garystafford/k8s-istio-observe-backend" target="_blank" rel="noopener">demo</a>, 精简了部分流程, 把在google cloud上环境的搭建去除了，同时将grpc-gateway部分的代码改了,fork的源码中把grpc-gateway单独写成一个模块提供服务, 这里改成了跟真正的服务结合在一起，少一层中转, github在<a href="https://github.com/zhoushuke/grpc-gateway-with-opentracing.git" target="_blank" rel="noopener">这里</a></p>
-<h3 id="流程"><a href="#流程" class="headerlink" title="流程"></a>流程</h3><p>这个demo里涉及三个服务:</p>
-<p>​             —————————————————————-</p>
-<p>curl == |<strong>(grpc-gateway) http</strong> ==&gt; service-a == grpc| ==&gt; service-c == tcp ==&gt; mongodb</p>
-<p>​              —————————————————————-</p>
-<p><code>service-a服务中整合了grpc-gateway服务, 暴露出8088 http接口, 通过8088端口转到 grpc 50051端口调用 service-c</code></p>
-<p><code>service-c 通过tcp调用mongodb写入数据</code></p>
-<p><code>这里直接使用命令行curl service-a的8088端口</code></p>
-<p>grpc-gateway的实现过程可参考<a href="https://blog.csdn.net/dapangzi88/article/details/63686334" target="_blank" rel="noopener">这里</a></p>
-<h3 id="前提"><a href="#前提" class="headerlink" title="前提"></a>前提</h3><p>需要一个kubernetes集群,部署了istio及开启了jaeger和kiali, 这部分不在这里展开. 可参考<a href="https://izsk.me/2020/01/03/Istio-Install-Upon-Kubernetes/" target="_blank" rel="noopener">这里</a></p>
-<h3 id="部署"><a href="#部署" class="headerlink" title="部署"></a>部署</h3><h4 id="编译镜像"><a href="#编译镜像" class="headerlink" title="编译镜像"></a>编译镜像</h4><figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line"><span class="built_in">cd</span> grpc-gateway-with-opentracing/services</span><br><span class="line">bash build_images.sh</span><br></pre></td></tr></table></figure>
-<h4 id="发布"><a href="#发布" class="headerlink" title="发布"></a>发布</h4><figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line"><span class="built_in">cd</span> grpc-gateway-with-opentracing/deployments</span><br><span class="line">kubectl apply -f namespaces/middle.yaml</span><br><span class="line">kubectl apply -f secrets/go-srv-demo.yaml</span><br><span class="line">kubectl apply -f yaml/*</span><br><span class="line"><span class="comment">#其中, mongodb使用到的用户名及密码为forguest:VnximZWwED， 端口27017</span></span><br></pre></td></tr></table></figure>
-<p>这里为了方便， mongodb数据库没有使用持久卷, 数据库启动之后连接mongodb进行用户授权, </p>
-<p>安装mongo shell 命令行工具, ubuntu下进行以下操作</p>
-<p><strong>注意: 使用的mongodb server为4.2的版本, 请安装对应版本的客户端,不然问题一大堆</strong></p>
-<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line">wget -qO - https://www.mongodb.org/static/pgp/server-4.2.asc | sudo apt-key add -</span><br><span class="line"><span class="built_in">echo</span> <span class="string">"deb [ arch=amd64 ] https://repo.mongodb.org/apt/ubuntu xenial/mongodb-org/4.2 multiverse"</span> | sudo tee /etc/apt/sources.list.d/mongodb-org-4.2.list</span><br><span class="line"></span><br><span class="line">sudo apt-get update</span><br><span class="line">apt-get install -y mongodb-org-shell</span><br></pre></td></tr></table></figure>
-<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">use admin;</span><br><span class="line">db.createUser(&#123;user: <span class="string">"forguest"</span> , <span class="built_in">pwd</span>: <span class="string">"VnximZWwED"</span>, roles: [  <span class="string">"userAdminAnyDatabase"</span>,<span class="string">"readWriteAnyDatabase"</span> ]&#125;)</span><br></pre></td></tr></table></figure>
-<h3 id="测试"><a href="#测试" class="headerlink" title="测试"></a>测试</h3><p>使用以下命令进行测试, 请对应替换service-a的集群ip.</p>
-<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">for</span> x <span class="keyword">in</span> $(seq 1 100);<span class="keyword">do</span> sleep 5;curl -H<span class="string">'Content-Type: application/json'</span> <span class="string">'your-service-a-svc-clusterIP:8088/api/v1/greeting'</span>;<span class="keyword">done</span></span><br></pre></td></tr></table></figure>
-<p>Jaeger效果如下:</p>
-<p><img src="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20200221174553.png" alt></p>
-<p>kialiu效果如下:</p>
-<p><img src="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20200221174801.png" alt></p>
-<h3 id="Opentracing分析"><a href="#Opentracing分析" class="headerlink" title="Opentracing分析"></a>Opentracing分析</h3><p>在grpc-agteway-with-opentracing.go代码中, 定义了如下对象, </p>
-<figure class="highlight go"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">var</span> (</span><br><span class="line">        otHeaders = []<span class="keyword">string</span>&#123;</span><br><span class="line">                <span class="string">"x-request-id"</span>,</span><br><span class="line">                <span class="string">"x-b3-traceid"</span>,</span><br><span class="line">                <span class="string">"x-b3-spanid"</span>,</span><br><span class="line">                <span class="string">"x-b3-parentspanid"</span>,</span><br><span class="line">                <span class="string">"x-b3-sampled"</span>,</span><br><span class="line">                <span class="string">"x-b3-flags"</span>,</span><br><span class="line">                <span class="string">"x-ot-span-context"</span>&#125;</span><br><span class="line">)</span><br></pre></td></tr></table></figure>
-<p>在grpc调用时， istio会做如下的操作:</p>
-<ul>
-<li>Inbound 流量：对于经过 Sidecar 流入应用程序的流量，如果经过 Sidecar 时 Header 中没有任何跟踪相关的信息，则会在创建一个根 Span，TraceId 就是这个 SpanId，然后再将请求传递给业务容器的服务；如果请求中包含 Trace 相关的信息，则 Sidecar 从中提取 Trace 的上下文信息并发给应用程序。</li>
-<li>Outbound 流量：对于经过 Sidecar 流出的流量，如果经过 Sidecar 时 Header 中没有任何跟踪相关的信息，则会创建根 Span，并将该跟 Span 相关上下文信息放在请求头中传递给下一个调用的服务；当存在 Trace 信息时，Sidecar 从 Header 中提取 Span 相关信息，并基于这个 Span 创建子 Span，并将新的 Span 信息加在请求头中传递</li>
-</ul>
-<p>总结就是: <strong>每一次的调用, istio都会将请求中的header进行解析, 看header中是否包含上面声明的变量,如果不存在, 则创建一个root span, 如果存在, 则将spanid做为自己的parentid,如果还有调用, 则依次这样传递下去</strong></p>
-<p>可以来看一下jaeger上的header信息:</p>
-<p>首先，每一次请求istio都会生成一个唯一的<strong>traceID(x-b3-traceid)及requestID(x-request-id)</strong>, 这两个值在这次请求中不管经过几个服务都不会改变, 这样就能够通过这者查询出这次请求所经过的服务有哪一些，但是这两者无法确定经过的服务间的顺序是怎样的, 所以必须看<strong>x-b3-spanid及x-b3-parentspanid</strong></p>
-<p><img src="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20200221180136.png" alt></p>
-<p>从上图可以看出service-a(根请求)的spanID为traceID的后16位, 再通过这个spanID，可以看到</p>
-<p><img src="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20200221180419.png" alt></p>
-<p><code>8932e8b49bbddf3a</code> 为<code>c78400f5fce93775</code>的 <code>child_of</code>即孩子span</p>
-<p>通过这种父子关系就可以很容易确定谁调用谁，再结合traceID或者RequestID(通常这两者一样)的唯一性就能够定位所有调用过的服务了. </p>
-<p><strong>从上面也可以看出, 要使用jaeger实现全链路监控,还是需要业务代码做集成,, 尽管istio帮我们在业务上做了很多的事情, 但目前像上面的例子需要加入header的部分istio无法实现，因为它不知道service-a会去调用哪个服务. 当然 ，以后这部分的coding会越来越少</strong></p>
+<p>刚开始的时候使用的是PlainAuth类型的认证方式,  因为之前的一个账号一直使用，没出过问题, 到这里就提示以下错误</p>
+<figure class="highlight shell"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">504 5.7.4 Unrecognized authentication type [xxx.prod.partner.outlook.cn]</span><br></pre></td></tr></table></figure>
+<p>这个意思很明确, 不能识别的认证方式，PlainAuth这里简单说一下，PlainAuth的是大部分的邮件系统都支持的认证, 但由于是明文传输, 安全性不太好, 因此很多公司默认都关闭了.</p>
+<p>可以通过telnet命令来查看一下邮件服务器支持的验证方式:</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">telnet yourmailserver 25</span><br></pre></td></tr></table></figure>
+<p><img src="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20200421141715.png" alt></p>
+<p>可以看到在这里是不支持<code>PlainAuth</code>这种认证方式的, 因此可以使用<code>STARTTLS</code>这种支持的方式</p>
+<p>好在大部分情况下都支持我们使用自定义的认证.</p>
+<figure class="highlight go"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">type</span> loginAuth <span class="keyword">struct</span> &#123;</span><br><span class="line">	username, password <span class="keyword">string</span></span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="function"><span class="keyword">func</span> <span class="title">LoginAuth</span><span class="params">(username, password <span class="keyword">string</span>)</span> <span class="title">smtp</span>.<span class="title">Auth</span></span> &#123;</span><br><span class="line">	<span class="keyword">return</span> &amp;loginAuth&#123;username, password&#125;</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="function"><span class="keyword">func</span> <span class="params">(a *loginAuth)</span> <span class="title">Start</span><span class="params">(server *smtp.ServerInfo)</span> <span class="params">(<span class="keyword">string</span>, []<span class="keyword">byte</span>, error)</span></span> &#123;</span><br><span class="line">	<span class="keyword">return</span> <span class="string">"LOGIN"</span>, []<span class="keyword">byte</span>(a.username), <span class="literal">nil</span></span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="function"><span class="keyword">func</span> <span class="params">(a *loginAuth)</span> <span class="title">Next</span><span class="params">(fromServer []<span class="keyword">byte</span>, more <span class="keyword">bool</span>)</span> <span class="params">([]<span class="keyword">byte</span>, error)</span></span> &#123;</span><br><span class="line">	<span class="keyword">if</span> more &#123;</span><br><span class="line">		<span class="keyword">switch</span> <span class="keyword">string</span>(fromServer) &#123;</span><br><span class="line">		<span class="keyword">case</span> <span class="string">"Username:"</span>:</span><br><span class="line">			<span class="keyword">return</span> []<span class="keyword">byte</span>(a.username), <span class="literal">nil</span></span><br><span class="line">		<span class="keyword">case</span> <span class="string">"Password:"</span>:</span><br><span class="line">			<span class="keyword">return</span> []<span class="keyword">byte</span>(a.password), <span class="literal">nil</span></span><br><span class="line">		<span class="keyword">default</span>:</span><br><span class="line">			<span class="keyword">return</span> <span class="literal">nil</span>, errors.New(<span class="string">"Unkown fromServer"</span>)</span><br><span class="line">		&#125;</span><br><span class="line">	&#125;</span><br><span class="line">	<span class="keyword">return</span> <span class="literal">nil</span>, <span class="literal">nil</span></span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="comment">// 发送邮件</span></span><br><span class="line"><span class="comment">// auth := smtp.PlainAuth("", user, passwd, host)</span></span><br><span class="line">auth := LoginAuth(config.GlobalConfig.User, config.GlobalConfig.Password)</span><br><span class="line"></span><br><span class="line">err := smtp.SendMail(mailServer, auth, config.GlobalConfig.User, to, []<span class="keyword">byte</span>(msg)</span><br></pre></td></tr></table></figure>
+<p>将auth 从PlainAuth切换至自定义的auth即可.</p>
+<p>目前该小工具已经开源, <a href="https://github.com/zhoushuke/sendxmail" target="_blank" rel="noopener">github</a>在这里, 感兴趣的可以查看<code>README.md</code></p>
 <h3 id="参考文章"><a href="#参考文章" class="headerlink" title="参考文章:"></a><strong>参考文章:</strong></h3><blockquote>
 <ul>
-<li><a href="https://blog.csdn.net/dapangzi88/article/details/63686334" target="_blank" rel="noopener">https://blog.csdn.net/dapangzi88/article/details/63686334</a></li>
-<li><a href="https://github.com/garystafford/k8s-istio-observe-backend" target="_blank" rel="noopener">https://github.com/garystafford/k8s-istio-observe-backend</a></li>
-<li><a href="https://izsk.me/2020/02/18/grpc-gateway-loadbalance-on-kubernetes-and-istio/" target="_blank" rel="noopener">https://izsk.me/2020/02/18/grpc-gateway-loadbalance-on-kubernetes-and-istio/</a></li>
-<li><a href="https://github.com/zhoushuke/grpc-gateway-with-opentracing" target="_blank" rel="noopener">https://github.com/zhoushuke/grpc-gateway-with-opentracing</a></li>
-<li><a href="https://izsk.me/2020/01/03/Istio-Install-Upon-Kubernetes/" target="_blank" rel="noopener">https://izsk.me/2020/01/03/Istio-Install-Upon-Kubernetes/</a></li>
-<li><a href="https://www.infoq.cn/article/pqy*PFPhox9OQQ9iCRTt" target="_blank" rel="noopener">https://www.infoq.cn/article/pqy*PFPhox9OQQ9iCRTt</a></li>
+<li><a href="https://being23.github.io/2015/09/17/%E4%BD%BF%E7%94%A8golang%E5%8F%91%E9%80%81%E9%82%AE%E4%BB%B6/]" target="_blank" rel="noopener">https://being23.github.io/2015/09/17/%E4%BD%BF%E7%94%A8golang%E5%8F%91%E9%80%81%E9%82%AE%E4%BB%B6/]</a>(<a href="https://being23.github.io/2015/09/17/使用golang发送邮件/" target="_blank" rel="noopener">https://being23.github.io/2015/09/17/使用golang发送邮件/</a></li>
+<li><a href="https://github.com/zhoushuke/sendxmail" target="_blank" rel="noopener">https://github.com/zhoushuke/sendxmail</a></li>
+<li><a href="http://blog.fatedier.com/2015/08/20/use-smtp-to-sendmail-in-go-and-some-problems-with-smtp/" target="_blank" rel="noopener">http://blog.fatedier.com/2015/08/20/use-smtp-to-sendmail-in-go-and-some-problems-with-smtp/</a></li>
+<li><a href="https://blog.51cto.com/linxucn/837365" target="_blank" rel="noopener">https://blog.51cto.com/linxucn/837365</a></li>
 </ul>
 </blockquote>
 <h3 id="转载请注明出处https-izsk-me"><a href="#转载请注明出处https-izsk-me" class="headerlink" title="转载请注明出处https://izsk.me"></a><strong>转载请注明出处<a href="https://izsk.me" target="_blank" rel="noopener">https://izsk.me</a></strong></h3>
@@ -499,7 +466,7 @@
       
         <div class="post-tags">
           
-            <a href="/tags/ServiceMesh/" rel="tag"># ServiceMesh</a>
+            <a href="/tags/Golang/" rel="tag"># Golang</a>
           
         </div>
       
@@ -508,8 +475,8 @@
         <div class="post-nav">
           <div class="post-nav-next post-nav-item">
             
-              <a href="/2020/02/20/Kubernetes-Spark-Job-InvalidDER/" rel="next" title="kubernetes学习(Kubernetes集群运行Spark-Job提示Invalid-DER:-object-is-not-integer错误的解决办法)">
-                <i class="fa fa-chevron-left"></i> kubernetes学习(Kubernetes集群运行Spark-Job提示Invalid-DER:-object-is-not-integer错误的解决办法)
+              <a href="/2020/04/15/EFK-prombles/" rel="next" title="FELK学习(踩坑记)">
+                <i class="fa fa-chevron-left"></i> FELK学习(踩坑记)
               </a>
             
           </div>
@@ -517,10 +484,6 @@
           <span class="post-nav-divider"></span>
 
           <div class="post-nav-prev post-nav-item">
-            
-              <a href="/2020/02/29/Istio-VirtualService-DestinationRule/" rel="prev" title="Istio学习(VirtualService and DestinationRule流量管理)">
-                Istio学习(VirtualService and DestinationRule流量管理) <i class="fa fa-chevron-right"></i>
-              </a>
             
           </div>
         </div>
@@ -648,7 +611,7 @@
             
 
             
-              <div class="post-toc-content"><ol class="nav"><li class="nav-item nav-level-3"><a class="nav-link" href="#流程"><span class="nav-number">1.</span> <span class="nav-text">流程</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#前提"><span class="nav-number">2.</span> <span class="nav-text">前提</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#部署"><span class="nav-number">3.</span> <span class="nav-text">部署</span></a><ol class="nav-child"><li class="nav-item nav-level-4"><a class="nav-link" href="#编译镜像"><span class="nav-number">3.1.</span> <span class="nav-text">编译镜像</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#发布"><span class="nav-number">3.2.</span> <span class="nav-text">发布</span></a></li></ol></li><li class="nav-item nav-level-3"><a class="nav-link" href="#测试"><span class="nav-number">4.</span> <span class="nav-text">测试</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#Opentracing分析"><span class="nav-number">5.</span> <span class="nav-text">Opentracing分析</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#参考文章"><span class="nav-number">6.</span> <span class="nav-text">参考文章:</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#转载请注明出处https-izsk-me"><span class="nav-number">7.</span> <span class="nav-text">转载请注明出处https://izsk.me</span></a></li></ol></div>
+              <div class="post-toc-content"><ol class="nav"><li class="nav-item nav-level-3"><a class="nav-link" href="#参考文章"><span class="nav-number">1.</span> <span class="nav-text">参考文章:</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#转载请注明出处https-izsk-me"><span class="nav-number">2.</span> <span class="nav-text">转载请注明出处https://izsk.me</span></a></li></ol></div>
             
 
           </div>
