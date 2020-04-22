@@ -1485,6 +1485,235 @@
       </tags>
   </entry>
   <entry>
+    <title>Kubernetes学习(在云架构外运行flannel)</title>
+    <url>/2020/01/07/Kubernetes-running-flannel-out-of-cloud/</url>
+    <content><![CDATA[<p>该文章为翻译文档, 这里是<a href="https://itnext.io/kubernetes-journey-up-and-running-out-of-the-cloud-flannel-c01283308f0e" target="_blank" rel="noopener">原文地址</a>, 比较清晰地说明了flannel在VxLAN下的实现原理</p>
+<a id="more"></a>
+<p>在本文中，我们将详细介绍flannel及其在Kubernetes网络中的作用。我强烈建议您点击参考链接，以更好地了解flannel工作原理。</p>
+<p>在<a href="https://itnext.io/kubernetes-journey-up-and-running-out-of-the-cloud-etcd-b332d1be474c" target="_blank" rel="noopener">上一篇文章中</a>，我们介绍了<strong>etcd</strong>并对其进行了简要概述。</p>
+<p>这些文章是我们的<a href="https://medium.com/@mtvallim/kubernetes-journey-up-and-running-out-of-the-cloud-introduction-f04a811c92a5" target="_blank" rel="noopener">Kubernetes旅程的</a>一部分。我希望您很高兴深入了解如何从云中安装和配置Kubernetes！</p>
+<h3 id="集群网络"><a href="#集群网络" class="headerlink" title="集群网络"></a>集群网络</h3><blockquote>
+<p><em>“网络是Kubernetes的核心部分，但要确切地了解其预期工作方式可能会有些困难。”</em></p>
+</blockquote>
+<blockquote>
+<p>参考：<a href="https://kubernetes.io/docs/concepts/cluster-administration/networking/" target="_blank" rel="noopener">https</a> : <a href="https://kubernetes.io/docs/concepts/cluster-administration/networking/" target="_blank" rel="noopener">//kubernetes.io/docs/concepts/cluster-administration/networking/</a></p>
+</blockquote>
+<p>在讨论<strong>flannel</strong>之前，了解群集的网络特性很重要。</p>
+<p>在本节中，我们将主要集中于了解<strong>Pod到Pod的</strong>通信方式。</p>
+<p><strong>Kubernetes网络模型</strong>遵循一些基本假设。在<a href="https://kubernetes.io/docs/concepts/cluster-administration/networking/#the-kubernetes-network-model" target="_blank" rel="noopener">官方文件</a>说，<strong>Kubernetes网络模型的</strong>要求：</p>
+<ul>
+<li><em>Pod都可以彼此通信，而无需使用网络地址转换（NAT）。</em></li>
+<li><em>节点-运行Kubernetes集群的机器。这些可以是虚拟机或物理机，或者实际上可以运行Kubernetes的任何其他机器-也可以与所有Pod通信，而无需NAT。</em></li>
+<li><em>每个Pod会看到与其他Pod一样的IP</em></li>
+</ul>
+<h3 id="Kubernetes网络模型"><a href="#Kubernetes网络模型" class="headerlink" title="Kubernetes网络模型"></a>Kubernetes网络模型</h3><p><img src="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20200422150307.png" alt></p>
+<p>每个Kubernetes节点（主节点或工作节点）都是Linux机器（VM或Bare Metal），其具有网络命名空间<strong>-netns-</strong>以网络接口作为其主要接口。上图中的<strong>eth0</strong>对此进行了说明。</p>
+<p>仔细观察，我们可以看到每个Pod都有自己的<strong>eth</strong>接口，这意味着每个Pod都有自己的网络配置（IP，路由等）。这也意味着每个Pod都有自己的<strong>网络</strong>，因此我们有一个按网络接口分隔的网络命名空间。</p>
+<p>为了说明这一点，假设您与同事一起参加在拉斯维加斯举行的会议。贵公司将赞助您参加此次会议，因此您将全部留在同一家酒店（Kubernetes节点）。这家酒店的每个房间（一个Pod）都配备了客房电话（网络接口）。</p>
+<p>您可以使用客房电话与不在酒店的家人进行通讯。没有免费的午餐，因此酒店显然会向您收取使用客房电话拨打的任何外部电话的费用。为此，所有外部呼叫都要经过一个中心（<strong>eth0</strong>），该中心将对其进行注册，然后将这些呼叫重定向到外部世界。客房电话和此中央设备之间的链接类似于虚拟接口（<strong>veth</strong>）在网络中扮演的角色</p>
+<p><em>“第五个设备是虚拟以太网设备。它们可以充当网络名称空间之间的隧道，以创建到另一个名称空间中的物理网络设备的桥，但也可以用作独立的网络设备。</em></p>
+<p><em>veth设备总是以互连对的形式创建。”</em></p>
+<blockquote>
+<p>参考：<a href="http://man7.org/linux/man-pages/man4/veth.4.html" target="_blank" rel="noopener">http</a> <em>:</em> <a href="http://man7.org/linux/man-pages/man4/veth.4.html" target="_blank" rel="noopener"><em>//man7.org/linux/man-pages/man4/veth.4.html</em></a></p>
+</blockquote>
+<p>现在，您和您的同事希望例如在您离开会议或吃晚饭时让对方知道。您想节省一些钱，因此决定使用客房电话互相通话，而不是使用手机。当您在酒店办理入住手续时，礼宾部解释说，您可以通过输入<strong>＃&lt;房间号&gt;在</strong>各个房间之间互相呼叫。有一个内部中心，可以进行这种通信。这类似于<strong>cni0</strong>（如上图所示）扮演的角色，充当允许Pod到Pod通信的桥梁。</p>
+<p>这家酒店可能有多栋建筑，而您的一些同事则位于第二栋建筑中。不过，礼宾部解释说根本没有问题。要与他们进行通信，您只需要在房间号之前添加建筑物号：<strong>＃ &lt;房间号&gt;</strong>。内部中央（<strong>cni</strong>）将注意到此地址不是其自己建筑物的内部地址，会将呼叫重定向到中央（<strong>eth0</strong>），这将使它们再次将呼叫重定向到另一个建筑物（另一个Kubernetes节点）中央（类似于<strong>eth0</strong>），依次将呼叫传递到它自己的内部中心，使呼叫最终在目标房间完成。有关此方案的更多技术说明，请检查<strong>在</strong>下面的“<strong>跨不同主机路由流量”</strong>部分。</p>
+<p>在Kubernetes上，所有这些配置和管理都是通过<strong>CNI</strong>（容器网络接口）插件进行的</p>
+<h3 id="什么是CNI"><a href="#什么是CNI" class="headerlink" title="什么是CNI"></a>什么是CNI</h3><p><strong>CNI</strong>是<strong>Container Networking Interface</strong>（<strong>容器网络接口</strong>）的缩写，它基本上是一个外部软件（模块），它实现了<a href="https://github.com/containernetworking/cni/blob/master/SPEC.md#container-network-interface-specification" target="_blank" rel="noopener">规范明确定义</a>的<a href="https://github.com/containernetworking/cni/blob/master/SPEC.md#container-network-interface-specification" target="_blank" rel="noopener">接口</a>，该<a href="https://github.com/containernetworking/cni/blob/master/SPEC.md#container-network-interface-specification" target="_blank" rel="noopener">接口</a>允许<strong>Kubernetes</strong>执行操作以提供网络功能。</p>
+<p>“<strong>每个CNI插件必须实现为由容器管理系统（例如rkt或Kubernetes）调用的可执行文件。</strong></p>
+<p>CNI插件是负责将网络接口到所述容器网络命名空间（例如一个的一端VETH在主机上对），使任何必要的变更（例如，另一端附接VETH成桥）。然后，它应该通过调用适当的IPAM插件，将IP分配给该接口并设置与IP地址管理部分一致的路由。”</p>
+<blockquote>
+<p>参考：<a href="https://github.com/containernetworking/cni/blob/master/SPEC.md#cni-plugin" target="_blank" rel="noopener">https</a> : <a href="https://github.com/containernetworking/cni/blob/master/SPEC.md#cni-plugin" target="_blank" rel="noopener">//github.com/containernetworking/cni/blob/master/SPEC.md#cni-plugin</a></p>
+</blockquote>
+<h3 id="Kubernetes请求路由"><a href="#Kubernetes请求路由" class="headerlink" title="Kubernetes请求路由"></a>Kubernetes请求路由</h3><p>我们将在两种情况下更详细地说明如何在Pod之间路由流量</p>
+<h4 id="在同一主机上路由流量"><a href="#在同一主机上路由流量" class="headerlink" title="在同一主机上路由流量"></a>在同一主机上路由流量</h4><p><img src="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20200422150719.png" alt></p>
+<p>从<strong>Pod 4</strong>到<strong>Pod 6</strong>的逐步通信：</p>
+<ol>
+<li>程序包通过eth4接口离开Pod 4网络，并通过虚拟接口veth4到达根网络</li>
+<li>请求到达cni0，寻找Pod 6的地址</li>
+<li>请求离开cni0并重定向到veth6</li>
+<li>请求通过veth6离开根网络，并通过eth6接口到达pod6网络</li>
+</ol>
+<h4 id="跨不同主机路由流量"><a href="#跨不同主机路由流量" class="headerlink" title="跨不同主机路由流量"></a>跨不同主机路由流量</h4><p><img src="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20200422151055.png" alt></p>
+<p>从<strong>Pod 1</strong>到<strong>Pod 6</strong>的逐步通信：</p>
+<ol>
+<li>程序包通过eth1接口离开Pod 1网络并通过虚拟接口veth1到达根网络</li>
+<li>请求离开veth1并到达cni0，寻找Pod6地址</li>
+<li>请求离开cni0并重定向到eth0</li>
+<li>请求从主机1离开eth0到达网关</li>
+<li>请求离开网关，并通过Worker1上的eth0接口到达根网</li>
+<li>请求离开eth0并到达cni0，以查找Pod6的地址；</li>
+<li>请求离开cni0并重定向到veth6虚拟接口</li>
+<li>请求从根netns通过veth6并到达Pod6 netns的eth6接口;</li>
+</ol>
+<h3 id="flannel"><a href="#flannel" class="headerlink" title="flannel"></a>flannel</h3><p><img src="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20200422151535.png" alt></p>
+<p>“ Flannel是配置专为Kubernetes设计的第3层网络结构的简单方法</p>
+<p><em>Flannel</em> 在每个主机上运行一个小的单一二进制代理程序，称为flanneld，并负责从更大的预配置地址空间中为每个主机分配子网租约。Flannel *直接<strong>使用Kubernetes API或etcd</strong>来存储网络配置，分配的子网以及任何辅助数据（例如主机的公共IP）。数据包使用包括VXLAN和各种云集成在内的几种后端机制之一转发。”</p>
+<blockquote>
+<p>参考：<a href="https://github.com/coreos/flannel" target="_blank" rel="noopener">https</a> : <a href="https://github.com/coreos/flannel" target="_blank" rel="noopener">//github.com/coreos/flannel</a></p>
+</blockquote>
+<h4 id="backend"><a href="#backend" class="headerlink" title="backend"></a>backend</h4><blockquote>
+<p><em>“</em> flannel可以与几个不同的后端进行配对。设置后，不应在运行时更改后端。</p>
+<p>推荐使用<a href="https://github.com/coreos/flannel/blob/master/Documentation/backends.md#vxlan" target="_blank" rel="noopener">VXLAN</a><em>。建议有经验的用户使用</em><a href="https://github.com/coreos/flannel/blob/master/Documentation/backends.md#host-gw" target="_blank" rel="noopener"> host-gw</a><em>来提高性能并获得基础架构的支持（通常不能在云环境中使用）。建议将<a href="https://github.com/coreos/flannel/blob/master/Documentation/backends.md#udp" target="_blank" rel="noopener">UDP</a></em>仅用于调试或不支持VXLAN的非常老的内核。”</p>
+</blockquote>
+<blockquote>
+<p>参考：<a href="https://github.com/coreos/flannel/blob/master/Documentation/backends.md#backends" target="_blank" rel="noopener">https</a> : <a href="https://github.com/coreos/flannel/blob/master/Documentation/backends.md#backends" target="_blank" rel="noopener">//github.com/coreos/flannel/blob/master/Documentation/backends.md</a></p>
+</blockquote>
+<p>在本文中，我们将讨论在解决方案中将使用的<strong>VXLAN</strong>模式的内部</p>
+<p><img src="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20200422151813.png" alt></p>
+<h3 id="flannel-namespace"><a href="#flannel-namespace" class="headerlink" title="flannel namespace"></a>flannel namespace</h3><p>默认情况下，flannel使用CIDR <strong>10.244.0.0/16</strong>为每个节点分配具有<strong>10.244.X.0 / 24</strong>掩码的较小子网，而<strong>Pod</strong>将使用这些子网之一分配给给定节点的IP地址。</p>
+<p>简而言之，这意味着每个节点最多可以有254个活动Pod，其中每个Pod将具有与此分配的子网不同的IP。</p>
+<p>你可以看到在本说明书<strong>KUBE-flannel.yml</strong>清单，在定义<strong>网conf.json</strong>。（官方flannel repository位于下面的链接中）</p>
+<figure class="highlight yaml"><table><tr><td class="code"><pre><span class="line"><span class="attr">kind:</span> <span class="string">ConfigMap</span> </span><br><span class="line"><span class="attr">apiVersion:</span> <span class="string">v1</span></span><br><span class="line"><span class="attr">metadata:</span></span><br><span class="line">  <span class="attr">name:</span> <span class="string">kube-flannel-cfg</span></span><br><span class="line">  <span class="attr">namespace:</span> <span class="string">kube-system</span></span><br><span class="line">  <span class="attr">labels:</span></span><br><span class="line">    <span class="attr">tier:</span> <span class="string">node</span></span><br><span class="line">    <span class="attr">app:</span> <span class="string">flannel</span></span><br><span class="line"><span class="attr">data:</span></span><br><span class="line">  <span class="attr">cni-conf.json:</span> <span class="string">|</span></span><br><span class="line">    <span class="string">&#123;</span></span><br><span class="line">      <span class="attr">"name":</span> <span class="string">"cbr0"</span><span class="string">,</span></span><br><span class="line">      <span class="attr">"plugins":</span> <span class="string">[</span></span><br><span class="line">        <span class="string">&#123;</span></span><br><span class="line">          <span class="attr">"type":</span> <span class="string">"flannel"</span><span class="string">,</span></span><br><span class="line">          <span class="attr">"delegate":</span> <span class="string">&#123;</span></span><br><span class="line">            <span class="attr">"hairpinMode":</span> <span class="literal">true</span><span class="string">,</span></span><br><span class="line">            <span class="attr">"isDefaultGateway":</span> <span class="literal">true</span></span><br><span class="line">          <span class="string">&#125;</span></span><br><span class="line">        <span class="string">&#125;,</span></span><br><span class="line">        <span class="string">&#123;</span></span><br><span class="line">          <span class="attr">"type":</span> <span class="string">"portmap"</span><span class="string">,</span></span><br><span class="line">          <span class="attr">"capabilities":</span> <span class="string">&#123;</span></span><br><span class="line">            <span class="attr">"portMappings":</span> <span class="literal">true</span></span><br><span class="line">          <span class="string">&#125;</span></span><br><span class="line">        <span class="string">&#125;</span></span><br><span class="line">      <span class="string">]</span></span><br><span class="line">    <span class="string">&#125;</span></span><br><span class="line">  <span class="attr">net-conf.json:</span> <span class="string">|</span></span><br><span class="line">    <span class="string">&#123;</span></span><br><span class="line">      <span class="attr">"Network":</span> <span class="string">"10.244.0.0/16"</span><span class="string">,</span></span><br><span class="line">      <span class="attr">"Backend":</span> <span class="string">&#123;</span></span><br><span class="line">        <span class="attr">"Type":</span> <span class="string">"vxlan"</span></span><br><span class="line">      <span class="string">&#125;</span></span><br><span class="line">    <span class="string">&#125;</span></span><br></pre></td></tr></table></figure>
+<h4 id="Virtual-Ethernet-Devices-—-veth"><a href="#Virtual-Ethernet-Devices-—-veth" class="headerlink" title="Virtual Ethernet Devices — veth"></a>Virtual Ethernet Devices — veth</h4><blockquote>
+<p>“第五个设备是虚拟以太网设备。它们可以充当网络名称空间之间的隧道，以创建到另一个名称空间中的物理网络设备的桥梁，但也可以用作独立的网络设备。”</p>
+</blockquote>
+<blockquote>
+<p><em>参考：</em><a href="http://man7.org/linux/man-pages/man4/veth.4.html" target="_blank" rel="noopener"><em>http</em></a> <em>:</em> <a href="http://man7.org/linux/man-pages/man4/veth.4.html" target="_blank" rel="noopener"><em>//man7.org/linux/man-pages/man4/veth.4.html</em></a></p>
+</blockquote>
+<h4 id="Bridge-—-cni0"><a href="#Bridge-—-cni0" class="headerlink" title="Bridge — cni0"></a>Bridge — cni0</h4><p><strong>cni0</strong>是Linux网络桥接设备，所有<strong>veth</strong>设备都将连接到该桥接器，因此同一节点上的所有<strong>Pod</strong>都可以相互通信，如<strong>Kubernetes网络模型</strong>和上述酒店类比中所述    </p>
+<h4 id="vxlan-flannel"><a href="#vxlan-flannel" class="headerlink" title="vxlan-flannel"></a>vxlan-flannel</h4><p><em>“</em> 虚拟可扩展局域网（VXLAN）是一种<em>[</em>网络虚拟化<em>](<a href="https://en.wikipedia.org/wiki/Network_virtualization" target="_blank" rel="noopener">https://en.wikipedia.org/wiki/Network_virtualization</a>)</em>技术，旨在解决<strong>与大型<em>[</em>云计算<em>](<a href="https://en.wikipedia.org/wiki/Cloud_computing" target="_blank" rel="noopener">https://en.wikipedia.org/wiki/Cloud_computing</a>)</em>部署</strong>相关<strong>的<em>[</em>可扩展性<em>](<a href="https://en.wikipedia.org/wiki/Scalability" target="_blank" rel="noopener">https://en.wikipedia.org/wiki/Scalability</a>)</em>问题</strong>。它使用类似<em>[</em>VLAN<em>](<a href="https://en.wikipedia.org/wiki/VLAN" target="_blank" rel="noopener">https://en.wikipedia.org/wiki/VLAN</a>)</em>的封装技术将<a href="https://en.wikipedia.org/wiki/OSI_model" target="_blank" rel="noopener">OSI </a><a href="https://en.wikipedia.org/wiki/Layer_2" target="_blank" rel="noopener"><em>第2层</em></a><a href="https://en.wikipedia.org/wiki/Ethernet_frame" target="_blank" rel="noopener"><em>以太网帧</em></a>封装在<a href="https://en.wikipedia.org/wiki/Layer_4" target="_blank" rel="noopener">第4层</a><a href="https://en.wikipedia.org/wiki/User_Datagram_Protocol" target="_blank" rel="noopener"><em>UDP</em></a><em>数据报中，并使用4789作为默认</em><a href="https://en.wikipedia.org/wiki/Internet_Assigned_Numbers_Authority" target="_blank" rel="noopener"><em>IANA</em></a><em>分配的目标UDP端口号。终止VXLAN隧道的VXLAN终结点，可以是虚拟或物理</em><a href="https://en.wikipedia.org/wiki/Switch_port" target="_blank" rel="noopener">交换机端口</a>，称为VXLAN隧道终结点（VTEP ).”</p>
+<blockquote>
+<p>参考：<a href="https://en.wikipedia.org/wiki/Virtual_Extensible_LAN" target="_blank" rel="noopener">https</a> : <a href="https://en.wikipedia.org/wiki/Virtual_Extensible_LAN" target="_blank" rel="noopener">//en.wikipedia.org/wiki/Virtual_Extensible_LAN</a></p>
+</blockquote>
+<p>该接口（在我们的图中，flannel.1）的主要功能是通过覆盖来确保Pod及其网络之间的通信前提之一（记住每个节点都有一个子网，每个Pod都有该子网的IP)。</p>
+<p>使用VXLAN，可以通过使两个或多个网络像在同一个网络中一样进行操作来连接两个或多个网络，也就是说，每个网络都是其自身网络的一部分，但在同一域内。</p>
+<p>在以前使用的类比中，VXLAN是将一栋建筑物连接到另一栋建筑物的（物理）电话线，从而允许您所在建筑物（Node1）中一个（Pod1)与位于您的同事所在的另一座建筑物（Node2）中的Pod4通信。 </p>
+<p><strong>flanneld</strong>是一个守护程序，负责使节点（及其所包含的Pod）之间的路由保持最新。</p>
+<h3 id="原文地址"><a href="#原文地址" class="headerlink" title="原文地址"></a>原文地址</h3><p><a href="https://itnext.io/kubernetes-journey-up-and-running-out-of-the-cloud-flannel-c01283308f0e" target="_blank" rel="noopener">https://itnext.io/kubernetes-journey-up-and-running-out-of-the-cloud-flannel-c01283308f0e</a></p>
+]]></content>
+      <categories>
+        <category>Kubernetes</category>
+      </categories>
+      <tags>
+        <tag>Kubernetes</tag>
+      </tags>
+  </entry>
+  <entry>
+    <title>Kubernetes学习(Bootstrap Token机制)</title>
+    <url>/2020/01/05/Kubernetes-Bootstrap-Node/</url>
+    <content><![CDATA[<p>CKA考试时可能会遇到一个大题: 大致题意是: 在已经存在的一个Kubernetes Cluster中新增一个Node, 使其加入集群及相关证书可自动续签.</p>
+<a id="more"></a>
+<p>我们一般搭建k8s集群，都使用了一些开源工具来做，这类工具都自动帮我们做了很多事情，因此我们只需要简单执行一条命令后，一个集群就完成搭建了, 非常方便，同时也隐藏了一些k8s的知识点, 比如Bootstarp Token就是上面这道题的考察内容.</p>
+<p>要了解Bootstrap Token前，我们要知道Kubernetes集群的<strong>认证(Kubernetes)及鉴权(Kubernetes)机制</strong>.</p>
+<p>Kubernetes中的存在非常多的证书, 原于Kubernetes的有些组件同时充当服务端及客户端, 比如apiserver, 其它组件访问它时，它是服务端, 同时，它也会访问etcd或者kubelet，这时它是客户端. 这种访问是需要通过认证的,kubernetes的认证也支持多种方式, 证书为其中最常用的, Kubernetes的证书可以存在多套,每套的证书可以由不同的<strong>根证书(CA)</strong>签发, apiserver访问kubelet跟访问etcd可以通过使用由不同根证书签发的证书来访问, 但是一般情况下，一个Kuberntes集群中我们习惯使用一个CA来签署所有的证书, 这也是几乎所有的部署工具采用的方式.</p>
+<p><strong>Bootstrap Token主要涉及认证阶段(TLS)</strong>，至于鉴权机制(RBAC)，不是本文重点.</p>
+<p><strong>集群启用RBAC后各组件之间的通信是基于TLS加密的，client和server需要通过证书中的CN，O来确定用户的user和group，因此client和server都需要持有有效证书, Bootstrap Token只用于kubelet tls 到apiserver的认证, 如果k8s集群本身都未开启tls,那自然就不需要了</strong></p>
+<p><strong>Node在Kubelet的启动参数中指定事先在集群中配置好的Bootstrap Token，这个Bootstrap Token只具有引导Node加入集群的权限限定，除此之外，没有其它权限, 这样通过限定权限可以保障集群安全</strong></p>
+<h3 id="Kubelet申请证书大致流程"><a href="#Kubelet申请证书大致流程" class="headerlink" title="Kubelet申请证书大致流程"></a>Kubelet申请证书大致流程</h3><blockquote>
+<ul>
+<li>集群产生一个低权账号用户组，通过TOKEN进行认证创建ClusterRole使其具有创建证书申请CSR的权限</li>
+<li>给这个组添加ClusterRoleBinding，使得具有这个组的账号的kubelet具有上述权限</li>
+<li>给添加ClusterRoleBinding，使得controller-manager自动同意上述两个证书的下发</li>
+<li>调整 Controller Manager确保启动tokencleaner和bootstrapsigner（4中自动证书下发的功能）</li>
+<li>基于上述TOKEN生成bootstrap.kubeconfig文件，并下发给node节点</li>
+<li>node节点的kubelet拿着这个bootstrap.kubeconfig向master的apiserver发起CSR(certificate signing request)</li>
+<li>master自动同意并下发第一个证书</li>
+<li>node节点的kubelet自动拿着第一个证书与master的apiserver通信申请第二个证书</li>
+<li>master自动同意并下发第二个证书</li>
+<li>node节点加入集群</li>
+</ul>
+</blockquote>
+<p><strong>上述过程要求，kubelet跟apiserver具有相同的CA证书</strong></p>
+<p>假设现阶段已经存在一个k8s集群, 然后存在一台需要加入改集群的node.</p>
+<p>先对Node做一些准备工作:</p>
+<h3 id="Node系统初始化"><a href="#Node系统初始化" class="headerlink" title="Node系统初始化"></a><strong>Node系统初始化</strong></h3><figure class="highlight bash"><table><tr><td class="code"><pre><span class="line">swapoff -a</span><br><span class="line"></span><br><span class="line">modprobe ip_vs_rr</span><br><span class="line"></span><br><span class="line">modprobe br_netfilter</span><br><span class="line"></span><br><span class="line">cat &gt;&gt; /etc/sysctl.conf &lt;&lt;EOF</span><br><span class="line">net.bridge.bridge-nf-call-iptables=1</span><br><span class="line">net.bridge.bridge-nf-call-ip6tables=1</span><br><span class="line">  EOF</span><br><span class="line">sysctl -p /etc/sysctl.conf</span><br></pre></td></tr></table></figure>
+<h3 id="Node安装docker-kubelet"><a href="#Node安装docker-kubelet" class="headerlink" title="Node安装docker/kubelet"></a>Node安装docker/kubelet</h3><figure class="highlight shell"><table><tr><td class="code"><pre><span class="line">apt-get update</span><br><span class="line">apt-get install -y docker kubelet</span><br></pre></td></tr></table></figure>
+<p>此时我们查看kubelet会发现它启动失败,因为目前还未配置bootstrap相关配置，它无法连接上apiserver</p>
+<h3 id="调整kube-apiserver"><a href="#调整kube-apiserver" class="headerlink" title="调整kube-apiserver"></a>调整kube-apiserver</h3><p>要使用bootstrap token引导Node加入集群, kube-apiserver 需要开启参数    <code>--enable-bootstrap-token-auth=true</code></p>
+<h3 id="Bootstrap"><a href="#Bootstrap" class="headerlink" title="Bootstrap"></a>Bootstrap</h3><h4 id="生成一个token"><a href="#生成一个token" class="headerlink" title="生成一个token"></a>生成一个token</h4><figure class="highlight shell"><table><tr><td class="code"><pre><span class="line">echo "$(head -c 6 /dev/urandom | md5sum | head -c 6)"."$(head -c 16 /dev/urandom | md5sum | head -c 16)"</span><br><span class="line">4b0928.8d7687fdb10e3707</span><br></pre></td></tr></table></figure>
+<p>Kubernetes的官方有详细说明, 点击查看<a href="https://kubernetes.io/docs/reference/command-line-tools-reference/kubelet-tls-bootstrapping/#bootstrap-tokens" target="_blank" rel="noopener">Bootstrap Token</a></p>
+<p>既然token只需要符合格式就行，CKA考试的时候可以直接使用页面上的Token来做，毕竟上面这一大串的命令不是谁都能记得住.</p>
+<h4 id="创建-Bootstrap-Token-Secret"><a href="#创建-Bootstrap-Token-Secret" class="headerlink" title="创建 Bootstrap Token Secret"></a>创建 Bootstrap Token Secret</h4><figure class="highlight yaml"><table><tr><td class="code"><pre><span class="line"><span class="attr">apiVersion:</span> <span class="string">v1</span></span><br><span class="line"><span class="attr">kind:</span> <span class="string">Secret</span></span><br><span class="line"><span class="attr">metadata:</span></span><br><span class="line">  <span class="comment"># Name MUST be of form "bootstrap-token-&lt;token id&gt;"</span></span><br><span class="line">  <span class="attr">name:</span> <span class="string">bootstrap-token-4b0928</span></span><br><span class="line">  <span class="attr">namespace:</span> <span class="string">kube-system</span></span><br><span class="line"></span><br><span class="line"><span class="comment"># Type MUST be 'bootstrap.kubernetes.io/token'</span></span><br><span class="line"><span class="attr">type:</span> <span class="string">bootstrap.kubernetes.io/token</span></span><br><span class="line"><span class="attr">stringData:</span></span><br><span class="line">  <span class="comment"># Human readable description. Optional.</span></span><br><span class="line">  <span class="attr">description:</span> <span class="string">"The default bootstrap token generated by 'kubeadm init'."</span></span><br><span class="line"></span><br><span class="line">  <span class="comment"># Token ID and secret. Required.</span></span><br><span class="line">  <span class="attr">token-id:</span> <span class="string">4b0928</span></span><br><span class="line">  <span class="attr">token-secret:</span> <span class="string">8d7687fdb10e3707</span></span><br><span class="line"></span><br><span class="line">  <span class="comment"># Expiration. Optional. 要注意这个过期时间, 如果相对于现在的时间已经过期, 则会被自动删除</span></span><br><span class="line">  <span class="attr">expiration:</span> <span class="number">2021</span><span class="number">-03</span><span class="string">-10T03:22:11Z</span></span><br><span class="line"></span><br><span class="line">  <span class="comment"># Allowed usages.</span></span><br><span class="line">  <span class="attr">usage-bootstrap-authentication:</span> <span class="string">"true"</span></span><br><span class="line">  <span class="attr">usage-bootstrap-signing:</span> <span class="string">"true"</span></span><br><span class="line"></span><br><span class="line">  <span class="comment"># Extra groups to authenticate the token as. Must start with "system:bootstrappers:"</span></span><br><span class="line">  <span class="attr">auth-extra-groups:</span> <span class="string">system:bootstrappers:worker,system:bootstrappers:ingress</span></span><br></pre></td></tr></table></figure>
+<p>secret的格式有要求,如下:</p>
+<blockquote>
+<ul>
+<li>namespace必须是kube-system</li>
+<li>name的后半部分token-id必须是token的前部分</li>
+<li>Expiration必须是未来的某个时刻, 不然的话一新建就会被删除</li>
+<li>token必须属于system:bootstrappers开头的组.</li>
+</ul>
+</blockquote>
+<p>更多信息可看这里<a href="https://kubernetes.io/docs/reference/command-line-tools-reference/kubelet-tls-bootstrapping/" target="_blank" rel="noopener">kubelet-tls-bootstrapping</a></p>
+<p>上述操作只是创建出了这个token, 下面需要给这个token绑定合适的权限, 用于引导Node.</p>
+<h4 id="创建-ClusterRole-和-ClusterRoleBinding"><a href="#创建-ClusterRole-和-ClusterRoleBinding" class="headerlink" title="创建 ClusterRole 和 ClusterRoleBinding"></a>创建 ClusterRole 和 ClusterRoleBinding</h4><p>查看集群必须存在3个clusterrole及3个clusterrolebinding,如下:</p>
+<p>3个clusterrole:</p>
+<blockquote>
+<ul>
+<li>system:certificates.k8s.io:certificatesigningrequests:nodeclient 用于第一次证书认证</li>
+<li>system:certificates.k8s.io:certificatesigningrequests:selfnodeclient 用于证书续签</li>
+<li>system:certificates.k8s.io:certificatesigningrequests:selfnodeserver </li>
+</ul>
+</blockquote>
+<p><strong>nodeclient 类型的 CSR 仅在第一次启动时会产生，selfnodeclient 类型的 CSR 请求实际上就是 kubelet renew 自己作为 client 跟 apiserver 通讯时使用的证书产生的，selfnodeserver 类型的 CSR 请求则是 kubelet 首次申请或后续 renew 自己的 10250 api 端口证书时产生的</strong></p>
+<p>重点关注前两个，后面那个k8s新版本下会自动新建</p>
+<figure class="highlight yaml"><table><tr><td class="code"><pre><span class="line"><span class="comment"># A ClusterRole which instructs the CSR approver to approve a user requesting</span></span><br><span class="line"><span class="comment"># node client credentials.</span></span><br><span class="line"><span class="attr">apiVersion:</span> <span class="string">rbac.authorization.k8s.io/v1</span></span><br><span class="line"><span class="attr">kind:</span> <span class="string">ClusterRole</span></span><br><span class="line"><span class="attr">metadata:</span></span><br><span class="line">  <span class="attr">name:</span> <span class="string">system:certificates.k8s.io:certificatesigningrequests:nodeclient</span></span><br><span class="line"><span class="attr">rules:</span></span><br><span class="line"><span class="bullet">-</span> <span class="attr">apiGroups:</span> <span class="string">["certificates.k8s.io"]</span></span><br><span class="line">  <span class="attr">resources:</span> <span class="string">["certificatesigningrequests/nodeclient"]</span></span><br><span class="line">  <span class="attr">verbs:</span> <span class="string">["create"]</span></span><br><span class="line"><span class="meta">---</span></span><br><span class="line"><span class="comment"># A ClusterRole which instructs the CSR approver to approve a node renewing its</span></span><br><span class="line"><span class="comment"># own client credentials.</span></span><br><span class="line"><span class="attr">apiVersion:</span> <span class="string">rbac.authorization.k8s.io/v1</span></span><br><span class="line"><span class="attr">kind:</span> <span class="string">ClusterRole</span></span><br><span class="line"><span class="attr">metadata:</span></span><br><span class="line">  <span class="attr">name:</span> <span class="string">system:certificates.k8s.io:certificatesigningrequests:selfnodeclient</span></span><br><span class="line"><span class="attr">rules:</span></span><br><span class="line"><span class="bullet">-</span> <span class="attr">apiGroups:</span> <span class="string">["certificates.k8s.io"]</span></span><br><span class="line">  <span class="attr">resources:</span> <span class="string">["certificatesigningrequests/selfnodeclient"]</span></span><br><span class="line">  <span class="attr">verbs:</span> <span class="string">["create"]</span></span><br><span class="line"><span class="meta">---</span></span><br><span class="line"><span class="comment"># A ClusterRole which instructs the CSR approver to approve a node requesting a</span></span><br><span class="line"><span class="comment"># serving cert matching its client cert.</span></span><br><span class="line"><span class="attr">kind:</span> <span class="string">ClusterRole</span></span><br><span class="line"><span class="attr">apiVersion:</span> <span class="string">rbac.authorization.k8s.io/v1</span></span><br><span class="line"><span class="attr">metadata:</span></span><br><span class="line">  <span class="attr">name:</span> <span class="string">system:certificates.k8s.io:certificatesigningrequests:selfnodeserver</span></span><br><span class="line"><span class="attr">rules:</span></span><br><span class="line"><span class="bullet">-</span> <span class="attr">apiGroups:</span> <span class="string">["certificates.k8s.io"]</span></span><br><span class="line">  <span class="attr">resources:</span> <span class="string">["certificatesigningrequests/selfnodeserver"]</span></span><br><span class="line">  <span class="attr">verbs:</span> <span class="string">["create"]</span></span><br></pre></td></tr></table></figure>
+<p>同时，需要有以下3个clusterrolebinding 到 clusterrole</p>
+<blockquote>
+<ul>
+<li>system:node-bootstrapper</li>
+<li>system:certificates.k8s.io:certificatesigningrequests:nodeclient</li>
+<li>system:certificates.k8s.io:certificatesigningrequests:selfnodeclient</li>
+</ul>
+</blockquote>
+<figure class="highlight yaml"><table><tr><td class="code"><pre><span class="line"><span class="comment"># enable bootstrapping nodes to create CSR</span></span><br><span class="line"><span class="attr">apiVersion:</span> <span class="string">rbac.authorization.k8s.io/v1</span></span><br><span class="line"><span class="attr">kind:</span> <span class="string">ClusterRoleBinding</span></span><br><span class="line"><span class="attr">metadata:</span></span><br><span class="line">  <span class="attr">name:</span> <span class="string">create-csrs-for-bootstrapping</span></span><br><span class="line"><span class="attr">subjects:</span></span><br><span class="line"><span class="bullet">-</span> <span class="attr">kind:</span> <span class="string">Group</span></span><br><span class="line">  <span class="attr">name:</span> <span class="string">system:bootstrappers</span></span><br><span class="line">  <span class="attr">apiGroup:</span> <span class="string">rbac.authorization.k8s.io</span></span><br><span class="line"><span class="attr">roleRef:</span></span><br><span class="line">  <span class="attr">kind:</span> <span class="string">ClusterRole</span></span><br><span class="line">  <span class="attr">name:</span> <span class="string">system:node-bootstrapper</span></span><br><span class="line">  <span class="attr">apiGroup:</span> <span class="string">rbac.authorization.k8s.io</span></span><br></pre></td></tr></table></figure>
+<figure class="highlight yaml"><table><tr><td class="code"><pre><span class="line"><span class="comment"># Approve all CSRs for the group "system:bootstrappers"</span></span><br><span class="line"><span class="attr">apiVersion:</span> <span class="string">rbac.authorization.k8s.io/v1</span></span><br><span class="line"><span class="attr">kind:</span> <span class="string">ClusterRoleBinding</span></span><br><span class="line"><span class="attr">metadata:</span></span><br><span class="line">  <span class="attr">name:</span> <span class="string">auto-approve-csrs-for-group</span></span><br><span class="line"><span class="attr">subjects:</span></span><br><span class="line"><span class="bullet">-</span> <span class="attr">kind:</span> <span class="string">Group</span></span><br><span class="line">  <span class="attr">name:</span> <span class="string">system:bootstrappers</span></span><br><span class="line">  <span class="attr">apiGroup:</span> <span class="string">rbac.authorization.k8s.io</span></span><br><span class="line"><span class="attr">roleRef:</span></span><br><span class="line">  <span class="attr">kind:</span> <span class="string">ClusterRole</span></span><br><span class="line">  <span class="attr">name:</span> <span class="string">system:certificates.k8s.io:certificatesigningrequests:nodeclient</span></span><br><span class="line">  <span class="attr">apiGroup:</span> <span class="string">rbac.authorization.k8s.io</span></span><br></pre></td></tr></table></figure>
+<figure class="highlight yaml"><table><tr><td class="code"><pre><span class="line"><span class="comment"># Approve renewal CSRs for the group "system:nodes"</span></span><br><span class="line"><span class="attr">apiVersion:</span> <span class="string">rbac.authorization.k8s.io/v1</span></span><br><span class="line"><span class="attr">kind:</span> <span class="string">ClusterRoleBinding</span></span><br><span class="line"><span class="attr">metadata:</span></span><br><span class="line">  <span class="attr">name:</span> <span class="string">auto-approve-renewals-for-nodes</span></span><br><span class="line"><span class="attr">subjects:</span></span><br><span class="line"><span class="bullet">-</span> <span class="attr">kind:</span> <span class="string">Group</span></span><br><span class="line">  <span class="attr">name:</span> <span class="string">system:nodes</span></span><br><span class="line">  <span class="attr">apiGroup:</span> <span class="string">rbac.authorization.k8s.io</span></span><br><span class="line"><span class="attr">roleRef:</span></span><br><span class="line">  <span class="attr">kind:</span> <span class="string">ClusterRole</span></span><br><span class="line">  <span class="attr">name:</span> <span class="string">system:certificates.k8s.io:certificatesigningrequests:selfnodeclient</span></span><br><span class="line">  <span class="attr">apiGroup:</span> <span class="string">rbac.authorization.k8s.io</span></span><br></pre></td></tr></table></figure>
+<p>自动批准组<code>system:bootstrappers</code>所有CSR 请求(nodeclient)</p>
+<p>自动批准组<code>system:nodes</code>的证书重签CSR请求.</p>
+<p>所以这就是为何token需要属于<code>system:bootstrappers</code>组</p>
+<p>更多信息可看这里<a href="https://kubernetes.io/docs/reference/command-line-tools-reference/kubelet-tls-bootstrapping/#bootstrap-tokens" target="_blank" rel="noopener">bootstrap-tokens</a></p>
+<h3 id="调整kube-controllermanager启动参数"><a href="#调整kube-controllermanager启动参数" class="headerlink" title="调整kube-controllermanager启动参数"></a>调整kube-controllermanager启动参数</h3><p>kube-controllermanager需要开启支持自动签署证书的参数<code>--controllers=*,bootstrapsigner,tokencleaner</code></p>
+<p>这样，每当有Node通过Bootstrap token来请求CSR(certificate signing request)</p>
+<p>对于 controller manager 来说，TLS bootstrapping 下 kubelet 发起的 CSR 请求大致分为以下三种</p>
+<blockquote>
+<ul>
+<li>nodeclient: kubelet 以 <code>O=system:nodes</code> 和 <code>CN=system:node:(node name)</code> 形式发起的 CSR 请求</li>
+<li>selfnodeclient: kubelet client renew 自己的证书发起的 CSR 请求(与上一个证书就有相同的 O 和 CN)</li>
+<li>selfnodeserver: kubelet server renew 自己的证书发起的 CSR 请求</li>
+</ul>
+</blockquote>
+<p>对应上面的3个clusterrole</p>
+<h3 id="生成kubeconfig文件"><a href="#生成kubeconfig文件" class="headerlink" title="生成kubeconfig文件"></a>生成kubeconfig文件</h3><figure class="highlight shell"><table><tr><td class="code"><pre><span class="line"><span class="meta">#</span><span class="bash"> 设置集群参数</span></span><br><span class="line">kubectl config --kubeconfig=/var/lib/kubelet/bootstrap-kubeconfig set-cluster kubernetes --server='https://10.170.0.2:6443' --certificate-authority=/etc/kubernetes/pki/ca.crt</span><br><span class="line"><span class="meta">#</span><span class="bash"> 设置客户端认证参数</span></span><br><span class="line">kubectl config --kubeconfig=/var/lib/kubelet/bootstrap-kubeconfig set-credentials system:bootstrap:4b0928 --token=4b0928.8d7687fdb10e3707</span><br><span class="line"><span class="meta">#</span><span class="bash">设置上下文参数</span></span><br><span class="line">kubectl config --kubeconfig=/var/lib/kubelet/bootstrap-kubeconfig set-context kubernetes --user=system:bootstrap:4b0928 --cluster=kubernetes</span><br><span class="line"><span class="meta">#</span><span class="bash"> 设置默认上下文</span></span><br><span class="line">kubectl config --kubeconfig=/var/lib/kubelet/bootstrap-kubeconfig use-context kubernetes</span><br></pre></td></tr></table></figure>
+<p>通过上面的命令最终会在/var/lib/kubelet目录下生bootstrap-kubeconfig文件, 将该文件放到node节点上, <strong>kubelet指定改文件路径,启动时从改文件中获取apiserver及Bootstrap Token</strong></p>
+<figure class="highlight yaml"><table><tr><td class="code"><pre><span class="line"><span class="attr">apiVersion:</span> <span class="string">v1</span></span><br><span class="line"><span class="attr">clusters:</span></span><br><span class="line"><span class="bullet">-</span> <span class="attr">cluster:</span></span><br><span class="line">    <span class="attr">certificate-authority:</span> <span class="string">/etc/kubernetes/pki/ca.crt</span></span><br><span class="line">    <span class="attr">server:</span> <span class="string">https://10.170.0.2:6443</span></span><br><span class="line">  <span class="attr">name:</span> <span class="string">kubernetes</span></span><br><span class="line"><span class="attr">contexts:</span></span><br><span class="line"><span class="bullet">-</span> <span class="attr">context:</span></span><br><span class="line">    <span class="attr">cluster:</span> <span class="string">kubernetes</span></span><br><span class="line">    <span class="attr">user:</span> <span class="string">system:bootstrap:4b0928</span></span><br><span class="line">  <span class="attr">name:</span> <span class="string">kubernetes</span></span><br><span class="line"><span class="attr">current-context:</span> <span class="string">kubernetes</span></span><br><span class="line"><span class="attr">kind:</span> <span class="string">Config</span></span><br><span class="line"><span class="attr">preferences:</span> <span class="string">&#123;&#125;</span></span><br><span class="line"><span class="attr">users:</span></span><br><span class="line"><span class="bullet">-</span> <span class="attr">name:</span> <span class="string">system:bootstrap:4b0928</span></span><br><span class="line">  <span class="attr">user:</span></span><br><span class="line">    <span class="attr">token:</span> <span class="string">4b0928.8d7687fdb10e3707</span> <span class="comment">#正是上面生成的token.</span></span><br></pre></td></tr></table></figure>
+<h3 id="调整Node上kubelet启动参数"><a href="#调整Node上kubelet启动参数" class="headerlink" title="调整Node上kubelet启动参数"></a>调整Node上kubelet启动参数</h3><p>node上需要有ca.crt(或者ca.pem)</p>
+<p><code>vim /lib/systemd/system/kubelet.service</code></p>
+<figure class="highlight yaml"><table><tr><td class="code"><pre><span class="line"><span class="string">[Unit]</span></span><br><span class="line"><span class="string">Description=kubelet:</span> <span class="string">The</span> <span class="string">Kubernetes</span> <span class="string">Node</span> <span class="string">Agent</span></span><br><span class="line"><span class="string">Documentation=https://kubernetes.io/docs/home/</span></span><br><span class="line"></span><br><span class="line"><span class="string">[Service]</span></span><br><span class="line"><span class="string">ExecStart=/usr/bin/kubelet</span> <span class="string">\</span></span><br><span class="line">  <span class="string">--bootstrap-kubeconfig=/var/lib/kubelet/bootstrap-kubeconfig</span> <span class="string">\</span></span><br><span class="line">  <span class="string">--kubeconfig=/var/lib/kubelet/kubeconfig</span> <span class="string">\</span></span><br><span class="line">  <span class="string">--config=/var/lib/kubelet/config.yaml</span> <span class="string">\</span></span><br><span class="line">  <span class="string">--network-plugin=cni</span> <span class="string">\</span></span><br><span class="line">  <span class="string">--rotate-certificates=true</span> <span class="string">\</span></span><br><span class="line">  <span class="string">--log-dir=/var/lib/kubelet/kubelet.log</span> <span class="string">\</span></span><br><span class="line">  <span class="string">--register-node=true</span> <span class="string">\</span></span><br><span class="line">  <span class="string">--v=2</span></span><br><span class="line"><span class="string">Restart=always</span></span><br><span class="line"><span class="string">StartLimitInterval=0</span></span><br><span class="line"><span class="string">RestartSec=10</span></span><br><span class="line"></span><br><span class="line"><span class="string">[Install]</span></span><br><span class="line"><span class="string">WantedBy=multi-user.target</span></span><br></pre></td></tr></table></figure>
+<p><strong>其中, 在启动时，如果在–kubeconfig指定的路径下存在kubeconfig文件,则使用该文件做认证,如果不存在，则认证为第一次认证，则使用参数bootstrap-kubeconfig指定的文件, 正是包含bootstrap token的引导文件</strong></p>
+<p><strong>通过kube-controller自动签署之后会把最终的kubeconfig写到–kubeconfig参数指定的路径，后续–bootstrap-kubeconfig则没有作用了. </strong></p>
+<p>config.yaml是kubelet的其它参数配置文件</p>
+<figure class="highlight yaml"><table><tr><td class="code"><pre><span class="line"><span class="comment">#cat /var/lib/kubelet/config.yaml</span></span><br><span class="line"><span class="attr">kind:</span> <span class="string">KubeletConfiguration</span></span><br><span class="line"><span class="attr">apiVersion:</span> <span class="string">kubelet.config.k8s.io/v1beta1</span></span><br><span class="line"><span class="attr">address:</span> <span class="number">10.170</span><span class="number">.0</span><span class="number">.3</span></span><br><span class="line"><span class="attr">port:</span> <span class="number">10250</span></span><br><span class="line"><span class="attr">readOnlyPort:</span> <span class="number">10255</span></span><br><span class="line"><span class="attr">cgroupDriver:</span> <span class="string">systemd</span></span><br><span class="line"><span class="attr">clusterDNS:</span> <span class="string">["10.96.0.10"]</span></span><br><span class="line"><span class="attr">clusterDomain:</span> <span class="string">cluster.local</span></span><br><span class="line"><span class="attr">failSwapOn:</span> <span class="literal">false</span></span><br></pre></td></tr></table></figure>
+<h3 id="流程总结"><a href="#流程总结" class="headerlink" title="流程总结"></a>流程总结</h3><blockquote>
+<ul>
+<li>kubelet 读取 bootstrap.kubeconfig，使用其 CA 与 Token 向 apiserver 发起第一次 CSR 请求(nodeclient),使用组<code>system:bootstrappers</code></li>
+<li>apiserver 根据 RBAC 规则自动批准首次 CSR 请求(approve-node-client-csr)，并下发证书(kubelet-client.crt)</li>
+<li>kubelet <strong>使用刚刚签发的证书(O=system:nodes, CN=system:node:NODE_NAME)</strong>与 apiserver 通讯，并发起申请 10250 server 所使用证书的 CSR 请求</li>
+<li>apiserver 根据 RBAC 规则自动批准 kubelet 为其 10250 端口申请的证书(kubelet-server-current.crt)</li>
+<li>证书即将到期时，kubelet 自动向 apiserver 发起用于与 apiserver 通讯所用证书的 renew CSR 请求和 renew 本身 10250 端口所用证书的 CSR 请求</li>
+<li>apiserver 根据 RBAC 规则自动批准两个证书</li>
+<li>kubelet 拿到新证书后关闭所有连接，reload 新证书，以后便一直如此</li>
+</ul>
+</blockquote>
+<p>建议大家都全手动搭建一次kubernetes,这样对Bootstrap Token机制会了解更深入.</p>
+<h3 id="参考文章"><a href="#参考文章" class="headerlink" title="参考文章:"></a><strong>参考文章:</strong></h3><blockquote>
+<ul>
+<li><a href="https://mritd.me/2018/01/07/kubernetes-tls-bootstrapping-note/" target="_blank" rel="noopener">Kubernetes TLS bootstrapping 那点事</a></li>
+<li><a href="https://mritd.me/2018/08/28/kubernetes-tls-bootstrapping-with-bootstrap-token/" target="_blank" rel="noopener">使用 Bootstrap Token 完成 TLS Bootstrapping</a></li>
+<li><a href="https://kubernetes.io/docs/reference/command-line-tools-reference/kubelet-tls-bootstrapping/" target="_blank" rel="noopener">kubelet-tls-bootstrapping</a></li>
+<li><a href="https://kubernetes.io/docs/reference/command-line-tools-reference/kubelet-tls-bootstrapping/#bootstrap-tokens" target="_blank" rel="noopener">Bootstrap Token</a></li>
+<li><a href="https://github.com/kelseyhightower/kubernetes-the-hard-way" target="_blank" rel="noopener">kubernetes-the-hard-way</a></li>
+</ul>
+</blockquote>
+<h3 id="转载请注明出处https-izsk-me"><a href="#转载请注明出处https-izsk-me" class="headerlink" title="转载请注明出处https://izsk.me"></a><strong>转载请注明出处<a href="https://izsk.me" target="_blank" rel="noopener">https://izsk.me</a></strong></h3>]]></content>
+      <categories>
+        <category>Kubernetes</category>
+      </categories>
+      <tags>
+        <tag>Kubernetes</tag>
+      </tags>
+  </entry>
+  <entry>
     <title>Kubernetes学习(flannel深入学习)</title>
     <url>/2020/01/05/Kubernetes-flannel-details/</url>
     <content><![CDATA[<p>得益于社区的繁荣, 包括部署工具的完善, 现在几乎没人会从0去搭建kubernetes集群, 随便拿起一个开源工具, 几乎都是一条命令, 喝个咖啡, 然后整个集群就能用了, 非常快捷, 但是方便的时候, 也容易遗漏掉其中的一些知识点, 有些对整个kubernetes的了解及生态还是非常有必要的.</p>
@@ -1622,130 +1851,6 @@
 <li><a href="https://www.cnblogs.com/YaoDD/p/7681811.html" target="_blank" rel="noopener">https://www.cnblogs.com/YaoDD/p/7681811.html</a></li>
 <li><a href="https://blog.51cto.com/14143894/2462379" target="_blank" rel="noopener">https://blog.51cto.com/14143894/2462379</a></li>
 <li><a href="https://itnext.io/kubernetes-journey-up-and-running-out-of-the-cloud-flannel-c01283308f0e" target="_blank" rel="noopener">https://itnext.io/kubernetes-journey-up-and-running-out-of-the-cloud-flannel-c01283308f0e</a></li>
-</ul>
-</blockquote>
-<h3 id="转载请注明出处https-izsk-me"><a href="#转载请注明出处https-izsk-me" class="headerlink" title="转载请注明出处https://izsk.me"></a><strong>转载请注明出处<a href="https://izsk.me" target="_blank" rel="noopener">https://izsk.me</a></strong></h3>]]></content>
-      <categories>
-        <category>Kubernetes</category>
-      </categories>
-      <tags>
-        <tag>Kubernetes</tag>
-      </tags>
-  </entry>
-  <entry>
-    <title>Kubernetes学习(Bootstrap Token机制)</title>
-    <url>/2020/01/05/Kubernetes-Bootstrap-Node/</url>
-    <content><![CDATA[<p>CKA考试时可能会遇到一个大题: 大致题意是: 在已经存在的一个Kubernetes Cluster中新增一个Node, 使其加入集群及相关证书可自动续签.</p>
-<a id="more"></a>
-<p>我们一般搭建k8s集群，都使用了一些开源工具来做，这类工具都自动帮我们做了很多事情，因此我们只需要简单执行一条命令后，一个集群就完成搭建了, 非常方便，同时也隐藏了一些k8s的知识点, 比如Bootstarp Token就是上面这道题的考察内容.</p>
-<p>要了解Bootstrap Token前，我们要知道Kubernetes集群的<strong>认证(Kubernetes)及鉴权(Kubernetes)机制</strong>.</p>
-<p>Kubernetes中的存在非常多的证书, 原于Kubernetes的有些组件同时充当服务端及客户端, 比如apiserver, 其它组件访问它时，它是服务端, 同时，它也会访问etcd或者kubelet，这时它是客户端. 这种访问是需要通过认证的,kubernetes的认证也支持多种方式, 证书为其中最常用的, Kubernetes的证书可以存在多套,每套的证书可以由不同的<strong>根证书(CA)</strong>签发, apiserver访问kubelet跟访问etcd可以通过使用由不同根证书签发的证书来访问, 但是一般情况下，一个Kuberntes集群中我们习惯使用一个CA来签署所有的证书, 这也是几乎所有的部署工具采用的方式.</p>
-<p><strong>Bootstrap Token主要涉及认证阶段(TLS)</strong>，至于鉴权机制(RBAC)，不是本文重点.</p>
-<p><strong>集群启用RBAC后各组件之间的通信是基于TLS加密的，client和server需要通过证书中的CN，O来确定用户的user和group，因此client和server都需要持有有效证书, Bootstrap Token只用于kubelet tls 到apiserver的认证, 如果k8s集群本身都未开启tls,那自然就不需要了</strong></p>
-<p><strong>Node在Kubelet的启动参数中指定事先在集群中配置好的Bootstrap Token，这个Bootstrap Token只具有引导Node加入集群的权限限定，除此之外，没有其它权限, 这样通过限定权限可以保障集群安全</strong></p>
-<h3 id="Kubelet申请证书大致流程"><a href="#Kubelet申请证书大致流程" class="headerlink" title="Kubelet申请证书大致流程"></a>Kubelet申请证书大致流程</h3><blockquote>
-<ul>
-<li>集群产生一个低权账号用户组，通过TOKEN进行认证创建ClusterRole使其具有创建证书申请CSR的权限</li>
-<li>给这个组添加ClusterRoleBinding，使得具有这个组的账号的kubelet具有上述权限</li>
-<li>给添加ClusterRoleBinding，使得controller-manager自动同意上述两个证书的下发</li>
-<li>调整 Controller Manager确保启动tokencleaner和bootstrapsigner（4中自动证书下发的功能）</li>
-<li>基于上述TOKEN生成bootstrap.kubeconfig文件，并下发给node节点</li>
-<li>node节点的kubelet拿着这个bootstrap.kubeconfig向master的apiserver发起CSR(certificate signing request)</li>
-<li>master自动同意并下发第一个证书</li>
-<li>node节点的kubelet自动拿着第一个证书与master的apiserver通信申请第二个证书</li>
-<li>master自动同意并下发第二个证书</li>
-<li>node节点加入集群</li>
-</ul>
-</blockquote>
-<p><strong>上述过程要求，kubelet跟apiserver具有相同的CA证书</strong></p>
-<p>假设现阶段已经存在一个k8s集群, 然后存在一台需要加入改集群的node.</p>
-<p>先对Node做一些准备工作:</p>
-<h3 id="Node系统初始化"><a href="#Node系统初始化" class="headerlink" title="Node系统初始化"></a><strong>Node系统初始化</strong></h3><figure class="highlight bash"><table><tr><td class="code"><pre><span class="line">swapoff -a</span><br><span class="line"></span><br><span class="line">modprobe ip_vs_rr</span><br><span class="line"></span><br><span class="line">modprobe br_netfilter</span><br><span class="line"></span><br><span class="line">cat &gt;&gt; /etc/sysctl.conf &lt;&lt;EOF</span><br><span class="line">net.bridge.bridge-nf-call-iptables=1</span><br><span class="line">net.bridge.bridge-nf-call-ip6tables=1</span><br><span class="line">  EOF</span><br><span class="line">sysctl -p /etc/sysctl.conf</span><br></pre></td></tr></table></figure>
-<h3 id="Node安装docker-kubelet"><a href="#Node安装docker-kubelet" class="headerlink" title="Node安装docker/kubelet"></a>Node安装docker/kubelet</h3><figure class="highlight shell"><table><tr><td class="code"><pre><span class="line">apt-get update</span><br><span class="line">apt-get install -y docker kubelet</span><br></pre></td></tr></table></figure>
-<p>此时我们查看kubelet会发现它启动失败,因为目前还未配置bootstrap相关配置，它无法连接上apiserver</p>
-<h3 id="调整kube-apiserver"><a href="#调整kube-apiserver" class="headerlink" title="调整kube-apiserver"></a>调整kube-apiserver</h3><p>要使用bootstrap token引导Node加入集群, kube-apiserver 需要开启参数    <code>--enable-bootstrap-token-auth=true</code></p>
-<h3 id="Bootstrap"><a href="#Bootstrap" class="headerlink" title="Bootstrap"></a>Bootstrap</h3><h4 id="生成一个token"><a href="#生成一个token" class="headerlink" title="生成一个token"></a>生成一个token</h4><figure class="highlight shell"><table><tr><td class="code"><pre><span class="line">echo "$(head -c 6 /dev/urandom | md5sum | head -c 6)"."$(head -c 16 /dev/urandom | md5sum | head -c 16)"</span><br><span class="line">4b0928.8d7687fdb10e3707</span><br></pre></td></tr></table></figure>
-<p>Kubernetes的官方有详细说明, 点击查看<a href="https://kubernetes.io/docs/reference/command-line-tools-reference/kubelet-tls-bootstrapping/#bootstrap-tokens" target="_blank" rel="noopener">Bootstrap Token</a></p>
-<p>既然token只需要符合格式就行，CKA考试的时候可以直接使用页面上的Token来做，毕竟上面这一大串的命令不是谁都能记得住.</p>
-<h4 id="创建-Bootstrap-Token-Secret"><a href="#创建-Bootstrap-Token-Secret" class="headerlink" title="创建 Bootstrap Token Secret"></a>创建 Bootstrap Token Secret</h4><figure class="highlight yaml"><table><tr><td class="code"><pre><span class="line"><span class="attr">apiVersion:</span> <span class="string">v1</span></span><br><span class="line"><span class="attr">kind:</span> <span class="string">Secret</span></span><br><span class="line"><span class="attr">metadata:</span></span><br><span class="line">  <span class="comment"># Name MUST be of form "bootstrap-token-&lt;token id&gt;"</span></span><br><span class="line">  <span class="attr">name:</span> <span class="string">bootstrap-token-4b0928</span></span><br><span class="line">  <span class="attr">namespace:</span> <span class="string">kube-system</span></span><br><span class="line"></span><br><span class="line"><span class="comment"># Type MUST be 'bootstrap.kubernetes.io/token'</span></span><br><span class="line"><span class="attr">type:</span> <span class="string">bootstrap.kubernetes.io/token</span></span><br><span class="line"><span class="attr">stringData:</span></span><br><span class="line">  <span class="comment"># Human readable description. Optional.</span></span><br><span class="line">  <span class="attr">description:</span> <span class="string">"The default bootstrap token generated by 'kubeadm init'."</span></span><br><span class="line"></span><br><span class="line">  <span class="comment"># Token ID and secret. Required.</span></span><br><span class="line">  <span class="attr">token-id:</span> <span class="string">4b0928</span></span><br><span class="line">  <span class="attr">token-secret:</span> <span class="string">8d7687fdb10e3707</span></span><br><span class="line"></span><br><span class="line">  <span class="comment"># Expiration. Optional. 要注意这个过期时间, 如果相对于现在的时间已经过期, 则会被自动删除</span></span><br><span class="line">  <span class="attr">expiration:</span> <span class="number">2021</span><span class="number">-03</span><span class="string">-10T03:22:11Z</span></span><br><span class="line"></span><br><span class="line">  <span class="comment"># Allowed usages.</span></span><br><span class="line">  <span class="attr">usage-bootstrap-authentication:</span> <span class="string">"true"</span></span><br><span class="line">  <span class="attr">usage-bootstrap-signing:</span> <span class="string">"true"</span></span><br><span class="line"></span><br><span class="line">  <span class="comment"># Extra groups to authenticate the token as. Must start with "system:bootstrappers:"</span></span><br><span class="line">  <span class="attr">auth-extra-groups:</span> <span class="string">system:bootstrappers:worker,system:bootstrappers:ingress</span></span><br></pre></td></tr></table></figure>
-<p>secret的格式有要求,如下:</p>
-<blockquote>
-<ul>
-<li>namespace必须是kube-system</li>
-<li>name的后半部分token-id必须是token的前部分</li>
-<li>Expiration必须是未来的某个时刻, 不然的话一新建就会被删除</li>
-<li>token必须属于system:bootstrappers开头的组.</li>
-</ul>
-</blockquote>
-<p>更多信息可看这里<a href="https://kubernetes.io/docs/reference/command-line-tools-reference/kubelet-tls-bootstrapping/" target="_blank" rel="noopener">kubelet-tls-bootstrapping</a></p>
-<p>上述操作只是创建出了这个token, 下面需要给这个token绑定合适的权限, 用于引导Node.</p>
-<h4 id="创建-ClusterRole-和-ClusterRoleBinding"><a href="#创建-ClusterRole-和-ClusterRoleBinding" class="headerlink" title="创建 ClusterRole 和 ClusterRoleBinding"></a>创建 ClusterRole 和 ClusterRoleBinding</h4><p>查看集群必须存在3个clusterrole及3个clusterrolebinding,如下:</p>
-<p>3个clusterrole:</p>
-<blockquote>
-<ul>
-<li>system:certificates.k8s.io:certificatesigningrequests:nodeclient 用于第一次证书认证</li>
-<li>system:certificates.k8s.io:certificatesigningrequests:selfnodeclient 用于证书续签</li>
-<li>system:certificates.k8s.io:certificatesigningrequests:selfnodeserver </li>
-</ul>
-</blockquote>
-<p><strong>nodeclient 类型的 CSR 仅在第一次启动时会产生，selfnodeclient 类型的 CSR 请求实际上就是 kubelet renew 自己作为 client 跟 apiserver 通讯时使用的证书产生的，selfnodeserver 类型的 CSR 请求则是 kubelet 首次申请或后续 renew 自己的 10250 api 端口证书时产生的</strong></p>
-<p>重点关注前两个，后面那个k8s新版本下会自动新建</p>
-<figure class="highlight yaml"><table><tr><td class="code"><pre><span class="line"><span class="comment"># A ClusterRole which instructs the CSR approver to approve a user requesting</span></span><br><span class="line"><span class="comment"># node client credentials.</span></span><br><span class="line"><span class="attr">apiVersion:</span> <span class="string">rbac.authorization.k8s.io/v1</span></span><br><span class="line"><span class="attr">kind:</span> <span class="string">ClusterRole</span></span><br><span class="line"><span class="attr">metadata:</span></span><br><span class="line">  <span class="attr">name:</span> <span class="string">system:certificates.k8s.io:certificatesigningrequests:nodeclient</span></span><br><span class="line"><span class="attr">rules:</span></span><br><span class="line"><span class="bullet">-</span> <span class="attr">apiGroups:</span> <span class="string">["certificates.k8s.io"]</span></span><br><span class="line">  <span class="attr">resources:</span> <span class="string">["certificatesigningrequests/nodeclient"]</span></span><br><span class="line">  <span class="attr">verbs:</span> <span class="string">["create"]</span></span><br><span class="line"><span class="meta">---</span></span><br><span class="line"><span class="comment"># A ClusterRole which instructs the CSR approver to approve a node renewing its</span></span><br><span class="line"><span class="comment"># own client credentials.</span></span><br><span class="line"><span class="attr">apiVersion:</span> <span class="string">rbac.authorization.k8s.io/v1</span></span><br><span class="line"><span class="attr">kind:</span> <span class="string">ClusterRole</span></span><br><span class="line"><span class="attr">metadata:</span></span><br><span class="line">  <span class="attr">name:</span> <span class="string">system:certificates.k8s.io:certificatesigningrequests:selfnodeclient</span></span><br><span class="line"><span class="attr">rules:</span></span><br><span class="line"><span class="bullet">-</span> <span class="attr">apiGroups:</span> <span class="string">["certificates.k8s.io"]</span></span><br><span class="line">  <span class="attr">resources:</span> <span class="string">["certificatesigningrequests/selfnodeclient"]</span></span><br><span class="line">  <span class="attr">verbs:</span> <span class="string">["create"]</span></span><br><span class="line"><span class="meta">---</span></span><br><span class="line"><span class="comment"># A ClusterRole which instructs the CSR approver to approve a node requesting a</span></span><br><span class="line"><span class="comment"># serving cert matching its client cert.</span></span><br><span class="line"><span class="attr">kind:</span> <span class="string">ClusterRole</span></span><br><span class="line"><span class="attr">apiVersion:</span> <span class="string">rbac.authorization.k8s.io/v1</span></span><br><span class="line"><span class="attr">metadata:</span></span><br><span class="line">  <span class="attr">name:</span> <span class="string">system:certificates.k8s.io:certificatesigningrequests:selfnodeserver</span></span><br><span class="line"><span class="attr">rules:</span></span><br><span class="line"><span class="bullet">-</span> <span class="attr">apiGroups:</span> <span class="string">["certificates.k8s.io"]</span></span><br><span class="line">  <span class="attr">resources:</span> <span class="string">["certificatesigningrequests/selfnodeserver"]</span></span><br><span class="line">  <span class="attr">verbs:</span> <span class="string">["create"]</span></span><br></pre></td></tr></table></figure>
-<p>同时，需要有以下3个clusterrolebinding 到 clusterrole</p>
-<blockquote>
-<ul>
-<li>system:node-bootstrapper</li>
-<li>system:certificates.k8s.io:certificatesigningrequests:nodeclient</li>
-<li>system:certificates.k8s.io:certificatesigningrequests:selfnodeclient</li>
-</ul>
-</blockquote>
-<figure class="highlight yaml"><table><tr><td class="code"><pre><span class="line"><span class="comment"># enable bootstrapping nodes to create CSR</span></span><br><span class="line"><span class="attr">apiVersion:</span> <span class="string">rbac.authorization.k8s.io/v1</span></span><br><span class="line"><span class="attr">kind:</span> <span class="string">ClusterRoleBinding</span></span><br><span class="line"><span class="attr">metadata:</span></span><br><span class="line">  <span class="attr">name:</span> <span class="string">create-csrs-for-bootstrapping</span></span><br><span class="line"><span class="attr">subjects:</span></span><br><span class="line"><span class="bullet">-</span> <span class="attr">kind:</span> <span class="string">Group</span></span><br><span class="line">  <span class="attr">name:</span> <span class="string">system:bootstrappers</span></span><br><span class="line">  <span class="attr">apiGroup:</span> <span class="string">rbac.authorization.k8s.io</span></span><br><span class="line"><span class="attr">roleRef:</span></span><br><span class="line">  <span class="attr">kind:</span> <span class="string">ClusterRole</span></span><br><span class="line">  <span class="attr">name:</span> <span class="string">system:node-bootstrapper</span></span><br><span class="line">  <span class="attr">apiGroup:</span> <span class="string">rbac.authorization.k8s.io</span></span><br></pre></td></tr></table></figure>
-<figure class="highlight yaml"><table><tr><td class="code"><pre><span class="line"><span class="comment"># Approve all CSRs for the group "system:bootstrappers"</span></span><br><span class="line"><span class="attr">apiVersion:</span> <span class="string">rbac.authorization.k8s.io/v1</span></span><br><span class="line"><span class="attr">kind:</span> <span class="string">ClusterRoleBinding</span></span><br><span class="line"><span class="attr">metadata:</span></span><br><span class="line">  <span class="attr">name:</span> <span class="string">auto-approve-csrs-for-group</span></span><br><span class="line"><span class="attr">subjects:</span></span><br><span class="line"><span class="bullet">-</span> <span class="attr">kind:</span> <span class="string">Group</span></span><br><span class="line">  <span class="attr">name:</span> <span class="string">system:bootstrappers</span></span><br><span class="line">  <span class="attr">apiGroup:</span> <span class="string">rbac.authorization.k8s.io</span></span><br><span class="line"><span class="attr">roleRef:</span></span><br><span class="line">  <span class="attr">kind:</span> <span class="string">ClusterRole</span></span><br><span class="line">  <span class="attr">name:</span> <span class="string">system:certificates.k8s.io:certificatesigningrequests:nodeclient</span></span><br><span class="line">  <span class="attr">apiGroup:</span> <span class="string">rbac.authorization.k8s.io</span></span><br></pre></td></tr></table></figure>
-<figure class="highlight yaml"><table><tr><td class="code"><pre><span class="line"><span class="comment"># Approve renewal CSRs for the group "system:nodes"</span></span><br><span class="line"><span class="attr">apiVersion:</span> <span class="string">rbac.authorization.k8s.io/v1</span></span><br><span class="line"><span class="attr">kind:</span> <span class="string">ClusterRoleBinding</span></span><br><span class="line"><span class="attr">metadata:</span></span><br><span class="line">  <span class="attr">name:</span> <span class="string">auto-approve-renewals-for-nodes</span></span><br><span class="line"><span class="attr">subjects:</span></span><br><span class="line"><span class="bullet">-</span> <span class="attr">kind:</span> <span class="string">Group</span></span><br><span class="line">  <span class="attr">name:</span> <span class="string">system:nodes</span></span><br><span class="line">  <span class="attr">apiGroup:</span> <span class="string">rbac.authorization.k8s.io</span></span><br><span class="line"><span class="attr">roleRef:</span></span><br><span class="line">  <span class="attr">kind:</span> <span class="string">ClusterRole</span></span><br><span class="line">  <span class="attr">name:</span> <span class="string">system:certificates.k8s.io:certificatesigningrequests:selfnodeclient</span></span><br><span class="line">  <span class="attr">apiGroup:</span> <span class="string">rbac.authorization.k8s.io</span></span><br></pre></td></tr></table></figure>
-<p>自动批准组<code>system:bootstrappers</code>所有CSR 请求(nodeclient)</p>
-<p>自动批准组<code>system:nodes</code>的证书重签CSR请求.</p>
-<p>所以这就是为何token需要属于<code>system:bootstrappers</code>组</p>
-<p>更多信息可看这里<a href="https://kubernetes.io/docs/reference/command-line-tools-reference/kubelet-tls-bootstrapping/#bootstrap-tokens" target="_blank" rel="noopener">bootstrap-tokens</a></p>
-<h3 id="调整kube-controllermanager启动参数"><a href="#调整kube-controllermanager启动参数" class="headerlink" title="调整kube-controllermanager启动参数"></a>调整kube-controllermanager启动参数</h3><p>kube-controllermanager需要开启支持自动签署证书的参数<code>--controllers=*,bootstrapsigner,tokencleaner</code></p>
-<p>这样，每当有Node通过Bootstrap token来请求CSR(certificate signing request)</p>
-<p>对于 controller manager 来说，TLS bootstrapping 下 kubelet 发起的 CSR 请求大致分为以下三种</p>
-<blockquote>
-<ul>
-<li>nodeclient: kubelet 以 <code>O=system:nodes</code> 和 <code>CN=system:node:(node name)</code> 形式发起的 CSR 请求</li>
-<li>selfnodeclient: kubelet client renew 自己的证书发起的 CSR 请求(与上一个证书就有相同的 O 和 CN)</li>
-<li>selfnodeserver: kubelet server renew 自己的证书发起的 CSR 请求</li>
-</ul>
-</blockquote>
-<p>对应上面的3个clusterrole</p>
-<h3 id="生成kubeconfig文件"><a href="#生成kubeconfig文件" class="headerlink" title="生成kubeconfig文件"></a>生成kubeconfig文件</h3><figure class="highlight shell"><table><tr><td class="code"><pre><span class="line"><span class="meta">#</span><span class="bash"> 设置集群参数</span></span><br><span class="line">kubectl config --kubeconfig=/var/lib/kubelet/bootstrap-kubeconfig set-cluster kubernetes --server='https://10.170.0.2:6443' --certificate-authority=/etc/kubernetes/pki/ca.crt</span><br><span class="line"><span class="meta">#</span><span class="bash"> 设置客户端认证参数</span></span><br><span class="line">kubectl config --kubeconfig=/var/lib/kubelet/bootstrap-kubeconfig set-credentials system:bootstrap:4b0928 --token=4b0928.8d7687fdb10e3707</span><br><span class="line"><span class="meta">#</span><span class="bash">设置上下文参数</span></span><br><span class="line">kubectl config --kubeconfig=/var/lib/kubelet/bootstrap-kubeconfig set-context kubernetes --user=system:bootstrap:4b0928 --cluster=kubernetes</span><br><span class="line"><span class="meta">#</span><span class="bash"> 设置默认上下文</span></span><br><span class="line">kubectl config --kubeconfig=/var/lib/kubelet/bootstrap-kubeconfig use-context kubernetes</span><br></pre></td></tr></table></figure>
-<p>通过上面的命令最终会在/var/lib/kubelet目录下生bootstrap-kubeconfig文件, 将该文件放到node节点上, <strong>kubelet指定改文件路径,启动时从改文件中获取apiserver及Bootstrap Token</strong></p>
-<figure class="highlight yaml"><table><tr><td class="code"><pre><span class="line"><span class="attr">apiVersion:</span> <span class="string">v1</span></span><br><span class="line"><span class="attr">clusters:</span></span><br><span class="line"><span class="bullet">-</span> <span class="attr">cluster:</span></span><br><span class="line">    <span class="attr">certificate-authority:</span> <span class="string">/etc/kubernetes/pki/ca.crt</span></span><br><span class="line">    <span class="attr">server:</span> <span class="string">https://10.170.0.2:6443</span></span><br><span class="line">  <span class="attr">name:</span> <span class="string">kubernetes</span></span><br><span class="line"><span class="attr">contexts:</span></span><br><span class="line"><span class="bullet">-</span> <span class="attr">context:</span></span><br><span class="line">    <span class="attr">cluster:</span> <span class="string">kubernetes</span></span><br><span class="line">    <span class="attr">user:</span> <span class="string">system:bootstrap:4b0928</span></span><br><span class="line">  <span class="attr">name:</span> <span class="string">kubernetes</span></span><br><span class="line"><span class="attr">current-context:</span> <span class="string">kubernetes</span></span><br><span class="line"><span class="attr">kind:</span> <span class="string">Config</span></span><br><span class="line"><span class="attr">preferences:</span> <span class="string">&#123;&#125;</span></span><br><span class="line"><span class="attr">users:</span></span><br><span class="line"><span class="bullet">-</span> <span class="attr">name:</span> <span class="string">system:bootstrap:4b0928</span></span><br><span class="line">  <span class="attr">user:</span></span><br><span class="line">    <span class="attr">token:</span> <span class="string">4b0928.8d7687fdb10e3707</span> <span class="comment">#正是上面生成的token.</span></span><br></pre></td></tr></table></figure>
-<h3 id="调整Node上kubelet启动参数"><a href="#调整Node上kubelet启动参数" class="headerlink" title="调整Node上kubelet启动参数"></a>调整Node上kubelet启动参数</h3><p>node上需要有ca.crt(或者ca.pem)</p>
-<p><code>vim /lib/systemd/system/kubelet.service</code></p>
-<figure class="highlight yaml"><table><tr><td class="code"><pre><span class="line"><span class="string">[Unit]</span></span><br><span class="line"><span class="string">Description=kubelet:</span> <span class="string">The</span> <span class="string">Kubernetes</span> <span class="string">Node</span> <span class="string">Agent</span></span><br><span class="line"><span class="string">Documentation=https://kubernetes.io/docs/home/</span></span><br><span class="line"></span><br><span class="line"><span class="string">[Service]</span></span><br><span class="line"><span class="string">ExecStart=/usr/bin/kubelet</span> <span class="string">\</span></span><br><span class="line">  <span class="string">--bootstrap-kubeconfig=/var/lib/kubelet/bootstrap-kubeconfig</span> <span class="string">\</span></span><br><span class="line">  <span class="string">--kubeconfig=/var/lib/kubelet/kubeconfig</span> <span class="string">\</span></span><br><span class="line">  <span class="string">--config=/var/lib/kubelet/config.yaml</span> <span class="string">\</span></span><br><span class="line">  <span class="string">--network-plugin=cni</span> <span class="string">\</span></span><br><span class="line">  <span class="string">--rotate-certificates=true</span> <span class="string">\</span></span><br><span class="line">  <span class="string">--log-dir=/var/lib/kubelet/kubelet.log</span> <span class="string">\</span></span><br><span class="line">  <span class="string">--register-node=true</span> <span class="string">\</span></span><br><span class="line">  <span class="string">--v=2</span></span><br><span class="line"><span class="string">Restart=always</span></span><br><span class="line"><span class="string">StartLimitInterval=0</span></span><br><span class="line"><span class="string">RestartSec=10</span></span><br><span class="line"></span><br><span class="line"><span class="string">[Install]</span></span><br><span class="line"><span class="string">WantedBy=multi-user.target</span></span><br></pre></td></tr></table></figure>
-<p><strong>其中, 在启动时，如果在–kubeconfig指定的路径下存在kubeconfig文件,则使用该文件做认证,如果不存在，则认证为第一次认证，则使用参数bootstrap-kubeconfig指定的文件, 正是包含bootstrap token的引导文件</strong></p>
-<p><strong>通过kube-controller自动签署之后会把最终的kubeconfig写到–kubeconfig参数指定的路径，后续–bootstrap-kubeconfig则没有作用了. </strong></p>
-<p>config.yaml是kubelet的其它参数配置文件</p>
-<figure class="highlight yaml"><table><tr><td class="code"><pre><span class="line"><span class="comment">#cat /var/lib/kubelet/config.yaml</span></span><br><span class="line"><span class="attr">kind:</span> <span class="string">KubeletConfiguration</span></span><br><span class="line"><span class="attr">apiVersion:</span> <span class="string">kubelet.config.k8s.io/v1beta1</span></span><br><span class="line"><span class="attr">address:</span> <span class="number">10.170</span><span class="number">.0</span><span class="number">.3</span></span><br><span class="line"><span class="attr">port:</span> <span class="number">10250</span></span><br><span class="line"><span class="attr">readOnlyPort:</span> <span class="number">10255</span></span><br><span class="line"><span class="attr">cgroupDriver:</span> <span class="string">systemd</span></span><br><span class="line"><span class="attr">clusterDNS:</span> <span class="string">["10.96.0.10"]</span></span><br><span class="line"><span class="attr">clusterDomain:</span> <span class="string">cluster.local</span></span><br><span class="line"><span class="attr">failSwapOn:</span> <span class="literal">false</span></span><br></pre></td></tr></table></figure>
-<h3 id="流程总结"><a href="#流程总结" class="headerlink" title="流程总结"></a>流程总结</h3><blockquote>
-<ul>
-<li>kubelet 读取 bootstrap.kubeconfig，使用其 CA 与 Token 向 apiserver 发起第一次 CSR 请求(nodeclient),使用组<code>system:bootstrappers</code></li>
-<li>apiserver 根据 RBAC 规则自动批准首次 CSR 请求(approve-node-client-csr)，并下发证书(kubelet-client.crt)</li>
-<li>kubelet <strong>使用刚刚签发的证书(O=system:nodes, CN=system:node:NODE_NAME)</strong>与 apiserver 通讯，并发起申请 10250 server 所使用证书的 CSR 请求</li>
-<li>apiserver 根据 RBAC 规则自动批准 kubelet 为其 10250 端口申请的证书(kubelet-server-current.crt)</li>
-<li>证书即将到期时，kubelet 自动向 apiserver 发起用于与 apiserver 通讯所用证书的 renew CSR 请求和 renew 本身 10250 端口所用证书的 CSR 请求</li>
-<li>apiserver 根据 RBAC 规则自动批准两个证书</li>
-<li>kubelet 拿到新证书后关闭所有连接，reload 新证书，以后便一直如此</li>
-</ul>
-</blockquote>
-<p>建议大家都全手动搭建一次kubernetes,这样对Bootstrap Token机制会了解更深入.</p>
-<h3 id="参考文章"><a href="#参考文章" class="headerlink" title="参考文章:"></a><strong>参考文章:</strong></h3><blockquote>
-<ul>
-<li><a href="https://mritd.me/2018/01/07/kubernetes-tls-bootstrapping-note/" target="_blank" rel="noopener">Kubernetes TLS bootstrapping 那点事</a></li>
-<li><a href="https://mritd.me/2018/08/28/kubernetes-tls-bootstrapping-with-bootstrap-token/" target="_blank" rel="noopener">使用 Bootstrap Token 完成 TLS Bootstrapping</a></li>
-<li><a href="https://kubernetes.io/docs/reference/command-line-tools-reference/kubelet-tls-bootstrapping/" target="_blank" rel="noopener">kubelet-tls-bootstrapping</a></li>
-<li><a href="https://kubernetes.io/docs/reference/command-line-tools-reference/kubelet-tls-bootstrapping/#bootstrap-tokens" target="_blank" rel="noopener">Bootstrap Token</a></li>
-<li><a href="https://github.com/kelseyhightower/kubernetes-the-hard-way" target="_blank" rel="noopener">kubernetes-the-hard-way</a></li>
 </ul>
 </blockquote>
 <h3 id="转载请注明出处https-izsk-me"><a href="#转载请注明出处https-izsk-me" class="headerlink" title="转载请注明出处https://izsk.me"></a><strong>转载请注明出处<a href="https://izsk.me" target="_blank" rel="noopener">https://izsk.me</a></strong></h3>]]></content>
@@ -5633,46 +5738,6 @@
       </tags>
   </entry>
   <entry>
-    <title>HTTP之长连接及短连接</title>
-    <url>/2017/08/12/HTTP%E4%B9%8B%E9%95%BF%E8%BF%9E%E6%8E%A5%E5%8F%8A%E7%9F%AD%E8%BF%9E%E6%8E%A5/</url>
-    <content><![CDATA[<p>我们都说HTTP协议是无状态的,我们又都说HTTP分长连接及短连接,’无状态’到底是个什么意思？</p>
-<a id="more"></a>
-<h3 id="无状态"><a href="#无状态" class="headerlink" title="无状态"></a><strong>无状态</strong></h3><p>HTTP无状态其实指的是协议对于事务处理没有记忆能力,服务器不知道客户端是什么状态.也就是说,打开一个服务器上的网页和你之前打开这个服务器上的网页之间没有任何联系.HTTP是一个无状态的面向连接的协议,无状态不代表HTTP不能保持TCP连接,更不能代表HTTP使用的是UDP协议(无连接).</p>
-<p>那http又是如何保持长连接的呢?</p>
-<p>在<code>HTTP/1.0</code>中,默认使用的是短连接.也就是说,浏览器和服务器每进行一次HTTP操作,就建立一次连接,但任务结束就中断连接.如果客户端浏览器访问的某个HTML或其他类型的 Web页中包含有其他的Web资源,如JavaScript文件、图像文件、CSS文件等；当浏览器每遇到这样一个Web资源,就会建立一个HTTP会话.<br>但从<code>HTTP/1.1</code>起,默认使用长连接,用以保持连接特性.使用长连接的HTTP协议,会在响应头有加入这行代码:</p>
-<p><code>Connection:keep-alive</code></p>
-<p>　　在使用长连接的情况下,当一个网页打开完成后,客户端和服务器之间用于传输HTTP数据的 TCP连接不会关闭,如果客户端再次访问这个服务器上的网页,会继续使用这一条已经建立的连接.<code>Keep-Alive</code>不会永久保持连接,它有一个保持时间,可以在不同的服务器软件（如Apache）中设定这个时间.实现长连接要客户端和服务端都支持长连接.</p>
-<p>当然,在很多web服务器中可以设置这个keep-Alive的保持时间,比如nginx的配置文件nginx.conf中可直接使用:</p>
-<p><code>keepalive_timeout  60;</code></p>
-<p><strong>HTTP协议的长连接和短连接,实质上是TCP协议的长连接和短连接.</strong></p>
-<p>那长短连接各自对应的场景有哪些呢(各自的优缺点)?</p>
-<h3 id="短连接"><a href="#短连接" class="headerlink" title="短连接"></a><strong>短连接</strong></h3><p>场景: client向server发起连接请求,server接到请求,然后双方建立连接.client向server 发送消息,server回应client,然后一次读写就完成了,这时候双方任何一个都可以发起close操作,不过一般都是client先发起 close操作.为什么呢,一般的server不会回复完client后立即关闭连接的,当然不排除有特殊的情况.从上面的描述看,短连接一般只会在 client/server间传递一次读写操作</p>
-<p><strong>短连接管理起来比较简单,存在的连接都是有用的连接,不需要额外的控制手段,但是频繁的创建大量的连接也很耗资源</strong></p>
-<h3 id="长连接"><a href="#长连接" class="headerlink" title="长连接"></a><strong>长连接</strong></h3><p>流程是:client向server发起连接,server接受client连接,双方建立连接.Client与server完成一次读写之后,它们之间的连接并不会主动关闭,后续的读写操作会继续使用这个连接.</p>
-<p>首先说一下TCP/IP详解上讲到的TCP保活功能,保活功能主要为服务器应用提供,服务器应用希望知道客户主机是否崩溃,从而可以代表客户使用资源.如果客户已经消失,使得服务器上保留一个半开放的连接,而服务器又在等待来自客户端的数据,则服务器将应远等待客户端的数据,保活功能就是试图在服务 器端检测到这种半开放的连接.</p>
-<p>如果一个给定的连接在两小时内没有任何的动作,服务器就向客户发一个探测报文段,客户主机必须处于以下4个状态之一:</p>
-<blockquote>
-<ul>
-<li>客户主机依然正常运行,并从服务器可达.客户的TCP响应正常,而服务器也知道对方是正常的,服务器在两小时后将保活定时器复位.</li>
-<li>客户主机已经崩溃,并且关闭或者正在重新启动.在任何一种情况下,客户的TCP都没有响应.服务端将不能收到对探测的响应,并在75秒后超时.服务器总共发送10个这样的探测 ,每个间隔75秒.如果服务器没有收到一个响应,它就认为客户主机已经关闭并终止连接.</li>
-<li>客户主机崩溃并已经重新启动.服务器将收到一个对其保活探测的响应,这个响应是一个复位,使得服务器终止这个连接.</li>
-</ul>
-</blockquote>
-<p>客户机正常运行,但是服务器不可达,这种情况与2类似,TCP能发现的就是没有收到探查的响应.</p>
-<p><strong>从上可以看出http要保持长连接需要做很多次的向客户端试探是否存活,这对性能是个很大的损耗,但是从另一方面来说长连接减少了很多的创关闭连接带来的开销,节约时间.</strong></p>
-<h3 id="场景"><a href="#场景" class="headerlink" title="场景"></a><strong>场景</strong></h3><p><code>长连接</code>多用于操作频繁,点对点的通讯,而且连接数不能太多情况,.每个TCP连接都需要三步握手,这需要时间,如果每个操作都是先连接,再操作的话那么处理速度会降低很多,所以每个操作完后都不断开,次处理时直接发送数据包就OK了,不用建立TCP连接.例如：数据库的连接用长连接, 如果用短连接频繁的通信会造成socket错误,而且频繁的socket 创建也是对资源的浪费. </p>
-<p>而像WEB网站的http服务一般都用<code>短链接</code>,因为长连接对于服务端来说会耗费一定的资源,而像WEB网站这么频繁的成千上万甚至上亿客户端的连接用短连接会更省一些资源,如果用长连接,而且同时有成千上万的用户,如果每个用户都占用一个连接的话,那可想而知吧.所以并发量大,但每个用户无需频繁操作情况下需用短连好.</p>
-<p><strong>没有哪一个更好,只有哪一个最适合,一切跟着场景走,总有一款适合你!</strong></p>
-<h3 id="转载请注明出处https-izsk-me"><a href="#转载请注明出处https-izsk-me" class="headerlink" title="转载请注明出处https://izsk.me"></a><strong>转载请注明出处<a href="https://izsk.me" target="_blank" rel="noopener">https://izsk.me</a></strong></h3><hr>
-]]></content>
-      <categories>
-        <category>Http-Tcp-Ip</category>
-      </categories>
-      <tags>
-        <tag>Http-Tcp-Ip</tag>
-      </tags>
-  </entry>
-  <entry>
     <title>Flask学习(flask应用)</title>
     <url>/2017/08/12/flask%E5%AD%A6%E4%B9%A0%E4%BA%8C(flask%E5%BA%94%E7%94%A8)/</url>
     <content><![CDATA[<p>距离<a href="https://izsk.me/2017/08/12/falsk%E5%AD%A6%E4%B9%A0(-" target="_blank" rel="noopener">上一篇</a>)有一段时间了,上次扯了点跟flask相关的内容,这次抽空记录下flask的机制.flask之所于上手容易,是因为我们对python语言稍微了解的话,简单几步就可以把一个小应用跑起来,不需要搭建额外的东西,所以对于并发量没有要求的话flask可以轻松应对.</p>
@@ -5737,6 +5802,46 @@
       </categories>
       <tags>
         <tag>Python</tag>
+      </tags>
+  </entry>
+  <entry>
+    <title>HTTP之长连接及短连接</title>
+    <url>/2017/08/12/HTTP%E4%B9%8B%E9%95%BF%E8%BF%9E%E6%8E%A5%E5%8F%8A%E7%9F%AD%E8%BF%9E%E6%8E%A5/</url>
+    <content><![CDATA[<p>我们都说HTTP协议是无状态的,我们又都说HTTP分长连接及短连接,’无状态’到底是个什么意思？</p>
+<a id="more"></a>
+<h3 id="无状态"><a href="#无状态" class="headerlink" title="无状态"></a><strong>无状态</strong></h3><p>HTTP无状态其实指的是协议对于事务处理没有记忆能力,服务器不知道客户端是什么状态.也就是说,打开一个服务器上的网页和你之前打开这个服务器上的网页之间没有任何联系.HTTP是一个无状态的面向连接的协议,无状态不代表HTTP不能保持TCP连接,更不能代表HTTP使用的是UDP协议(无连接).</p>
+<p>那http又是如何保持长连接的呢?</p>
+<p>在<code>HTTP/1.0</code>中,默认使用的是短连接.也就是说,浏览器和服务器每进行一次HTTP操作,就建立一次连接,但任务结束就中断连接.如果客户端浏览器访问的某个HTML或其他类型的 Web页中包含有其他的Web资源,如JavaScript文件、图像文件、CSS文件等；当浏览器每遇到这样一个Web资源,就会建立一个HTTP会话.<br>但从<code>HTTP/1.1</code>起,默认使用长连接,用以保持连接特性.使用长连接的HTTP协议,会在响应头有加入这行代码:</p>
+<p><code>Connection:keep-alive</code></p>
+<p>　　在使用长连接的情况下,当一个网页打开完成后,客户端和服务器之间用于传输HTTP数据的 TCP连接不会关闭,如果客户端再次访问这个服务器上的网页,会继续使用这一条已经建立的连接.<code>Keep-Alive</code>不会永久保持连接,它有一个保持时间,可以在不同的服务器软件（如Apache）中设定这个时间.实现长连接要客户端和服务端都支持长连接.</p>
+<p>当然,在很多web服务器中可以设置这个keep-Alive的保持时间,比如nginx的配置文件nginx.conf中可直接使用:</p>
+<p><code>keepalive_timeout  60;</code></p>
+<p><strong>HTTP协议的长连接和短连接,实质上是TCP协议的长连接和短连接.</strong></p>
+<p>那长短连接各自对应的场景有哪些呢(各自的优缺点)?</p>
+<h3 id="短连接"><a href="#短连接" class="headerlink" title="短连接"></a><strong>短连接</strong></h3><p>场景: client向server发起连接请求,server接到请求,然后双方建立连接.client向server 发送消息,server回应client,然后一次读写就完成了,这时候双方任何一个都可以发起close操作,不过一般都是client先发起 close操作.为什么呢,一般的server不会回复完client后立即关闭连接的,当然不排除有特殊的情况.从上面的描述看,短连接一般只会在 client/server间传递一次读写操作</p>
+<p><strong>短连接管理起来比较简单,存在的连接都是有用的连接,不需要额外的控制手段,但是频繁的创建大量的连接也很耗资源</strong></p>
+<h3 id="长连接"><a href="#长连接" class="headerlink" title="长连接"></a><strong>长连接</strong></h3><p>流程是:client向server发起连接,server接受client连接,双方建立连接.Client与server完成一次读写之后,它们之间的连接并不会主动关闭,后续的读写操作会继续使用这个连接.</p>
+<p>首先说一下TCP/IP详解上讲到的TCP保活功能,保活功能主要为服务器应用提供,服务器应用希望知道客户主机是否崩溃,从而可以代表客户使用资源.如果客户已经消失,使得服务器上保留一个半开放的连接,而服务器又在等待来自客户端的数据,则服务器将应远等待客户端的数据,保活功能就是试图在服务 器端检测到这种半开放的连接.</p>
+<p>如果一个给定的连接在两小时内没有任何的动作,服务器就向客户发一个探测报文段,客户主机必须处于以下4个状态之一:</p>
+<blockquote>
+<ul>
+<li>客户主机依然正常运行,并从服务器可达.客户的TCP响应正常,而服务器也知道对方是正常的,服务器在两小时后将保活定时器复位.</li>
+<li>客户主机已经崩溃,并且关闭或者正在重新启动.在任何一种情况下,客户的TCP都没有响应.服务端将不能收到对探测的响应,并在75秒后超时.服务器总共发送10个这样的探测 ,每个间隔75秒.如果服务器没有收到一个响应,它就认为客户主机已经关闭并终止连接.</li>
+<li>客户主机崩溃并已经重新启动.服务器将收到一个对其保活探测的响应,这个响应是一个复位,使得服务器终止这个连接.</li>
+</ul>
+</blockquote>
+<p>客户机正常运行,但是服务器不可达,这种情况与2类似,TCP能发现的就是没有收到探查的响应.</p>
+<p><strong>从上可以看出http要保持长连接需要做很多次的向客户端试探是否存活,这对性能是个很大的损耗,但是从另一方面来说长连接减少了很多的创关闭连接带来的开销,节约时间.</strong></p>
+<h3 id="场景"><a href="#场景" class="headerlink" title="场景"></a><strong>场景</strong></h3><p><code>长连接</code>多用于操作频繁,点对点的通讯,而且连接数不能太多情况,.每个TCP连接都需要三步握手,这需要时间,如果每个操作都是先连接,再操作的话那么处理速度会降低很多,所以每个操作完后都不断开,次处理时直接发送数据包就OK了,不用建立TCP连接.例如：数据库的连接用长连接, 如果用短连接频繁的通信会造成socket错误,而且频繁的socket 创建也是对资源的浪费. </p>
+<p>而像WEB网站的http服务一般都用<code>短链接</code>,因为长连接对于服务端来说会耗费一定的资源,而像WEB网站这么频繁的成千上万甚至上亿客户端的连接用短连接会更省一些资源,如果用长连接,而且同时有成千上万的用户,如果每个用户都占用一个连接的话,那可想而知吧.所以并发量大,但每个用户无需频繁操作情况下需用短连好.</p>
+<p><strong>没有哪一个更好,只有哪一个最适合,一切跟着场景走,总有一款适合你!</strong></p>
+<h3 id="转载请注明出处https-izsk-me"><a href="#转载请注明出处https-izsk-me" class="headerlink" title="转载请注明出处https://izsk.me"></a><strong>转载请注明出处<a href="https://izsk.me" target="_blank" rel="noopener">https://izsk.me</a></strong></h3><hr>
+]]></content>
+      <categories>
+        <category>Http-Tcp-Ip</category>
+      </categories>
+      <tags>
+        <tag>Http-Tcp-Ip</tag>
       </tags>
   </entry>
   <entry>
