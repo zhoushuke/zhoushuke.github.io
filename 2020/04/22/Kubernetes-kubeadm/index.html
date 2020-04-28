@@ -68,7 +68,7 @@
 <link href="/css/main.css?v=5.1.0" rel="stylesheet" type="text/css">
 
 
-  <meta name="keywords" content="分布式架构,">
+  <meta name="keywords" content="Kubernetes,">
 
 
 
@@ -86,21 +86,25 @@
 
 
 
-<meta name="description" content="项目中需要一个分布式数据库用于存储业务的KV数据, 在前期项目调研结合业务比对了业界常用的KV数据库模型后, 最后选择了CockRoachDB(CRDB).">
-<meta name="keywords" content="分布式架构">
+<meta name="description" content="相信很多同学在搭建kubernetes时都会选择使用工具进行安装, 现在开源的工具真是层出不穷，本人也体验过多种部署工具, 如rke、kubespray、kubeadm、minikube甚至手工安装等, kubeadm是本人第一个尝试的工具, 因此也使用的最多, kubeadm默认的证书是1年到期, client能够到期后自动进行续签,但是server端却不能, 如果在到期时没有及时进行证书的延期">
+<meta name="keywords" content="Kubernetes">
 <meta property="og:type" content="article">
-<meta property="og:title" content="CockRoachDB学习(架构)">
-<meta property="og:url" content="https://zhoushuke.github.io/2019/10/06/CockroachDB-Struct/index.html">
+<meta property="og:title" content="Kubernetes学习(kubeadm源码修改证书有效期)">
+<meta property="og:url" content="https://zhoushuke.github.io/2020/04/22/Kubernetes-kubeadm/index.html">
 <meta property="og:site_name" content="Z.S.K.&#39;s Records">
-<meta property="og:description" content="项目中需要一个分布式数据库用于存储业务的KV数据, 在前期项目调研结合业务比对了业界常用的KV数据库模型后, 最后选择了CockRoachDB(CRDB).">
+<meta property="og:description" content="相信很多同学在搭建kubernetes时都会选择使用工具进行安装, 现在开源的工具真是层出不穷，本人也体验过多种部署工具, 如rke、kubespray、kubeadm、minikube甚至手工安装等, kubeadm是本人第一个尝试的工具, 因此也使用的最多, kubeadm默认的证书是1年到期, client能够到期后自动进行续签,但是server端却不能, 如果在到期时没有及时进行证书的延期">
 <meta property="og:locale" content="zh-Hans">
-<meta property="og:image" content="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20200206180949.png">
-<meta property="og:image" content="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20200206181047.png">
-<meta property="og:updated_time" content="2020-02-06T11:51:35.763Z">
+<meta property="og:image" content="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20200428155835.png">
+<meta property="og:image" content="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20200428163928.png">
+<meta property="og:image" content="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20200428161521.png">
+<meta property="og:image" content="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20200428163448.png">
+<meta property="og:image" content="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20200428122925.png">
+<meta property="og:image" content="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20200428161640.png">
+<meta property="og:updated_time" content="2020-04-28T14:17:19.929Z">
 <meta name="twitter:card" content="summary">
-<meta name="twitter:title" content="CockRoachDB学习(架构)">
-<meta name="twitter:description" content="项目中需要一个分布式数据库用于存储业务的KV数据, 在前期项目调研结合业务比对了业界常用的KV数据库模型后, 最后选择了CockRoachDB(CRDB).">
-<meta name="twitter:image" content="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20200206180949.png">
+<meta name="twitter:title" content="Kubernetes学习(kubeadm源码修改证书有效期)">
+<meta name="twitter:description" content="相信很多同学在搭建kubernetes时都会选择使用工具进行安装, 现在开源的工具真是层出不穷，本人也体验过多种部署工具, 如rke、kubespray、kubeadm、minikube甚至手工安装等, kubeadm是本人第一个尝试的工具, 因此也使用的最多, kubeadm默认的证书是1年到期, client能够到期后自动进行续签,但是server端却不能, 如果在到期时没有及时进行证书的延期">
+<meta name="twitter:image" content="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20200428155835.png">
 
 
 
@@ -128,13 +132,13 @@
 
 
 
-  <link rel="canonical" href="https://zhoushuke.github.io/2019/10/06/CockroachDB-Struct/">
+  <link rel="canonical" href="https://zhoushuke.github.io/2020/04/22/Kubernetes-kubeadm/">
 
 
 
 
 
-  <title> CockRoachDB学习(架构) | Z.S.K.'s Records </title>
+  <title> Kubernetes学习(kubeadm源码修改证书有效期) | Z.S.K.'s Records </title>
 </head>
 
 <body itemscope itemtype="http://schema.org/WebPage" lang="zh-Hans">
@@ -300,7 +304,7 @@
   
 
   <article class="post post-type-normal " itemscope itemtype="http://schema.org/Article">
-  <link itemprop="mainEntityOfPage" href="https://zhoushuke.github.io/2019/10/06/CockroachDB-Struct/">
+  <link itemprop="mainEntityOfPage" href="https://zhoushuke.github.io/2020/04/22/Kubernetes-kubeadm/">
 
   <span style="display:none" itemprop="author" itemscope itemtype="http://schema.org/Person">
     <meta itemprop="name" content="Z.S.K.">
@@ -324,7 +328,7 @@
             
             
               
-                CockRoachDB学习(架构)
+                Kubernetes学习(kubeadm源码修改证书有效期)
               
             
           </h1>
@@ -339,8 +343,8 @@
               
                 <span class="post-meta-item-text">发表于</span>
               
-              <time title="Post created" itemprop="dateCreated datePublished" datetime="2019-10-06T20:10:53+08:00">
-                2019-10-06
+              <time title="Post created" itemprop="dateCreated datePublished" datetime="2020-04-22T17:10:53+08:00">
+                2020-04-22
               </time>
             
 
@@ -362,8 +366,8 @@
               
               
                 <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
-                  <a href="/categories/分布式架构/" itemprop="url" rel="index">
-                    <span itemprop="name">分布式架构</span>
+                  <a href="/categories/Kubernetes/" itemprop="url" rel="index">
+                    <span itemprop="name">Kubernetes</span>
                   </a>
                 </span>
 
@@ -397,130 +401,45 @@
       
 
       
-        <p>项目中需要一个分布式数据库用于存储业务的KV数据, 在前期项目调研结合业务比对了业界常用的KV数据库模型后, 最后选择了CockRoachDB(CRDB).</p>
+        <p>相信很多同学在搭建kubernetes时都会选择使用工具进行安装, 现在开源的工具真是层出不穷，本人也体验过多种部署工具, 如rke、kubespray、kubeadm、minikube甚至手工安装等, kubeadm是本人第一个尝试的工具, 因此也使用的最多, kubeadm默认的证书是1年到期, client能够到期后自动进行续签,但是server端却不能, 如果在到期时没有及时进行证书的延期, 则会造成整个集群异常,今天主要记录下kubeadm通过修改源码来改变集群证书的相关操作</p>
 <a id="more"></a>
-<p>选择CRDB主要基于以下几点考虑:</p>
-<blockquote>
-<ul>
-<li>目前项目的主要开发语言为Golang,而CRDB就是Golang实现的</li>
-<li>分布式, 高开发、高性能、高可用</li>
-<li>运维成本简单,上手容易</li>
-</ul>
-</blockquote>
-<p>CRDB开源以来, 业界很多大公司都在用, 百度还将CRDB的技术文档进行了翻译, 有兴趣的可以看<a href="http://www.cockroachchina.cn" target="_blank" rel="noopener">这里</a></p>
-<p>目前CRDB的源码托管在<a href="https://github.com/cockroachdb/cockroach" target="_blank" rel="noopener">github</a>上</p>
-<h3 id="CRDB特性"><a href="#CRDB特性" class="headerlink" title="CRDB特性"></a>CRDB特性</h3><p>CockroachDB is a distributed SQL database. The primary design goals are scalability, strong consistency and survivability (hence the name). CockroachDB aims to tolerate disk, machine, rack, and even datacenter failures with minimal latency disruption and no manual intervention. CockroachDB nodes are symmetric; a design goal is homogeneous deployment (one binary) with minimal configuration and no required external dependencies.</p>
-<p>CockroachDB是一个<strong>分布式</strong>的数据库，主要设计目标是<strong>可扩展，强一致和高可用</strong> 。CockroachDB旨在无人为干预情况下，以极短的中断时间容忍磁盘、主机、机架甚至整个数据中心的故障 。 CockroachDB采用完全<strong>去中心化</strong>架构，集群中各个节点的地位完全对等，同时所有功能封装在一个二进制文件中，可以做到尽量<strong>不依赖</strong>配置文件直接部署</p>
-<p>从这段官文可以看到几个很显眼的字段: 分布式、可扩展、强一致、高可靠、去中心化、不依赖</p>
-<p>从这些字眼来看，完全符合项目需要，但是也需要认真地学习下CRDB的原理</p>
-<h4 id="分布式"><a href="#分布式" class="headerlink" title="分布式"></a>分布式</h4><p>现在搞个数据库, 不做成分布式都不好意思了, 这个没啥好说的.</p>
-<h4 id="可扩展"><a href="#可扩展" class="headerlink" title="可扩展"></a>可扩展</h4><p>CRDB支持横向地增加节点到集群中来提升整个集群的存储容量, 理论上最大可以支撑4EB的数据存储, 理论上单集群支持10K节点规模，节点之间通过Gossip协议来同步状态.</p>
-<p>查询以分布式任务的方式在各个数据节点并发执行，可以通过增加节点数来提升单个查询的性能</p>
-<h4 id="强一致性"><a href="#强一致性" class="headerlink" title="强一致性"></a>强一致性</h4><p>CRDB Range的副本数据同步是基于Raft协议来保证强一致性的, 所有一致性状态都存储在RocksDB中</p>
-<p>对range内的数据所做的任何更改都依赖于一致性算法，以确保其大多数副本同意提交后才能返回给客户端,.</p>
-<p>当写入未达成共识时，转发程序将停止以保持集群内的一致性</p>
-<p>副本同步复制跟异常复制:</p>
-<p><strong>同步复制要求所有写入传播到法定数量的数据副本之后，才能提交。 为了确保与数据的一致性，这是CockroachDB使用的复制类型</strong></p>
-<p><strong>异步复制只需要一个节点来接收写入来被认为已提交; 之后它会传播到每个数据副本。 这或多或少等同于NoSQL数据库推广的“最终一致性”。 这种复制方法可能会导致异常和数据丢失</strong></p>
-<h4 id="高可用"><a href="#高可用" class="headerlink" title="高可用"></a>高可用</h4><p>将Range副本分布在一个数据中心，可以确保低延迟复制，同时能容忍磁盘或机器故障。如果将副本分布在不同机架，即使某些网络交换机故障，CockroachDB仍可提供服务</p>
-<p>Range副本可以跨数据中心和跨地域分布，以应对来自数据中心电源中断或网络中断，以及区域电力故障等问题</p>
-<p>例如，一个Range包含三个副本，每个副本可以位于不同的位置：</p>
-<ul>
-<li>如果副本分布于同一台服务器上的多块磁盘，可以容忍单块磁盘故障。</li>
-<li>如果副本分布于同一机架上的不同服务器，可以容忍单台服务器故障。</li>
-<li>如果副本分布于同一个数据中心不同机架，可以容忍单个机架电源和网络故障。</li>
-<li>如果副本分布于不同数据中心，可以容忍大规模网络中断或断电。</li>
-</ul>
-<p>N为总副本数，F为可容忍故障副本数，则N=2F+1。（例如，三副本可以容忍一个副本故障，五副本则可以容忍两个副本故障，以此类推）</p>
-<h4 id="去中心化"><a href="#去中心化" class="headerlink" title="去中心化"></a>去中心化</h4><p>集群中所有的节点角色都是对等的, 客户端的查询请求可以发送到集群任意节点，且每个查询可独立并发执行（无论有无冲突），意味着集群的吞吐能力可以随着节点数的增加线性提升.</p>
-<p>如果一个节点接收到一个它无法直接服务的读或写请求，它会找到能够处理该请求的节点，并与它进行通信。这样你不需要知道数据位于哪里，CockroachDB会为你跟踪数据，并为每个节点启用对称行为（symmetric behavior）</p>
-<h4 id="不依赖"><a href="#不依赖" class="headerlink" title="不依赖"></a>不依赖</h4><p>CRDB所有功能都在一个编译好的二进制中, 不需要依赖其它组件, 运维部署都非常方便.</p>
-<h4 id="高性能"><a href="#高性能" class="headerlink" title="高性能"></a>高性能</h4><p>CRDB单集群支持10K节点的规模, 能够存储的数据最大为4EB, 性能可谓是强悍, 当然一般业务很难达到这个规模.</p>
-<p>当然CRDB由于支持强一致性又想要高性能, 架构设计自然是花费了很多功夫, 这个就是后话了.</p>
-<h3 id="CRDB术语"><a href="#CRDB术语" class="headerlink" title="CRDB术语"></a>CRDB术语</h3><p>了解CRDB之前, 需要了解下CRDB里常见的几个术语</p>
-<table>
-<thead>
-<tr>
-<th style="text-align:left">术语</th>
-<th style="text-align:left">定义</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td style="text-align:left"><strong>Cluster（集群）</strong></td>
-<td style="text-align:left">你部署的CockroachDB集群，它包含一个或多个数据库，对外则像一个逻辑应用程序一样提供服务。</td>
-</tr>
-<tr>
-<td style="text-align:left"><strong>Node（节点）</strong></td>
-<td style="text-align:left">运行CockroachDB的单个机器。 许多节点连接在一起以创建你的集群。</td>
-</tr>
-<tr>
-<td style="text-align:left"><strong>Store (存储)</strong></td>
-<td style="text-align:left">真正KV数据的存储，一个节点可以启用多个Store, 一个Store包含多个Range.</td>
-</tr>
-<tr>
-<td style="text-align:left"><strong>Range (数据分片)</strong></td>
-<td style="text-align:left">集群中一组连续的已排序的数据,每个Range分片默认为64M。</td>
-</tr>
-<tr>
-<td style="text-align:left"><strong>Replicas（副本）</strong></td>
-<td style="text-align:left">range的副本，存储在至少3个节点上，以确保可用性。</td>
-</tr>
-<tr>
-<td style="text-align:left"><strong>Range Lease（range租约）</strong></td>
-<td style="text-align:left">对于每个range，其中的一个replicas持有“range lease“，该replicas（称为leaseholder）是接收和协调该range的所有读写请求的replicas</td>
-</tr>
-</tbody>
-</table>
-<p>看多了这种分布式数据库你会发现, 每种数据库都有自己的各种概念, 其实原理上很相近</p>
-<h3 id="CRDB架构"><a href="#CRDB架构" class="headerlink" title="CRDB架构"></a>CRDB架构</h3><h4 id="分层架构图"><a href="#分层架构图" class="headerlink" title="分层架构图"></a>分层架构图</h4><p><img src="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20200206180949.png" alt></p>
-<p>CRDB的分为以下几层，这些层直接与在它上面和下面的层交互，提供相对不透明的服务，详细可看<a href="http://doc.cockroachchina.baidu.com/#architecture/overview/" target="_blank" rel="noopener">这里</a></p>
-<table>
-<thead>
-<tr>
-<th>层</th>
-<th style="text-align:left">顺序</th>
-<th style="text-align:left">目的</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td><a href="http://doc.cockroachchina.baidu.com/#architecture/sql-layer.md" target="_blank" rel="noopener">SQL</a></td>
-<td style="text-align:left">1</td>
-<td style="text-align:left">将客户端SQL查询转换为KV操作。</td>
-</tr>
-<tr>
-<td><a href="http://doc.cockroachchina.baidu.com/#architecture/transaction-layer.md" target="_blank" rel="noopener">Transactional</a></td>
-<td style="text-align:left">2</td>
-<td style="text-align:left">允许对多个KV条目进行原子性改变。</td>
-</tr>
-<tr>
-<td><a href="http://doc.cockroachchina.baidu.com/#architecture/distribution-layer.md" target="_blank" rel="noopener">Distribution</a></td>
-<td style="text-align:left">3</td>
-<td style="text-align:left">将复制的KV range作为单个实体。</td>
-</tr>
-<tr>
-<td><a href="http://doc.cockroachchina.baidu.com/#architecture/replication-layer.md" target="_blank" rel="noopener">Replication</a></td>
-<td style="text-align:left">4</td>
-<td style="text-align:left">跨越多节点的一致性和同步复制KV range。此层还允许通过租约实现一致的读取。</td>
-</tr>
-<tr>
-<td><a href="http://doc.cockroachchina.baidu.com/#architecture/storage-layer.md" target="_blank" rel="noopener">Storage</a></td>
-<td style="text-align:left">5</td>
-<td style="text-align:left">在磁盘上写入和读取KV数据</td>
-</tr>
-</tbody>
-</table>
-<p>CRDB做为一个数据库, 其实也是分层的结构，在最上层是提供给使用人员的是SQL层, 使用人员可直接使用如Mysql数据库一样的sql语句结构来操作CRDB</p>
-<p>CRDB本质是个KV数据库, 那直接也存在从SQL –&gt; KV的转换, 这一系列操作由SQL层进行处理, 既然CRDB是个数据库, 那自然也少不了比如<strong>SQL语句的解析、执行计划、执行器等</strong>一系列过程, 具体过程可查看<a href="http://doc.cockroachchina.baidu.com/#architecture/sql-layer/" target="_blank" rel="noopener">这里</a></p>
-<h4 id="Store架构图"><a href="#Store架构图" class="headerlink" title="Store架构图"></a>Store架构图</h4><p><img src="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20200206181047.png" alt></p>
-<p>每个Store包含多个Range，Range为KV层数据管理的最小单元，每个Range的多个副本之间使用Raft协议进行同步。如下图所示，每个Range有3个副本，同一Range的副本用相同颜色标识，副本之间使用Raft协议同步</p>
+<h3 id="修改kubeadm源码"><a href="#修改kubeadm源码" class="headerlink" title="修改kubeadm源码"></a>修改kubeadm源码</h3><h4 id="切换分支"><a href="#切换分支" class="headerlink" title="切换分支"></a>切换分支</h4><figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">git <span class="built_in">clone</span> https://github.com/kubernetes/kubernetes.git</span><br><span class="line"><span class="built_in">cd</span> kubernetes</span><br></pre></td></tr></table></figure>
+<p><img src="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20200428155835.png" alt></p>
+<h4 id="修改kubeadm源码-1"><a href="#修改kubeadm源码-1" class="headerlink" title="修改kubeadm源码"></a>修改kubeadm源码</h4><figure class="highlight go"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">// kubernetes/cmd/kubeadm/app/constants/constants.go</span></span><br><span class="line"><span class="comment">// 修改以下常量</span></span><br><span class="line">CertificateValidity = time.Hour * <span class="number">24</span> * <span class="number">365</span></span><br><span class="line"><span class="comment">// 变成10年</span></span><br><span class="line"><span class="comment">// CertificateValidity = time.Hour * 24 * 3650</span></span><br><span class="line"></span><br><span class="line"><span class="comment">// CertificateValidity常量在kubernetes/cmd/kubeadm/app/util/pkiutil/pki_helpers.go中引用</span></span><br><span class="line"><span class="comment">// 当然， 在这里修改也是可以的</span></span><br><span class="line">NotAfter:     time.Now().Add(kubeadmconstants.CertificateValidity).UTC(),</span><br><span class="line"><span class="comment">// NotAfter:     time.Now().Add(kubeadmconstants.CertificateValidity * 100.UTC(),</span></span><br></pre></td></tr></table></figure>
+<p>这两个地方都可以修改, 只要最后这两个值能跟期望值对应上即可，修改完之后对kubeadm进行编译</p>
+<h4 id="二进制编译"><a href="#二进制编译" class="headerlink" title="二进制编译"></a>二进制编译</h4><figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">KUBE_BUILD_PLATFORMS=linux/amd64 make all WHAT=cmd/kubeadm GOFLAGS=-v GOGCFLAGS=<span class="string">"-N -l"</span></span><br></pre></td></tr></table></figure>
+<p>最终会在kubernetes/_output生成kubeadm, 如果大家不想麻烦的话, 这里有个现成的版本对应v1.15, 证书有效期100年.</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">wget http://rj-bai.oss-cn-beijing.aliyuncs.com/kubeadm -O /usr/bin/kubeadm &amp;&amp; chmod +x /usr/bin/kubeadm</span><br></pre></td></tr></table></figure>
+<p>或者进入cmd/kubeadm<br>执行go build -v命令,如果没出错,会生成可执行文件kubeadm</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">go build -v</span><br></pre></td></tr></table></figure>
+<p>生成的可执行文件在当前文件夹下面</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">ls cmd/kubeadm/</span><br></pre></td></tr></table></figure>
+<p><img src="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20200428163928.png" alt></p>
+<h4 id="容器编译"><a href="#容器编译" class="headerlink" title="容器编译"></a>容器编译</h4><figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># 使用官方的kube-cross镜像进行编译.</span></span><br><span class="line">docker pull us.gcr.io/k8s-artifacts-prod/build-image/kube-cross:v1.12.17-1</span><br><span class="line">build/run.sh make kubeadm</span><br><span class="line"><span class="comment"># 经过几分钟后，最终会在以下目录生成kubeadm</span></span><br><span class="line">_output/dockerized/bin/linux/amd64</span><br><span class="line"><span class="comment"># 可以查看下kubeadm版本</span></span><br></pre></td></tr></table></figure>
+<p><img src="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20200428161521.png" alt></p>
+<h3 id="搭建新集群"><a href="#搭建新集群" class="headerlink" title="搭建新集群"></a>搭建新集群</h3><p>如果是新集群的话就比较容器了, 直接使用新的kubeadm进行部署, 那么部署出来的集群证书就是100年.p</p>
+<p>kubeadm如何进行集群部署, 这里不再详细记录了.这里只写主要步骤</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line">apt install -y kubelet=1.15.1-00 kubectl=1.15.1-00 kubeadm=1.15.1-00 --allow-change-held-packages</span><br><span class="line"></span><br><span class="line">kubeadm init --config=kubeadm-config.yaml --upload-certs</span><br><span class="line"></span><br><span class="line">kubectl apply -f https://raw.githubusercontent.com/coreos/flannel/2140ac876ef134e0ed5af15c65e414cf26827915/Documentation/kube-flannel.yml</span><br><span class="line"></span><br><span class="line">kubeadm init --config=kubeadm-config.yaml --upload-certs</span><br></pre></td></tr></table></figure>
+<p>将新版的kubeadm替换默认安装的kubeadm</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">mv /usr/bin/kubeadm /usr/bin/kubeadm_bak</span><br><span class="line">cp _output/dockerized/bin/linux/amd64/kubeadm /usr/bin/kubeadm</span><br><span class="line">chmod +x /usr/bin/kubeadm</span><br></pre></td></tr></table></figure>
+<p>kubeadm执行完了按照提示执行命令</p>
+<p>最终部署起来的集群证书有效期为100年</p>
+<p><img src="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20200428163448.png" alt></p>
+<h3 id="对现有集群进行证书更新"><a href="#对现有集群进行证书更新" class="headerlink" title="对现有集群进行证书更新"></a>对现有集群进行证书更新</h3><p>那如果是对存在的集群进行证书重签，如何操作呢?</p>
+<p>首先, 查看当前集群的证书有效期，这里使用的kubeadm是未修改源码的kubeadm</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">kubeadm alpha certs check-expiration</span><br></pre></td></tr></table></figure>
+<p><img src="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20200428122925.png" alt></p>
+<p>在没有使用kubeadm搭建的情况下,可以使用以下命令查看证书过期时间</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">openssl x509 -<span class="keyword">in</span> front-proxy-client.crt   -noout -text  |grep Not</span><br></pre></td></tr></table></figure>
+<p>然后使用证书100年的kubeadm执行以下操作即可</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># 使用100年的kubeadm更新证书</span></span><br><span class="line">./kubeadm alpha certs renew all</span><br><span class="line"><span class="comment"># 再次查看证书有效期， 对比前后会发现证书已经从1年变成了100年了.</span></span><br><span class="line">./kubeadm alpha certs check-expiration</span><br></pre></td></tr></table></figure>
+<p><img src="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20200428161640.png" alt></p>
+<p>至此, 不管是搭建集群之前操作证书有效期还是对存在的集群延长证书有效期进行操作都不怕了,完美.</p>
 <h3 id="参考文章"><a href="#参考文章" class="headerlink" title="参考文章:"></a><strong>参考文章:</strong></h3><blockquote>
 <ul>
-<li><a href="http://www.cockroachchina.cn/?p=1088" target="_blank" rel="noopener">http://www.cockroachchina.cn/?p=1088</a></li>
-<li><a href="http://doc.cockroachchina.baidu.com/" target="_blank" rel="noopener">http://doc.cockroachchina.baidu.com/</a></li>
-<li><a href="https://github.com/cockroachdb/cockroach/blob/master/docs/design.md" target="_blank" rel="noopener">https://github.com/cockroachdb/cockroach/blob/master/docs/design.md</a></li>
-<li><a href="http://doc.cockroachchina.baidu.com/#architecture/overview/" target="_blank" rel="noopener">http://doc.cockroachchina.baidu.com/#architecture/overview/</a></li>
+<li><a href="https://github.com/kubernetes/kubernetes/" target="_blank" rel="noopener">https://github.com/kubernetes/kubernetes/</a></li>
+<li><a href="https://www.kubernetes.org.cn/5777.html" target="_blank" rel="noopener">https://www.kubernetes.org.cn/5777.html</a></li>
+<li><a href="https://blog.rj-bai.com/post/160.html" target="_blank" rel="noopener">https://blog.rj-bai.com/post/160.html</a></li>
 </ul>
 </blockquote>
 <h3 id="转载请注明出处https-izsk-me"><a href="#转载请注明出处https-izsk-me" class="headerlink" title="转载请注明出处https://izsk.me"></a><strong>转载请注明出处<a href="https://izsk.me" target="_blank" rel="noopener">https://izsk.me</a></strong></h3>
@@ -572,7 +491,7 @@
       
         <div class="post-tags">
           
-            <a href="/tags/分布式架构/" rel="tag"># 分布式架构</a>
+            <a href="/tags/Kubernetes/" rel="tag"># Kubernetes</a>
           
         </div>
       
@@ -581,8 +500,8 @@
         <div class="post-nav">
           <div class="post-nav-next post-nav-item">
             
-              <a href="/2019/10/06/ES-FGC-Fix/" rel="next" title="记一次排查ES FGC导致的集群宕机异常">
-                <i class="fa fa-chevron-left"></i> 记一次排查ES FGC导致的集群宕机异常
+              <a href="/2020/04/20/golang-restfulAPI-mail-server/" rel="next" title="golang学习(golang搭建邮件系统解决Unrecognized authentication type)">
+                <i class="fa fa-chevron-left"></i> golang学习(golang搭建邮件系统解决Unrecognized authentication type)
               </a>
             
           </div>
@@ -590,10 +509,6 @@
           <span class="post-nav-divider"></span>
 
           <div class="post-nav-prev post-nav-item">
-            
-              <a href="/2019/10/06/how-to-do-blackbox-monitor/" rel="prev" title="做黑盒监控引发的思考">
-                做黑盒监控引发的思考 <i class="fa fa-chevron-right"></i>
-              </a>
             
           </div>
         </div>
@@ -721,7 +636,7 @@
             
 
             
-              <div class="post-toc-content"><ol class="nav"><li class="nav-item nav-level-3"><a class="nav-link" href="#CRDB特性"><span class="nav-number">1.</span> <span class="nav-text">CRDB特性</span></a><ol class="nav-child"><li class="nav-item nav-level-4"><a class="nav-link" href="#分布式"><span class="nav-number">1.1.</span> <span class="nav-text">分布式</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#可扩展"><span class="nav-number">1.2.</span> <span class="nav-text">可扩展</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#强一致性"><span class="nav-number">1.3.</span> <span class="nav-text">强一致性</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#高可用"><span class="nav-number">1.4.</span> <span class="nav-text">高可用</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#去中心化"><span class="nav-number">1.5.</span> <span class="nav-text">去中心化</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#不依赖"><span class="nav-number">1.6.</span> <span class="nav-text">不依赖</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#高性能"><span class="nav-number">1.7.</span> <span class="nav-text">高性能</span></a></li></ol></li><li class="nav-item nav-level-3"><a class="nav-link" href="#CRDB术语"><span class="nav-number">2.</span> <span class="nav-text">CRDB术语</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#CRDB架构"><span class="nav-number">3.</span> <span class="nav-text">CRDB架构</span></a><ol class="nav-child"><li class="nav-item nav-level-4"><a class="nav-link" href="#分层架构图"><span class="nav-number">3.1.</span> <span class="nav-text">分层架构图</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#Store架构图"><span class="nav-number">3.2.</span> <span class="nav-text">Store架构图</span></a></li></ol></li><li class="nav-item nav-level-3"><a class="nav-link" href="#参考文章"><span class="nav-number">4.</span> <span class="nav-text">参考文章:</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#转载请注明出处https-izsk-me"><span class="nav-number">5.</span> <span class="nav-text">转载请注明出处https://izsk.me</span></a></li></ol></div>
+              <div class="post-toc-content"><ol class="nav"><li class="nav-item nav-level-3"><a class="nav-link" href="#修改kubeadm源码"><span class="nav-number">1.</span> <span class="nav-text">修改kubeadm源码</span></a><ol class="nav-child"><li class="nav-item nav-level-4"><a class="nav-link" href="#切换分支"><span class="nav-number">1.1.</span> <span class="nav-text">切换分支</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#修改kubeadm源码-1"><span class="nav-number">1.2.</span> <span class="nav-text">修改kubeadm源码</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#二进制编译"><span class="nav-number">1.3.</span> <span class="nav-text">二进制编译</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#容器编译"><span class="nav-number">1.4.</span> <span class="nav-text">容器编译</span></a></li></ol></li><li class="nav-item nav-level-3"><a class="nav-link" href="#搭建新集群"><span class="nav-number">2.</span> <span class="nav-text">搭建新集群</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#对现有集群进行证书更新"><span class="nav-number">3.</span> <span class="nav-text">对现有集群进行证书更新</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#参考文章"><span class="nav-number">4.</span> <span class="nav-text">参考文章:</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#转载请注明出处https-izsk-me"><span class="nav-number">5.</span> <span class="nav-text">转载请注明出处https://izsk.me</span></a></li></ol></div>
             
 
           </div>
