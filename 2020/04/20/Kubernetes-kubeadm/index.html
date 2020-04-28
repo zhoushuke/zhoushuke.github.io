@@ -68,7 +68,7 @@
 <link href="/css/main.css?v=5.1.0" rel="stylesheet" type="text/css">
 
 
-  <meta name="keywords" content="Python,Oracle,">
+  <meta name="keywords" content="Kubernetes,">
 
 
 
@@ -86,18 +86,25 @@
 
 
 
-<meta name="description" content="在python中查询Oracle,首先当然是cx_Oracle,方便快捷,但是很无奈有时必须使用sqlplus命令的形式,比如生成oracle9i的statspack报告,cx_Oracle就无能为力了,同时,这也涉及到python中子进程调用的问题,简单的任务当然首选subprocess">
-<meta name="keywords" content="Python,Oracle">
+<meta name="description" content="相信很多同学在搭建kubernetes时都会选择使用工具进行安装, 现在开源的工具真是层出不穷，本人也体验过多种部署工具, 如rke、kubespray、kubeadm、minikube甚至手工安装等, kubeadm是本人第一个尝试的工具, 因此也使用的最多, kubeadm默认的证书是1年到期, client能够到期后自动进行续签,但是server端却不能, 如果在到期时没有及时进行证书的延期">
+<meta name="keywords" content="Kubernetes">
 <meta property="og:type" content="article">
-<meta property="og:title" content="python中调用sqlplus">
-<meta property="og:url" content="https://zhoushuke.github.io/2017/04/08/python中调用sqlplus/index.html">
+<meta property="og:title" content="Kubernetes学习(使用PodSecurityPolicy)">
+<meta property="og:url" content="https://zhoushuke.github.io/2020/04/20/Kubernetes-kubeadm/index.html">
 <meta property="og:site_name" content="Z.S.K.&#39;s Records">
-<meta property="og:description" content="在python中查询Oracle,首先当然是cx_Oracle,方便快捷,但是很无奈有时必须使用sqlplus命令的形式,比如生成oracle9i的statspack报告,cx_Oracle就无能为力了,同时,这也涉及到python中子进程调用的问题,简单的任务当然首选subprocess">
+<meta property="og:description" content="相信很多同学在搭建kubernetes时都会选择使用工具进行安装, 现在开源的工具真是层出不穷，本人也体验过多种部署工具, 如rke、kubespray、kubeadm、minikube甚至手工安装等, kubeadm是本人第一个尝试的工具, 因此也使用的最多, kubeadm默认的证书是1年到期, client能够到期后自动进行续签,但是server端却不能, 如果在到期时没有及时进行证书的延期">
 <meta property="og:locale" content="zh-Hans">
-<meta property="og:updated_time" content="2020-01-14T12:12:54.308Z">
+<meta property="og:image" content="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20200428155835.png">
+<meta property="og:image" content="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20200428163928.png">
+<meta property="og:image" content="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20200428161521.png">
+<meta property="og:image" content="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20200428163448.png">
+<meta property="og:image" content="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20200428122925.png">
+<meta property="og:image" content="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20200428161640.png">
+<meta property="og:updated_time" content="2020-04-28T08:48:45.076Z">
 <meta name="twitter:card" content="summary">
-<meta name="twitter:title" content="python中调用sqlplus">
-<meta name="twitter:description" content="在python中查询Oracle,首先当然是cx_Oracle,方便快捷,但是很无奈有时必须使用sqlplus命令的形式,比如生成oracle9i的statspack报告,cx_Oracle就无能为力了,同时,这也涉及到python中子进程调用的问题,简单的任务当然首选subprocess">
+<meta name="twitter:title" content="Kubernetes学习(使用PodSecurityPolicy)">
+<meta name="twitter:description" content="相信很多同学在搭建kubernetes时都会选择使用工具进行安装, 现在开源的工具真是层出不穷，本人也体验过多种部署工具, 如rke、kubespray、kubeadm、minikube甚至手工安装等, kubeadm是本人第一个尝试的工具, 因此也使用的最多, kubeadm默认的证书是1年到期, client能够到期后自动进行续签,但是server端却不能, 如果在到期时没有及时进行证书的延期">
+<meta name="twitter:image" content="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20200428155835.png">
 
 
 
@@ -125,13 +132,13 @@
 
 
 
-  <link rel="canonical" href="https://zhoushuke.github.io/2017/04/08/python中调用sqlplus/">
+  <link rel="canonical" href="https://zhoushuke.github.io/2020/04/20/Kubernetes-kubeadm/">
 
 
 
 
 
-  <title> python中调用sqlplus | Z.S.K.'s Records </title>
+  <title> Kubernetes学习(使用PodSecurityPolicy) | Z.S.K.'s Records </title>
 </head>
 
 <body itemscope itemtype="http://schema.org/WebPage" lang="zh-Hans">
@@ -297,7 +304,7 @@
   
 
   <article class="post post-type-normal " itemscope itemtype="http://schema.org/Article">
-  <link itemprop="mainEntityOfPage" href="https://zhoushuke.github.io/2017/04/08/python中调用sqlplus/">
+  <link itemprop="mainEntityOfPage" href="https://zhoushuke.github.io/2020/04/20/Kubernetes-kubeadm/">
 
   <span style="display:none" itemprop="author" itemscope itemtype="http://schema.org/Person">
     <meta itemprop="name" content="Z.S.K.">
@@ -321,7 +328,7 @@
             
             
               
-                python中调用sqlplus
+                Kubernetes学习(使用PodSecurityPolicy)
               
             
           </h1>
@@ -336,8 +343,8 @@
               
                 <span class="post-meta-item-text">发表于</span>
               
-              <time title="Post created" itemprop="dateCreated datePublished" datetime="2017-04-08T20:50:53+08:00">
-                2017-04-08
+              <time title="Post created" itemprop="dateCreated datePublished" datetime="2020-04-20T17:10:53+08:00">
+                2020-04-20
               </time>
             
 
@@ -359,8 +366,8 @@
               
               
                 <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
-                  <a href="/categories/Python/" itemprop="url" rel="index">
-                    <span itemprop="name">Python</span>
+                  <a href="/categories/Kubernetes/" itemprop="url" rel="index">
+                    <span itemprop="name">Kubernetes</span>
                   </a>
                 </span>
 
@@ -394,29 +401,48 @@
       
 
       
-        <p>在python中查询Oracle,首先当然是cx_Oracle,方便快捷,但是很无奈有时必须使用sqlplus命令的形式,比如生成oracle9i的statspack报告,cx_Oracle就无能为力了,同时,这也涉及到python中子进程调用的问题,简单的任务当然首选subprocess</p>
+        <p>相信很多同学在搭建kubernetes时都会选择使用工具进行安装, 现在开源的工具真是层出不穷，本人也体验过多种部署工具, 如rke、kubespray、kubeadm、minikube甚至手工安装等, kubeadm是本人第一个尝试的工具, 因此也使用的最多, kubeadm默认的证书是1年到期, client能够到期后自动进行续签,但是server端却不能, 如果在到期时没有及时进行证书的延期, 则会造成整个集群异常,今天主要记录下kubeadm通过修改源码来改变集群证书的相关操作</p>
 <a id="more"></a>
-<h3 id="subprocess"><a href="#subprocess" class="headerlink" title="subprocess"></a><strong>subprocess</strong></h3><p><strong>talk is cheap,show me your code</strong></p>
-<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">import</span> subprocess</span><br><span class="line"><span class="class"><span class="keyword">class</span> <span class="title">oracleversion</span><span class="params">()</span>:</span></span><br><span class="line">    <span class="function"><span class="keyword">def</span> <span class="title">__init__</span><span class="params">(self,username,password,databaseName)</span>:</span></span><br><span class="line">        self.username = username</span><br><span class="line">        self.password = password</span><br><span class="line">        self.databaseName = databaseName</span><br><span class="line">    <span class="function"><span class="keyword">def</span> <span class="title">run</span><span class="params">(self)</span>:</span></span><br><span class="line">        <span class="keyword">try</span>:</span><br><span class="line">            oraclever = <span class="string">"sqlplus -S "</span> + self.username + <span class="string">"/"</span> + self.password + <span class="string">"@"</span> + self.databaseName</span><br><span class="line">            child = subprocess.Popen(oraclever,shell=<span class="literal">True</span>,stdout=subprocess.PIPE, stdin=subprocess.PIPE, stderr=subprocess.PIPE)</span><br><span class="line">            child.stdin.write(<span class="string">b"select * from v$version where rownum&lt;2;"</span>)</span><br><span class="line">            <span class="keyword">return</span> child.communicate()</span><br><span class="line">            <span class="comment">#print("&lt;&lt;%s done.&gt;&gt;" %self.city)</span></span><br><span class="line">        <span class="keyword">except</span> Exception <span class="keyword">as</span> e:</span><br><span class="line">            err_txt = <span class="string">"ERROR: 调用ORACLE SQLPLUS失败!"</span></span><br><span class="line">            print(err_txt)</span><br><span class="line">            write_errtxt(err_txt)</span><br></pre></td></tr></table></figure>
-<p>上面则是一个简单的判断oracle的版本,因为oracle的版本不同,涉及到后续的操作流程不一样,首先import subprocess</p>
-<p>使用Popen fork一个子进程,子进程调用sqlplus,大多数的时候我们是需要在sqlplus中执行命令,如何与子进程进行交互呢？</p>
-<h4 id="subprocess-Popen"><a href="#subprocess-Popen" class="headerlink" title="subprocess.Popen"></a><strong>subprocess.Popen</strong></h4><p>child=subprocess.Popen(oraclever,shell=True,stdout=subprocess.PIPE,stdin=subprocess.PIPE,stderr=subprocess.PIPE)</p>
-<p>首先我们需要在父子进程之间形成一个管道(PIPE),通过这个管道进行交互,父进程可以给子进程输入,子进程得到输入处理后把输出或者是错误信息返回给父进程,shell=True表示使用shell执行</p>
-<h4 id="child-stdin-write"><a href="#child-stdin-write" class="headerlink" title="child.stdin.write()"></a><strong>child.stdin.write()</strong></h4><p>这便是向子进程传递输入,这里有个注意的地方:</p>
-<p><strong>对于python2.x,这里直接传递sql语句没问题</strong></p>
-<p><strong>但是对于python3.x,必须将字符串转换成字节串,直接在字符串前加b,得到的输出则需要decode()转换成字符串</strong></p>
-<h4 id="out-err-child-communicate"><a href="#out-err-child-communicate" class="headerlink" title="(out,err)=child.communicate()"></a><strong>(out,err)=child.communicate()</strong></h4><p>这句话其实返回的是一个元组,元组前表示输出,后者表示错误信息</p>
-<h4 id="child-wait"><a href="#child-wait" class="headerlink" title="child.wait()"></a><strong>child.wait()</strong></h4><p>该函数迫使父进程等待子进程执行完之后再往下执行,返回命令执行后的返回值</p>
-<h4 id="Popen-poll"><a href="#Popen-poll" class="headerlink" title="Popen.poll()"></a><strong>Popen.poll()</strong></h4><p>用于检查子进程是否已经结束</p>
-<h4 id="Popen-terminate"><a href="#Popen-terminate" class="headerlink" title="Popen.terminate()"></a><strong>Popen.terminate()</strong></h4><p>停止(stop)子进程</p>
-<h4 id="Popen-kill"><a href="#Popen-kill" class="headerlink" title="Popen.kill()"></a><strong>Popen.kill()</strong></h4><p>杀死子进程</p>
+<h3 id="修改kubeadm源码"><a href="#修改kubeadm源码" class="headerlink" title="修改kubeadm源码"></a>修改kubeadm源码</h3><h4 id="切换分支"><a href="#切换分支" class="headerlink" title="切换分支"></a>切换分支</h4><figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">git <span class="built_in">clone</span> https://github.com/kubernetes/kubernetes.git</span><br><span class="line"><span class="built_in">cd</span> kubernetes</span><br></pre></td></tr></table></figure>
+<p><img src="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20200428155835.png" alt></p>
+<h4 id="修改kubeadm源码-1"><a href="#修改kubeadm源码-1" class="headerlink" title="修改kubeadm源码"></a>修改kubeadm源码</h4><figure class="highlight go"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">// kubernetes/cmd/kubeadm/app/constants/constants.go</span></span><br><span class="line"><span class="comment">// 修改以下常量</span></span><br><span class="line">CertificateValidity = time.Hour * <span class="number">24</span> * <span class="number">365</span></span><br><span class="line"><span class="comment">// 变成10年</span></span><br><span class="line"><span class="comment">// CertificateValidity = time.Hour * 24 * 3650</span></span><br><span class="line"></span><br><span class="line"><span class="comment">// CertificateValidity常量在kubernetes/cmd/kubeadm/app/util/pkiutil/pki_helpers.go中引用</span></span><br><span class="line"><span class="comment">// 当然， 在这里修改也是可以的</span></span><br><span class="line">NotAfter:     time.Now().Add(kubeadmconstants.CertificateValidity).UTC(),</span><br><span class="line"><span class="comment">// NotAfter:     time.Now().Add(kubeadmconstants.CertificateValidity * 100.UTC(),</span></span><br></pre></td></tr></table></figure>
+<p>这两个地方都可以修改, 只要最后这两个值能跟期望值对应上即可，修改完之后对kubeadm进行编译</p>
+<h4 id="二进制编译"><a href="#二进制编译" class="headerlink" title="二进制编译"></a>二进制编译</h4><figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">KUBE_BUILD_PLATFORMS=linux/amd64 make all WHAT=cmd/kubeadm GOFLAGS=-v GOGCFLAGS=<span class="string">"-N -l"</span></span><br></pre></td></tr></table></figure>
+<p>最终会在kubernetes/_output生成kubeadm, 如果大家不想麻烦的话, 这里有个现成的版本对应v1.15, 证书有效期100年.</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">wget http://rj-bai.oss-cn-beijing.aliyuncs.com/kubeadm -O /usr/bin/kubeadm &amp;&amp; chmod +x /usr/bin/kubeadm</span><br></pre></td></tr></table></figure>
+<p>或者进入cmd/kubeadm<br>执行go build -v命令,如果没出错,会生成可执行文件kubeadm</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">go build -v</span><br></pre></td></tr></table></figure>
+<p>生成的可执行文件在当前文件夹下面</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">ls cmd/kubeadm/</span><br></pre></td></tr></table></figure>
+<p><img src="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20200428163928.png" alt></p>
+<h4 id="容器编译"><a href="#容器编译" class="headerlink" title="容器编译"></a>容器编译</h4><figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># 使用官方的kube-cross镜像进行编译.</span></span><br><span class="line">docker pull us.gcr.io/k8s-artifacts-prod/build-image/kube-cross:v1.12.17-1</span><br><span class="line">build/run.sh make kubeadm</span><br><span class="line"><span class="comment"># 经过几分钟后，最终会在以下目录生成kubeadm</span></span><br><span class="line">_output/dockerized/bin/linux/amd64</span><br><span class="line"><span class="comment"># 可以查看下kubeadm版本</span></span><br></pre></td></tr></table></figure>
+<p><img src="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20200428161521.png" alt></p>
+<h3 id="搭建新集群"><a href="#搭建新集群" class="headerlink" title="搭建新集群"></a>搭建新集群</h3><p>如果是新集群的话就比较容器了, 直接使用新的kubeadm进行部署, 那么部署出来的集群证书就是100年.p</p>
+<p>kubeadm如何进行集群部署, 这里不再详细记录了.这里只写主要步骤</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line">apt install -y kubelet=1.15.1-00 kubectl=1.15.1-00 kubeadm=1.15.1-00 --allow-change-held-packages</span><br><span class="line"></span><br><span class="line">kubeadm init --config=kubeadm-config.yaml --upload-certs</span><br><span class="line"></span><br><span class="line">kubectl apply -f https://raw.githubusercontent.com/coreos/flannel/2140ac876ef134e0ed5af15c65e414cf26827915/Documentation/kube-flannel.yml</span><br><span class="line"></span><br><span class="line">kubeadm init --config=kubeadm-config.yaml --upload-certs</span><br></pre></td></tr></table></figure>
+<p>将新版的kubeadm替换默认安装的kubeadm</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">mv /usr/bin/kubeadm /usr/bin/kubeadm_bak</span><br><span class="line">cp _output/dockerized/bin/linux/amd64/kubeadm /usr/bin/kubeadm</span><br><span class="line">chmod +x /usr/bin/kubeadm</span><br></pre></td></tr></table></figure>
+<p>kubeadm执行完了按照提示执行命令</p>
+<p>最终部署起来的集群证书有效期为100年</p>
+<p><img src="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20200428163448.png" alt></p>
+<h3 id="对现有集群进行证书更新"><a href="#对现有集群进行证书更新" class="headerlink" title="对现有集群进行证书更新"></a>对现有集群进行证书更新</h3><p>那如果是对存在的集群进行证书重签，如何操作呢?</p>
+<p>首先, 查看当前集群的证书有效期，这里使用的kubeadm是未修改源码的kubeadm</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">kubeadm alpha certs check-expiration</span><br></pre></td></tr></table></figure>
+<p><img src="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20200428122925.png" alt></p>
+<p>在没有使用kubeadm搭建的情况下,可以使用以下命令查看证书过期时间</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">openssl x509 -<span class="keyword">in</span> front-proxy-client.crt   -noout -text  |grep Not</span><br></pre></td></tr></table></figure>
+<p>然后使用证书100年的kubeadm执行以下操作即可</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># 使用100年的kubeadm更新证书</span></span><br><span class="line">./kubeadm alpha certs renew all</span><br><span class="line"><span class="comment"># 再次查看证书有效期， 对比前后会发现证书已经从1年变成了100年了.</span></span><br><span class="line">./kubeadm alpha certs check-expiration</span><br></pre></td></tr></table></figure>
+<p><img src="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20200428161640.png" alt></p>
+<p>至此, 不管是搭建集群之前操作证书有效期还是对存在的集群延长证书有效期进行操作都不怕了,完美.</p>
 <h3 id="参考文章"><a href="#参考文章" class="headerlink" title="参考文章:"></a><strong>参考文章:</strong></h3><blockquote>
 <ul>
-<li><a href="http://blog.csdn.net/imzoer/article/details/8678029" target="_blank" rel="noopener">Python中subprocess学习</a></li>
+<li><a href="https://github.com/kubernetes/kubernetes/" target="_blank" rel="noopener">https://github.com/kubernetes/kubernetes/</a></li>
+<li><a href="https://www.kubernetes.org.cn/5777.html" target="_blank" rel="noopener">https://www.kubernetes.org.cn/5777.html</a></li>
+<li><a href="https://blog.rj-bai.com/post/160.html" target="_blank" rel="noopener">https://blog.rj-bai.com/post/160.html</a></li>
 </ul>
 </blockquote>
-<h3 id="转载请注明出处https-izsk-me"><a href="#转载请注明出处https-izsk-me" class="headerlink" title="转载请注明出处https://izsk.me"></a><strong>转载请注明出处<a href="https://izsk.me" target="_blank" rel="noopener">https://izsk.me</a></strong></h3><hr>
-
+<h3 id="转载请注明出处https-izsk-me"><a href="#转载请注明出处https-izsk-me" class="headerlink" title="转载请注明出处https://izsk.me"></a><strong>转载请注明出处<a href="https://izsk.me" target="_blank" rel="noopener">https://izsk.me</a></strong></h3>
       
     </div>
 
@@ -465,9 +491,7 @@
       
         <div class="post-tags">
           
-            <a href="/tags/Python/" rel="tag"># Python</a>
-          
-            <a href="/tags/Oracle/" rel="tag"># Oracle</a>
+            <a href="/tags/Kubernetes/" rel="tag"># Kubernetes</a>
           
         </div>
       
@@ -476,8 +500,8 @@
         <div class="post-nav">
           <div class="post-nav-next post-nav-item">
             
-              <a href="/2017/03/17/python中文分词器-结巴分词/" rel="next" title="python中文分词器-结巴分词">
-                <i class="fa fa-chevron-left"></i> python中文分词器-结巴分词
+              <a href="/2020/04/15/EFK-prombles/" rel="next" title="FELK学习(踩坑记)">
+                <i class="fa fa-chevron-left"></i> FELK学习(踩坑记)
               </a>
             
           </div>
@@ -486,8 +510,8 @@
 
           <div class="post-nav-prev post-nav-item">
             
-              <a href="/2017/05/16/FELK-ELK-Struct/" rel="prev" title="FELK学习(ELK介绍)">
-                FELK学习(ELK介绍) <i class="fa fa-chevron-right"></i>
+              <a href="/2020/04/20/golang-restfulAPI-mail-server/" rel="prev" title="golang学习(golang搭建邮件系统解决Unrecognized authentication type)">
+                golang学习(golang搭建邮件系统解决Unrecognized authentication type) <i class="fa fa-chevron-right"></i>
               </a>
             
           </div>
@@ -616,7 +640,7 @@
             
 
             
-              <div class="post-toc-content"><ol class="nav"><li class="nav-item nav-level-3"><a class="nav-link" href="#subprocess"><span class="nav-number">1.</span> <span class="nav-text">subprocess</span></a><ol class="nav-child"><li class="nav-item nav-level-4"><a class="nav-link" href="#subprocess-Popen"><span class="nav-number">1.1.</span> <span class="nav-text">subprocess.Popen</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#child-stdin-write"><span class="nav-number">1.2.</span> <span class="nav-text">child.stdin.write()</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#out-err-child-communicate"><span class="nav-number">1.3.</span> <span class="nav-text">(out,err)=child.communicate()</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#child-wait"><span class="nav-number">1.4.</span> <span class="nav-text">child.wait()</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#Popen-poll"><span class="nav-number">1.5.</span> <span class="nav-text">Popen.poll()</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#Popen-terminate"><span class="nav-number">1.6.</span> <span class="nav-text">Popen.terminate()</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#Popen-kill"><span class="nav-number">1.7.</span> <span class="nav-text">Popen.kill()</span></a></li></ol></li><li class="nav-item nav-level-3"><a class="nav-link" href="#参考文章"><span class="nav-number">2.</span> <span class="nav-text">参考文章:</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#转载请注明出处https-izsk-me"><span class="nav-number">3.</span> <span class="nav-text">转载请注明出处https://izsk.me</span></a></li></ol></div>
+              <div class="post-toc-content"><ol class="nav"><li class="nav-item nav-level-3"><a class="nav-link" href="#修改kubeadm源码"><span class="nav-number">1.</span> <span class="nav-text">修改kubeadm源码</span></a><ol class="nav-child"><li class="nav-item nav-level-4"><a class="nav-link" href="#切换分支"><span class="nav-number">1.1.</span> <span class="nav-text">切换分支</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#修改kubeadm源码-1"><span class="nav-number">1.2.</span> <span class="nav-text">修改kubeadm源码</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#二进制编译"><span class="nav-number">1.3.</span> <span class="nav-text">二进制编译</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#容器编译"><span class="nav-number">1.4.</span> <span class="nav-text">容器编译</span></a></li></ol></li><li class="nav-item nav-level-3"><a class="nav-link" href="#搭建新集群"><span class="nav-number">2.</span> <span class="nav-text">搭建新集群</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#对现有集群进行证书更新"><span class="nav-number">3.</span> <span class="nav-text">对现有集群进行证书更新</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#参考文章"><span class="nav-number">4.</span> <span class="nav-text">参考文章:</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#转载请注明出处https-izsk-me"><span class="nav-number">5.</span> <span class="nav-text">转载请注明出处https://izsk.me</span></a></li></ol></div>
             
 
           </div>
