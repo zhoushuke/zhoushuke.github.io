@@ -105,7 +105,11 @@
 <meta property="og:image" content="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/447313AF-7DD6-4FB4-8F46-AE1DC468C7CA.png">
 <meta property="og:image" content="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/C73EB07F-14CD-43A7-86C0-49B4812F57A6.png">
 <meta property="og:image" content="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/2AE46262-2624-446C-909E-1FA0E76A8AD7.png">
-<meta property="og:updated_time" content="2020-04-30T08:39:02.312Z">
+<meta property="og:image" content="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20200506115705.png">
+<meta property="og:image" content="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20200506115805.png">
+<meta property="og:image" content="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20200506120151.png">
+<meta property="og:image" content="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20200506120040.png">
+<meta property="og:updated_time" content="2020-05-06T12:39:52.046Z">
 <meta name="twitter:card" content="summary">
 <meta name="twitter:title" content="Kubernetes学习(Kubernetes踩坑记)">
 <meta name="twitter:description" content="记录在使用Kubernetes中遇到的各种问题及解决方案, 好记性不如烂笔头 不定期更新">
@@ -463,6 +467,30 @@
 <p>解决:</p>
 <p>执行以下命令修复</p>
 <figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">apt --fix-broken install </span><br><span class="line">apt-get update</span><br></pre></td></tr></table></figure>
+<h3 id="访问service时提示Connection-refused"><a href="#访问service时提示Connection-refused" class="headerlink" title="访问service时提示Connection refused"></a>访问service时提示Connection refused</h3><p>现象: 从另一环境中把yaml文件导入到新环境后有些service访问不通</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">telnet mongodb-mst.external 27017</span><br><span class="line">Trying 10.97.135.242...</span><br><span class="line">telnet: Unable to connect to remote host: Connection refused</span><br></pre></td></tr></table></figure>
+<p>首先排除了域名、端口的配置问题。</p>
+<p>会发现提示连接拒绝.可以确定的是集群内的DNS是正常的.</p>
+<p>那么就是通过clusterIP无法到达realserver. 查看iptables规则</p>
+<p>发现提示<code>default has no endpoints --reject-with icmp-port-unreachable</code></p>
+<p><img src="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20200506115705.png" alt></p>
+<p>很奇怪, 提示没有endpoints, 但是使用<code>kubectl get ep</code>又能看到ep存在且配置没有问题</p>
+<p>而且这个default是怎么来的.</p>
+<p>为了方便部署, 很多配置是从别的环境导出的配置, 有些service访问是没问题的, 只有少部分<code>connection refused</code></p>
+<p>结比一下发现一个很有趣的问题，先来看下不正常的yaml文件:</p>
+<p><img src="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20200506115805.png" alt></p>
+<p>由于服务在集群外部署的, 因此这里使用了subset方式, 开始怀疑问题在这里, 但是后来知道这个不是重点</p>
+<p>乍一看这个配置没什么问题, 部署也很正常, 但是对比正常的yaml文件，发现一个区别：</p>
+<p>如果在services中的端口指定了名字, 那么在subsets中的端口也要带名字, 没有带名字的就会出现<code>connection refused</code>，这个确实之前从来没有关注过, 一个端口的情况下也不会指定名字</p>
+<p>而且这面iptalbes中提示的default刚好就是这里的port name,虽然不敢相信，但是也只能试一试这个方法: 在subsets中也加了port name</p>
+<p><img src="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20200506120151.png" alt></p>
+<p>重新部署一个，再次查看iptalbes规则 </p>
+<p><code>iptables-save|grep mongodb-mst</code></p>
+<p><img src="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20200506120040.png" alt></p>
+<p>OMG, 居然可行, 再看下telnet的结果:</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">Trying 10.105.116.92...</span><br><span class="line">Connected to mongodb-mst.external.svc.cluster.local.</span><br><span class="line">Escape character is <span class="string">'^]'</span>.</span><br></pre></td></tr></table></figure>
+<p>访问也是没问题, 那么原因就在于:</p>
+<p><strong>在service中指定了port name时, 也需要在ep中指定port name</strong></p>
 <h3 id="参考文章"><a href="#参考文章" class="headerlink" title="参考文章:"></a><strong>参考文章:</strong></h3><blockquote>
 <ul>
 <li><a href="http://www.xuyasong.com/?p=1725" target="_blank" rel="noopener">http://www.xuyasong.com/?p=1725</a></li>
@@ -537,6 +565,10 @@
 
           <div class="post-nav-prev post-nav-item">
             
+              <a href="/2020/05/06/Kubernetes-svc-ep-port-name/" rel="prev" title="Kubernetes学习(排查访问service时提示Connection refused)">
+                Kubernetes学习(排查访问service时提示Connection refused) <i class="fa fa-chevron-right"></i>
+              </a>
+            
           </div>
         </div>
       
@@ -603,7 +635,7 @@
           
             <div class="site-state-item site-state-posts">
               <a href="/archives">
-                <span class="site-state-item-count">116</span>
+                <span class="site-state-item-count">117</span>
                 <span class="site-state-item-name">日志</span>
               </a>
             </div>
@@ -663,7 +695,7 @@
             
 
             
-              <div class="post-toc-content"><ol class="nav"><li class="nav-item nav-level-3"><a class="nav-link" href="#Are-you-tring-to-mount-a-directory-on-to-a-file"><span class="nav-number">1.</span> <span class="nav-text">Are you tring to mount a directory on to a file</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#Kubernetes启动后提示slice-no-such-file-ro-directory"><span class="nav-number">2.</span> <span class="nav-text">Kubernetes启动后提示slice: no such file ro directory</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#“cni0”-already-has-an-IP-address-different-from"><span class="nav-number">3.</span> <span class="nav-text">“cni0” already has an IP address different from</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#kubeadm初始化时提示-CPU小于2"><span class="nav-number">4.</span> <span class="nav-text">kubeadm初始化时提示 CPU小于2</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#Unable-to-update-cni-config-no-network-found"><span class="nav-number">5.</span> <span class="nav-text">Unable to update cni config: no network found</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#while-reading-‘google-dockercfg’-metadata"><span class="nav-number">6.</span> <span class="nav-text">while reading ‘google-dockercfg’ metadata</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#no-providers-available-to-validate-pod-request"><span class="nav-number">7.</span> <span class="nav-text">no providers available to validate pod request</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#unable-to-upgrade-connection-Unauthorized"><span class="nav-number">8.</span> <span class="nav-text">unable to upgrade connection: Unauthorized</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#kubectl-get-cs-提示-lt-unknown"><span class="nav-number">9.</span> <span class="nav-text">kubectl get cs 提示\&lt;unknown&gt;</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#安装kubeadm时提示Depends错误"><span class="nav-number">10.</span> <span class="nav-text">安装kubeadm时提示Depends错误</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#参考文章"><span class="nav-number">11.</span> <span class="nav-text">参考文章:</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#转载请注明出处https-izsk-me"><span class="nav-number">12.</span> <span class="nav-text">转载请注明出处https://izsk.me</span></a></li></ol></div>
+              <div class="post-toc-content"><ol class="nav"><li class="nav-item nav-level-3"><a class="nav-link" href="#Are-you-tring-to-mount-a-directory-on-to-a-file"><span class="nav-number">1.</span> <span class="nav-text">Are you tring to mount a directory on to a file</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#Kubernetes启动后提示slice-no-such-file-ro-directory"><span class="nav-number">2.</span> <span class="nav-text">Kubernetes启动后提示slice: no such file ro directory</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#“cni0”-already-has-an-IP-address-different-from"><span class="nav-number">3.</span> <span class="nav-text">“cni0” already has an IP address different from</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#kubeadm初始化时提示-CPU小于2"><span class="nav-number">4.</span> <span class="nav-text">kubeadm初始化时提示 CPU小于2</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#Unable-to-update-cni-config-no-network-found"><span class="nav-number">5.</span> <span class="nav-text">Unable to update cni config: no network found</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#while-reading-‘google-dockercfg’-metadata"><span class="nav-number">6.</span> <span class="nav-text">while reading ‘google-dockercfg’ metadata</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#no-providers-available-to-validate-pod-request"><span class="nav-number">7.</span> <span class="nav-text">no providers available to validate pod request</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#unable-to-upgrade-connection-Unauthorized"><span class="nav-number">8.</span> <span class="nav-text">unable to upgrade connection: Unauthorized</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#kubectl-get-cs-提示-lt-unknown"><span class="nav-number">9.</span> <span class="nav-text">kubectl get cs 提示\&lt;unknown&gt;</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#安装kubeadm时提示Depends错误"><span class="nav-number">10.</span> <span class="nav-text">安装kubeadm时提示Depends错误</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#访问service时提示Connection-refused"><span class="nav-number">11.</span> <span class="nav-text">访问service时提示Connection refused</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#参考文章"><span class="nav-number">12.</span> <span class="nav-text">参考文章:</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#转载请注明出处https-izsk-me"><span class="nav-number">13.</span> <span class="nav-text">转载请注明出处https://izsk.me</span></a></li></ol></div>
             
 
           </div>
