@@ -86,23 +86,35 @@
 
 
 
-<meta name="description" content="今天排查一个在kubernetes集群中访问svc时出现的Connection refused的问题，比较奇怪">
+<meta name="description" content="记录在使用Kubernetes中遇到的各种问题及解决方案, 好记性不如烂笔头 不定期更新">
 <meta name="keywords" content="Kubernetes">
 <meta property="og:type" content="article">
-<meta property="og:title" content="Kubernetes学习(排查访问service时提示Connection refused)">
-<meta property="og:url" content="https://zhoushuke.github.io/2020/05/06/Kubernetes-svc-ep-port-name/index.html">
+<meta property="og:title" content="Kubernetes学习(Kubernetes踩坑记)">
+<meta property="og:url" content="https://zhoushuke.github.io/2020/05/10/Kubernetes-prombles/index.html">
 <meta property="og:site_name" content="Z.S.K.&#39;s Records">
-<meta property="og:description" content="今天排查一个在kubernetes集群中访问svc时出现的Connection refused的问题，比较奇怪">
+<meta property="og:description" content="记录在使用Kubernetes中遇到的各种问题及解决方案, 好记性不如烂笔头 不定期更新">
 <meta property="og:locale" content="zh-Hans">
+<meta property="og:image" content="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20200430132115.png">
+<meta property="og:image" content="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20200430132148.png">
+<meta property="og:image" content="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/41B2684F-312C-41ED-AF56-D6014C6B74E6.png">
+<meta property="og:image" content="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20200430145913.png">
+<meta property="og:image" content="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/63611F8A-F803-46F5-8792-67111E03DF91.png">
+<meta property="og:image" content="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/FB66ABBE-FF79-48A4-8A8B-7FDC3AED6634.png">
+<meta property="og:image" content="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/ACEB6BE6-7E22-4A43-AB4A-A51E00CE9EFE.png">
+<meta property="og:image" content="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/5FECFF57-F204-4ADF-A9E0-5F1D9A917194.png">
+<meta property="og:image" content="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/447313AF-7DD6-4FB4-8F46-AE1DC468C7CA.png">
+<meta property="og:image" content="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/C73EB07F-14CD-43A7-86C0-49B4812F57A6.png">
+<meta property="og:image" content="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/2AE46262-2624-446C-909E-1FA0E76A8AD7.png">
 <meta property="og:image" content="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20200506115705.png">
 <meta property="og:image" content="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20200506115805.png">
 <meta property="og:image" content="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20200506120151.png">
 <meta property="og:image" content="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20200506120040.png">
-<meta property="og:updated_time" content="2020-05-06T12:39:52.066Z">
+<meta property="og:image" content="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20200511180743.png">
+<meta property="og:updated_time" content="2020-05-12T04:43:28.626Z">
 <meta name="twitter:card" content="summary">
-<meta name="twitter:title" content="Kubernetes学习(排查访问service时提示Connection refused)">
-<meta name="twitter:description" content="今天排查一个在kubernetes集群中访问svc时出现的Connection refused的问题，比较奇怪">
-<meta name="twitter:image" content="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20200506115705.png">
+<meta name="twitter:title" content="Kubernetes学习(Kubernetes踩坑记)">
+<meta name="twitter:description" content="记录在使用Kubernetes中遇到的各种问题及解决方案, 好记性不如烂笔头 不定期更新">
+<meta name="twitter:image" content="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20200430132115.png">
 
 
 
@@ -130,13 +142,13 @@
 
 
 
-  <link rel="canonical" href="https://zhoushuke.github.io/2020/05/06/Kubernetes-svc-ep-port-name/">
+  <link rel="canonical" href="https://zhoushuke.github.io/2020/05/10/Kubernetes-prombles/">
 
 
 
 
 
-  <title> Kubernetes学习(排查访问service时提示Connection refused) | Z.S.K.'s Records </title>
+  <title> Kubernetes学习(Kubernetes踩坑记) | Z.S.K.'s Records </title>
 </head>
 
 <body itemscope itemtype="http://schema.org/WebPage" lang="zh-Hans">
@@ -302,7 +314,7 @@
   
 
   <article class="post post-type-normal " itemscope itemtype="http://schema.org/Article">
-  <link itemprop="mainEntityOfPage" href="https://zhoushuke.github.io/2020/05/06/Kubernetes-svc-ep-port-name/">
+  <link itemprop="mainEntityOfPage" href="https://zhoushuke.github.io/2020/05/10/Kubernetes-prombles/">
 
   <span style="display:none" itemprop="author" itemscope itemtype="http://schema.org/Person">
     <meta itemprop="name" content="Z.S.K.">
@@ -326,7 +338,7 @@
             
             
               
-                Kubernetes学习(排查访问service时提示Connection refused)
+                Kubernetes学习(Kubernetes踩坑记)
               
             
           </h1>
@@ -341,8 +353,8 @@
               
                 <span class="post-meta-item-text">发表于</span>
               
-              <time title="Post created" itemprop="dateCreated datePublished" datetime="2020-05-06T17:10:53+08:00">
-                2020-05-06
+              <time title="Post created" itemprop="dateCreated datePublished" datetime="2020-05-10T17:10:53+08:00">
+                2020-05-10
               </time>
             
 
@@ -399,13 +411,68 @@
       
 
       
-        <p>今天排查一个在kubernetes集群中访问svc时出现的<code>Connection refused</code>的问题，比较奇怪</p>
+        <p>记录在使用Kubernetes中遇到的各种问题及解决方案, 好记性不如烂笔头</p>
+<p><strong>不定期更新</strong></p>
 <a id="more"></a>
-<h3 id="现象"><a href="#现象" class="headerlink" title="现象"></a>现象</h3><p>背景是: 由于项目关系，需要从一个k8s环境中把yaml文件导入到一个全新的k8s环境, 导入之后发现有些service在应用间访问不通</p>
+<h3 id="Are-you-tring-to-mount-a-directory-on-to-a-file"><a href="#Are-you-tring-to-mount-a-directory-on-to-a-file" class="headerlink" title="Are you tring to mount a directory on to a file"></a>Are you tring to mount a directory on to a file</h3><p><img src="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20200430132115.png" alt></p>
+<p>原因: </p>
+<p>Yaml文件中使用了subPath, 但是mountPath指向了一个目录</p>
+<p>解决: </p>
+<p>mountPath需要加上文件名</p>
+<p><img src="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20200430132148.png" alt></p>
+<h3 id="Kubernetes启动后提示slice-no-such-file-ro-directory"><a href="#Kubernetes启动后提示slice-no-such-file-ro-directory" class="headerlink" title="Kubernetes启动后提示slice: no such file ro directory"></a>Kubernetes启动后提示slice: no such file ro directory</h3><p><img src="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/41B2684F-312C-41ED-AF56-D6014C6B74E6.png" alt></p>
+<p>原因: </p>
+<p>yum安装的kubelet默认的是cgroupfs，而docker一般默认的是systemd。但是kubernetes安装的时候建议使用systemd, kubelet跟docker的不一致, 要么修改kubelet的启动参数 , 要么修改dokcer启动参数</p>
+<p>解决:</p>
+<p>docker的启动参数文件为: <code>/etc/docker/daemon.json: &quot;exec-opts&quot;: [&quot;native.cgroupdriver=systemd”]</code></p>
+<p>kubelet的启动参数文件为: <code>/var/lib/kubelet/config.yaml:  cgroupDriver: systemd</code></p>
+<h3 id="“cni0”-already-has-an-IP-address-different-from"><a href="#“cni0”-already-has-an-IP-address-different-from" class="headerlink" title="“cni0” already has an IP address different from"></a>“cni0” already has an IP address different from</h3><p><img src="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20200430145913.png" alt></p>
+<p>原因:</p>
+<p>使用kubeadm reset 重复操作过, reset之后，之前flannel创建的bridge device cni0和网口设备flannel.1依然健在</p>
+<p> 解决:</p>
+<p>添加之前需要清除下网络</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br></pre></td><td class="code"><pre><span class="line">kubeadm reset</span><br><span class="line">systemctl stop kubelet</span><br><span class="line">systemctl stop docker</span><br><span class="line">rm -rf /var/lib/cni/</span><br><span class="line">rm -rf /var/lib/kubelet/*</span><br><span class="line">rm -rf /etc/cni/</span><br><span class="line">ifconfig cni0 down</span><br><span class="line">ifconfig flannel.1 down</span><br><span class="line">ifconfig docker0 down</span><br><span class="line">ip link delete cni0</span><br><span class="line">ip link delete flannel.1</span><br><span class="line">systemctl start docker</span><br><span class="line">systemctl start kubelet</span><br></pre></td></tr></table></figure>
+<h3 id="kubeadm初始化时提示-CPU小于2"><a href="#kubeadm初始化时提示-CPU小于2" class="headerlink" title="kubeadm初始化时提示 CPU小于2"></a>kubeadm初始化时提示 CPU小于2</h3><figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line">[preflight] Running pre-flight checks</span><br><span class="line">error execution phase preflight: [preflight] Some fatal errors occurred:</span><br><span class="line">    [ERROR NumCPU]: the number of available CPUs 1 is less than the required 2</span><br><span class="line">[preflight] If you know what you are doing, you can make a check non-fatal with `--ignore-preflight-errors=...`</span><br></pre></td></tr></table></figure>
+<p>原因:</p>
+<p>kubeadm对资源一定的要求，如果是测试环境无所谓的话,可忽略</p>
+<p>解决:</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">使用 --ignore-preflight-errors 忽略</span><br></pre></td></tr></table></figure>
+<h3 id="Unable-to-update-cni-config-no-network-found"><a href="#Unable-to-update-cni-config-no-network-found" class="headerlink" title="Unable to update cni config: no network found"></a>Unable to update cni config: no network found</h3><p><img src="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/63611F8A-F803-46F5-8792-67111E03DF91.png" alt></p>
+<p>原因:</p>
+<p>还未部署网络插件容器，导致在/etc/cni下还没有文件</p>
+<p>解决:</p>
+<p>根据实际情况部署网络插件</p>
+<h3 id="while-reading-‘google-dockercfg’-metadata"><a href="#while-reading-‘google-dockercfg’-metadata" class="headerlink" title="while reading ‘google-dockercfg’ metadata"></a>while reading ‘google-dockercfg’ metadata</h3><p><img src="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/FB66ABBE-FF79-48A4-8A8B-7FDC3AED6634.png" alt></p>
+<p>原因:</p>
+<p>无法访问上述url出现 404</p>
+<p>解决:</p>
+<p>由于是在RKE上部署k8s, 所以可能会去访问google相关的url, 不影响业务,可以忽略</p>
+<h3 id="no-providers-available-to-validate-pod-request"><a href="#no-providers-available-to-validate-pod-request" class="headerlink" title="no providers available to validate pod request"></a>no providers available to validate pod request</h3><p><img src="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/ACEB6BE6-7E22-4A43-AB4A-A51E00CE9EFE.png" alt></p>
+<p>原因:</p>
+<p>在api-server的启动参数enable-admission中设置了PodSecrityPolicy, 但是集群中又没有任何的podsecritypolicy，因此导致整个集群都无法新建出pod</p>
+<p>解决:</p>
+<p>删除相应的podsecritypolicy即可</p>
+<h3 id="unable-to-upgrade-connection-Unauthorized"><a href="#unable-to-upgrade-connection-Unauthorized" class="headerlink" title="unable to upgrade connection: Unauthorized"></a>unable to upgrade connection: Unauthorized</h3><p><img src="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/5FECFF57-F204-4ADF-A9E0-5F1D9A917194.png" alt></p>
+<p>原因:</p>
+<p>kubelet的启动参数少了x509认证方式配置证书的路径, 加上重启kubelet即可</p>
+<p>解决:</p>
+<p><img src="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/447313AF-7DD6-4FB4-8F46-AE1DC468C7CA.png" alt></p>
+<h3 id="kubectl-get-cs-提示-lt-unknown"><a href="#kubectl-get-cs-提示-lt-unknown" class="headerlink" title="kubectl get cs 提示\&lt;unknown>"></a>kubectl get cs 提示\&lt;unknown></h3><p><img src="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/C73EB07F-14CD-43A7-86C0-49B4812F57A6.png" alt></p>
+<p>原因:</p>
+<p>是个bug, 版本的问题，kubernetes有意废除get cs命令</p>
+<p>解决:</p>
+<p>目前对集群的运行无影响, 可通过加-oyaml 查看状态</p>
+<h3 id="安装kubeadm时提示Depends错误"><a href="#安装kubeadm时提示Depends错误" class="headerlink" title="安装kubeadm时提示Depends错误"></a>安装kubeadm时提示Depends错误</h3><p><img src="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/2AE46262-2624-446C-909E-1FA0E76A8AD7.png" alt></p>
+<p>原因: </p>
+<p>跟kubeadm没多大关系, 系统安装的有问题</p>
+<p>解决:</p>
+<p>执行以下命令修复</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">apt --fix-broken install </span><br><span class="line">apt-get update</span><br></pre></td></tr></table></figure>
+<h3 id="访问service时提示Connection-refused"><a href="#访问service时提示Connection-refused" class="headerlink" title="访问service时提示Connection refused"></a>访问service时提示Connection refused</h3><p>现象: 从另一环境中把yaml文件导入到新环境后有些service访问不通</p>
 <figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">telnet mongodb-mst.external 27017</span><br><span class="line">Trying 10.97.135.242...</span><br><span class="line">telnet: Unable to connect to remote host: Connection refused</span><br></pre></td></tr></table></figure>
-<h3 id="排查"><a href="#排查" class="headerlink" title="排查"></a>排查</h3><p>首先排除了域名、端口的配置问题。</p>
-<p>可以确定的是集群内的DNS是正常的.</p>
-<p>提示连接拒绝那么就是通过clusterIP无法到达realserver. 查看iptables规则</p>
+<p>首先排除了域名、端口的配置问题。</p>
+<p>会发现提示连接拒绝.可以确定的是集群内的DNS是正常的.</p>
+<p>那么就是通过clusterIP无法到达realserver. 查看iptables规则</p>
 <p>发现提示<code>default has no endpoints --reject-with icmp-port-unreachable</code></p>
 <p><img src="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20200506115705.png" alt></p>
 <p>很奇怪, 提示没有endpoints, 但是使用<code>kubectl get ep</code>又能看到ep存在且配置没有问题</p>
@@ -423,20 +490,24 @@
 <p><img src="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20200506120040.png" alt></p>
 <p>OMG, 居然可行, 再看下telnet的结果:</p>
 <figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">Trying 10.105.116.92...</span><br><span class="line">Connected to mongodb-mst.external.svc.cluster.local.</span><br><span class="line">Escape character is <span class="string">'^]'</span>.</span><br></pre></td></tr></table></figure>
-<p>访问也是没问题, </p>
-<h3 id="结果"><a href="#结果" class="headerlink" title="结果"></a>结果</h3><p>那么结果很明显了:</p>
-<p><strong>在service中指定了port name时, 也需要在ep中指定同样的port name</strong></p>
-<p>这是为什么呢?</p>
-<p>查看<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.15/#serviceport-v1-core" target="_blank" rel="noopener">文档</a></p>
-<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># ServicePort v1 core</span></span><br><span class="line">The name of this port within the service. This must be a DNS_LABEL. All ports within a ServiceSpec must have unique names. This maps to the <span class="string">'Name'</span> field <span class="keyword">in</span> EndpointPort objects. Optional <span class="keyword">if</span> only one ServicePort is defined on this service</span><br></pre></td></tr></table></figure>
-<p>提到了在不止一个端口时， svc的port name 需要与endpointport name保持一致.</p>
-<p>源码里也会对比端口名字.</p>
-<figure class="highlight go"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">func</span> <span class="params">(cache *EndpointSliceCache)</span> <span class="title">endpointInfoByServicePort</span><span class="params">(serviceNN types.NamespacedName, sliceInfoByName endpointSliceInfoByName)</span> <span class="title">spToEndpointMap</span></span> &#123;</span><br><span class="line">	endpointInfoBySP := spToEndpointMap&#123;&#125;</span><br><span class="line"></span><br><span class="line">	<span class="keyword">for</span> _, sliceInfo := <span class="keyword">range</span> sliceInfoByName &#123;</span><br><span class="line">		<span class="keyword">for</span> _, port := <span class="keyword">range</span> sliceInfo.Ports &#123;</span><br><span class="line">			<span class="keyword">if</span> port.Name == <span class="literal">nil</span> &#123;</span><br><span class="line">				klog.Warningf(<span class="string">"ignoring port with nil name %v"</span>, port)</span><br><span class="line">				<span class="keyword">continue</span></span><br><span class="line">			&#125;</span><br><span class="line">			<span class="comment">// <span class="doctag">TODO:</span> handle nil ports to mean "all"</span></span><br><span class="line">			<span class="keyword">if</span> port.Port == <span class="literal">nil</span> || *port.Port == <span class="keyword">int32</span>(<span class="number">0</span>) &#123;</span><br><span class="line">				klog.Warningf(<span class="string">"ignoring invalid endpoint port %s"</span>, *port.Name)</span><br><span class="line">				<span class="keyword">continue</span></span><br><span class="line">			&#125;</span><br><span class="line"></span><br><span class="line">			svcPortName := ServicePortName&#123;</span><br><span class="line">				NamespacedName: serviceNN,</span><br><span class="line">				Port:           *port.Name,</span><br><span class="line">				Protocol:       *port.Protocol,</span><br><span class="line">			&#125;</span><br><span class="line"></span><br><span class="line">			endpointInfoBySP[svcPortName] = cache.addEndpointsByIP(serviceNN, <span class="keyword">int</span>(*port.Port), endpointInfoBySP[svcPortName], sliceInfo.Endpoints)</span><br><span class="line">		&#125;</span><br><span class="line">	&#125;</span><br><span class="line"></span><br><span class="line">	<span class="keyword">return</span> endpointInfoBySP</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
-<p>主要是这个端口的名称平时也不怎么在意, 没想到有坑</p>
+<p>访问也是没问题, 那么原因就在于:</p>
+<p><strong>在service中指定了port name时, 也需要在ep中指定port name</strong></p>
+<h3 id="error-converting-fieldPath-field-label-not-supported"><a href="#error-converting-fieldPath-field-label-not-supported" class="headerlink" title="error converting fieldPath: field label not supported"></a>error converting fieldPath: field label not supported</h3><p>今天遇到一个部署deployment出错的问题, yaml文件如下:</p>
+<figure class="highlight yaml"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br></pre></td><td class="code"><pre><span class="line"><span class="attr">apiVersion:</span> <span class="string">apps/v1</span></span><br><span class="line"><span class="attr">kind:</span> <span class="string">Deployment</span></span><br><span class="line"><span class="attr">metadata:</span></span><br><span class="line">  <span class="attr">name:</span> <span class="string">demo-deployment</span></span><br><span class="line">  <span class="attr">namespace:</span> <span class="string">4test</span></span><br><span class="line">  <span class="attr">labels:</span></span><br><span class="line">    <span class="attr">app:</span> <span class="string">config-demo-app</span></span><br><span class="line"><span class="attr">spec:</span></span><br><span class="line">  <span class="attr">replicas:</span> <span class="number">1</span></span><br><span class="line">  <span class="attr">selector:</span></span><br><span class="line">    <span class="attr">matchLabels:</span></span><br><span class="line">      <span class="attr">app:</span> <span class="string">config-demo-app</span></span><br><span class="line">  <span class="attr">template:</span></span><br><span class="line">    <span class="attr">metadata:</span></span><br><span class="line">      <span class="attr">labels:</span></span><br><span class="line">        <span class="attr">app:</span> <span class="string">config-demo-app</span></span><br><span class="line">      <span class="attr">annotations:</span></span><br><span class="line">        <span class="comment"># The field we'll use to couple our ConfigMap and Deployment</span></span><br><span class="line">        <span class="attr">configHash:</span> <span class="string">4431f6d28fdf60c8140d28c42cde331a76269ac7a0e6af01d0de0fa8392c1145</span></span><br><span class="line">    <span class="attr">spec:</span></span><br><span class="line">      <span class="attr">containers:</span></span><br><span class="line">      <span class="bullet">-</span> <span class="attr">name:</span> <span class="string">config-demo-app</span></span><br><span class="line">        <span class="attr">image:</span> <span class="string">gcr.io/optimum-rock-145719/config-demo-app</span></span><br><span class="line">        <span class="attr">ports:</span></span><br><span class="line">        <span class="bullet">-</span> <span class="attr">containerPort:</span> <span class="number">80</span></span><br><span class="line">        <span class="attr">envFrom:</span></span><br><span class="line">        <span class="comment"># The ConfigMap we want to use</span></span><br><span class="line">        <span class="bullet">-</span> <span class="attr">configMapRef:</span></span><br><span class="line">            <span class="attr">name:</span> <span class="string">demo-config</span></span><br><span class="line">        <span class="comment"># Extra-curricular: We can make the hash of our ConfigMap available at a</span></span><br><span class="line">        <span class="comment"># (e.g.) debug endpoint via a fieldRef</span></span><br><span class="line">        <span class="attr">env:</span></span><br><span class="line">        <span class="bullet">-</span> <span class="attr">name:</span> <span class="string">CONFIG_HASH</span></span><br><span class="line">          <span class="comment">#value: "4431f6d28fdf60c8140d28c42cde331a76269ac7a0e6af01d0de0fa8392c1145"</span></span><br><span class="line">          <span class="attr">valueFrom:</span></span><br><span class="line">            <span class="attr">fieldRef:</span></span><br><span class="line">              <span class="attr">fieldPath:</span> <span class="string">spec.template.metadata.annotations.configHash</span></span><br></pre></td></tr></table></figure>
+<p>提示以下错误:</p>
+<p><img src="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20200511180743.png" alt></p>
+<p>会提示<code>Unsupported value:spec.template.metadata.annotations.configHash</code></p>
+<p>目的很简单: container中的环境变量中引用configHash变量, 这个值是当configmap变更时比对两个不同的sha值以此达到重启pod的目的, 但fieldPath显然不支持<code>spec.template.metadata.annotations.configHash</code></p>
+<p>从报错提示来看, 支持列表有<code>metadata.name, metadata.namespace, metadata.uid, spec.nodeName,spec.serviceAccountName, status.hostIp, status.PodIP, status.PodIPs</code></p>
+<p><strong>这些值用于容器中需要以下信息时可以不从k8s的apiserver中获取而是可以很方便地从这些变量直接获得</strong></p>
+<p>详见:<code>https://www.magalix.com/blog/kubernetes-patterns-the-reflection-pattern</code></p>
 <h3 id="参考文章"><a href="#参考文章" class="headerlink" title="参考文章:"></a><strong>参考文章:</strong></h3><blockquote>
 <ul>
-<li><a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.15/#serviceport-v1-core" target="_blank" rel="noopener">https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.15/#serviceport-v1-core</a></li>
+<li><a href="http://www.xuyasong.com/?p=1725" target="_blank" rel="noopener">http://www.xuyasong.com/?p=1725</a></li>
 <li><a href="https://kubernetes.io/" target="_blank" rel="noopener">https://kubernetes.io/</a></li>
+<li><a href="https://www.cnblogs.com/breezey/p/8810039.html" target="_blank" rel="noopener">https://www.cnblogs.com/breezey/p/8810039.html</a></li>
+<li><a href="https://ieevee.com/tech/2018/04/25/downwardapi.html" target="_blank" rel="noopener">https://ieevee.com/tech/2018/04/25/downwardapi.html</a></li>
+<li><a href="https://www.magalix.com/blog/kubernetes-patterns-the-reflection-pattern" target="_blank" rel="noopener">https://www.magalix.com/blog/kubernetes-patterns-the-reflection-pattern</a></li>
 </ul>
 </blockquote>
 <h3 id="转载请注明出处https-izsk-me"><a href="#转载请注明出处https-izsk-me" class="headerlink" title="转载请注明出处https://izsk.me"></a><strong>转载请注明出处<a href="https://izsk.me" target="_blank" rel="noopener">https://izsk.me</a></strong></h3>
@@ -497,8 +568,8 @@
         <div class="post-nav">
           <div class="post-nav-next post-nav-item">
             
-              <a href="/2020/04/29/Kubernetes-add-new-cert-into-apiserver/" rel="next" title="Kubernetes学习(apiserver证书中新增IP/DNS)">
-                <i class="fa fa-chevron-left"></i> Kubernetes学习(apiserver证书中新增IP/DNS)
+              <a href="/2020/05/06/Kubernetes-svc-ep-port-name/" rel="next" title="Kubernetes学习(排查访问service时提示Connection refused)">
+                <i class="fa fa-chevron-left"></i> Kubernetes学习(排查访问service时提示Connection refused)
               </a>
             
           </div>
@@ -506,10 +577,6 @@
           <span class="post-nav-divider"></span>
 
           <div class="post-nav-prev post-nav-item">
-            
-              <a href="/2020/05/10/Kubernetes-prombles/" rel="prev" title="Kubernetes学习(Kubernetes踩坑记)">
-                Kubernetes学习(Kubernetes踩坑记) <i class="fa fa-chevron-right"></i>
-              </a>
             
           </div>
         </div>
@@ -637,7 +704,7 @@
             
 
             
-              <div class="post-toc-content"><ol class="nav"><li class="nav-item nav-level-3"><a class="nav-link" href="#现象"><span class="nav-number">1.</span> <span class="nav-text">现象</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#排查"><span class="nav-number">2.</span> <span class="nav-text">排查</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#结果"><span class="nav-number">3.</span> <span class="nav-text">结果</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#参考文章"><span class="nav-number">4.</span> <span class="nav-text">参考文章:</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#转载请注明出处https-izsk-me"><span class="nav-number">5.</span> <span class="nav-text">转载请注明出处https://izsk.me</span></a></li></ol></div>
+              <div class="post-toc-content"><ol class="nav"><li class="nav-item nav-level-3"><a class="nav-link" href="#Are-you-tring-to-mount-a-directory-on-to-a-file"><span class="nav-number">1.</span> <span class="nav-text">Are you tring to mount a directory on to a file</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#Kubernetes启动后提示slice-no-such-file-ro-directory"><span class="nav-number">2.</span> <span class="nav-text">Kubernetes启动后提示slice: no such file ro directory</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#“cni0”-already-has-an-IP-address-different-from"><span class="nav-number">3.</span> <span class="nav-text">“cni0” already has an IP address different from</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#kubeadm初始化时提示-CPU小于2"><span class="nav-number">4.</span> <span class="nav-text">kubeadm初始化时提示 CPU小于2</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#Unable-to-update-cni-config-no-network-found"><span class="nav-number">5.</span> <span class="nav-text">Unable to update cni config: no network found</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#while-reading-‘google-dockercfg’-metadata"><span class="nav-number">6.</span> <span class="nav-text">while reading ‘google-dockercfg’ metadata</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#no-providers-available-to-validate-pod-request"><span class="nav-number">7.</span> <span class="nav-text">no providers available to validate pod request</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#unable-to-upgrade-connection-Unauthorized"><span class="nav-number">8.</span> <span class="nav-text">unable to upgrade connection: Unauthorized</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#kubectl-get-cs-提示-lt-unknown"><span class="nav-number">9.</span> <span class="nav-text">kubectl get cs 提示\&lt;unknown&gt;</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#安装kubeadm时提示Depends错误"><span class="nav-number">10.</span> <span class="nav-text">安装kubeadm时提示Depends错误</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#访问service时提示Connection-refused"><span class="nav-number">11.</span> <span class="nav-text">访问service时提示Connection refused</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#error-converting-fieldPath-field-label-not-supported"><span class="nav-number">12.</span> <span class="nav-text">error converting fieldPath: field label not supported</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#参考文章"><span class="nav-number">13.</span> <span class="nav-text">参考文章:</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#转载请注明出处https-izsk-me"><span class="nav-number">14.</span> <span class="nav-text">转载请注明出处https://izsk.me</span></a></li></ol></div>
             
 
           </div>
