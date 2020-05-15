@@ -68,7 +68,7 @@
 <link href="/css/main.css?v=5.1.0" rel="stylesheet" type="text/css">
 
 
-  <meta name="keywords" content="ServiceMesh,">
+  <meta name="keywords" content="Gitlab,">
 
 
 
@@ -86,24 +86,20 @@
 
 
 
-<meta name="description" content="上次在Kubernetes中安装好Istio之后, 忙了很长的时间在处理另一个事, 今天学习一下istio的架构及一些概念，后续分析整个数据的流向.">
-<meta name="keywords" content="ServiceMesh">
+<meta name="description" content="随着环境的多样性, 频繁的集成、测试占用了大量的时间, 大公司都有专门的团队做效率工程, 而我司这种小公司则就只能自养自足. 好在所有的环境都切换到了kubernetes环境, k8s天然的属性结合gitlab end-to-end的能力，实现CI/CD也能节省大量的时间.">
+<meta name="keywords" content="Gitlab">
 <meta property="og:type" content="article">
-<meta property="og:title" content="Istio学习(架构)">
-<meta property="og:url" content="https://zhoushuke.github.io/2020/02/09/Istio-Struct/index.html">
+<meta property="og:title" content="Gitlab学习(实现多kubernets环境CI&#x2F;CD)">
+<meta property="og:url" content="https://zhoushuke.github.io/2020/05/15/gitlab-kubernetes-multi-environment-deploy/index.html">
 <meta property="og:site_name" content="Z.S.K.&#39;s Records">
-<meta property="og:description" content="上次在Kubernetes中安装好Istio之后, 忙了很长的时间在处理另一个事, 今天学习一下istio的架构及一些概念，后续分析整个数据的流向.">
+<meta property="og:description" content="随着环境的多样性, 频繁的集成、测试占用了大量的时间, 大公司都有专门的团队做效率工程, 而我司这种小公司则就只能自养自足. 好在所有的环境都切换到了kubernetes环境, k8s天然的属性结合gitlab end-to-end的能力，实现CI/CD也能节省大量的时间.">
 <meta property="og:locale" content="zh-Hans">
-<meta property="og:image" content="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20200209153912.png">
-<meta property="og:image" content="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20200209154612.png">
-<meta property="og:image" content="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20200209212447.png">
-<meta property="og:image" content="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20200209155817.png">
-<meta property="og:image" content="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20200209160002.png">
-<meta property="og:updated_time" content="2020-02-11T14:15:34.900Z">
+<meta property="og:image" content="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/gitlab_workflow_example.png">
+<meta property="og:updated_time" content="2020-05-15T09:13:52.119Z">
 <meta name="twitter:card" content="summary">
-<meta name="twitter:title" content="Istio学习(架构)">
-<meta name="twitter:description" content="上次在Kubernetes中安装好Istio之后, 忙了很长的时间在处理另一个事, 今天学习一下istio的架构及一些概念，后续分析整个数据的流向.">
-<meta name="twitter:image" content="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20200209153912.png">
+<meta name="twitter:title" content="Gitlab学习(实现多kubernets环境CI&#x2F;CD)">
+<meta name="twitter:description" content="随着环境的多样性, 频繁的集成、测试占用了大量的时间, 大公司都有专门的团队做效率工程, 而我司这种小公司则就只能自养自足. 好在所有的环境都切换到了kubernetes环境, k8s天然的属性结合gitlab end-to-end的能力，实现CI/CD也能节省大量的时间.">
+<meta name="twitter:image" content="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/gitlab_workflow_example.png">
 
 
 
@@ -131,13 +127,13 @@
 
 
 
-  <link rel="canonical" href="https://zhoushuke.github.io/2020/02/09/Istio-Struct/">
+  <link rel="canonical" href="https://zhoushuke.github.io/2020/05/15/gitlab-kubernetes-multi-environment-deploy/">
 
 
 
 
 
-  <title> Istio学习(架构) | Z.S.K.'s Records </title>
+  <title> Gitlab学习(实现多kubernets环境CI/CD) | Z.S.K.'s Records </title>
 </head>
 
 <body itemscope itemtype="http://schema.org/WebPage" lang="zh-Hans">
@@ -303,7 +299,7 @@
   
 
   <article class="post post-type-normal " itemscope itemtype="http://schema.org/Article">
-  <link itemprop="mainEntityOfPage" href="https://zhoushuke.github.io/2020/02/09/Istio-Struct/">
+  <link itemprop="mainEntityOfPage" href="https://zhoushuke.github.io/2020/05/15/gitlab-kubernetes-multi-environment-deploy/">
 
   <span style="display:none" itemprop="author" itemscope itemtype="http://schema.org/Person">
     <meta itemprop="name" content="Z.S.K.">
@@ -327,7 +323,7 @@
             
             
               
-                Istio学习(架构)
+                Gitlab学习(实现多kubernets环境CI/CD)
               
             
           </h1>
@@ -342,8 +338,8 @@
               
                 <span class="post-meta-item-text">发表于</span>
               
-              <time title="Post created" itemprop="dateCreated datePublished" datetime="2020-02-09T15:40:53+08:00">
-                2020-02-09
+              <time title="Post created" itemprop="dateCreated datePublished" datetime="2020-05-15T13:30:53+08:00">
+                2020-05-15
               </time>
             
 
@@ -365,8 +361,8 @@
               
               
                 <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
-                  <a href="/categories/ServiceMesh/" itemprop="url" rel="index">
-                    <span itemprop="name">ServiceMesh</span>
+                  <a href="/categories/Gitlab/" itemprop="url" rel="index">
+                    <span itemprop="name">Gitlab</span>
                   </a>
                 </span>
 
@@ -400,69 +396,68 @@
       
 
       
-        <p>上次在Kubernetes中安装好Istio之后, 忙了很长的时间在处理另一个事, 今天学习一下istio的架构及一些概念，后续分析整个数据的流向.</p>
+        <p>随着环境的多样性, 频繁的集成、测试占用了大量的时间, 大公司都有专门的团队做效率工程, 而我司这种小公司则就只能自养自足. 好在所有的环境都切换到了kubernetes环境, k8s天然的属性结合gitlab end-to-end的能力，实现CI/CD也能节省大量的时间.</p>
 <a id="more"></a>
-<h3 id="WhatFor"><a href="#WhatFor" class="headerlink" title="WhatFor"></a>WhatFor</h3><p>先来看看istio能做什么，从<a href="istio.io">官网</a>的首页很明确地指出了istio的作用</p>
-<p><img src="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20200209153912.png" alt></p>
-<p>主要提供四个方面的能力, 简单总结一下:</p>
+<p>目前存在有3个环境<code>dev, gray, prod</code>,都是基于k8s架构, 使用的开发语言大部分都是golang.</p>
+<p> <code>dev用于线下环境测试 --&gt;  gray用于灰度环境的联调 --&gt;  prod则是生产环境</code></p>
+<p>由于不同环境只是配置文件的不同, CI/CD主要存在以下场景:</p>
+<ol>
+<li>Merge request请求，对于这类请求全都需要执行源码编译, 可由maintainer选择是否同时需要后续流程</li>
+<li>dev环境发布, 开发同学自测环境</li>
+<li>gray环境发布，所有开发同学都能够发布</li>
+<li>prod环境发布， 只有部分同学有权限发布</li>
+<li>配置文件的变更，变更权限跟环境走</li>
+</ol>
+<h3 id="CI-CD流程"><a href="#CI-CD流程" class="headerlink" title="CI/CD流程"></a>CI/CD流程</h3><p><code>dev --&gt; makesource --&gt; imagespush --&gt; --&gt; CD gray --&gt; [自动化测试] --&gt; CD prod --&gt; [Blackbox Monitor]</code></p>
+<p>由于dev环境其实是开发自己使用的环境,虽然接入了CI/CD，但基于不怎么维护, 因此把dev放在最前面，用于说明开发者自测完成.</p>
+<p>目前自动化测试跟功能黑盒测试还在完善.</p>
+<p><img src="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/gitlab_workflow_example.png" alt></p>
+<p>###merge request</p>
+<p>由于出于对源码的保护, 对于merge request的请求都需要通过maintainer进行codeview,因此<code>merge request</code> 进行源码编译(代码测试), 编译通过后才能合并到目的分支是，同时gitlab还支持选择当pipeline成功时可自动合并</p>
+<p>maintainer也可以选择是否需要配置合并后自动发布流程.</p>
+<p>关于gitlab开启自动合并功能, 详见<a href="https://docs.gitlab.com/ee/ci/merge_request_pipelines/" target="_blank" rel="noopener">merge_request_pipelines</a></p>
+<h3 id="kubernetes认证"><a href="#kubernetes认证" class="headerlink" title="kubernetes认证"></a>kubernetes认证</h3><p>多个kubernetes的认证也是根据环境来做的, 最简单的办法就是通过将各种环境下的kubeconfig文件作为变量,最好做为gitlab的组环境变量，这样所有的repo都能够使用了.</p>
+<p>在gitlab-ci.yml中通过不同的环境来选用不同的kubeconfig, 这样就能实现对集群的操作,</p>
+<p>比如修改gray环境下的某个应用的配置文件， 主要代码如下:</p>
+<figure class="highlight yaml"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br></pre></td><td class="code"><pre><span class="line"><span class="string">.exportenvgray:</span> <span class="meta">&amp;exportenvgray</span></span><br><span class="line">  <span class="bullet">-</span> <span class="string">export</span> <span class="string">MODE=gray</span></span><br><span class="line">  <span class="bullet">-</span> <span class="string">KUBE_CONFIG=$&#123;KUBE_CONFIG_GRAY&#125;</span></span><br><span class="line">  </span><br><span class="line"><span class="string">.kubeconfig:</span> <span class="meta">&amp;kubeconfig</span></span><br><span class="line">  <span class="bullet">-</span> <span class="string">mkdir</span> <span class="string">$HOME/.kube</span> <span class="string">&amp;&amp;</span> <span class="string">cat</span> <span class="string">$KUBE_CONFIG</span> <span class="string">&gt;</span> <span class="string">$HOME/.kube/config</span> <span class="comment">#需要在gilab中指定为文件类型的变量</span></span><br><span class="line"></span><br><span class="line"><span class="string">.k8supdateconfig:</span> <span class="meta">&amp;k8supdateconfig</span></span><br><span class="line">  <span class="bullet">-</span> <span class="string">kubectl</span> <span class="string">create</span> <span class="string">configmap</span> <span class="string">$&#123;APP&#125;-$&#123;KUBERNETES_NS&#125;-cm</span> <span class="string">--from-file=/tmp/config.yml</span> <span class="string">-n</span> <span class="string">$&#123;KUBERNETES_NS&#125;</span> <span class="string">-o</span> <span class="string">yaml</span> <span class="string">--dry-run</span> <span class="string">|</span> <span class="string">kubectl</span> <span class="string">apply</span> <span class="string">-f</span> <span class="bullet">-</span></span><br><span class="line">  </span><br><span class="line"><span class="string">.updateconfig:</span> <span class="meta">&amp;updateconfig</span></span><br><span class="line">  <span class="attr">image:</span> <span class="string">kubectl_yaml:v1.15.4</span></span><br><span class="line">  <span class="attr">dependencies:</span> <span class="string">[]</span></span><br><span class="line">  <span class="attr">script:</span></span><br><span class="line">    <span class="bullet">-</span> <span class="string">*kubeconfig</span> <span class="comment"># 获取认证文件</span></span><br><span class="line">    <span class="bullet">-</span> <span class="string">*k8supdateconfig</span> <span class="comment"># 到这里就有权限能够更新configmap了</span></span><br><span class="line"></span><br><span class="line"><span class="attr">updateconfig:</span></span><br><span class="line">  <span class="string">&lt;&lt;:</span> <span class="meta">*updateconfig</span></span><br><span class="line">  <span class="attr">stage:</span> <span class="string">updateconfig1box</span></span><br><span class="line">  <span class="attr">before_script:</span></span><br><span class="line">    <span class="bullet">-</span> <span class="string">*exportenv1gray</span> <span class="comment"># 指定环境变量，通过不同的环境获取不同的kubeconfig变量.</span></span><br><span class="line">  <span class="attr">rules:</span></span><br><span class="line">    <span class="bullet">-</span> <span class="attr">if:</span> <span class="string">'$CI_COMMIT_MESSAGE =~ /\[gray[ _-]uc\]/i &amp;&amp; $CONFIGPATH != ""'</span> <span class="comment"># 指定执行条件</span></span><br></pre></td></tr></table></figure>
+<h3 id="多环境发布流程"><a href="#多环境发布流程" class="headerlink" title="多环境发布流程"></a>多环境发布流程</h3><p>对于多个环境, 其实除了配置不一样之外，其它的操作都是一样的，因此可借用yaml文件的锚定及gitlab的external功能大于减少gitlab-ci.yml配置文件的行数</p>
+<p><strong>因为需要将gitlab-ci.yml做成标准化的流程，对于我来说, 我不需要区分是谁触发的pipeline，只需要知道你想触发哪个pipeline, 至于权限问题,则直接丢给了gitlab做管理</strong></p>
+<p><strong>有些开发者可能一天commit 100次, 但是他知道前面的90次都是做代码集成, 并不能编译通过, 所以没必要每次的push都执行pipeline， 所以把什么时候需要才真正执行pipeline的选择丢给了开发者,因为开发者才是真正知道代码进度的问题, 当然他想每次都执行也是没问题的.</strong></p>
+<p>因此这里大量使用了<code>commit message</code>关键字来区分environment</p>
+<p>根据commit message的内容来选择执行对应的pipeline(以下关键字不区分大小写),比如: </p>
 <blockquote>
 <ul>
-<li>Connect: 主要用于工作负载之内的流量管理</li>
-<li>Secure: 主要用于工作负载之间的认证</li>
-<li>Control: 主要用于配置策略及遥测功能</li>
-<li>Observe: 主要用于监控、日志、调用链等可观察性功能</li>
+<li>包含有<strong>[mb]</strong> 时: 会执行源码编译(makebinary),主要用于开发编译集成</li>
+<li>包含有<strong>[gray-cd] or [gray_cd] or [gray cd]</strong>时: 发布到1box环境(测试环境)</li>
+<li><p>包含有 <strong>[gray-uc] or [gray_uc] or [gray uc]</strong>时: 说明只需要更新配置文件，但代码并未更新，适用于数据库密码修改等操作</p>
+</li>
+<li><p>当<code>gray</code>环境回归测试通过后, 将分支合并到主分支，打tag后可使用<strong>[prod-cd]</strong>发布到生产再进行回归</p>
+</li>
+<li>包含有<strong>[skip ci] or [ci skip]</strong>时: 不执行任何pipeline, 适用于比如提交文档修改之类的操作</li>
 </ul>
 </blockquote>
-<p><code>从实际来看, 虽然Istio支持了很多的平台, 但是与之最为紧密结合使用的还是Kubernetes.</code></p>
-<h3 id="Struct"><a href="#Struct" class="headerlink" title="Struct"></a>Struct</h3><p>istio的整体架构图</p>
-<p><img src="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20200209154612.png" alt></p>
-<p>再细分, istio分为控制面及数据面, 如下: </p>
-<p><img src="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20200209212447.png" alt></p>
-<p>从架构图可以看出几个很重要的信息</p>
+<p>对于只需更新配置文件的前提</p>
 <blockquote>
 <ul>
-<li>istio在数据面的工作负载中使用了<code>sidecar</code>(envoy)功能,这个是kubernets原生支持的</li>
-<li>istio的原理借鉴了kubernetes的service设计理念, 在kubernetes中，kube-proxy劫持的是进出kubernetes节点的流量，而istio的sidecar则劫持的是进出pod的流量, Kubernetes 管理的对象是 Pod，那么 Service Mesh 中管理的对象就是一个个 Service</li>
-<li><code>istio使用了Adapter来对接抽象各种平台能力, 这使得istio的拓展性更强.</code></li>
+<li>由于缺少专门的配置平台, 目前使用的配置文件都使用configmap中， 很多的开发者又喜欢直接在平台(rancher)上修改，这样就没办法保证源代码中的配置会得到及时的更新， 为保证配置文件端到端的修改, 尽量禁止了在rancher上直接修改配置文件</li>
+<li>配置文件的存放路径需要位于项目跟目录下的config/config.yml，yaml格式, demo见下.</li>
+<li>开发人员在发布<code>gray</code>环境时, 不应该保存有生产上的配置文件, 生产上则可以保存1box环境的配置,<strong>CI流程会根据发布的环境来选择对应的配置文件</strong></li>
+<li>应用启动时可通过命令行参数指定配置文件的路径, 固定位于目录/etc/${APP}/config.yml下</li>
+<li>如果应用不存在配置文件(如nodejs等应用)则可在gitlab-ci.yml文件中把<code>CONFIGPATH</code>变量置为空</li>
 </ul>
 </blockquote>
-<p>具体sidecar是如何劫持流量并转发出去的，不在这篇说明. </p>
-<p>再来简单说明一下各个组件的作用.</p>
-<h3 id="Components"><a href="#Components" class="headerlink" title="Components"></a>Components</h3><h4 id="数据面"><a href="#数据面" class="headerlink" title="数据面"></a>数据面</h4><h5 id="envoy"><a href="#envoy" class="headerlink" title="envoy"></a>envoy</h5><p>数据面很简单, 就一个proxy(envoy)</p>
-<p>envoy有如下的特点:</p>
-<blockquote>
-<ul>
-<li>HTTP 7层路由</li>
-<li>支持gRPC、HTTP/2</li>
-<li>服务发现和动态配置</li>
-<li>健康检查</li>
-<li>高级负载均衡</li>
-</ul>
-</blockquote>
-<p><code>简单来说, istio通过注入(手工注入入自动注入)等方式将envoy加入到业务Pod中, 然后通过initContainer生成的iptables规则将所在进出业务容器的流量都进行劫持</code></p>
-<h4 id="控制面"><a href="#控制面" class="headerlink" title="控制面"></a>控制面</h4><h5 id="pilot"><a href="#pilot" class="headerlink" title="pilot"></a>pilot</h5><p><code>Pilot 是Istio实现流量管理的核心组件，它主要的作用是配置和管理Envoy代理</code></p>
-<blockquote>
-<ul>
-<li>从平台（如Kubernetes）获取服务信息，完成服务发现</li>
-<li>获取Istio的各项配置，转换成Envoy代理可读的格式并分发, 使用XDS协议.</li>
-</ul>
-</blockquote>
-<p>piolt架构图:</p>
-<p><img src="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20200209155817.png" alt></p>
-<h5 id="Mixer"><a href="#Mixer" class="headerlink" title="Mixer"></a>Mixer</h5><p><code>Mixer的主要功能是提供策略控制，并从Envoy代理收集遥测数据</code>。每次网络通信时Envoy代理都会向Mixer发出预检要求，用来检测调用者的合法性。调用之后Envoy代理会发送遥测数据供Mixer收集。一般情况下Sidecar代理可以缓存这些数据，不需要频繁地调用Mixer.</p>
-<p>​    同时,<code>Mixer彩用配器模式</code>, 可以支持不同的后端，如日志后端，监控后端, 调用链后端.</p>
-<p><img src="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20200209160002.png" alt></p>
-<h5 id="Citadel"><a href="#Citadel" class="headerlink" title="Citadel"></a>Citadel</h5><p>Citadel是与安全相关的组件，主要负责密钥和证书的管理。它可以提供服务间和终端用户的身份认证，还可以加密服务网格中的流量。</p>
-<h5 id="galley"><a href="#galley" class="headerlink" title="galley"></a>galley</h5><p>在2019年3月份发布的1.1版本中，Gally作为一个独立的组件被添加到了架构当中（在此之前的版本中Gally并未独立出现），它现在是Istio主要的配置管理组件，负责配置的获取、处理和分发。Gally使用了一种叫作MCP（Mesh Configuration Protocol，网格配置协议）的协议与其他组件进行通信。</p>
-<p>重点学习Pilot及Mix即可, citadel及galley一般都不会变动频繁, 知道怎么一回事就可以了.</p>
-<p>上面主要学习了下istio整体的框架,没有说明地很详细, 至于istio如何注入sidecar, sidecar又是如何劫持流向转发, 又是如何找到对端的容器地址的，挺有意思, 后续再更.</p>
+<h3 id="配置文件处理"><a href="#配置文件处理" class="headerlink" title="配置文件处理"></a>配置文件处理</h3><p>这是一个标准化的流程，由于代码中可能保存有所有环境的配置文件, 为了数据安全, 需要对配置文件进行解析, 即: 根据要发布的环境来选择配置文件段，然后发布成kubernetes configmap的形式,最后挂载到应用中.</p>
+<p>这里参考一个开源库<a href="https://github.com/olebedev/config" target="_blank" rel="noopener">config</a>,随便改了些代码就实现功能了，即: 通过指定一个环境变量来获取配置文件段.</p>
+<p>###<code>config/config.yml</code></p>
+<figure class="highlight yaml"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br></pre></td><td class="code"><pre><span class="line"><span class="attr">debug:</span></span><br><span class="line">    <span class="attr">mode:</span> <span class="string">debug</span></span><br><span class="line">    <span class="attr">table:</span> <span class="string">filter</span></span><br><span class="line">    <span class="attr">enabled:</span> <span class="string">[mon,osd]</span></span><br><span class="line">    <span class="attr">disabled:</span> <span class="string">[]</span></span><br><span class="line">    <span class="attr">ipv4:</span></span><br><span class="line">      <span class="attr">mon:</span></span><br><span class="line">      <span class="attr">priority:</span> <span class="number">100</span></span><br><span class="line">      <span class="attr">tcp:</span></span><br><span class="line">      <span class="bullet">-</span> <span class="string">"-p tcp -m multiport --dport 6789,3300 -m state --state NEW -j ACCEPT"</span></span><br><span class="line">      <span class="bullet">-</span> <span class="string">"-p tcp -m multiport --dport 6789,3300 -m state --state ESTABLISHED -j ACCEPT"</span></span><br><span class="line">    <span class="attr">osd:</span></span><br><span class="line">      <span class="attr">priority:</span> <span class="number">200</span></span><br><span class="line"><span class="attr">1box:</span></span><br><span class="line">    <span class="attr">zsk:</span> <span class="string">"我是ZSK"</span></span><br><span class="line">    <span class="attr">mode:</span> <span class="string">1box</span></span><br><span class="line">    <span class="attr">table:</span> <span class="string">filter</span></span><br><span class="line">    <span class="attr">enabled:</span> <span class="string">[mon,osd]</span></span><br><span class="line">    <span class="attr">disabled:</span> <span class="string">[]</span></span><br><span class="line">    <span class="attr">ipv4:</span></span><br><span class="line">      <span class="attr">mon:</span></span><br><span class="line">      <span class="attr">priority:</span> <span class="number">100</span></span><br><span class="line">      <span class="attr">tcp:</span></span><br><span class="line">      <span class="bullet">-</span> <span class="string">"-p tcp -m multiport --dport 6789,3300 -m state --state NEW -j ACCEPT"</span></span><br><span class="line">      <span class="bullet">-</span> <span class="string">"-p tcp -m multiport --dport 6789,3300 -m state --state ESTABLISHED -j ACCEPT"</span></span><br><span class="line"><span class="attr">prod:</span></span><br><span class="line">  <span class="string">...</span></span><br></pre></td></tr></table></figure>
+<p>经过几天的研究测试，发现gitlab的CI/CD还是很强大的, 除了能够支持很多的语言来写gitlab-ci.yaml外,官方文档也是非常的详细, 我几乎没有再看其它的文档 .</p>
+<p>CI/CD是个很有技巧的活, 除了标准化之外，跟其它工种的同学怎么协调接入, 比如自动化测、 分级发布、联动发布、黑盒监控等，都需要投入大量的时间来做.</p>
+<p><strong>技术从来都不是重点, 推动起来被人认可才是</strong></p>
 <h3 id="参考文章"><a href="#参考文章" class="headerlink" title="参考文章:"></a><strong>参考文章:</strong></h3><blockquote>
 <ul>
-<li><a href="https://jimmysong.io/istio-handbook/concepts/sidecar-injection-deep-dive.html" target="_blank" rel="noopener">https://jimmysong.io/istio-handbook/concepts/sidecar-injection-deep-dive.html</a></li>
-<li><a href="https://jimmysong.io/istio-handbook/concepts/sidecar-traffic-routing-deep-dive.html" target="_blank" rel="noopener">https://jimmysong.io/istio-handbook/concepts/sidecar-traffic-routing-deep-dive.html</a></li>
-<li><a href="https://mp.weixin.qq.com/s/C-NoiknOj9cga7FYUjdKaA" target="_blank" rel="noopener">https://mp.weixin.qq.com/s/C-NoiknOj9cga7FYUjdKaA</a></li>
-<li><a href="https://jimmysong.io" target="_blank" rel="noopener">https://jimmysong.io</a></li>
-<li>Https://istio.io</li>
+<li><a href="https://docs.gitlab.com/ee/ci/merge_request_pipelines/" target="_blank" rel="noopener">https://docs.gitlab.com/ee/ci/merge_request_pipelines/</a></li>
+<li><a href="https://github.com/olebedev/config" target="_blank" rel="noopener">https://github.com/olebedev/config</a></li>
+<li><a href="http://gitlab.bj.sensetime.com/help/ci/variables/README#variables" target="_blank" rel="noopener">http://gitlab.bj.sensetime.com/help/ci/variables/README#variables</a></li>
 </ul>
 </blockquote>
 <h3 id="转载请注明出处https-izsk-me"><a href="#转载请注明出处https-izsk-me" class="headerlink" title="转载请注明出处https://izsk.me"></a><strong>转载请注明出处<a href="https://izsk.me" target="_blank" rel="noopener">https://izsk.me</a></strong></h3>
@@ -514,7 +509,7 @@
       
         <div class="post-tags">
           
-            <a href="/tags/ServiceMesh/" rel="tag"># ServiceMesh</a>
+            <a href="/tags/Gitlab/" rel="tag"># Gitlab</a>
           
         </div>
       
@@ -523,8 +518,8 @@
         <div class="post-nav">
           <div class="post-nav-next post-nav-item">
             
-              <a href="/2020/02/04/Kubernetes-Volumes-Mount/" rel="next" title="Kubernetes学习(volume挂载情况汇总)">
-                <i class="fa fa-chevron-left"></i> Kubernetes学习(volume挂载情况汇总)
+              <a href="/2020/05/12/Kubernetes-Reflection-Pattern/" rel="next" title="Kubernetes学习(kubernetes中的反射模式(DownwardAPI))">
+                <i class="fa fa-chevron-left"></i> Kubernetes学习(kubernetes中的反射模式(DownwardAPI))
               </a>
             
           </div>
@@ -532,10 +527,6 @@
           <span class="post-nav-divider"></span>
 
           <div class="post-nav-prev post-nav-item">
-            
-              <a href="/2020/02/10/FELK-Curator/" rel="prev" title="FELK学习(Elasticsearch索引管理工具Curator)">
-                FELK学习(Elasticsearch索引管理工具Curator) <i class="fa fa-chevron-right"></i>
-              </a>
             
           </div>
         </div>
@@ -663,7 +654,7 @@
             
 
             
-              <div class="post-toc-content"><ol class="nav"><li class="nav-item nav-level-3"><a class="nav-link" href="#WhatFor"><span class="nav-number">1.</span> <span class="nav-text">WhatFor</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#Struct"><span class="nav-number">2.</span> <span class="nav-text">Struct</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#Components"><span class="nav-number">3.</span> <span class="nav-text">Components</span></a><ol class="nav-child"><li class="nav-item nav-level-4"><a class="nav-link" href="#数据面"><span class="nav-number">3.1.</span> <span class="nav-text">数据面</span></a><ol class="nav-child"><li class="nav-item nav-level-5"><a class="nav-link" href="#envoy"><span class="nav-number">3.1.1.</span> <span class="nav-text">envoy</span></a></li></ol></li><li class="nav-item nav-level-4"><a class="nav-link" href="#控制面"><span class="nav-number">3.2.</span> <span class="nav-text">控制面</span></a><ol class="nav-child"><li class="nav-item nav-level-5"><a class="nav-link" href="#pilot"><span class="nav-number">3.2.1.</span> <span class="nav-text">pilot</span></a></li><li class="nav-item nav-level-5"><a class="nav-link" href="#Mixer"><span class="nav-number">3.2.2.</span> <span class="nav-text">Mixer</span></a></li><li class="nav-item nav-level-5"><a class="nav-link" href="#Citadel"><span class="nav-number">3.2.3.</span> <span class="nav-text">Citadel</span></a></li><li class="nav-item nav-level-5"><a class="nav-link" href="#galley"><span class="nav-number">3.2.4.</span> <span class="nav-text">galley</span></a></li></ol></li></ol></li><li class="nav-item nav-level-3"><a class="nav-link" href="#参考文章"><span class="nav-number">4.</span> <span class="nav-text">参考文章:</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#转载请注明出处https-izsk-me"><span class="nav-number">5.</span> <span class="nav-text">转载请注明出处https://izsk.me</span></a></li></ol></div>
+              <div class="post-toc-content"><ol class="nav"><li class="nav-item nav-level-3"><a class="nav-link" href="#CI-CD流程"><span class="nav-number">1.</span> <span class="nav-text">CI/CD流程</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#kubernetes认证"><span class="nav-number">2.</span> <span class="nav-text">kubernetes认证</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#多环境发布流程"><span class="nav-number">3.</span> <span class="nav-text">多环境发布流程</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#配置文件处理"><span class="nav-number">4.</span> <span class="nav-text">配置文件处理</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#参考文章"><span class="nav-number">5.</span> <span class="nav-text">参考文章:</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#转载请注明出处https-izsk-me"><span class="nav-number">6.</span> <span class="nav-text">转载请注明出处https://izsk.me</span></a></li></ol></div>
             
 
           </div>
