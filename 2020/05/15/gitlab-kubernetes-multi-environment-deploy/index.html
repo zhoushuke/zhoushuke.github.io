@@ -95,7 +95,7 @@
 <meta property="og:description" content="随着环境的多样性, 频繁的集成、测试占用了大量的时间, 大公司都有专门的团队做效率工程, 而我司这种小公司则就只能自养自足. 好在所有的环境都切换到了kubernetes环境, k8s天然的属性结合gitlab end-to-end的能力，实现CI/CD也能节省大量的时间.">
 <meta property="og:locale" content="zh-Hans">
 <meta property="og:image" content="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/gitlab_workflow_example.png">
-<meta property="og:updated_time" content="2020-05-15T09:13:52.119Z">
+<meta property="og:updated_time" content="2020-05-15T09:40:07.415Z">
 <meta name="twitter:card" content="summary">
 <meta name="twitter:title" content="Gitlab学习(实现多kubernets环境CI&#x2F;CD)">
 <meta name="twitter:description" content="随着环境的多样性, 频繁的集成、测试占用了大量的时间, 大公司都有专门的团队做效率工程, 而我司这种小公司则就只能自养自足. 好在所有的环境都切换到了kubernetes环境, k8s天然的属性结合gitlab end-to-end的能力，实现CI/CD也能节省大量的时间.">
@@ -412,8 +412,7 @@
 <p>由于dev环境其实是开发自己使用的环境,虽然接入了CI/CD，但基于不怎么维护, 因此把dev放在最前面，用于说明开发者自测完成.</p>
 <p>目前自动化测试跟功能黑盒测试还在完善.</p>
 <p><img src="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/gitlab_workflow_example.png" alt></p>
-<p>###merge request</p>
-<p>由于出于对源码的保护, 对于merge request的请求都需要通过maintainer进行codeview,因此<code>merge request</code> 进行源码编译(代码测试), 编译通过后才能合并到目的分支是，同时gitlab还支持选择当pipeline成功时可自动合并</p>
+<h3 id="merge-request"><a href="#merge-request" class="headerlink" title="merge request"></a>merge request</h3><p>由于出于对源码的保护, 对于merge request的请求都需要通过maintainer进行codeview,因此<code>merge request</code> 进行源码编译(代码测试), 编译通过后才能合并到目的分支是，同时gitlab还支持选择当pipeline成功时可自动合并</p>
 <p>maintainer也可以选择是否需要配置合并后自动发布流程.</p>
 <p>关于gitlab开启自动合并功能, 详见<a href="https://docs.gitlab.com/ee/ci/merge_request_pipelines/" target="_blank" rel="noopener">merge_request_pipelines</a></p>
 <h3 id="kubernetes认证"><a href="#kubernetes认证" class="headerlink" title="kubernetes认证"></a>kubernetes认证</h3><p>多个kubernetes的认证也是根据环境来做的, 最简单的办法就是通过将各种环境下的kubeconfig文件作为变量,最好做为gitlab的组环境变量，这样所有的repo都能够使用了.</p>
@@ -654,7 +653,7 @@
             
 
             
-              <div class="post-toc-content"><ol class="nav"><li class="nav-item nav-level-3"><a class="nav-link" href="#CI-CD流程"><span class="nav-number">1.</span> <span class="nav-text">CI/CD流程</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#kubernetes认证"><span class="nav-number">2.</span> <span class="nav-text">kubernetes认证</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#多环境发布流程"><span class="nav-number">3.</span> <span class="nav-text">多环境发布流程</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#配置文件处理"><span class="nav-number">4.</span> <span class="nav-text">配置文件处理</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#参考文章"><span class="nav-number">5.</span> <span class="nav-text">参考文章:</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#转载请注明出处https-izsk-me"><span class="nav-number">6.</span> <span class="nav-text">转载请注明出处https://izsk.me</span></a></li></ol></div>
+              <div class="post-toc-content"><ol class="nav"><li class="nav-item nav-level-3"><a class="nav-link" href="#CI-CD流程"><span class="nav-number">1.</span> <span class="nav-text">CI/CD流程</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#merge-request"><span class="nav-number">2.</span> <span class="nav-text">merge request</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#kubernetes认证"><span class="nav-number">3.</span> <span class="nav-text">kubernetes认证</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#多环境发布流程"><span class="nav-number">4.</span> <span class="nav-text">多环境发布流程</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#配置文件处理"><span class="nav-number">5.</span> <span class="nav-text">配置文件处理</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#参考文章"><span class="nav-number">6.</span> <span class="nav-text">参考文章:</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#转载请注明出处https-izsk-me"><span class="nav-number">7.</span> <span class="nav-text">转载请注明出处https://izsk.me</span></a></li></ol></div>
             
 
           </div>
