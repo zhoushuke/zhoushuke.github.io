@@ -68,7 +68,7 @@
 <link href="/css/main.css?v=5.1.0" rel="stylesheet" type="text/css">
 
 
-  <meta name="keywords" content="Gitlab,">
+  <meta name="keywords" content="Kubernetes,">
 
 
 
@@ -86,23 +86,23 @@
 
 
 
-<meta name="description" content="在使用gitlab做ci/cd发布时，变量是无法避免的话题，这次来聊一聊gitlab中各类级别的变量">
-<meta name="keywords" content="Gitlab">
+<meta name="description" content="在使用kubernetes的时候，常常不太会关注docker这层, 在Node节点查看docker的进程, 会发现在docker-client、dockerd、containerd、containerd-shim、runC, 傻傻分不清楚这几个跟docker相关的进程到底扮演着什么角色.">
+<meta name="keywords" content="Kubernetes">
 <meta property="og:type" content="article">
-<meta property="og:title" content="Gitlab学习(CI中的变量)">
-<meta property="og:url" content="https://zhoushuke.github.io/2020/04/15/gitlab-ci-variables/index.html">
+<meta property="og:title" content="Kubernetes学习(Docker)">
+<meta property="og:url" content="https://zhoushuke.github.io/2019/11/15/Kubernetes-docker-arch/index.html">
 <meta property="og:site_name" content="Z.S.K.&#39;s Records">
-<meta property="og:description" content="在使用gitlab做ci/cd发布时，变量是无法避免的话题，这次来聊一聊gitlab中各类级别的变量">
+<meta property="og:description" content="在使用kubernetes的时候，常常不太会关注docker这层, 在Node节点查看docker的进程, 会发现在docker-client、dockerd、containerd、containerd-shim、runC, 傻傻分不清楚这几个跟docker相关的进程到底扮演着什么角色.">
 <meta property="og:locale" content="zh-Hans">
-<meta property="og:image" content="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/image-20200110161226067.png">
-<meta property="og:image" content="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20200514164539.png">
-<meta property="og:image" content="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20200514165413.png">
-<meta property="og:image" content="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/image-20200110164034852.png">
-<meta property="og:updated_time" content="2020-05-14T09:52:51.282Z">
+<meta property="og:image" content="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20200422155644.png">
+<meta property="og:image" content="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20200422163423.png">
+<meta property="og:image" content="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20200414141636.png">
+<meta property="og:image" content="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20200422164159.png">
+<meta property="og:updated_time" content="2020-05-20T08:17:06.285Z">
 <meta name="twitter:card" content="summary">
-<meta name="twitter:title" content="Gitlab学习(CI中的变量)">
-<meta name="twitter:description" content="在使用gitlab做ci/cd发布时，变量是无法避免的话题，这次来聊一聊gitlab中各类级别的变量">
-<meta name="twitter:image" content="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/image-20200110161226067.png">
+<meta name="twitter:title" content="Kubernetes学习(Docker)">
+<meta name="twitter:description" content="在使用kubernetes的时候，常常不太会关注docker这层, 在Node节点查看docker的进程, 会发现在docker-client、dockerd、containerd、containerd-shim、runC, 傻傻分不清楚这几个跟docker相关的进程到底扮演着什么角色.">
+<meta name="twitter:image" content="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20200422155644.png">
 
 
 
@@ -130,13 +130,13 @@
 
 
 
-  <link rel="canonical" href="https://zhoushuke.github.io/2020/04/15/gitlab-ci-variables/">
+  <link rel="canonical" href="https://zhoushuke.github.io/2019/11/15/Kubernetes-docker-arch/">
 
 
 
 
 
-  <title> Gitlab学习(CI中的变量) | Z.S.K.'s Records </title>
+  <title> Kubernetes学习(Docker) | Z.S.K.'s Records </title>
 </head>
 
 <body itemscope itemtype="http://schema.org/WebPage" lang="zh-Hans">
@@ -302,7 +302,7 @@
   
 
   <article class="post post-type-normal " itemscope itemtype="http://schema.org/Article">
-  <link itemprop="mainEntityOfPage" href="https://zhoushuke.github.io/2020/04/15/gitlab-ci-variables/">
+  <link itemprop="mainEntityOfPage" href="https://zhoushuke.github.io/2019/11/15/Kubernetes-docker-arch/">
 
   <span style="display:none" itemprop="author" itemscope itemtype="http://schema.org/Person">
     <meta itemprop="name" content="Z.S.K.">
@@ -326,7 +326,7 @@
             
             
               
-                Gitlab学习(CI中的变量)
+                Kubernetes学习(Docker)
               
             
           </h1>
@@ -341,8 +341,8 @@
               
                 <span class="post-meta-item-text">发表于</span>
               
-              <time title="Post created" itemprop="dateCreated datePublished" datetime="2020-04-15T13:30:53+08:00">
-                2020-04-15
+              <time title="Post created" itemprop="dateCreated datePublished" datetime="2019-11-15T17:30:53+08:00">
+                2019-11-15
               </time>
             
 
@@ -364,8 +364,8 @@
               
               
                 <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
-                  <a href="/categories/Gitlab/" itemprop="url" rel="index">
-                    <span itemprop="name">Gitlab</span>
+                  <a href="/categories/Kubernetes/" itemprop="url" rel="index">
+                    <span itemprop="name">Kubernetes</span>
                   </a>
                 </span>
 
@@ -399,72 +399,45 @@
       
 
       
-        <p>在使用gitlab做ci/cd发布时，变量是无法避免的话题，这次来聊一聊gitlab中各类级别的变量</p>
+        <p>在使用kubernetes的时候，常常不太会关注docker这层, 在Node节点查看docker的进程, 会发现在docker-client、dockerd、containerd、containerd-shim、runC, 傻傻分不清楚这几个跟docker相关的进程到底扮演着什么角色.</p>
 <a id="more"></a>
-<p>首先, 变量大致可以分为以下几大类,优先级从高到低:</p>
-<blockquote>
+<h3 id="CRI"><a href="#CRI" class="headerlink" title="CRI"></a>CRI</h3><p>在docker的最初版本, docker就是client+daemonset架构, 非常简洁</p>
+<p>只不过到后来Kubernetes的兴起, 容器厂商的技术对战也变得非常激烈, 再到后来Kubernetes取得完全的胜利, 再到后来几家大佬公司一起制定了CRI(container runtime interface), docker为了适配才成了今天所看到的架构</p>
+<p>关于容器时代几家大佬公司之间的竞争, 有兴趣的可以看下<a href="https://zhuanlan.zhihu.com/p/87602649" target="_blank" rel="noopener">这篇文章</a>.</p>
+<p>CRI在Kubernetes的架构中也是个很重要的部分, 至于为何需要这个, 不再这里详细, 今天只学一学docker(这里说的docker会存在歧义)做为CRI</p>
+<p>先来看看CRI在Kubernetes的位置</p>
+<p><img src="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20200422155644.png" alt></p>
+<p>Kubernetes中的docker那层的架构分为以下几层:</p>
+<p><img src="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20200422163423.png" alt></p>
+<p>而ContainerRuntime(docker)的结构如下</p>
+<p><img src="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20200414141636.png" alt></p>
+<h4 id="Client"><a href="#Client" class="headerlink" title="Client"></a>Client</h4><p>最上面那一层是个client，就是我们经常使用的docker ps等命令行的时候, 相当于我们做为client去请求docker的服务端, 那必须存在一个daemonset的进程一直来监听主机上发出的命令</p>
+<h4 id="dockerEngine"><a href="#dockerEngine" class="headerlink" title="dockerEngine"></a>dockerEngine</h4><p>这个其实就相当于是docker daemon, 负责监听主机上docker相关的命令,将相关命令发送给containerd.</p>
+<h4 id="containerd"><a href="#containerd" class="headerlink" title="containerd"></a>containerd</h4><p>先看下官方的说明:</p>
+<p><code>containerd is available as a daemon for Linux and Windows. It manages the complete container lifecycle of its host system, from image transfer and storage to container execution and supervision to low-level storage to network attachments and beyond.</code></p>
+<p>翻译一下: <strong>containerd</strong>在linux跟windows是一个守护进程我, 通过它管理容器的生命周期, 从图像传输和存储到容器执行和监督，再到低级存储再到网络附件等等</p>
+<p><img src="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20200422164159.png" alt></p>
+<p>containerd 向上为 Docker Daemon 提供了 gRPC 接口，使得 Docker Daemon 屏蔽下面的结构变化，确保原有接口向下兼容。向下通过 containerd-shim 结合 runC，使得引擎可以独立升级，避免之前 Docker Daemon 升级会导致所有容器不可用的问题</p>
+<p>其实 <code>containerd</code> 就包含了我们常用的 <code>docker</code> 的命令， 所以可以通过Client不经过docker daemon直接与containerd进行通信</p>
+<h4 id="containerd-shim"><a href="#containerd-shim" class="headerlink" title="containerd-shim"></a>containerd-shim</h4><p>containerd 通过 shim 调用 runc 的包函数来启动容器， 也就是说containerd通过shim操作runc，runc真正控制容器生命周期</p>
+<p>启动一个容器就会启动一个shim进程，因此会在Node上看到大量的shim进程</p>
+<p>引入shim, 主要有以下几点考虑.</p>
 <ul>
-<li><a href="https://docs.gitlab.com/ee/ci/triggers/README.html#making-use-of-trigger-variables" target="_blank" rel="noopener">Trigger variables</a> or <a href="https://docs.gitlab.com/ee/ci/pipelines/schedules.html#using-variables" target="_blank" rel="noopener">scheduled pipeline variables</a>.</li>
-<li>Project-level <a href="https://docs.gitlab.com/ee/ci/variables/README.html#custom-environment-variables" target="_blank" rel="noopener">variables</a> or <a href="https://docs.gitlab.com/ee/ci/variables/README.html#protect-a-custom-variable" target="_blank" rel="noopener">protected variables</a>.</li>
-<li>Group-level <a href="https://docs.gitlab.com/ee/ci/variables/README.html#group-level-environment-variables" target="_blank" rel="noopener">variables</a> or <a href="https://docs.gitlab.com/ee/ci/variables/README.html#protect-a-custom-variable" target="_blank" rel="noopener">protected variables</a>.</li>
-<li>YAML-defined <a href="https://docs.gitlab.com/ee/ci/yaml/README.html#variables" target="_blank" rel="noopener">job-level variables</a>.</li>
-<li>YAML-defined <a href="https://docs.gitlab.com/ee/ci/yaml/README.html#variables" target="_blank" rel="noopener">global variables</a>.</li>
-<li><a href="https://docs.gitlab.com/ee/ci/variables/README.html#deployment-environment-variables" target="_blank" rel="noopener">Deployment variables</a>.</li>
-<li><a href="https://docs.gitlab.com/ee/ci/variables/predefined_variables.html" target="_blank" rel="noopener">Predefined environment variables</a>.</li>
+<li>允许runc在创建&amp;运行容器之后退出</li>
+<li>用shim作为容器的父进程，而不是直接用containerd作为容器的父进程，是为了防止这种情况：当containerd挂掉的时候，shim还在，因此可以保证容器打开的文件描述符不会被关掉</li>
+<li>依靠shim来收集&amp;报告容器的退出状态，这样就不需要containerd来wait子进程</li>
 </ul>
-</blockquote>
-<p>变量无非就是一种作用域跟优先级的问题，优先级高的会自动覆盖同名优先级的变量</p>
-<p>我觉得最常用的有<code>Project-level、Group-level、global、job</code></p>
-<h3 id="group-project"><a href="#group-project" class="headerlink" title="group/project"></a>group/project</h3><p>这类的变量直接作用于整个组, 在gitlab的这个组下的所有project，都可以使用, 一般源代码管理都是以某一业务组区分，因此group级别的变量多用于整个组内共享</p>
-<p>project-level同理</p>
-<p>设置方法</p>
-<p><code>group --&gt; setting --&gt; ci/cd --&gt; variables</code></p>
-<p><code>project --&gt; setting --&gt; ci/cd --&gt; variables</code></p>
-<p>这里以project变量为例:</p>
-<p><img src="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/image-20200110161226067.png" alt></p>
-<h4 id="protected"><a href="#protected" class="headerlink" title="protected"></a>protected</h4><p>gitlab的原文如下:</p>
-<p><code>Variables can be protected. Whenever a variable is protected, it would only be securely passed to pipelines running on the protected branches or protected tags. The other pipelines would not get any protected variables.</code></p>
-<p>翻译一下: 如果把变量选中为<code>protected</code>的话，那么这个就是只会在<code>protected branches or protected tags</code>上安全的传递，其它的情况将不会获取改变量.</p>
-<p>但是从我测试的情况来看, 提交的分支为master, 没有设置<code>protected tag</code>, 发现:</p>
-<ol>
-<li>如果某个变量被选中为<code>protected</code>, commit触发pipeline时都可以获取该变量</li>
-<li>但是如果commit时带上tag, 则该变量时为空，当取消<code>protected</code>状态时, 执行正常</li>
-</ol>
-<p>乍一看是不是感觉跟原文说的有点出路, 其实出现这种情况是正常的, gitlab默认情况下, master分支是受保护的，</p>
-<h5 id="protected-branches"><a href="#protected-branches" class="headerlink" title="protected branches"></a>protected branches</h5><p>可以通过项目 <code>Setting--&gt;Repository --&gt; CI/CD --&gt; Protected Branchers</code>中查看，如下图</p>
-<p><img src="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20200514164539.png" alt></p>
-<p>所以第1种情况能够正确获取<code>protected</code>的变量是正常的,关于<code>protected branch</code>官方说明在<a href="http://gitlab.bj.sensetime.com/help/user/project/protected_branches" target="_blank" rel="noopener">protected branch</a></p>
-<p>第2种情况无法获取的原因是因为带上了tag, 而<code>protected</code>的变量需要存在<code>protected tag</code>配置才能使用</p>
-<p>默认情况下是不设置的, 因此无法获取</p>
-<h5 id="protected-tags"><a href="#protected-tags" class="headerlink" title="protected tags"></a>protected tags</h5><p>设置<code>protected tag</code>也非常简单,官方说明<a href="http://gitlab.bj.sensetime.com/help/user/project/protected_tags.md" target="_blank" rel="noopener">protected tag</a></p>
-<p>项目 <code>Setting--&gt;Repository --&gt; CI/CD --&gt; Protected Tags</code></p>
-<p><img src="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20200514165413.png" alt></p>
-<p><code>protected branch</code>跟<code>protected tags</code>都是为了防止对源代码误操作的两种方式</p>
-<h4 id="Masked"><a href="#Masked" class="headerlink" title="Masked"></a>Masked</h4><p>而变量的<code>masked</code>则是为了保护变量不回显</p>
-<p><code>protected</code>相当于对权限做了一次验证，但是它无法完全的把变量保护起来, 如果在CI中开启<code>CI_DEBUG_TRACE: &#39;true&#39;</code>还是能够看到变量的值的，而<code>masked</code>则完全在log中不打印变量, 一般用于比较敏感的信息</p>
-<h4 id="K8s-SECRET"><a href="#K8s-SECRET" class="headerlink" title="K8s_SECRET"></a>K8s_SECRET</h4><p>以<code>K8S_SECRET_</code>开头的变量都会转换成kubernetes的secret</p>
-<p>​        如定义了一个变量叫: K8S_SECRET_RAILS_MASTER_KEY</p>
-<p>​        最终会在k8s中的形态,在部署应用容器里会最终又被转换成环境变量,可直接通过$RAILS_MASTER_KEY:</p>
-<figure class="highlight yaml"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br></pre></td><td class="code"><pre><span class="line"><span class="attr">apiVersion:</span> <span class="string">v1</span></span><br><span class="line"><span class="attr">data:</span></span><br><span class="line">  <span class="attr">RAILS_MASTER_KEY:</span> <span class="string">MTIzNC10ZXN0</span></span><br><span class="line"><span class="attr">kind:</span> <span class="string">Secret</span></span><br><span class="line"><span class="attr">metadata:</span></span><br><span class="line">  <span class="attr">creationTimestamp:</span> <span class="number">2018</span><span class="number">-12</span><span class="string">-20T01:48:26Z</span></span><br><span class="line">  <span class="attr">name:</span> <span class="string">production-secret</span></span><br><span class="line">  <span class="attr">namespace:</span> <span class="string">minimal-ruby-app-54</span></span><br><span class="line">  <span class="attr">resourceVersion:</span> <span class="string">"429422"</span></span><br><span class="line">  <span class="attr">selfLink:</span> <span class="string">/api/v1/namespaces/minimal-ruby-app-54/secrets/production-secret</span></span><br><span class="line">  <span class="attr">uid:</span> <span class="string">57ac2bfd-03f9-11e9-b812-42010a9400e4</span></span><br><span class="line"><span class="attr">type:</span> <span class="string">Opaque</span></span><br></pre></td></tr></table></figure>
-<p>当然，在运行前pipeline时也可在UI指定环境变量，这些变量只对应某个project. 且只有这次有效</p>
-<p><img src="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/image-20200110164034852.png" alt></p>
-<h3 id="job"><a href="#job" class="headerlink" title="job"></a>job</h3><p>job级别的变量限定在只在某一具体的job内, 这也是用的最多的一种变量</p>
-<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line">justupdateconfig:</span><br><span class="line">  stage: <span class="built_in">test</span></span><br><span class="line">  dependencies: []</span><br><span class="line">  variables:</span><br><span class="line">    CI_DEBUG_TRACE: <span class="string">'true // job-level</span></span><br></pre></td></tr></table></figure>
-<h3 id="global"><a href="#global" class="headerlink" title="global"></a>global</h3><p>这里说到的global指的是在整个pipeline期间，该类变量都是可以使用的</p>
-<p><code>.gitlab-ci.yml</code>中定义全局变量</p>
-<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line">variables:</span><br><span class="line">  KUBERNETES_NS: <span class="string">'stage'</span></span><br><span class="line">  APP: <span class="string">'p-expoter'</span></span><br><span class="line">  PUSH_REPO: <span class="string">'test'</span></span><br><span class="line">  CONFIGPATH: <span class="string">'config/config.yml'</span></span><br></pre></td></tr></table></figure>
-<p>在pipeline执行期间都是可以直接引用的，<code>$CONFIGPATH</code></p>
-<h3 id="predefined"><a href="#predefined" class="headerlink" title="predefined"></a>predefined</h3><p>同时, gitlab在执行时runner也会暴露出很多的自带的变量, 这些变量在做一些逻辑判断的时候非常有用, 比如判断是不是master分支, 当前路径等等</p>
-<p>判断是否commit是否存在tag.</p>
-<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">if</span> [ <span class="string">"<span class="variable">$CI_COMMIT_TAG</span>"</span> = <span class="string">""</span> ]; <span class="keyword">then</span></span><br><span class="line">  COMMIT_TAG=<span class="string">"<span class="variable">$CI_COMMIT_REF_NAME</span>-<span class="variable">$CI_COMMIT_SHORT_SHA</span>"</span></span><br><span class="line"><span class="keyword">else</span></span><br><span class="line">  COMMIT_TAG=<span class="string">"<span class="variable">$CI_COMMIT_TAG</span>-<span class="variable">$CI_COMMIT_SHORT_SHA</span>"</span></span><br><span class="line"><span class="keyword">fi</span></span><br></pre></td></tr></table></figure>
-<p>变量列表在<a href="https://docs.gitlab.com/ee/ci/variables/predefined_variables.html" target="_blank" rel="noopener">predefined_variables</a></p>
-<p>gitlab还支持将变量直接注入到部署的业务容器中, 这个还没有用到过, 有需要的同学可以参考官文.</p>
-<h3 id="常用变量"><a href="#常用变量" class="headerlink" title="常用变量"></a>常用变量</h3><figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br></pre></td><td class="code"><pre><span class="line">CI_COMMIT_TAG  <span class="comment"># commit tag</span></span><br><span class="line">CI_DEBUG_TRACE <span class="comment"># 开启debug</span></span><br><span class="line">CI_MERGE_REQUEST_ID</span><br><span class="line">CI_JOB_TRIGGERED <span class="comment">#是否由api触发</span></span><br><span class="line">CI_COMMIT_SHA <span class="comment">#git commit产生的id 长格式</span></span><br><span class="line">CI_COMMIT_SHORT_SHA <span class="comment"># 同上, 短格式</span></span><br><span class="line">CI_COMMIT_BRANCH <span class="comment"># 提交分支</span></span><br><span class="line">CI_PROJECT_DIR <span class="comment"># 当前路径</span></span><br><span class="line">CI_MERGE_REQUEST_SOURCE_BRANCH_NAME <span class="comment"># mege request的源分支</span></span><br><span class="line">CI_MERGE_REQUEST_TARGET_BRANCH_NAME <span class="comment"># merge request的目标分支</span></span><br></pre></td></tr></table></figure>
+<h3 id="runC"><a href="#runC" class="headerlink" title="runC"></a>runC</h3><p> runc是OCI(Open Container Initiative, 开放容器标准)的一个参考实现. 于是, containerd-shim 在这一步需要调用 runc 这个命令行工具, 来启动容器;</p>
+<p>runc 启动完容器后本身会直接退出, containerd-shim 则会成为容器进程的父进程, 负责收集容器进程的状态, 上报给 containerd, 并在容器中 pid 为 1 的进程退出后接管容器中的子进程进行清理, 确保不会出现僵尸进程</p>
+<p>平时也不怎么去关注docker， 都不知道一个docker居然涉及到这么多的东西</p>
+<p>不过由于containerd的发展, 现在已经完全有能力跟client直接交互,</p>
+<p>相信不久以后,containerd很可能马上就会替代docker，成为Kubernetes首选的容器运行时, 这样架构上相对简洁一点.</p>
 <h3 id="参考文章"><a href="#参考文章" class="headerlink" title="参考文章:"></a><strong>参考文章:</strong></h3><blockquote>
 <ul>
-<li><a href="http://gitlab.bj.sensetime.com/help/user/project/protected_tags.md" target="_blank" rel="noopener">http://gitlab.bj.sensetime.com/help/user/project/protected_tags.md</a></li>
-<li><a href="http://gitlab.bj.sensetime.com/help/user/project/protected_branches" target="_blank" rel="noopener">http://gitlab.bj.sensetime.com/help/user/project/protected_branches</a></li>
-<li><a href="http://gitlab.bj.sensetime.com/help/ci/variables/README#variables" target="_blank" rel="noopener">http://gitlab.bj.sensetime.com/help/ci/variables/README#variables</a></li>
+<li><a href="https://containerd.io/" target="_blank" rel="noopener">https://containerd.io/</a></li>
+<li><a href="https://www.pyfdtic.com/2018/03/16/docker-内部组件结构-docker-daemon-container-runC/" target="_blank" rel="noopener">https://www.pyfdtic.com/2018/03/16/docker-内部组件结构-docker-daemon-container-runC/</a></li>
+<li><a href="https://blog.csdn.net/u013812710/article/details/79001463" target="_blank" rel="noopener">https://blog.csdn.net/u013812710/article/details/79001463</a></li>
+<li><a href="https://zhuanlan.zhihu.com/p/87602649" target="_blank" rel="noopener">https://zhuanlan.zhihu.com/p/87602649</a></li>
 </ul>
 </blockquote>
 <h3 id="转载请注明出处https-izsk-me"><a href="#转载请注明出处https-izsk-me" class="headerlink" title="转载请注明出处https://izsk.me"></a><strong>转载请注明出处<a href="https://izsk.me" target="_blank" rel="noopener">https://izsk.me</a></strong></h3>
@@ -516,7 +489,7 @@
       
         <div class="post-tags">
           
-            <a href="/tags/Gitlab/" rel="tag"># Gitlab</a>
+            <a href="/tags/Kubernetes/" rel="tag"># Kubernetes</a>
           
         </div>
       
@@ -525,8 +498,8 @@
         <div class="post-nav">
           <div class="post-nav-next post-nav-item">
             
-              <a href="/2020/03/09/Jmeter-ops/" rel="next" title="Kubernetes学习(jmeter压测)">
-                <i class="fa fa-chevron-left"></i> Kubernetes学习(jmeter压测)
+              <a href="/2019/11/15/grafana-source-backup-tools/" rel="next" title="Grafana学习(grafana资源备份工具)">
+                <i class="fa fa-chevron-left"></i> Grafana学习(grafana资源备份工具)
               </a>
             
           </div>
@@ -535,8 +508,8 @@
 
           <div class="post-nav-prev post-nav-item">
             
-              <a href="/2020/04/20/golang-restfulAPI-mail-server/" rel="prev" title="golang学习(golang搭建邮件系统解决Unrecognized authentication type)">
-                golang学习(golang搭建邮件系统解决Unrecognized authentication type) <i class="fa fa-chevron-right"></i>
+              <a href="/2019/11/16/Kubernetes-CA-Byhand/" rel="prev" title="Kubernetes学习(手动创建Kubernetes集群所需证书)">
+                Kubernetes学习(手动创建Kubernetes集群所需证书) <i class="fa fa-chevron-right"></i>
               </a>
             
           </div>
@@ -665,7 +638,7 @@
             
 
             
-              <div class="post-toc-content"><ol class="nav"><li class="nav-item nav-level-3"><a class="nav-link" href="#group-project"><span class="nav-number">1.</span> <span class="nav-text">group/project</span></a><ol class="nav-child"><li class="nav-item nav-level-4"><a class="nav-link" href="#protected"><span class="nav-number">1.1.</span> <span class="nav-text">protected</span></a><ol class="nav-child"><li class="nav-item nav-level-5"><a class="nav-link" href="#protected-branches"><span class="nav-number">1.1.1.</span> <span class="nav-text">protected branches</span></a></li><li class="nav-item nav-level-5"><a class="nav-link" href="#protected-tags"><span class="nav-number">1.1.2.</span> <span class="nav-text">protected tags</span></a></li></ol></li><li class="nav-item nav-level-4"><a class="nav-link" href="#Masked"><span class="nav-number">1.2.</span> <span class="nav-text">Masked</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#K8s-SECRET"><span class="nav-number">1.3.</span> <span class="nav-text">K8s_SECRET</span></a></li></ol></li><li class="nav-item nav-level-3"><a class="nav-link" href="#job"><span class="nav-number">2.</span> <span class="nav-text">job</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#global"><span class="nav-number">3.</span> <span class="nav-text">global</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#predefined"><span class="nav-number">4.</span> <span class="nav-text">predefined</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#常用变量"><span class="nav-number">5.</span> <span class="nav-text">常用变量</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#参考文章"><span class="nav-number">6.</span> <span class="nav-text">参考文章:</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#转载请注明出处https-izsk-me"><span class="nav-number">7.</span> <span class="nav-text">转载请注明出处https://izsk.me</span></a></li></ol></div>
+              <div class="post-toc-content"><ol class="nav"><li class="nav-item nav-level-3"><a class="nav-link" href="#CRI"><span class="nav-number">1.</span> <span class="nav-text">CRI</span></a><ol class="nav-child"><li class="nav-item nav-level-4"><a class="nav-link" href="#Client"><span class="nav-number">1.1.</span> <span class="nav-text">Client</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#dockerEngine"><span class="nav-number">1.2.</span> <span class="nav-text">dockerEngine</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#containerd"><span class="nav-number">1.3.</span> <span class="nav-text">containerd</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#containerd-shim"><span class="nav-number">1.4.</span> <span class="nav-text">containerd-shim</span></a></li></ol></li><li class="nav-item nav-level-3"><a class="nav-link" href="#runC"><span class="nav-number">2.</span> <span class="nav-text">runC</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#参考文章"><span class="nav-number">3.</span> <span class="nav-text">参考文章:</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#转载请注明出处https-izsk-me"><span class="nav-number">4.</span> <span class="nav-text">转载请注明出处https://izsk.me</span></a></li></ol></div>
             
 
           </div>
