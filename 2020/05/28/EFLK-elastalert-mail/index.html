@@ -86,22 +86,22 @@
 
 
 
-<meta name="description" content="elastalert是专门为elastsearch开源的日志关键字监控工具, 支持非常多的告警方式且自定义程度很高, 代码写的也非常清晰, 最近调研了这个开源库进行了二次开发, 用在了业务日志关键字监控上,还是很不错的.这里站在用户使用的角度对邮件告警进行了改造, 期间踩了不少坑. 下次会记录一下支持微信告警的方式.">
+<meta name="description" content="elastalert是专门为elastsearch开源的日志关键字监控工具, 支持非常多的告警方式且自定义程度很高, 代码写的也非常清晰, 最近调研了这个开源库进行了二次开发, 用在了业务日志关键字监控上,还是很不错的.这里站在用户使用的角度对邮件告警进行了改造, 期间踩了不少坑. 下次会记录一下常见的监控rule类型及接入微信告警的方式.">
 <meta name="keywords" content="FELK">
 <meta property="og:type" content="article">
-<meta property="og:title" content="FELK学习(elastalert改造一)">
+<meta property="og:title" content="FELK学习(elastalert自定义邮件模板)">
 <meta property="og:url" content="https://zhoushuke.github.io/2020/05/28/EFLK-elastalert-mail/index.html">
 <meta property="og:site_name" content="Z.S.K.&#39;s Records">
-<meta property="og:description" content="elastalert是专门为elastsearch开源的日志关键字监控工具, 支持非常多的告警方式且自定义程度很高, 代码写的也非常清晰, 最近调研了这个开源库进行了二次开发, 用在了业务日志关键字监控上,还是很不错的.这里站在用户使用的角度对邮件告警进行了改造, 期间踩了不少坑. 下次会记录一下支持微信告警的方式.">
+<meta property="og:description" content="elastalert是专门为elastsearch开源的日志关键字监控工具, 支持非常多的告警方式且自定义程度很高, 代码写的也非常清晰, 最近调研了这个开源库进行了二次开发, 用在了业务日志关键字监控上,还是很不错的.这里站在用户使用的角度对邮件告警进行了改造, 期间踩了不少坑. 下次会记录一下常见的监控rule类型及接入微信告警的方式.">
 <meta property="og:locale" content="zh-Hans">
 <meta property="og:image" content="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20200528165204.png">
 <meta property="og:image" content="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20200526124725.png">
 <meta property="og:image" content="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20200526153919.png">
 <meta property="og:image" content="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20200526154551.png">
-<meta property="og:updated_time" content="2020-05-28T09:26:08.379Z">
+<meta property="og:updated_time" content="2020-05-28T09:27:43.315Z">
 <meta name="twitter:card" content="summary">
-<meta name="twitter:title" content="FELK学习(elastalert改造一)">
-<meta name="twitter:description" content="elastalert是专门为elastsearch开源的日志关键字监控工具, 支持非常多的告警方式且自定义程度很高, 代码写的也非常清晰, 最近调研了这个开源库进行了二次开发, 用在了业务日志关键字监控上,还是很不错的.这里站在用户使用的角度对邮件告警进行了改造, 期间踩了不少坑. 下次会记录一下支持微信告警的方式.">
+<meta name="twitter:title" content="FELK学习(elastalert自定义邮件模板)">
+<meta name="twitter:description" content="elastalert是专门为elastsearch开源的日志关键字监控工具, 支持非常多的告警方式且自定义程度很高, 代码写的也非常清晰, 最近调研了这个开源库进行了二次开发, 用在了业务日志关键字监控上,还是很不错的.这里站在用户使用的角度对邮件告警进行了改造, 期间踩了不少坑. 下次会记录一下常见的监控rule类型及接入微信告警的方式.">
 <meta name="twitter:image" content="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20200528165204.png">
 
 
@@ -136,7 +136,7 @@
 
 
 
-  <title> FELK学习(elastalert改造一) | Z.S.K.'s Records </title>
+  <title> FELK学习(elastalert自定义邮件模板) | Z.S.K.'s Records </title>
 </head>
 
 <body itemscope itemtype="http://schema.org/WebPage" lang="zh-Hans">
@@ -326,7 +326,7 @@
             
             
               
-                FELK学习(elastalert改造一)
+                FELK学习(elastalert自定义邮件模板)
               
             
           </h1>
@@ -400,7 +400,7 @@
 
       
         <p>elastalert是专门为elastsearch开源的日志关键字监控工具, 支持非常多的告警方式且自定义程度很高, 代码写的也非常清晰, 最近调研了这个开源库进行了二次开发, 用在了业务日志关键字监控上,还是很不错的.这里站在用户使用的角度对邮件告警进行了改造, 期间踩了不少坑.</p>
-<p>下次会记录一下支持微信告警的方式.</p>
+<p>下次会记录一下常见的监控<code>rule</code>类型及接入微信告警的方式.</p>
 <a id="more"></a>
 <h3 id="安装"><a href="#安装" class="headerlink" title="安装"></a>安装</h3><figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">pip3 install elastalert</span><br></pre></td></tr></table></figure>
 <h3 id="启动"><a href="#启动" class="headerlink" title="启动"></a>启动</h3><h4 id="物理机"><a href="#物理机" class="headerlink" title="物理机"></a>物理机</h4><figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">/usr/bin/python -m elastalert.elastalert --rule /etc/elastalert/rules/my_rule.yaml --verbose</span><br></pre></td></tr></table></figure>
