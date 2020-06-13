@@ -96,7 +96,7 @@
 <meta property="og:locale" content="zh-Hans">
 <meta property="og:image" content="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20200610105313.png">
 <meta property="og:image" content="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20200612162959.png">
-<meta property="og:updated_time" content="2020-06-13T12:50:19.870Z">
+<meta property="og:updated_time" content="2020-06-13T12:59:04.822Z">
 <meta name="twitter:card" content="summary">
 <meta name="twitter:title" content="Kubernetes学习(关于CoreDNS的5s超时问题)">
 <meta name="twitter:description" content="今天同事反映了一个很奇怪的问题: 在k8s环境里的容器中curl另一个服务时会出现断断续续的超时, 问题现象很简单, 但问题根源很复杂">
@@ -454,12 +454,14 @@
 <p>再或者直接通过<code>Entrypoint/CMD</code>写入</p>
 <p><code>/bin/echo &#39;options single-request-reopen&#39; &gt;&gt; /etc/resolv.conf</code></p>
 <h4 id="musl-libc"><a href="#musl-libc" class="headerlink" title="musl libc"></a>musl libc</h4><p>前几种方案是 glibc 支持的，而基于 alpine 的镜像底层库是 musl libc 不是 glibc，所以即使加了这些 options 也没用，因此如果是通过alpine构建的镜像，当然也有解决办法，网上推荐使用本地DNS的方式，也就是每个节点都部署一个本地的dns, 容器直接请求本的dns，不需要走 DNAT，也不会发生 conntrack 冲突。另外还有个好处，就是避免 DNS 服务成为性能瓶颈</p>
+<p>NodeLocal DNScache（k8s v1.15中的beta），这已在k8s官方文档中进行了详细介绍。该解决方案旨在通过作为DaemonSet在每个节点上运行DNS缓存代理来提高群集上的总体DNS性能，以便Pod可以与在同一节点上运行的这些代理联系，从而减少仍然使用conntrack发生竞争的可能性</p>
+<p>当然，这个需要集群版本在1.15以上，如果低于这个版本使用其它的dns加速工具如dnsmasq nscd等也可以实现本地dns缓存，但部署起来会比较复杂</p>
 <p>当然也可以直接设置 POD.spec.dnsPolicy 为 “Default”， 意思是POD里面的 /etc/resolv.conf是从宿主机上的 /etc/resolv.conf继承而来，这样宿主机上的所有pod都会将宿主机上的/etc/resolv.conf直接挂载到容器内.这样也能解决问题</p>
 <ul>
 <li>“<code>Default</code>“: The Pod inherits the name resolution configuration from the node that the pods run on. See <a href="https://kubernetes.io/docs/tasks/administer-cluster/dns-custom-nameservers/#inheriting-dns-from-the-node" target="_blank" rel="noopener">related discussion</a> for more details.</li>
 <li>“<code>ClusterFirst</code>“: Any DNS query that does not match the configured cluster domain suffix, such as “<code>www.kubernetes.io</code>“, is forwarded to the upstream nameserver inherited from the node. Cluster administrators may have extra stub-domain and upstream DNS servers configured. See <a href="https://kubernetes.io/docs/tasks/administer-cluster/dns-custom-nameservers/#effects-on-pods" target="_blank" rel="noopener">related discussion</a> for details on how DNS queries are handled in those cases.</li>
 </ul>
-<p>但是个人还是建议直接更换镜像, 基于alpine构建的镜像还是有挺多坑的.</p>
+<p>如果想尽快解决问题的话，个人还是建议直接更换alpine镜像, 基于alpine构建的镜像还是有挺多坑的.</p>
 <h3 id="getaddrinfo-、gethostbyname"><a href="#getaddrinfo-、gethostbyname" class="headerlink" title="getaddrinfo()、gethostbyname()"></a>getaddrinfo()、gethostbyname()</h3><p>关于A与AAAA, 有两个很常用的函数, 之前也有用过, 但是从来没有关注过这两者的区别</p>
 <p><code>getaddrinfo()</code>会返回A与AAAA的记录, 如果其中任一个没有返回，都将超时重试</p>
 <p>而<code>gethostbyname()</code>只会返回A记录</p>

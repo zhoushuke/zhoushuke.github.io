@@ -60,12 +60,14 @@
 <p>再或者直接通过<code>Entrypoint/CMD</code>写入</p>
 <p><code>/bin/echo &#39;options single-request-reopen&#39; &gt;&gt; /etc/resolv.conf</code></p>
 <h4 id="musl-libc"><a href="#musl-libc" class="headerlink" title="musl libc"></a>musl libc</h4><p>前几种方案是 glibc 支持的，而基于 alpine 的镜像底层库是 musl libc 不是 glibc，所以即使加了这些 options 也没用，因此如果是通过alpine构建的镜像，当然也有解决办法，网上推荐使用本地DNS的方式，也就是每个节点都部署一个本地的dns, 容器直接请求本的dns，不需要走 DNAT，也不会发生 conntrack 冲突。另外还有个好处，就是避免 DNS 服务成为性能瓶颈</p>
+<p>NodeLocal DNScache（k8s v1.15中的beta），这已在k8s官方文档中进行了详细介绍。该解决方案旨在通过作为DaemonSet在每个节点上运行DNS缓存代理来提高群集上的总体DNS性能，以便Pod可以与在同一节点上运行的这些代理联系，从而减少仍然使用conntrack发生竞争的可能性</p>
+<p>当然，这个需要集群版本在1.15以上，如果低于这个版本使用其它的dns加速工具如dnsmasq nscd等也可以实现本地dns缓存，但部署起来会比较复杂</p>
 <p>当然也可以直接设置 POD.spec.dnsPolicy 为 “Default”， 意思是POD里面的 /etc/resolv.conf是从宿主机上的 /etc/resolv.conf继承而来，这样宿主机上的所有pod都会将宿主机上的/etc/resolv.conf直接挂载到容器内.这样也能解决问题</p>
 <ul>
 <li>“<code>Default</code>“: The Pod inherits the name resolution configuration from the node that the pods run on. See <a href="https://kubernetes.io/docs/tasks/administer-cluster/dns-custom-nameservers/#inheriting-dns-from-the-node" target="_blank" rel="noopener">related discussion</a> for more details.</li>
 <li>“<code>ClusterFirst</code>“: Any DNS query that does not match the configured cluster domain suffix, such as “<code>www.kubernetes.io</code>“, is forwarded to the upstream nameserver inherited from the node. Cluster administrators may have extra stub-domain and upstream DNS servers configured. See <a href="https://kubernetes.io/docs/tasks/administer-cluster/dns-custom-nameservers/#effects-on-pods" target="_blank" rel="noopener">related discussion</a> for details on how DNS queries are handled in those cases.</li>
 </ul>
-<p>但是个人还是建议直接更换镜像, 基于alpine构建的镜像还是有挺多坑的.</p>
+<p>如果想尽快解决问题的话，个人还是建议直接更换alpine镜像, 基于alpine构建的镜像还是有挺多坑的.</p>
 <h3 id="getaddrinfo-、gethostbyname"><a href="#getaddrinfo-、gethostbyname" class="headerlink" title="getaddrinfo()、gethostbyname()"></a>getaddrinfo()、gethostbyname()</h3><p>关于A与AAAA, 有两个很常用的函数, 之前也有用过, 但是从来没有关注过这两者的区别</p>
 <p><code>getaddrinfo()</code>会返回A与AAAA的记录, 如果其中任一个没有返回，都将超时重试</p>
 <p>而<code>gethostbyname()</code>只会返回A记录</p>
@@ -2387,33 +2389,6 @@
       </tags>
   </entry>
   <entry>
-    <title>有趣的Shell Snippet</title>
-    <url>/2020/02/02/shell-funny-snippet/</url>
-    <content><![CDATA[<p>记录下遇到的有趣的shell代码, 可能是一些常用的snippet, 也可能是使用的时候不经意踩到的坑</p>
-<p><strong>不定时更新</strong></p>
-<a id="more"></a>
-<h3 id="善用"><a href="#善用" class="headerlink" title="善用{}"></a>善用<code>{}</code></h3><figure class="highlight shell"><table><tr><td class="code"><pre><span class="line">ATEST="ISTEST"</span><br><span class="line"><span class="meta">#</span><span class="bash"> 错误使用，打印为空, bash会把ATEST_exec当成是一个变量，也就是最大的查找_连接的字符</span></span><br><span class="line">echo $ATEST_exec</span><br><span class="line"><span class="meta">#</span><span class="bash"> 正确</span></span><br><span class="line">echo $&#123;ATEST&#125;_exec</span><br></pre></td></tr></table></figure>
-<h3 id="使用-amp-amp"><a href="#使用-amp-amp" class="headerlink" title="使用&amp;&amp; ||"></a>使用<code>&amp;&amp;</code> <code>||</code></h3><p>有时为了shell命令能够简短, 经常会连着使用 <code>&amp;&amp;(且) ||(或)</code>, 但是如果不多想一次的话，可能就会跟结果相背.</p>
-<figure class="highlight shell"><table><tr><td class="code"><pre><span class="line"><span class="meta">#</span><span class="bash"> 只有当command1成功(命令返回值为0), 才会执行command2</span></span><br><span class="line">command1 &amp;&amp; command 2</span><br><span class="line"></span><br><span class="line"><span class="meta">#</span><span class="bash"> 只有当command1失败(命令返回值不为0), 才会执行command2</span></span><br><span class="line">command1 || command2</span><br><span class="line"></span><br><span class="line"><span class="meta">#</span><span class="bash"> command1与command2会顺序执行, 两个命令之间没有关系.</span></span><br><span class="line">command1; command2</span><br><span class="line"></span><br><span class="line"><span class="meta">#</span><span class="bash"> 例子</span></span><br><span class="line"><span class="meta">#</span><span class="bash"> 假如想判断从网上下载一个东西, 如果成功继续执行, 如果失败, 则打印一句话并退出.</span></span><br><span class="line"><span class="meta">#</span><span class="bash"> 思考下面三个句子，哪条符合要求</span></span><br><span class="line"></span><br><span class="line"><span class="meta">#</span><span class="bash"> 这句话相当于(wget -q someURL -O localdir || <span class="built_in">echo</span> <span class="string">"DOWN FAILED!"</span>); <span class="built_in">exit</span> 1</span></span><br><span class="line"><span class="meta">#</span><span class="bash"> 因此, 不管wget是否成功, <span class="built_in">exit</span> 1都将被执行. </span></span><br><span class="line">wget -q someURL -O localdir || echo "DOWN FAILED!"; exit 1</span><br><span class="line"></span><br><span class="line"><span class="meta">#</span><span class="bash"> 当wget成功后, 忽略 || 后面的语句, 只有失败了，才会<span class="built_in">echo</span>, 由于<span class="built_in">echo</span>成功, 因此也会执行 <span class="built_in">exit</span> 1</span></span><br><span class="line">wget -q someURL -O localdir || (echo "DOWN FAILED!" &amp;&amp; exit 1)</span><br><span class="line"></span><br><span class="line"><span class="meta">#</span><span class="bash"> 这句跟上面的效果一样, 唯一的区别在于<span class="built_in">exit</span> 1必然会执行而不管<span class="built_in">echo</span>语句有没有成功</span></span><br><span class="line">wget -q someURL -O localdir || (echo "DOWN FAILED!"; exit 1)</span><br></pre></td></tr></table></figure>
-<h3 id="换行符"><a href="#换行符" class="headerlink" title="换行符"></a>换行符</h3><p>经常会有读取文件的需要, 用的最多的是使用for循环读取文件, 使用的时候需要特别注意文件的换行符, 默认情况下，换行符为空格, 需要使用<code>IFS</code>指定为换行</p>
-<figure class="highlight shell"><table><tr><td class="code"><pre><span class="line"><span class="meta">#</span><span class="bash"> 测试文件</span></span><br><span class="line">cat xx.md</span><br><span class="line">this is a test</span><br><span class="line">for readline</span><br><span class="line">from bash</span><br><span class="line"></span><br><span class="line"><span class="meta">#</span><span class="bash"> 读取文件脚本(错误)</span></span><br><span class="line">cat readfromfile.sh</span><br><span class="line"><span class="meta">#</span><span class="bash">!/bin/bash</span></span><br><span class="line"></span><br><span class="line">for LINE in `cat xx.md`</span><br><span class="line">do</span><br><span class="line">    echo $LINE</span><br><span class="line">done</span><br><span class="line"></span><br><span class="line"><span class="meta">#</span><span class="bash"> 输出, 没有按行输出, 第个单词都占据了一行</span></span><br><span class="line">this</span><br><span class="line">is</span><br><span class="line">a</span><br><span class="line">test</span><br><span class="line">for</span><br><span class="line">readline</span><br><span class="line">from</span><br><span class="line">bash</span><br><span class="line"></span><br><span class="line"><span class="meta">#</span><span class="bash"> 正确的脚本</span></span><br><span class="line"><span class="meta">#</span><span class="bash">!/bin/bash</span></span><br><span class="line"></span><br><span class="line">IFS_old=$IFS      # 将原IFS值保存，以便用完后恢复</span><br><span class="line">IFS=$'\n'					# 指定回车为分隔符</span><br><span class="line"></span><br><span class="line">for LINE in $(cat xx.md)</span><br><span class="line">do</span><br><span class="line">        echo $&#123;LINE&#125;</span><br><span class="line">done</span><br><span class="line">IFS=$IFS_old 			# 恢复原IFS值</span><br><span class="line"></span><br><span class="line"><span class="meta">#</span><span class="bash"> 输出</span></span><br><span class="line">this is a test</span><br><span class="line">for readline</span><br><span class="line">from bash</span><br><span class="line"></span><br><span class="line"><span class="meta">#</span><span class="bash"> 当然以下两种方式也可以达到逐行输出效果, 大文件请考虑效率</span></span><br><span class="line"><span class="meta">#</span><span class="bash"> second</span></span><br><span class="line">cat xx.md | while read line</span><br><span class="line">do</span><br><span class="line">    echo "$&#123;line&#125;"</span><br><span class="line">done</span><br><span class="line"><span class="meta">#</span><span class="bash">  third</span></span><br><span class="line">while read line</span><br><span class="line">do </span><br><span class="line">    echo "$&#123;line&#125;"</span><br><span class="line">done &lt; xx.md</span><br></pre></td></tr></table></figure>
-<h3 id="变量默认值"><a href="#变量默认值" class="headerlink" title="变量默认值"></a>变量默认值</h3><p>有时候定义变量的时候, 经常需要默认值, shell中也有一些比较有趣的表达式</p>
-<figure class="highlight shell"><table><tr><td class="code"><pre><span class="line"><span class="meta">$</span><span class="bash">&#123;value:=word&#125;  </span></span><br><span class="line"><span class="meta">#</span><span class="bash">如果value存在且非null 则返回value 否则把word赋值给value并返回word(=value), 适合场景：如果value没有初始化 可给它赋初值</span></span><br><span class="line">echo $&#123;value:=word&#125;---&gt;文件的第一行</span><br><span class="line">echo $&#123;value1:=word&#125;---&gt;word 且会把word赋值给value</span><br><span class="line"></span><br><span class="line"><span class="meta">$</span><span class="bash">&#123;value:+word&#125;  </span></span><br><span class="line"><span class="meta">#</span><span class="bash"> 如果value存在且非null 则返回word 如果value没有设置或为空 则返回value</span></span><br><span class="line">echo $&#123;value:+word&#125;---&gt;word</span><br><span class="line">echo $&#123;value1:-word&#125;---&gt; 返回空 因为value1本身就是空</span><br><span class="line"></span><br><span class="line"><span class="meta">$</span><span class="bash">&#123;value:?word&#125; </span></span><br><span class="line"><span class="meta">#</span><span class="bash"> 如果valued存在且非Null， 那就什么也不做。否则，value:word会被发送到标准错误输出，并且程序会退出；如果没有指定word 则输出  value: parameter null or not <span class="built_in">set</span></span></span><br><span class="line">echo $&#123;value:?nomessage&#125;----&gt;输出第一行</span><br><span class="line">echo $&#123;value:?nomessage&#125;----&gt;value:nomessage</span><br><span class="line">echo $&#123;value:?&#125;-----&gt;value: parameter null or not set</span><br></pre></td></tr></table></figure>
-<h3 id="参数解析getops"><a href="#参数解析getops" class="headerlink" title="参数解析getops"></a>参数解析getops</h3><p>在写脚本的时候，经常需要对参数进行解析,shell毕竟是个脚本语言, 不可能像python等高级语言一样有很完善的参数解析库, <code>getops是bash自带的一个用于参数解析的工具, 但是它只是用于参数解析, 不能对参数进行更高级的操作，比如参数间依赖, 参数判断等</code></p>
-<figure class="highlight shell"><table><tr><td class="code"><pre><span class="line">function usage() &#123;</span><br><span class="line">	echo "$&#123;0&#125; -m [master/slave] -t [my/db] -s [slave-ip]"</span><br><span class="line">    echo ''</span><br><span class="line">    # shellcheck disable=SC2016</span><br><span class="line">    echo '  -m: Specify install type: master or slave'</span><br><span class="line">    # shellcheck disable=SC2016</span><br><span class="line">    echo '  -s: If type == master, then must specify opq slave ip'</span><br><span class="line">    # shellcheck disable=SC2016</span><br><span class="line">    echo '  -t: Specify instll opq type: my or db, my is short for mingyuan'</span><br><span class="line">    echo 'example:'</span><br><span class="line">    cat &lt;&lt; EOF</span><br><span class="line">    #install opq-db</span><br><span class="line"><span class="meta"> 		#</span><span class="bash"> master</span></span><br><span class="line"><span class="meta">			#</span><span class="bash"> ./auto_install_opq_from_oss.sh -m master -s 127.0.0.1 -t db</span></span><br><span class="line"><span class="meta"> 		#</span><span class="bash"> slave</span></span><br><span class="line"><span class="meta">			#</span><span class="bash"> ./auto_install_opq_from_oss.sh -m slave -t db</span></span><br><span class="line"><span class="meta"> 	#</span><span class="bash"> install opq-mingyuan</span></span><br><span class="line"><span class="meta">		#</span><span class="bash"> master</span></span><br><span class="line"><span class="meta">			#</span><span class="bash"> ./install_opq.sh -m master -s 127.0.0.1 -t my</span></span><br><span class="line"><span class="meta">		#</span><span class="bash"> slave</span></span><br><span class="line"><span class="meta">			#</span><span class="bash"> ./install_opq.sh -m slave -t my</span></span><br><span class="line">EOF</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line">while getopts "m:s:t:h" opt   # ":m:s:t:h" 如果首位的出现: 表示不打印错误信息</span><br><span class="line"><span class="meta">#</span><span class="bash"> 上面这句表示: -m -s -t 需要参数 -h 不需要传参</span></span><br><span class="line">do</span><br><span class="line">    case $&#123;opt&#125; in</span><br><span class="line">       m)</span><br><span class="line">         MODE=$&#123;OPTARG&#125;</span><br><span class="line">         ;;</span><br><span class="line">       s)</span><br><span class="line">         SLAVEIP=$&#123;OPTARG&#125;</span><br><span class="line">         ;;</span><br><span class="line">       t)</span><br><span class="line">         STYPE=$&#123;OPTARG&#125;</span><br><span class="line">         ;;</span><br><span class="line">       h)</span><br><span class="line">         usage</span><br><span class="line">         exit 0</span><br><span class="line">         ;;</span><br><span class="line">       \?)</span><br><span class="line">         echo "Invalid option: -$OPTARG" &gt;&amp;2</span><br><span class="line">         usage</span><br><span class="line">         exit 1</span><br><span class="line">         ;;</span><br><span class="line">    esac</span><br><span class="line">done</span><br><span class="line"></span><br><span class="line"><span class="meta">#</span><span class="bash"> 这里要说明一下 <span class="string">"m:s:t:h"</span>的含义</span></span><br><span class="line"><span class="meta">#</span><span class="bash"> 如果首位(m前)出现 : 表示「不打印错误信息」，也就是说如果需要带参数但没有带时不会打印错误</span></span><br><span class="line"><span class="meta">#</span><span class="bash"> 紧邻字母后面的 : 表示该选项接收一个参数, 如果没有带参数的话,则会提示错误</span></span><br></pre></td></tr></table></figure>
-<h3 id="多if时不如使用case"><a href="#多if时不如使用case" class="headerlink" title="多if时不如使用case"></a>多if时不如使用case</h3><p>在需要使用法if进行业务判断时, 不防使用case，相对于层层if, 代码会更加清晰</p>
-<figure class="highlight shell"><table><tr><td class="code"><pre><span class="line">if [[ "$lmode" == "master" ]]; then</span><br><span class="line">	case $lstype in</span><br><span class="line"> 		my)</span><br><span class="line">			OPQ_UNTAR_DIR_NAME='multiindex_opq_master_mingyuan'</span><br><span class="line">			;;</span><br><span class="line">		db)</span><br><span class="line">			OPQ_UNTAR_DIR_NAME='multiindex_opq_master'</span><br><span class="line">			;;</span><br><span class="line">	esac</span><br><span class="line">	PROGRAM='opq_master'</span><br><span class="line">else</span><br><span class="line">	case $lstype in</span><br><span class="line">		my)</span><br><span class="line">			OPQ_UNTAR_DIR_NAME='multiindex_opq_slave_mingyuan'</span><br><span class="line">			;;</span><br><span class="line">		db)</span><br><span class="line">			OPQ_UNTAR_DIR_NAME='multiindex_opq_slave'</span><br><span class="line">			;;</span><br><span class="line">	esac</span><br><span class="line">	PROGRAM='opq_slave'</span><br><span class="line">fi</span><br></pre></td></tr></table></figure>
-<h3 id="加载key-value类的配置文件"><a href="#加载key-value类的配置文件" class="headerlink" title="加载key-value类的配置文件"></a>加载key-value类的配置文件</h3><figure class="highlight shell"><table><tr><td class="code"><pre><span class="line">cat xx</span><br><span class="line">key1=value1</span><br><span class="line">key2=value2</span><br><span class="line"></span><br><span class="line">cat xx.sh</span><br><span class="line">. xx # 这里直接使用. xx即可把xx文件里的key-value引入,后续可直接使用k.</span><br><span class="line">echo $key1, $key2</span><br><span class="line"></span><br><span class="line"><span class="meta">#</span><span class="bash">注意, 配置文件只能是k=v的形式(多个k=v可以在一行, 使用空格隔开), 其它形式会报错</span></span><br></pre></td></tr></table></figure>
-<h3 id="一行代码-字符串是否包含子串"><a href="#一行代码-字符串是否包含子串" class="headerlink" title="一行代码: 字符串是否包含子串"></a>一行代码: 字符串是否包含子串</h3><figure class="highlight bash"><table><tr><td class="code"><pre><span class="line"><span class="comment"># 判断CONSUL_SERVER中是否包含逗号 如果包含EXPECT_LEN=3， 不包含EXPECT_LEN=1</span></span><br><span class="line">[ -z <span class="string">"<span class="variable">$&#123;CONSUL_SERVER##*,*&#125;</span>"</span> ] &amp;&amp; EXPECT_LEN=3 || EXPECT_LEN=1</span><br></pre></td></tr></table></figure>
-<h3 id="参考文章"><a href="#参考文章" class="headerlink" title="参考文章:"></a>参考文章:</h3><h3 id="转载请注明出处https-izsk-me"><a href="#转载请注明出处https-izsk-me" class="headerlink" title="转载请注明出处https://izsk.me"></a><strong>转载请注明出处<a href="https://izsk.me" target="_blank" rel="noopener">https://izsk.me</a></strong></h3>]]></content>
-      <categories>
-        <category>Shell</category>
-      </categories>
-      <tags>
-        <tag>Shell</tag>
-      </tags>
-  </entry>
-  <entry>
     <title>定时备份Kubernetes集群常用对象到Yaml文件</title>
     <url>/2020/02/02/Backup-Kubernetes-Object-ToYaml/</url>
     <content><![CDATA[<p>有时候我们经常需要用到kubernetes中常用对象的yaml文件, 搞了个简单的脚本来定时备份集群中常用的资源对象保存到yaml文件，以防万一, 毕竟机器的运维权限在别人手上, 指不定什么时候就出问题.</p>
@@ -2441,6 +2416,33 @@
       </categories>
       <tags>
         <tag>Kubernetes</tag>
+      </tags>
+  </entry>
+  <entry>
+    <title>有趣的Shell Snippet</title>
+    <url>/2020/02/02/shell-funny-snippet/</url>
+    <content><![CDATA[<p>记录下遇到的有趣的shell代码, 可能是一些常用的snippet, 也可能是使用的时候不经意踩到的坑</p>
+<p><strong>不定时更新</strong></p>
+<a id="more"></a>
+<h3 id="善用"><a href="#善用" class="headerlink" title="善用{}"></a>善用<code>{}</code></h3><figure class="highlight shell"><table><tr><td class="code"><pre><span class="line">ATEST="ISTEST"</span><br><span class="line"><span class="meta">#</span><span class="bash"> 错误使用，打印为空, bash会把ATEST_exec当成是一个变量，也就是最大的查找_连接的字符</span></span><br><span class="line">echo $ATEST_exec</span><br><span class="line"><span class="meta">#</span><span class="bash"> 正确</span></span><br><span class="line">echo $&#123;ATEST&#125;_exec</span><br></pre></td></tr></table></figure>
+<h3 id="使用-amp-amp"><a href="#使用-amp-amp" class="headerlink" title="使用&amp;&amp; ||"></a>使用<code>&amp;&amp;</code> <code>||</code></h3><p>有时为了shell命令能够简短, 经常会连着使用 <code>&amp;&amp;(且) ||(或)</code>, 但是如果不多想一次的话，可能就会跟结果相背.</p>
+<figure class="highlight shell"><table><tr><td class="code"><pre><span class="line"><span class="meta">#</span><span class="bash"> 只有当command1成功(命令返回值为0), 才会执行command2</span></span><br><span class="line">command1 &amp;&amp; command 2</span><br><span class="line"></span><br><span class="line"><span class="meta">#</span><span class="bash"> 只有当command1失败(命令返回值不为0), 才会执行command2</span></span><br><span class="line">command1 || command2</span><br><span class="line"></span><br><span class="line"><span class="meta">#</span><span class="bash"> command1与command2会顺序执行, 两个命令之间没有关系.</span></span><br><span class="line">command1; command2</span><br><span class="line"></span><br><span class="line"><span class="meta">#</span><span class="bash"> 例子</span></span><br><span class="line"><span class="meta">#</span><span class="bash"> 假如想判断从网上下载一个东西, 如果成功继续执行, 如果失败, 则打印一句话并退出.</span></span><br><span class="line"><span class="meta">#</span><span class="bash"> 思考下面三个句子，哪条符合要求</span></span><br><span class="line"></span><br><span class="line"><span class="meta">#</span><span class="bash"> 这句话相当于(wget -q someURL -O localdir || <span class="built_in">echo</span> <span class="string">"DOWN FAILED!"</span>); <span class="built_in">exit</span> 1</span></span><br><span class="line"><span class="meta">#</span><span class="bash"> 因此, 不管wget是否成功, <span class="built_in">exit</span> 1都将被执行. </span></span><br><span class="line">wget -q someURL -O localdir || echo "DOWN FAILED!"; exit 1</span><br><span class="line"></span><br><span class="line"><span class="meta">#</span><span class="bash"> 当wget成功后, 忽略 || 后面的语句, 只有失败了，才会<span class="built_in">echo</span>, 由于<span class="built_in">echo</span>成功, 因此也会执行 <span class="built_in">exit</span> 1</span></span><br><span class="line">wget -q someURL -O localdir || (echo "DOWN FAILED!" &amp;&amp; exit 1)</span><br><span class="line"></span><br><span class="line"><span class="meta">#</span><span class="bash"> 这句跟上面的效果一样, 唯一的区别在于<span class="built_in">exit</span> 1必然会执行而不管<span class="built_in">echo</span>语句有没有成功</span></span><br><span class="line">wget -q someURL -O localdir || (echo "DOWN FAILED!"; exit 1)</span><br></pre></td></tr></table></figure>
+<h3 id="换行符"><a href="#换行符" class="headerlink" title="换行符"></a>换行符</h3><p>经常会有读取文件的需要, 用的最多的是使用for循环读取文件, 使用的时候需要特别注意文件的换行符, 默认情况下，换行符为空格, 需要使用<code>IFS</code>指定为换行</p>
+<figure class="highlight shell"><table><tr><td class="code"><pre><span class="line"><span class="meta">#</span><span class="bash"> 测试文件</span></span><br><span class="line">cat xx.md</span><br><span class="line">this is a test</span><br><span class="line">for readline</span><br><span class="line">from bash</span><br><span class="line"></span><br><span class="line"><span class="meta">#</span><span class="bash"> 读取文件脚本(错误)</span></span><br><span class="line">cat readfromfile.sh</span><br><span class="line"><span class="meta">#</span><span class="bash">!/bin/bash</span></span><br><span class="line"></span><br><span class="line">for LINE in `cat xx.md`</span><br><span class="line">do</span><br><span class="line">    echo $LINE</span><br><span class="line">done</span><br><span class="line"></span><br><span class="line"><span class="meta">#</span><span class="bash"> 输出, 没有按行输出, 第个单词都占据了一行</span></span><br><span class="line">this</span><br><span class="line">is</span><br><span class="line">a</span><br><span class="line">test</span><br><span class="line">for</span><br><span class="line">readline</span><br><span class="line">from</span><br><span class="line">bash</span><br><span class="line"></span><br><span class="line"><span class="meta">#</span><span class="bash"> 正确的脚本</span></span><br><span class="line"><span class="meta">#</span><span class="bash">!/bin/bash</span></span><br><span class="line"></span><br><span class="line">IFS_old=$IFS      # 将原IFS值保存，以便用完后恢复</span><br><span class="line">IFS=$'\n'					# 指定回车为分隔符</span><br><span class="line"></span><br><span class="line">for LINE in $(cat xx.md)</span><br><span class="line">do</span><br><span class="line">        echo $&#123;LINE&#125;</span><br><span class="line">done</span><br><span class="line">IFS=$IFS_old 			# 恢复原IFS值</span><br><span class="line"></span><br><span class="line"><span class="meta">#</span><span class="bash"> 输出</span></span><br><span class="line">this is a test</span><br><span class="line">for readline</span><br><span class="line">from bash</span><br><span class="line"></span><br><span class="line"><span class="meta">#</span><span class="bash"> 当然以下两种方式也可以达到逐行输出效果, 大文件请考虑效率</span></span><br><span class="line"><span class="meta">#</span><span class="bash"> second</span></span><br><span class="line">cat xx.md | while read line</span><br><span class="line">do</span><br><span class="line">    echo "$&#123;line&#125;"</span><br><span class="line">done</span><br><span class="line"><span class="meta">#</span><span class="bash">  third</span></span><br><span class="line">while read line</span><br><span class="line">do </span><br><span class="line">    echo "$&#123;line&#125;"</span><br><span class="line">done &lt; xx.md</span><br></pre></td></tr></table></figure>
+<h3 id="变量默认值"><a href="#变量默认值" class="headerlink" title="变量默认值"></a>变量默认值</h3><p>有时候定义变量的时候, 经常需要默认值, shell中也有一些比较有趣的表达式</p>
+<figure class="highlight shell"><table><tr><td class="code"><pre><span class="line"><span class="meta">$</span><span class="bash">&#123;value:=word&#125;  </span></span><br><span class="line"><span class="meta">#</span><span class="bash">如果value存在且非null 则返回value 否则把word赋值给value并返回word(=value), 适合场景：如果value没有初始化 可给它赋初值</span></span><br><span class="line">echo $&#123;value:=word&#125;---&gt;文件的第一行</span><br><span class="line">echo $&#123;value1:=word&#125;---&gt;word 且会把word赋值给value</span><br><span class="line"></span><br><span class="line"><span class="meta">$</span><span class="bash">&#123;value:+word&#125;  </span></span><br><span class="line"><span class="meta">#</span><span class="bash"> 如果value存在且非null 则返回word 如果value没有设置或为空 则返回value</span></span><br><span class="line">echo $&#123;value:+word&#125;---&gt;word</span><br><span class="line">echo $&#123;value1:-word&#125;---&gt; 返回空 因为value1本身就是空</span><br><span class="line"></span><br><span class="line"><span class="meta">$</span><span class="bash">&#123;value:?word&#125; </span></span><br><span class="line"><span class="meta">#</span><span class="bash"> 如果valued存在且非Null， 那就什么也不做。否则，value:word会被发送到标准错误输出，并且程序会退出；如果没有指定word 则输出  value: parameter null or not <span class="built_in">set</span></span></span><br><span class="line">echo $&#123;value:?nomessage&#125;----&gt;输出第一行</span><br><span class="line">echo $&#123;value:?nomessage&#125;----&gt;value:nomessage</span><br><span class="line">echo $&#123;value:?&#125;-----&gt;value: parameter null or not set</span><br></pre></td></tr></table></figure>
+<h3 id="参数解析getops"><a href="#参数解析getops" class="headerlink" title="参数解析getops"></a>参数解析getops</h3><p>在写脚本的时候，经常需要对参数进行解析,shell毕竟是个脚本语言, 不可能像python等高级语言一样有很完善的参数解析库, <code>getops是bash自带的一个用于参数解析的工具, 但是它只是用于参数解析, 不能对参数进行更高级的操作，比如参数间依赖, 参数判断等</code></p>
+<figure class="highlight shell"><table><tr><td class="code"><pre><span class="line">function usage() &#123;</span><br><span class="line">	echo "$&#123;0&#125; -m [master/slave] -t [my/db] -s [slave-ip]"</span><br><span class="line">    echo ''</span><br><span class="line">    # shellcheck disable=SC2016</span><br><span class="line">    echo '  -m: Specify install type: master or slave'</span><br><span class="line">    # shellcheck disable=SC2016</span><br><span class="line">    echo '  -s: If type == master, then must specify opq slave ip'</span><br><span class="line">    # shellcheck disable=SC2016</span><br><span class="line">    echo '  -t: Specify instll opq type: my or db, my is short for mingyuan'</span><br><span class="line">    echo 'example:'</span><br><span class="line">    cat &lt;&lt; EOF</span><br><span class="line">    #install opq-db</span><br><span class="line"><span class="meta"> 		#</span><span class="bash"> master</span></span><br><span class="line"><span class="meta">			#</span><span class="bash"> ./auto_install_opq_from_oss.sh -m master -s 127.0.0.1 -t db</span></span><br><span class="line"><span class="meta"> 		#</span><span class="bash"> slave</span></span><br><span class="line"><span class="meta">			#</span><span class="bash"> ./auto_install_opq_from_oss.sh -m slave -t db</span></span><br><span class="line"><span class="meta"> 	#</span><span class="bash"> install opq-mingyuan</span></span><br><span class="line"><span class="meta">		#</span><span class="bash"> master</span></span><br><span class="line"><span class="meta">			#</span><span class="bash"> ./install_opq.sh -m master -s 127.0.0.1 -t my</span></span><br><span class="line"><span class="meta">		#</span><span class="bash"> slave</span></span><br><span class="line"><span class="meta">			#</span><span class="bash"> ./install_opq.sh -m slave -t my</span></span><br><span class="line">EOF</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line">while getopts "m:s:t:h" opt   # ":m:s:t:h" 如果首位的出现: 表示不打印错误信息</span><br><span class="line"><span class="meta">#</span><span class="bash"> 上面这句表示: -m -s -t 需要参数 -h 不需要传参</span></span><br><span class="line">do</span><br><span class="line">    case $&#123;opt&#125; in</span><br><span class="line">       m)</span><br><span class="line">         MODE=$&#123;OPTARG&#125;</span><br><span class="line">         ;;</span><br><span class="line">       s)</span><br><span class="line">         SLAVEIP=$&#123;OPTARG&#125;</span><br><span class="line">         ;;</span><br><span class="line">       t)</span><br><span class="line">         STYPE=$&#123;OPTARG&#125;</span><br><span class="line">         ;;</span><br><span class="line">       h)</span><br><span class="line">         usage</span><br><span class="line">         exit 0</span><br><span class="line">         ;;</span><br><span class="line">       \?)</span><br><span class="line">         echo "Invalid option: -$OPTARG" &gt;&amp;2</span><br><span class="line">         usage</span><br><span class="line">         exit 1</span><br><span class="line">         ;;</span><br><span class="line">    esac</span><br><span class="line">done</span><br><span class="line"></span><br><span class="line"><span class="meta">#</span><span class="bash"> 这里要说明一下 <span class="string">"m:s:t:h"</span>的含义</span></span><br><span class="line"><span class="meta">#</span><span class="bash"> 如果首位(m前)出现 : 表示「不打印错误信息」，也就是说如果需要带参数但没有带时不会打印错误</span></span><br><span class="line"><span class="meta">#</span><span class="bash"> 紧邻字母后面的 : 表示该选项接收一个参数, 如果没有带参数的话,则会提示错误</span></span><br></pre></td></tr></table></figure>
+<h3 id="多if时不如使用case"><a href="#多if时不如使用case" class="headerlink" title="多if时不如使用case"></a>多if时不如使用case</h3><p>在需要使用法if进行业务判断时, 不防使用case，相对于层层if, 代码会更加清晰</p>
+<figure class="highlight shell"><table><tr><td class="code"><pre><span class="line">if [[ "$lmode" == "master" ]]; then</span><br><span class="line">	case $lstype in</span><br><span class="line"> 		my)</span><br><span class="line">			OPQ_UNTAR_DIR_NAME='multiindex_opq_master_mingyuan'</span><br><span class="line">			;;</span><br><span class="line">		db)</span><br><span class="line">			OPQ_UNTAR_DIR_NAME='multiindex_opq_master'</span><br><span class="line">			;;</span><br><span class="line">	esac</span><br><span class="line">	PROGRAM='opq_master'</span><br><span class="line">else</span><br><span class="line">	case $lstype in</span><br><span class="line">		my)</span><br><span class="line">			OPQ_UNTAR_DIR_NAME='multiindex_opq_slave_mingyuan'</span><br><span class="line">			;;</span><br><span class="line">		db)</span><br><span class="line">			OPQ_UNTAR_DIR_NAME='multiindex_opq_slave'</span><br><span class="line">			;;</span><br><span class="line">	esac</span><br><span class="line">	PROGRAM='opq_slave'</span><br><span class="line">fi</span><br></pre></td></tr></table></figure>
+<h3 id="加载key-value类的配置文件"><a href="#加载key-value类的配置文件" class="headerlink" title="加载key-value类的配置文件"></a>加载key-value类的配置文件</h3><figure class="highlight shell"><table><tr><td class="code"><pre><span class="line">cat xx</span><br><span class="line">key1=value1</span><br><span class="line">key2=value2</span><br><span class="line"></span><br><span class="line">cat xx.sh</span><br><span class="line">. xx # 这里直接使用. xx即可把xx文件里的key-value引入,后续可直接使用k.</span><br><span class="line">echo $key1, $key2</span><br><span class="line"></span><br><span class="line"><span class="meta">#</span><span class="bash">注意, 配置文件只能是k=v的形式(多个k=v可以在一行, 使用空格隔开), 其它形式会报错</span></span><br></pre></td></tr></table></figure>
+<h3 id="一行代码-字符串是否包含子串"><a href="#一行代码-字符串是否包含子串" class="headerlink" title="一行代码: 字符串是否包含子串"></a>一行代码: 字符串是否包含子串</h3><figure class="highlight bash"><table><tr><td class="code"><pre><span class="line"><span class="comment"># 判断CONSUL_SERVER中是否包含逗号 如果包含EXPECT_LEN=3， 不包含EXPECT_LEN=1</span></span><br><span class="line">[ -z <span class="string">"<span class="variable">$&#123;CONSUL_SERVER##*,*&#125;</span>"</span> ] &amp;&amp; EXPECT_LEN=3 || EXPECT_LEN=1</span><br></pre></td></tr></table></figure>
+<h3 id="参考文章"><a href="#参考文章" class="headerlink" title="参考文章:"></a>参考文章:</h3><h3 id="转载请注明出处https-izsk-me"><a href="#转载请注明出处https-izsk-me" class="headerlink" title="转载请注明出处https://izsk.me"></a><strong>转载请注明出处<a href="https://izsk.me" target="_blank" rel="noopener">https://izsk.me</a></strong></h3>]]></content>
+      <categories>
+        <category>Shell</category>
+      </categories>
+      <tags>
+        <tag>Shell</tag>
       </tags>
   </entry>
   <entry>
@@ -2882,6 +2884,130 @@
       </tags>
   </entry>
   <entry>
+    <title>Kubernetes学习(Bootstrap Token机制)</title>
+    <url>/2020/01/05/Kubernetes-Bootstrap-Node/</url>
+    <content><![CDATA[<p>CKA考试时可能会遇到一个大题: 大致题意是: 在已经存在的一个Kubernetes Cluster中新增一个Node, 使其加入集群及相关证书可自动续签.</p>
+<a id="more"></a>
+<p>我们一般搭建k8s集群，都使用了一些开源工具来做，这类工具都自动帮我们做了很多事情，因此我们只需要简单执行一条命令后，一个集群就完成搭建了, 非常方便，同时也隐藏了一些k8s的知识点, 比如Bootstarp Token就是上面这道题的考察内容.</p>
+<p>要了解Bootstrap Token前，我们要知道Kubernetes集群的<strong>认证(Kubernetes)及鉴权(Kubernetes)机制</strong>.</p>
+<p>Kubernetes中的存在非常多的证书, 原于Kubernetes的有些组件同时充当服务端及客户端, 比如apiserver, 其它组件访问它时，它是服务端, 同时，它也会访问etcd或者kubelet，这时它是客户端. 这种访问是需要通过认证的,kubernetes的认证也支持多种方式, 证书为其中最常用的, Kubernetes的证书可以存在多套,每套的证书可以由不同的<strong>根证书(CA)</strong>签发, apiserver访问kubelet跟访问etcd可以通过使用由不同根证书签发的证书来访问, 但是一般情况下，一个Kuberntes集群中我们习惯使用一个CA来签署所有的证书, 这也是几乎所有的部署工具采用的方式.</p>
+<p><strong>Bootstrap Token主要涉及认证阶段(TLS)</strong>，至于鉴权机制(RBAC)，不是本文重点.</p>
+<p><strong>集群启用RBAC后各组件之间的通信是基于TLS加密的，client和server需要通过证书中的CN，O来确定用户的user和group，因此client和server都需要持有有效证书, Bootstrap Token只用于kubelet tls 到apiserver的认证, 如果k8s集群本身都未开启tls,那自然就不需要了</strong></p>
+<p><strong>Node在Kubelet的启动参数中指定事先在集群中配置好的Bootstrap Token，这个Bootstrap Token只具有引导Node加入集群的权限限定，除此之外，没有其它权限, 这样通过限定权限可以保障集群安全</strong></p>
+<h3 id="Kubelet申请证书大致流程"><a href="#Kubelet申请证书大致流程" class="headerlink" title="Kubelet申请证书大致流程"></a>Kubelet申请证书大致流程</h3><blockquote>
+<ul>
+<li>集群产生一个低权账号用户组，通过TOKEN进行认证创建ClusterRole使其具有创建证书申请CSR的权限</li>
+<li>给这个组添加ClusterRoleBinding，使得具有这个组的账号的kubelet具有上述权限</li>
+<li>给添加ClusterRoleBinding，使得controller-manager自动同意上述两个证书的下发</li>
+<li>调整 Controller Manager确保启动tokencleaner和bootstrapsigner（4中自动证书下发的功能）</li>
+<li>基于上述TOKEN生成bootstrap.kubeconfig文件，并下发给node节点</li>
+<li>node节点的kubelet拿着这个bootstrap.kubeconfig向master的apiserver发起CSR(certificate signing request)</li>
+<li>master自动同意并下发第一个证书</li>
+<li>node节点的kubelet自动拿着第一个证书与master的apiserver通信申请第二个证书</li>
+<li>master自动同意并下发第二个证书</li>
+<li>node节点加入集群</li>
+</ul>
+</blockquote>
+<p><strong>上述过程要求，kubelet跟apiserver具有相同的CA证书</strong></p>
+<p>假设现阶段已经存在一个k8s集群, 然后存在一台需要加入改集群的node.</p>
+<p>先对Node做一些准备工作:</p>
+<h3 id="Node系统初始化"><a href="#Node系统初始化" class="headerlink" title="Node系统初始化"></a><strong>Node系统初始化</strong></h3><figure class="highlight bash"><table><tr><td class="code"><pre><span class="line">swapoff -a</span><br><span class="line"></span><br><span class="line">modprobe ip_vs_rr</span><br><span class="line"></span><br><span class="line">modprobe br_netfilter</span><br><span class="line"></span><br><span class="line">cat &gt;&gt; /etc/sysctl.conf &lt;&lt;EOF</span><br><span class="line">net.bridge.bridge-nf-call-iptables=1</span><br><span class="line">net.bridge.bridge-nf-call-ip6tables=1</span><br><span class="line">  EOF</span><br><span class="line">sysctl -p /etc/sysctl.conf</span><br></pre></td></tr></table></figure>
+<h3 id="Node安装docker-kubelet"><a href="#Node安装docker-kubelet" class="headerlink" title="Node安装docker/kubelet"></a>Node安装docker/kubelet</h3><figure class="highlight shell"><table><tr><td class="code"><pre><span class="line">apt-get update</span><br><span class="line">apt-get install -y docker kubelet</span><br></pre></td></tr></table></figure>
+<p>此时我们查看kubelet会发现它启动失败,因为目前还未配置bootstrap相关配置，它无法连接上apiserver</p>
+<h3 id="调整kube-apiserver"><a href="#调整kube-apiserver" class="headerlink" title="调整kube-apiserver"></a>调整kube-apiserver</h3><p>要使用bootstrap token引导Node加入集群, kube-apiserver 需要开启参数    <code>--enable-bootstrap-token-auth=true</code></p>
+<h3 id="Bootstrap"><a href="#Bootstrap" class="headerlink" title="Bootstrap"></a>Bootstrap</h3><h4 id="生成一个token"><a href="#生成一个token" class="headerlink" title="生成一个token"></a>生成一个token</h4><figure class="highlight shell"><table><tr><td class="code"><pre><span class="line">echo "$(head -c 6 /dev/urandom | md5sum | head -c 6)"."$(head -c 16 /dev/urandom | md5sum | head -c 16)"</span><br><span class="line">4b0928.8d7687fdb10e3707</span><br></pre></td></tr></table></figure>
+<p>Kubernetes的官方有详细说明, 点击查看<a href="https://kubernetes.io/docs/reference/command-line-tools-reference/kubelet-tls-bootstrapping/#bootstrap-tokens" target="_blank" rel="noopener">Bootstrap Token</a></p>
+<p>既然token只需要符合格式就行，CKA考试的时候可以直接使用页面上的Token来做，毕竟上面这一大串的命令不是谁都能记得住.</p>
+<h4 id="创建-Bootstrap-Token-Secret"><a href="#创建-Bootstrap-Token-Secret" class="headerlink" title="创建 Bootstrap Token Secret"></a>创建 Bootstrap Token Secret</h4><figure class="highlight yaml"><table><tr><td class="code"><pre><span class="line"><span class="attr">apiVersion:</span> <span class="string">v1</span></span><br><span class="line"><span class="attr">kind:</span> <span class="string">Secret</span></span><br><span class="line"><span class="attr">metadata:</span></span><br><span class="line">  <span class="comment"># Name MUST be of form "bootstrap-token-&lt;token id&gt;"</span></span><br><span class="line">  <span class="attr">name:</span> <span class="string">bootstrap-token-4b0928</span></span><br><span class="line">  <span class="attr">namespace:</span> <span class="string">kube-system</span></span><br><span class="line"></span><br><span class="line"><span class="comment"># Type MUST be 'bootstrap.kubernetes.io/token'</span></span><br><span class="line"><span class="attr">type:</span> <span class="string">bootstrap.kubernetes.io/token</span></span><br><span class="line"><span class="attr">stringData:</span></span><br><span class="line">  <span class="comment"># Human readable description. Optional.</span></span><br><span class="line">  <span class="attr">description:</span> <span class="string">"The default bootstrap token generated by 'kubeadm init'."</span></span><br><span class="line"></span><br><span class="line">  <span class="comment"># Token ID and secret. Required.</span></span><br><span class="line">  <span class="attr">token-id:</span> <span class="string">4b0928</span></span><br><span class="line">  <span class="attr">token-secret:</span> <span class="string">8d7687fdb10e3707</span></span><br><span class="line"></span><br><span class="line">  <span class="comment"># Expiration. Optional. 要注意这个过期时间, 如果相对于现在的时间已经过期, 则会被自动删除</span></span><br><span class="line">  <span class="attr">expiration:</span> <span class="number">2021</span><span class="number">-03</span><span class="string">-10T03:22:11Z</span></span><br><span class="line"></span><br><span class="line">  <span class="comment"># Allowed usages.</span></span><br><span class="line">  <span class="attr">usage-bootstrap-authentication:</span> <span class="string">"true"</span></span><br><span class="line">  <span class="attr">usage-bootstrap-signing:</span> <span class="string">"true"</span></span><br><span class="line"></span><br><span class="line">  <span class="comment"># Extra groups to authenticate the token as. Must start with "system:bootstrappers:"</span></span><br><span class="line">  <span class="attr">auth-extra-groups:</span> <span class="string">system:bootstrappers:worker,system:bootstrappers:ingress</span></span><br></pre></td></tr></table></figure>
+<p>secret的格式有要求,如下:</p>
+<blockquote>
+<ul>
+<li>namespace必须是kube-system</li>
+<li>name的后半部分token-id必须是token的前部分</li>
+<li>Expiration必须是未来的某个时刻, 不然的话一新建就会被删除</li>
+<li>token必须属于system:bootstrappers开头的组.</li>
+</ul>
+</blockquote>
+<p>更多信息可看这里<a href="https://kubernetes.io/docs/reference/command-line-tools-reference/kubelet-tls-bootstrapping/" target="_blank" rel="noopener">kubelet-tls-bootstrapping</a></p>
+<p>上述操作只是创建出了这个token, 下面需要给这个token绑定合适的权限, 用于引导Node.</p>
+<h4 id="创建-ClusterRole-和-ClusterRoleBinding"><a href="#创建-ClusterRole-和-ClusterRoleBinding" class="headerlink" title="创建 ClusterRole 和 ClusterRoleBinding"></a>创建 ClusterRole 和 ClusterRoleBinding</h4><p>查看集群必须存在3个clusterrole及3个clusterrolebinding,如下:</p>
+<p>3个clusterrole:</p>
+<blockquote>
+<ul>
+<li>system:certificates.k8s.io:certificatesigningrequests:nodeclient 用于第一次证书认证</li>
+<li>system:certificates.k8s.io:certificatesigningrequests:selfnodeclient 用于证书续签</li>
+<li>system:certificates.k8s.io:certificatesigningrequests:selfnodeserver </li>
+</ul>
+</blockquote>
+<p><strong>nodeclient 类型的 CSR 仅在第一次启动时会产生，selfnodeclient 类型的 CSR 请求实际上就是 kubelet renew 自己作为 client 跟 apiserver 通讯时使用的证书产生的，selfnodeserver 类型的 CSR 请求则是 kubelet 首次申请或后续 renew 自己的 10250 api 端口证书时产生的</strong></p>
+<p>重点关注前两个，后面那个k8s新版本下会自动新建</p>
+<figure class="highlight yaml"><table><tr><td class="code"><pre><span class="line"><span class="comment"># A ClusterRole which instructs the CSR approver to approve a user requesting</span></span><br><span class="line"><span class="comment"># node client credentials.</span></span><br><span class="line"><span class="attr">apiVersion:</span> <span class="string">rbac.authorization.k8s.io/v1</span></span><br><span class="line"><span class="attr">kind:</span> <span class="string">ClusterRole</span></span><br><span class="line"><span class="attr">metadata:</span></span><br><span class="line">  <span class="attr">name:</span> <span class="string">system:certificates.k8s.io:certificatesigningrequests:nodeclient</span></span><br><span class="line"><span class="attr">rules:</span></span><br><span class="line"><span class="bullet">-</span> <span class="attr">apiGroups:</span> <span class="string">["certificates.k8s.io"]</span></span><br><span class="line">  <span class="attr">resources:</span> <span class="string">["certificatesigningrequests/nodeclient"]</span></span><br><span class="line">  <span class="attr">verbs:</span> <span class="string">["create"]</span></span><br><span class="line"><span class="meta">---</span></span><br><span class="line"><span class="comment"># A ClusterRole which instructs the CSR approver to approve a node renewing its</span></span><br><span class="line"><span class="comment"># own client credentials.</span></span><br><span class="line"><span class="attr">apiVersion:</span> <span class="string">rbac.authorization.k8s.io/v1</span></span><br><span class="line"><span class="attr">kind:</span> <span class="string">ClusterRole</span></span><br><span class="line"><span class="attr">metadata:</span></span><br><span class="line">  <span class="attr">name:</span> <span class="string">system:certificates.k8s.io:certificatesigningrequests:selfnodeclient</span></span><br><span class="line"><span class="attr">rules:</span></span><br><span class="line"><span class="bullet">-</span> <span class="attr">apiGroups:</span> <span class="string">["certificates.k8s.io"]</span></span><br><span class="line">  <span class="attr">resources:</span> <span class="string">["certificatesigningrequests/selfnodeclient"]</span></span><br><span class="line">  <span class="attr">verbs:</span> <span class="string">["create"]</span></span><br><span class="line"><span class="meta">---</span></span><br><span class="line"><span class="comment"># A ClusterRole which instructs the CSR approver to approve a node requesting a</span></span><br><span class="line"><span class="comment"># serving cert matching its client cert.</span></span><br><span class="line"><span class="attr">kind:</span> <span class="string">ClusterRole</span></span><br><span class="line"><span class="attr">apiVersion:</span> <span class="string">rbac.authorization.k8s.io/v1</span></span><br><span class="line"><span class="attr">metadata:</span></span><br><span class="line">  <span class="attr">name:</span> <span class="string">system:certificates.k8s.io:certificatesigningrequests:selfnodeserver</span></span><br><span class="line"><span class="attr">rules:</span></span><br><span class="line"><span class="bullet">-</span> <span class="attr">apiGroups:</span> <span class="string">["certificates.k8s.io"]</span></span><br><span class="line">  <span class="attr">resources:</span> <span class="string">["certificatesigningrequests/selfnodeserver"]</span></span><br><span class="line">  <span class="attr">verbs:</span> <span class="string">["create"]</span></span><br></pre></td></tr></table></figure>
+<p>同时，需要有以下3个clusterrolebinding 到 clusterrole</p>
+<blockquote>
+<ul>
+<li>system:node-bootstrapper</li>
+<li>system:certificates.k8s.io:certificatesigningrequests:nodeclient</li>
+<li>system:certificates.k8s.io:certificatesigningrequests:selfnodeclient</li>
+</ul>
+</blockquote>
+<figure class="highlight yaml"><table><tr><td class="code"><pre><span class="line"><span class="comment"># enable bootstrapping nodes to create CSR</span></span><br><span class="line"><span class="attr">apiVersion:</span> <span class="string">rbac.authorization.k8s.io/v1</span></span><br><span class="line"><span class="attr">kind:</span> <span class="string">ClusterRoleBinding</span></span><br><span class="line"><span class="attr">metadata:</span></span><br><span class="line">  <span class="attr">name:</span> <span class="string">create-csrs-for-bootstrapping</span></span><br><span class="line"><span class="attr">subjects:</span></span><br><span class="line"><span class="bullet">-</span> <span class="attr">kind:</span> <span class="string">Group</span></span><br><span class="line">  <span class="attr">name:</span> <span class="string">system:bootstrappers</span></span><br><span class="line">  <span class="attr">apiGroup:</span> <span class="string">rbac.authorization.k8s.io</span></span><br><span class="line"><span class="attr">roleRef:</span></span><br><span class="line">  <span class="attr">kind:</span> <span class="string">ClusterRole</span></span><br><span class="line">  <span class="attr">name:</span> <span class="string">system:node-bootstrapper</span></span><br><span class="line">  <span class="attr">apiGroup:</span> <span class="string">rbac.authorization.k8s.io</span></span><br></pre></td></tr></table></figure>
+<figure class="highlight yaml"><table><tr><td class="code"><pre><span class="line"><span class="comment"># Approve all CSRs for the group "system:bootstrappers"</span></span><br><span class="line"><span class="attr">apiVersion:</span> <span class="string">rbac.authorization.k8s.io/v1</span></span><br><span class="line"><span class="attr">kind:</span> <span class="string">ClusterRoleBinding</span></span><br><span class="line"><span class="attr">metadata:</span></span><br><span class="line">  <span class="attr">name:</span> <span class="string">auto-approve-csrs-for-group</span></span><br><span class="line"><span class="attr">subjects:</span></span><br><span class="line"><span class="bullet">-</span> <span class="attr">kind:</span> <span class="string">Group</span></span><br><span class="line">  <span class="attr">name:</span> <span class="string">system:bootstrappers</span></span><br><span class="line">  <span class="attr">apiGroup:</span> <span class="string">rbac.authorization.k8s.io</span></span><br><span class="line"><span class="attr">roleRef:</span></span><br><span class="line">  <span class="attr">kind:</span> <span class="string">ClusterRole</span></span><br><span class="line">  <span class="attr">name:</span> <span class="string">system:certificates.k8s.io:certificatesigningrequests:nodeclient</span></span><br><span class="line">  <span class="attr">apiGroup:</span> <span class="string">rbac.authorization.k8s.io</span></span><br></pre></td></tr></table></figure>
+<figure class="highlight yaml"><table><tr><td class="code"><pre><span class="line"><span class="comment"># Approve renewal CSRs for the group "system:nodes"</span></span><br><span class="line"><span class="attr">apiVersion:</span> <span class="string">rbac.authorization.k8s.io/v1</span></span><br><span class="line"><span class="attr">kind:</span> <span class="string">ClusterRoleBinding</span></span><br><span class="line"><span class="attr">metadata:</span></span><br><span class="line">  <span class="attr">name:</span> <span class="string">auto-approve-renewals-for-nodes</span></span><br><span class="line"><span class="attr">subjects:</span></span><br><span class="line"><span class="bullet">-</span> <span class="attr">kind:</span> <span class="string">Group</span></span><br><span class="line">  <span class="attr">name:</span> <span class="string">system:nodes</span></span><br><span class="line">  <span class="attr">apiGroup:</span> <span class="string">rbac.authorization.k8s.io</span></span><br><span class="line"><span class="attr">roleRef:</span></span><br><span class="line">  <span class="attr">kind:</span> <span class="string">ClusterRole</span></span><br><span class="line">  <span class="attr">name:</span> <span class="string">system:certificates.k8s.io:certificatesigningrequests:selfnodeclient</span></span><br><span class="line">  <span class="attr">apiGroup:</span> <span class="string">rbac.authorization.k8s.io</span></span><br></pre></td></tr></table></figure>
+<p>自动批准组<code>system:bootstrappers</code>所有CSR 请求(nodeclient)</p>
+<p>自动批准组<code>system:nodes</code>的证书重签CSR请求.</p>
+<p>所以这就是为何token需要属于<code>system:bootstrappers</code>组</p>
+<p>更多信息可看这里<a href="https://kubernetes.io/docs/reference/command-line-tools-reference/kubelet-tls-bootstrapping/#bootstrap-tokens" target="_blank" rel="noopener">bootstrap-tokens</a></p>
+<h3 id="调整kube-controllermanager启动参数"><a href="#调整kube-controllermanager启动参数" class="headerlink" title="调整kube-controllermanager启动参数"></a>调整kube-controllermanager启动参数</h3><p>kube-controllermanager需要开启支持自动签署证书的参数<code>--controllers=*,bootstrapsigner,tokencleaner</code></p>
+<p>这样，每当有Node通过Bootstrap token来请求CSR(certificate signing request)</p>
+<p>对于 controller manager 来说，TLS bootstrapping 下 kubelet 发起的 CSR 请求大致分为以下三种</p>
+<blockquote>
+<ul>
+<li>nodeclient: kubelet 以 <code>O=system:nodes</code> 和 <code>CN=system:node:(node name)</code> 形式发起的 CSR 请求</li>
+<li>selfnodeclient: kubelet client renew 自己的证书发起的 CSR 请求(与上一个证书就有相同的 O 和 CN)</li>
+<li>selfnodeserver: kubelet server renew 自己的证书发起的 CSR 请求</li>
+</ul>
+</blockquote>
+<p>对应上面的3个clusterrole</p>
+<h3 id="生成kubeconfig文件"><a href="#生成kubeconfig文件" class="headerlink" title="生成kubeconfig文件"></a>生成kubeconfig文件</h3><figure class="highlight shell"><table><tr><td class="code"><pre><span class="line"><span class="meta">#</span><span class="bash"> 设置集群参数</span></span><br><span class="line">kubectl config --kubeconfig=/var/lib/kubelet/bootstrap-kubeconfig set-cluster kubernetes --server='https://10.170.0.2:6443' --certificate-authority=/etc/kubernetes/pki/ca.crt</span><br><span class="line"><span class="meta">#</span><span class="bash"> 设置客户端认证参数</span></span><br><span class="line">kubectl config --kubeconfig=/var/lib/kubelet/bootstrap-kubeconfig set-credentials system:bootstrap:4b0928 --token=4b0928.8d7687fdb10e3707</span><br><span class="line"><span class="meta">#</span><span class="bash">设置上下文参数</span></span><br><span class="line">kubectl config --kubeconfig=/var/lib/kubelet/bootstrap-kubeconfig set-context kubernetes --user=system:bootstrap:4b0928 --cluster=kubernetes</span><br><span class="line"><span class="meta">#</span><span class="bash"> 设置默认上下文</span></span><br><span class="line">kubectl config --kubeconfig=/var/lib/kubelet/bootstrap-kubeconfig use-context kubernetes</span><br></pre></td></tr></table></figure>
+<p>通过上面的命令最终会在/var/lib/kubelet目录下生bootstrap-kubeconfig文件, 将该文件放到node节点上, <strong>kubelet指定改文件路径,启动时从改文件中获取apiserver及Bootstrap Token</strong></p>
+<figure class="highlight yaml"><table><tr><td class="code"><pre><span class="line"><span class="attr">apiVersion:</span> <span class="string">v1</span></span><br><span class="line"><span class="attr">clusters:</span></span><br><span class="line"><span class="bullet">-</span> <span class="attr">cluster:</span></span><br><span class="line">    <span class="attr">certificate-authority:</span> <span class="string">/etc/kubernetes/pki/ca.crt</span></span><br><span class="line">    <span class="attr">server:</span> <span class="string">https://10.170.0.2:6443</span></span><br><span class="line">  <span class="attr">name:</span> <span class="string">kubernetes</span></span><br><span class="line"><span class="attr">contexts:</span></span><br><span class="line"><span class="bullet">-</span> <span class="attr">context:</span></span><br><span class="line">    <span class="attr">cluster:</span> <span class="string">kubernetes</span></span><br><span class="line">    <span class="attr">user:</span> <span class="string">system:bootstrap:4b0928</span></span><br><span class="line">  <span class="attr">name:</span> <span class="string">kubernetes</span></span><br><span class="line"><span class="attr">current-context:</span> <span class="string">kubernetes</span></span><br><span class="line"><span class="attr">kind:</span> <span class="string">Config</span></span><br><span class="line"><span class="attr">preferences:</span> <span class="string">&#123;&#125;</span></span><br><span class="line"><span class="attr">users:</span></span><br><span class="line"><span class="bullet">-</span> <span class="attr">name:</span> <span class="string">system:bootstrap:4b0928</span></span><br><span class="line">  <span class="attr">user:</span></span><br><span class="line">    <span class="attr">token:</span> <span class="string">4b0928.8d7687fdb10e3707</span> <span class="comment">#正是上面生成的token.</span></span><br></pre></td></tr></table></figure>
+<h3 id="调整Node上kubelet启动参数"><a href="#调整Node上kubelet启动参数" class="headerlink" title="调整Node上kubelet启动参数"></a>调整Node上kubelet启动参数</h3><p>node上需要有ca.crt(或者ca.pem)</p>
+<p><code>vim /lib/systemd/system/kubelet.service</code></p>
+<figure class="highlight yaml"><table><tr><td class="code"><pre><span class="line"><span class="string">[Unit]</span></span><br><span class="line"><span class="string">Description=kubelet:</span> <span class="string">The</span> <span class="string">Kubernetes</span> <span class="string">Node</span> <span class="string">Agent</span></span><br><span class="line"><span class="string">Documentation=https://kubernetes.io/docs/home/</span></span><br><span class="line"></span><br><span class="line"><span class="string">[Service]</span></span><br><span class="line"><span class="string">ExecStart=/usr/bin/kubelet</span> <span class="string">\</span></span><br><span class="line">  <span class="string">--bootstrap-kubeconfig=/var/lib/kubelet/bootstrap-kubeconfig</span> <span class="string">\</span></span><br><span class="line">  <span class="string">--kubeconfig=/var/lib/kubelet/kubeconfig</span> <span class="string">\</span></span><br><span class="line">  <span class="string">--config=/var/lib/kubelet/config.yaml</span> <span class="string">\</span></span><br><span class="line">  <span class="string">--network-plugin=cni</span> <span class="string">\</span></span><br><span class="line">  <span class="string">--rotate-certificates=true</span> <span class="string">\</span></span><br><span class="line">  <span class="string">--log-dir=/var/lib/kubelet/kubelet.log</span> <span class="string">\</span></span><br><span class="line">  <span class="string">--register-node=true</span> <span class="string">\</span></span><br><span class="line">  <span class="string">--v=2</span></span><br><span class="line"><span class="string">Restart=always</span></span><br><span class="line"><span class="string">StartLimitInterval=0</span></span><br><span class="line"><span class="string">RestartSec=10</span></span><br><span class="line"></span><br><span class="line"><span class="string">[Install]</span></span><br><span class="line"><span class="string">WantedBy=multi-user.target</span></span><br></pre></td></tr></table></figure>
+<p><strong>其中, 在启动时，如果在–kubeconfig指定的路径下存在kubeconfig文件,则使用该文件做认证,如果不存在，则认证为第一次认证，则使用参数bootstrap-kubeconfig指定的文件, 正是包含bootstrap token的引导文件</strong></p>
+<p><strong>通过kube-controller自动签署之后会把最终的kubeconfig写到–kubeconfig参数指定的路径，后续–bootstrap-kubeconfig则没有作用了. </strong></p>
+<p>config.yaml是kubelet的其它参数配置文件</p>
+<figure class="highlight yaml"><table><tr><td class="code"><pre><span class="line"><span class="comment">#cat /var/lib/kubelet/config.yaml</span></span><br><span class="line"><span class="attr">kind:</span> <span class="string">KubeletConfiguration</span></span><br><span class="line"><span class="attr">apiVersion:</span> <span class="string">kubelet.config.k8s.io/v1beta1</span></span><br><span class="line"><span class="attr">address:</span> <span class="number">10.170</span><span class="number">.0</span><span class="number">.3</span></span><br><span class="line"><span class="attr">port:</span> <span class="number">10250</span></span><br><span class="line"><span class="attr">readOnlyPort:</span> <span class="number">10255</span></span><br><span class="line"><span class="attr">cgroupDriver:</span> <span class="string">systemd</span></span><br><span class="line"><span class="attr">clusterDNS:</span> <span class="string">["10.96.0.10"]</span></span><br><span class="line"><span class="attr">clusterDomain:</span> <span class="string">cluster.local</span></span><br><span class="line"><span class="attr">failSwapOn:</span> <span class="literal">false</span></span><br></pre></td></tr></table></figure>
+<h3 id="流程总结"><a href="#流程总结" class="headerlink" title="流程总结"></a>流程总结</h3><blockquote>
+<ul>
+<li>kubelet 读取 bootstrap.kubeconfig，使用其 CA 与 Token 向 apiserver 发起第一次 CSR 请求(nodeclient),使用组<code>system:bootstrappers</code></li>
+<li>apiserver 根据 RBAC 规则自动批准首次 CSR 请求(approve-node-client-csr)，并下发证书(kubelet-client.crt)</li>
+<li>kubelet <strong>使用刚刚签发的证书(O=system:nodes, CN=system:node:NODE_NAME)</strong>与 apiserver 通讯，并发起申请 10250 server 所使用证书的 CSR 请求</li>
+<li>apiserver 根据 RBAC 规则自动批准 kubelet 为其 10250 端口申请的证书(kubelet-server-current.crt)</li>
+<li>证书即将到期时，kubelet 自动向 apiserver 发起用于与 apiserver 通讯所用证书的 renew CSR 请求和 renew 本身 10250 端口所用证书的 CSR 请求</li>
+<li>apiserver 根据 RBAC 规则自动批准两个证书</li>
+<li>kubelet 拿到新证书后关闭所有连接，reload 新证书，以后便一直如此</li>
+</ul>
+</blockquote>
+<p>建议大家都全手动搭建一次kubernetes,这样对Bootstrap Token机制会了解更深入.</p>
+<h3 id="参考文章"><a href="#参考文章" class="headerlink" title="参考文章:"></a><strong>参考文章:</strong></h3><blockquote>
+<ul>
+<li><a href="https://mritd.me/2018/01/07/kubernetes-tls-bootstrapping-note/" target="_blank" rel="noopener">Kubernetes TLS bootstrapping 那点事</a></li>
+<li><a href="https://mritd.me/2018/08/28/kubernetes-tls-bootstrapping-with-bootstrap-token/" target="_blank" rel="noopener">使用 Bootstrap Token 完成 TLS Bootstrapping</a></li>
+<li><a href="https://kubernetes.io/docs/reference/command-line-tools-reference/kubelet-tls-bootstrapping/" target="_blank" rel="noopener">kubelet-tls-bootstrapping</a></li>
+<li><a href="https://kubernetes.io/docs/reference/command-line-tools-reference/kubelet-tls-bootstrapping/#bootstrap-tokens" target="_blank" rel="noopener">Bootstrap Token</a></li>
+<li><a href="https://github.com/kelseyhightower/kubernetes-the-hard-way" target="_blank" rel="noopener">kubernetes-the-hard-way</a></li>
+</ul>
+</blockquote>
+<h3 id="转载请注明出处https-izsk-me"><a href="#转载请注明出处https-izsk-me" class="headerlink" title="转载请注明出处https://izsk.me"></a><strong>转载请注明出处<a href="https://izsk.me" target="_blank" rel="noopener">https://izsk.me</a></strong></h3>]]></content>
+      <categories>
+        <category>Kubernetes</category>
+      </categories>
+      <tags>
+        <tag>Kubernetes</tag>
+      </tags>
+  </entry>
+  <entry>
     <title>Kubernetes学习(flannel深入学习)</title>
     <url>/2020/01/05/Kubernetes-flannel-details/</url>
     <content><![CDATA[<p>得益于社区的繁荣, 包括部署工具的完善, 现在几乎没人会从0去搭建kubernetes集群, 随便拿起一个开源工具, 几乎都是一条命令, 喝个咖啡, 然后整个集群就能用了, 非常快捷, 但是方便的时候, 也容易遗漏掉其中的一些知识点, 有些对整个kubernetes的了解及生态还是非常有必要的.</p>
@@ -3019,130 +3145,6 @@
 <li><a href="https://www.cnblogs.com/YaoDD/p/7681811.html" target="_blank" rel="noopener">https://www.cnblogs.com/YaoDD/p/7681811.html</a></li>
 <li><a href="https://blog.51cto.com/14143894/2462379" target="_blank" rel="noopener">https://blog.51cto.com/14143894/2462379</a></li>
 <li><a href="https://itnext.io/kubernetes-journey-up-and-running-out-of-the-cloud-flannel-c01283308f0e" target="_blank" rel="noopener">https://itnext.io/kubernetes-journey-up-and-running-out-of-the-cloud-flannel-c01283308f0e</a></li>
-</ul>
-</blockquote>
-<h3 id="转载请注明出处https-izsk-me"><a href="#转载请注明出处https-izsk-me" class="headerlink" title="转载请注明出处https://izsk.me"></a><strong>转载请注明出处<a href="https://izsk.me" target="_blank" rel="noopener">https://izsk.me</a></strong></h3>]]></content>
-      <categories>
-        <category>Kubernetes</category>
-      </categories>
-      <tags>
-        <tag>Kubernetes</tag>
-      </tags>
-  </entry>
-  <entry>
-    <title>Kubernetes学习(Bootstrap Token机制)</title>
-    <url>/2020/01/05/Kubernetes-Bootstrap-Node/</url>
-    <content><![CDATA[<p>CKA考试时可能会遇到一个大题: 大致题意是: 在已经存在的一个Kubernetes Cluster中新增一个Node, 使其加入集群及相关证书可自动续签.</p>
-<a id="more"></a>
-<p>我们一般搭建k8s集群，都使用了一些开源工具来做，这类工具都自动帮我们做了很多事情，因此我们只需要简单执行一条命令后，一个集群就完成搭建了, 非常方便，同时也隐藏了一些k8s的知识点, 比如Bootstarp Token就是上面这道题的考察内容.</p>
-<p>要了解Bootstrap Token前，我们要知道Kubernetes集群的<strong>认证(Kubernetes)及鉴权(Kubernetes)机制</strong>.</p>
-<p>Kubernetes中的存在非常多的证书, 原于Kubernetes的有些组件同时充当服务端及客户端, 比如apiserver, 其它组件访问它时，它是服务端, 同时，它也会访问etcd或者kubelet，这时它是客户端. 这种访问是需要通过认证的,kubernetes的认证也支持多种方式, 证书为其中最常用的, Kubernetes的证书可以存在多套,每套的证书可以由不同的<strong>根证书(CA)</strong>签发, apiserver访问kubelet跟访问etcd可以通过使用由不同根证书签发的证书来访问, 但是一般情况下，一个Kuberntes集群中我们习惯使用一个CA来签署所有的证书, 这也是几乎所有的部署工具采用的方式.</p>
-<p><strong>Bootstrap Token主要涉及认证阶段(TLS)</strong>，至于鉴权机制(RBAC)，不是本文重点.</p>
-<p><strong>集群启用RBAC后各组件之间的通信是基于TLS加密的，client和server需要通过证书中的CN，O来确定用户的user和group，因此client和server都需要持有有效证书, Bootstrap Token只用于kubelet tls 到apiserver的认证, 如果k8s集群本身都未开启tls,那自然就不需要了</strong></p>
-<p><strong>Node在Kubelet的启动参数中指定事先在集群中配置好的Bootstrap Token，这个Bootstrap Token只具有引导Node加入集群的权限限定，除此之外，没有其它权限, 这样通过限定权限可以保障集群安全</strong></p>
-<h3 id="Kubelet申请证书大致流程"><a href="#Kubelet申请证书大致流程" class="headerlink" title="Kubelet申请证书大致流程"></a>Kubelet申请证书大致流程</h3><blockquote>
-<ul>
-<li>集群产生一个低权账号用户组，通过TOKEN进行认证创建ClusterRole使其具有创建证书申请CSR的权限</li>
-<li>给这个组添加ClusterRoleBinding，使得具有这个组的账号的kubelet具有上述权限</li>
-<li>给添加ClusterRoleBinding，使得controller-manager自动同意上述两个证书的下发</li>
-<li>调整 Controller Manager确保启动tokencleaner和bootstrapsigner（4中自动证书下发的功能）</li>
-<li>基于上述TOKEN生成bootstrap.kubeconfig文件，并下发给node节点</li>
-<li>node节点的kubelet拿着这个bootstrap.kubeconfig向master的apiserver发起CSR(certificate signing request)</li>
-<li>master自动同意并下发第一个证书</li>
-<li>node节点的kubelet自动拿着第一个证书与master的apiserver通信申请第二个证书</li>
-<li>master自动同意并下发第二个证书</li>
-<li>node节点加入集群</li>
-</ul>
-</blockquote>
-<p><strong>上述过程要求，kubelet跟apiserver具有相同的CA证书</strong></p>
-<p>假设现阶段已经存在一个k8s集群, 然后存在一台需要加入改集群的node.</p>
-<p>先对Node做一些准备工作:</p>
-<h3 id="Node系统初始化"><a href="#Node系统初始化" class="headerlink" title="Node系统初始化"></a><strong>Node系统初始化</strong></h3><figure class="highlight bash"><table><tr><td class="code"><pre><span class="line">swapoff -a</span><br><span class="line"></span><br><span class="line">modprobe ip_vs_rr</span><br><span class="line"></span><br><span class="line">modprobe br_netfilter</span><br><span class="line"></span><br><span class="line">cat &gt;&gt; /etc/sysctl.conf &lt;&lt;EOF</span><br><span class="line">net.bridge.bridge-nf-call-iptables=1</span><br><span class="line">net.bridge.bridge-nf-call-ip6tables=1</span><br><span class="line">  EOF</span><br><span class="line">sysctl -p /etc/sysctl.conf</span><br></pre></td></tr></table></figure>
-<h3 id="Node安装docker-kubelet"><a href="#Node安装docker-kubelet" class="headerlink" title="Node安装docker/kubelet"></a>Node安装docker/kubelet</h3><figure class="highlight shell"><table><tr><td class="code"><pre><span class="line">apt-get update</span><br><span class="line">apt-get install -y docker kubelet</span><br></pre></td></tr></table></figure>
-<p>此时我们查看kubelet会发现它启动失败,因为目前还未配置bootstrap相关配置，它无法连接上apiserver</p>
-<h3 id="调整kube-apiserver"><a href="#调整kube-apiserver" class="headerlink" title="调整kube-apiserver"></a>调整kube-apiserver</h3><p>要使用bootstrap token引导Node加入集群, kube-apiserver 需要开启参数    <code>--enable-bootstrap-token-auth=true</code></p>
-<h3 id="Bootstrap"><a href="#Bootstrap" class="headerlink" title="Bootstrap"></a>Bootstrap</h3><h4 id="生成一个token"><a href="#生成一个token" class="headerlink" title="生成一个token"></a>生成一个token</h4><figure class="highlight shell"><table><tr><td class="code"><pre><span class="line">echo "$(head -c 6 /dev/urandom | md5sum | head -c 6)"."$(head -c 16 /dev/urandom | md5sum | head -c 16)"</span><br><span class="line">4b0928.8d7687fdb10e3707</span><br></pre></td></tr></table></figure>
-<p>Kubernetes的官方有详细说明, 点击查看<a href="https://kubernetes.io/docs/reference/command-line-tools-reference/kubelet-tls-bootstrapping/#bootstrap-tokens" target="_blank" rel="noopener">Bootstrap Token</a></p>
-<p>既然token只需要符合格式就行，CKA考试的时候可以直接使用页面上的Token来做，毕竟上面这一大串的命令不是谁都能记得住.</p>
-<h4 id="创建-Bootstrap-Token-Secret"><a href="#创建-Bootstrap-Token-Secret" class="headerlink" title="创建 Bootstrap Token Secret"></a>创建 Bootstrap Token Secret</h4><figure class="highlight yaml"><table><tr><td class="code"><pre><span class="line"><span class="attr">apiVersion:</span> <span class="string">v1</span></span><br><span class="line"><span class="attr">kind:</span> <span class="string">Secret</span></span><br><span class="line"><span class="attr">metadata:</span></span><br><span class="line">  <span class="comment"># Name MUST be of form "bootstrap-token-&lt;token id&gt;"</span></span><br><span class="line">  <span class="attr">name:</span> <span class="string">bootstrap-token-4b0928</span></span><br><span class="line">  <span class="attr">namespace:</span> <span class="string">kube-system</span></span><br><span class="line"></span><br><span class="line"><span class="comment"># Type MUST be 'bootstrap.kubernetes.io/token'</span></span><br><span class="line"><span class="attr">type:</span> <span class="string">bootstrap.kubernetes.io/token</span></span><br><span class="line"><span class="attr">stringData:</span></span><br><span class="line">  <span class="comment"># Human readable description. Optional.</span></span><br><span class="line">  <span class="attr">description:</span> <span class="string">"The default bootstrap token generated by 'kubeadm init'."</span></span><br><span class="line"></span><br><span class="line">  <span class="comment"># Token ID and secret. Required.</span></span><br><span class="line">  <span class="attr">token-id:</span> <span class="string">4b0928</span></span><br><span class="line">  <span class="attr">token-secret:</span> <span class="string">8d7687fdb10e3707</span></span><br><span class="line"></span><br><span class="line">  <span class="comment"># Expiration. Optional. 要注意这个过期时间, 如果相对于现在的时间已经过期, 则会被自动删除</span></span><br><span class="line">  <span class="attr">expiration:</span> <span class="number">2021</span><span class="number">-03</span><span class="string">-10T03:22:11Z</span></span><br><span class="line"></span><br><span class="line">  <span class="comment"># Allowed usages.</span></span><br><span class="line">  <span class="attr">usage-bootstrap-authentication:</span> <span class="string">"true"</span></span><br><span class="line">  <span class="attr">usage-bootstrap-signing:</span> <span class="string">"true"</span></span><br><span class="line"></span><br><span class="line">  <span class="comment"># Extra groups to authenticate the token as. Must start with "system:bootstrappers:"</span></span><br><span class="line">  <span class="attr">auth-extra-groups:</span> <span class="string">system:bootstrappers:worker,system:bootstrappers:ingress</span></span><br></pre></td></tr></table></figure>
-<p>secret的格式有要求,如下:</p>
-<blockquote>
-<ul>
-<li>namespace必须是kube-system</li>
-<li>name的后半部分token-id必须是token的前部分</li>
-<li>Expiration必须是未来的某个时刻, 不然的话一新建就会被删除</li>
-<li>token必须属于system:bootstrappers开头的组.</li>
-</ul>
-</blockquote>
-<p>更多信息可看这里<a href="https://kubernetes.io/docs/reference/command-line-tools-reference/kubelet-tls-bootstrapping/" target="_blank" rel="noopener">kubelet-tls-bootstrapping</a></p>
-<p>上述操作只是创建出了这个token, 下面需要给这个token绑定合适的权限, 用于引导Node.</p>
-<h4 id="创建-ClusterRole-和-ClusterRoleBinding"><a href="#创建-ClusterRole-和-ClusterRoleBinding" class="headerlink" title="创建 ClusterRole 和 ClusterRoleBinding"></a>创建 ClusterRole 和 ClusterRoleBinding</h4><p>查看集群必须存在3个clusterrole及3个clusterrolebinding,如下:</p>
-<p>3个clusterrole:</p>
-<blockquote>
-<ul>
-<li>system:certificates.k8s.io:certificatesigningrequests:nodeclient 用于第一次证书认证</li>
-<li>system:certificates.k8s.io:certificatesigningrequests:selfnodeclient 用于证书续签</li>
-<li>system:certificates.k8s.io:certificatesigningrequests:selfnodeserver </li>
-</ul>
-</blockquote>
-<p><strong>nodeclient 类型的 CSR 仅在第一次启动时会产生，selfnodeclient 类型的 CSR 请求实际上就是 kubelet renew 自己作为 client 跟 apiserver 通讯时使用的证书产生的，selfnodeserver 类型的 CSR 请求则是 kubelet 首次申请或后续 renew 自己的 10250 api 端口证书时产生的</strong></p>
-<p>重点关注前两个，后面那个k8s新版本下会自动新建</p>
-<figure class="highlight yaml"><table><tr><td class="code"><pre><span class="line"><span class="comment"># A ClusterRole which instructs the CSR approver to approve a user requesting</span></span><br><span class="line"><span class="comment"># node client credentials.</span></span><br><span class="line"><span class="attr">apiVersion:</span> <span class="string">rbac.authorization.k8s.io/v1</span></span><br><span class="line"><span class="attr">kind:</span> <span class="string">ClusterRole</span></span><br><span class="line"><span class="attr">metadata:</span></span><br><span class="line">  <span class="attr">name:</span> <span class="string">system:certificates.k8s.io:certificatesigningrequests:nodeclient</span></span><br><span class="line"><span class="attr">rules:</span></span><br><span class="line"><span class="bullet">-</span> <span class="attr">apiGroups:</span> <span class="string">["certificates.k8s.io"]</span></span><br><span class="line">  <span class="attr">resources:</span> <span class="string">["certificatesigningrequests/nodeclient"]</span></span><br><span class="line">  <span class="attr">verbs:</span> <span class="string">["create"]</span></span><br><span class="line"><span class="meta">---</span></span><br><span class="line"><span class="comment"># A ClusterRole which instructs the CSR approver to approve a node renewing its</span></span><br><span class="line"><span class="comment"># own client credentials.</span></span><br><span class="line"><span class="attr">apiVersion:</span> <span class="string">rbac.authorization.k8s.io/v1</span></span><br><span class="line"><span class="attr">kind:</span> <span class="string">ClusterRole</span></span><br><span class="line"><span class="attr">metadata:</span></span><br><span class="line">  <span class="attr">name:</span> <span class="string">system:certificates.k8s.io:certificatesigningrequests:selfnodeclient</span></span><br><span class="line"><span class="attr">rules:</span></span><br><span class="line"><span class="bullet">-</span> <span class="attr">apiGroups:</span> <span class="string">["certificates.k8s.io"]</span></span><br><span class="line">  <span class="attr">resources:</span> <span class="string">["certificatesigningrequests/selfnodeclient"]</span></span><br><span class="line">  <span class="attr">verbs:</span> <span class="string">["create"]</span></span><br><span class="line"><span class="meta">---</span></span><br><span class="line"><span class="comment"># A ClusterRole which instructs the CSR approver to approve a node requesting a</span></span><br><span class="line"><span class="comment"># serving cert matching its client cert.</span></span><br><span class="line"><span class="attr">kind:</span> <span class="string">ClusterRole</span></span><br><span class="line"><span class="attr">apiVersion:</span> <span class="string">rbac.authorization.k8s.io/v1</span></span><br><span class="line"><span class="attr">metadata:</span></span><br><span class="line">  <span class="attr">name:</span> <span class="string">system:certificates.k8s.io:certificatesigningrequests:selfnodeserver</span></span><br><span class="line"><span class="attr">rules:</span></span><br><span class="line"><span class="bullet">-</span> <span class="attr">apiGroups:</span> <span class="string">["certificates.k8s.io"]</span></span><br><span class="line">  <span class="attr">resources:</span> <span class="string">["certificatesigningrequests/selfnodeserver"]</span></span><br><span class="line">  <span class="attr">verbs:</span> <span class="string">["create"]</span></span><br></pre></td></tr></table></figure>
-<p>同时，需要有以下3个clusterrolebinding 到 clusterrole</p>
-<blockquote>
-<ul>
-<li>system:node-bootstrapper</li>
-<li>system:certificates.k8s.io:certificatesigningrequests:nodeclient</li>
-<li>system:certificates.k8s.io:certificatesigningrequests:selfnodeclient</li>
-</ul>
-</blockquote>
-<figure class="highlight yaml"><table><tr><td class="code"><pre><span class="line"><span class="comment"># enable bootstrapping nodes to create CSR</span></span><br><span class="line"><span class="attr">apiVersion:</span> <span class="string">rbac.authorization.k8s.io/v1</span></span><br><span class="line"><span class="attr">kind:</span> <span class="string">ClusterRoleBinding</span></span><br><span class="line"><span class="attr">metadata:</span></span><br><span class="line">  <span class="attr">name:</span> <span class="string">create-csrs-for-bootstrapping</span></span><br><span class="line"><span class="attr">subjects:</span></span><br><span class="line"><span class="bullet">-</span> <span class="attr">kind:</span> <span class="string">Group</span></span><br><span class="line">  <span class="attr">name:</span> <span class="string">system:bootstrappers</span></span><br><span class="line">  <span class="attr">apiGroup:</span> <span class="string">rbac.authorization.k8s.io</span></span><br><span class="line"><span class="attr">roleRef:</span></span><br><span class="line">  <span class="attr">kind:</span> <span class="string">ClusterRole</span></span><br><span class="line">  <span class="attr">name:</span> <span class="string">system:node-bootstrapper</span></span><br><span class="line">  <span class="attr">apiGroup:</span> <span class="string">rbac.authorization.k8s.io</span></span><br></pre></td></tr></table></figure>
-<figure class="highlight yaml"><table><tr><td class="code"><pre><span class="line"><span class="comment"># Approve all CSRs for the group "system:bootstrappers"</span></span><br><span class="line"><span class="attr">apiVersion:</span> <span class="string">rbac.authorization.k8s.io/v1</span></span><br><span class="line"><span class="attr">kind:</span> <span class="string">ClusterRoleBinding</span></span><br><span class="line"><span class="attr">metadata:</span></span><br><span class="line">  <span class="attr">name:</span> <span class="string">auto-approve-csrs-for-group</span></span><br><span class="line"><span class="attr">subjects:</span></span><br><span class="line"><span class="bullet">-</span> <span class="attr">kind:</span> <span class="string">Group</span></span><br><span class="line">  <span class="attr">name:</span> <span class="string">system:bootstrappers</span></span><br><span class="line">  <span class="attr">apiGroup:</span> <span class="string">rbac.authorization.k8s.io</span></span><br><span class="line"><span class="attr">roleRef:</span></span><br><span class="line">  <span class="attr">kind:</span> <span class="string">ClusterRole</span></span><br><span class="line">  <span class="attr">name:</span> <span class="string">system:certificates.k8s.io:certificatesigningrequests:nodeclient</span></span><br><span class="line">  <span class="attr">apiGroup:</span> <span class="string">rbac.authorization.k8s.io</span></span><br></pre></td></tr></table></figure>
-<figure class="highlight yaml"><table><tr><td class="code"><pre><span class="line"><span class="comment"># Approve renewal CSRs for the group "system:nodes"</span></span><br><span class="line"><span class="attr">apiVersion:</span> <span class="string">rbac.authorization.k8s.io/v1</span></span><br><span class="line"><span class="attr">kind:</span> <span class="string">ClusterRoleBinding</span></span><br><span class="line"><span class="attr">metadata:</span></span><br><span class="line">  <span class="attr">name:</span> <span class="string">auto-approve-renewals-for-nodes</span></span><br><span class="line"><span class="attr">subjects:</span></span><br><span class="line"><span class="bullet">-</span> <span class="attr">kind:</span> <span class="string">Group</span></span><br><span class="line">  <span class="attr">name:</span> <span class="string">system:nodes</span></span><br><span class="line">  <span class="attr">apiGroup:</span> <span class="string">rbac.authorization.k8s.io</span></span><br><span class="line"><span class="attr">roleRef:</span></span><br><span class="line">  <span class="attr">kind:</span> <span class="string">ClusterRole</span></span><br><span class="line">  <span class="attr">name:</span> <span class="string">system:certificates.k8s.io:certificatesigningrequests:selfnodeclient</span></span><br><span class="line">  <span class="attr">apiGroup:</span> <span class="string">rbac.authorization.k8s.io</span></span><br></pre></td></tr></table></figure>
-<p>自动批准组<code>system:bootstrappers</code>所有CSR 请求(nodeclient)</p>
-<p>自动批准组<code>system:nodes</code>的证书重签CSR请求.</p>
-<p>所以这就是为何token需要属于<code>system:bootstrappers</code>组</p>
-<p>更多信息可看这里<a href="https://kubernetes.io/docs/reference/command-line-tools-reference/kubelet-tls-bootstrapping/#bootstrap-tokens" target="_blank" rel="noopener">bootstrap-tokens</a></p>
-<h3 id="调整kube-controllermanager启动参数"><a href="#调整kube-controllermanager启动参数" class="headerlink" title="调整kube-controllermanager启动参数"></a>调整kube-controllermanager启动参数</h3><p>kube-controllermanager需要开启支持自动签署证书的参数<code>--controllers=*,bootstrapsigner,tokencleaner</code></p>
-<p>这样，每当有Node通过Bootstrap token来请求CSR(certificate signing request)</p>
-<p>对于 controller manager 来说，TLS bootstrapping 下 kubelet 发起的 CSR 请求大致分为以下三种</p>
-<blockquote>
-<ul>
-<li>nodeclient: kubelet 以 <code>O=system:nodes</code> 和 <code>CN=system:node:(node name)</code> 形式发起的 CSR 请求</li>
-<li>selfnodeclient: kubelet client renew 自己的证书发起的 CSR 请求(与上一个证书就有相同的 O 和 CN)</li>
-<li>selfnodeserver: kubelet server renew 自己的证书发起的 CSR 请求</li>
-</ul>
-</blockquote>
-<p>对应上面的3个clusterrole</p>
-<h3 id="生成kubeconfig文件"><a href="#生成kubeconfig文件" class="headerlink" title="生成kubeconfig文件"></a>生成kubeconfig文件</h3><figure class="highlight shell"><table><tr><td class="code"><pre><span class="line"><span class="meta">#</span><span class="bash"> 设置集群参数</span></span><br><span class="line">kubectl config --kubeconfig=/var/lib/kubelet/bootstrap-kubeconfig set-cluster kubernetes --server='https://10.170.0.2:6443' --certificate-authority=/etc/kubernetes/pki/ca.crt</span><br><span class="line"><span class="meta">#</span><span class="bash"> 设置客户端认证参数</span></span><br><span class="line">kubectl config --kubeconfig=/var/lib/kubelet/bootstrap-kubeconfig set-credentials system:bootstrap:4b0928 --token=4b0928.8d7687fdb10e3707</span><br><span class="line"><span class="meta">#</span><span class="bash">设置上下文参数</span></span><br><span class="line">kubectl config --kubeconfig=/var/lib/kubelet/bootstrap-kubeconfig set-context kubernetes --user=system:bootstrap:4b0928 --cluster=kubernetes</span><br><span class="line"><span class="meta">#</span><span class="bash"> 设置默认上下文</span></span><br><span class="line">kubectl config --kubeconfig=/var/lib/kubelet/bootstrap-kubeconfig use-context kubernetes</span><br></pre></td></tr></table></figure>
-<p>通过上面的命令最终会在/var/lib/kubelet目录下生bootstrap-kubeconfig文件, 将该文件放到node节点上, <strong>kubelet指定改文件路径,启动时从改文件中获取apiserver及Bootstrap Token</strong></p>
-<figure class="highlight yaml"><table><tr><td class="code"><pre><span class="line"><span class="attr">apiVersion:</span> <span class="string">v1</span></span><br><span class="line"><span class="attr">clusters:</span></span><br><span class="line"><span class="bullet">-</span> <span class="attr">cluster:</span></span><br><span class="line">    <span class="attr">certificate-authority:</span> <span class="string">/etc/kubernetes/pki/ca.crt</span></span><br><span class="line">    <span class="attr">server:</span> <span class="string">https://10.170.0.2:6443</span></span><br><span class="line">  <span class="attr">name:</span> <span class="string">kubernetes</span></span><br><span class="line"><span class="attr">contexts:</span></span><br><span class="line"><span class="bullet">-</span> <span class="attr">context:</span></span><br><span class="line">    <span class="attr">cluster:</span> <span class="string">kubernetes</span></span><br><span class="line">    <span class="attr">user:</span> <span class="string">system:bootstrap:4b0928</span></span><br><span class="line">  <span class="attr">name:</span> <span class="string">kubernetes</span></span><br><span class="line"><span class="attr">current-context:</span> <span class="string">kubernetes</span></span><br><span class="line"><span class="attr">kind:</span> <span class="string">Config</span></span><br><span class="line"><span class="attr">preferences:</span> <span class="string">&#123;&#125;</span></span><br><span class="line"><span class="attr">users:</span></span><br><span class="line"><span class="bullet">-</span> <span class="attr">name:</span> <span class="string">system:bootstrap:4b0928</span></span><br><span class="line">  <span class="attr">user:</span></span><br><span class="line">    <span class="attr">token:</span> <span class="string">4b0928.8d7687fdb10e3707</span> <span class="comment">#正是上面生成的token.</span></span><br></pre></td></tr></table></figure>
-<h3 id="调整Node上kubelet启动参数"><a href="#调整Node上kubelet启动参数" class="headerlink" title="调整Node上kubelet启动参数"></a>调整Node上kubelet启动参数</h3><p>node上需要有ca.crt(或者ca.pem)</p>
-<p><code>vim /lib/systemd/system/kubelet.service</code></p>
-<figure class="highlight yaml"><table><tr><td class="code"><pre><span class="line"><span class="string">[Unit]</span></span><br><span class="line"><span class="string">Description=kubelet:</span> <span class="string">The</span> <span class="string">Kubernetes</span> <span class="string">Node</span> <span class="string">Agent</span></span><br><span class="line"><span class="string">Documentation=https://kubernetes.io/docs/home/</span></span><br><span class="line"></span><br><span class="line"><span class="string">[Service]</span></span><br><span class="line"><span class="string">ExecStart=/usr/bin/kubelet</span> <span class="string">\</span></span><br><span class="line">  <span class="string">--bootstrap-kubeconfig=/var/lib/kubelet/bootstrap-kubeconfig</span> <span class="string">\</span></span><br><span class="line">  <span class="string">--kubeconfig=/var/lib/kubelet/kubeconfig</span> <span class="string">\</span></span><br><span class="line">  <span class="string">--config=/var/lib/kubelet/config.yaml</span> <span class="string">\</span></span><br><span class="line">  <span class="string">--network-plugin=cni</span> <span class="string">\</span></span><br><span class="line">  <span class="string">--rotate-certificates=true</span> <span class="string">\</span></span><br><span class="line">  <span class="string">--log-dir=/var/lib/kubelet/kubelet.log</span> <span class="string">\</span></span><br><span class="line">  <span class="string">--register-node=true</span> <span class="string">\</span></span><br><span class="line">  <span class="string">--v=2</span></span><br><span class="line"><span class="string">Restart=always</span></span><br><span class="line"><span class="string">StartLimitInterval=0</span></span><br><span class="line"><span class="string">RestartSec=10</span></span><br><span class="line"></span><br><span class="line"><span class="string">[Install]</span></span><br><span class="line"><span class="string">WantedBy=multi-user.target</span></span><br></pre></td></tr></table></figure>
-<p><strong>其中, 在启动时，如果在–kubeconfig指定的路径下存在kubeconfig文件,则使用该文件做认证,如果不存在，则认证为第一次认证，则使用参数bootstrap-kubeconfig指定的文件, 正是包含bootstrap token的引导文件</strong></p>
-<p><strong>通过kube-controller自动签署之后会把最终的kubeconfig写到–kubeconfig参数指定的路径，后续–bootstrap-kubeconfig则没有作用了. </strong></p>
-<p>config.yaml是kubelet的其它参数配置文件</p>
-<figure class="highlight yaml"><table><tr><td class="code"><pre><span class="line"><span class="comment">#cat /var/lib/kubelet/config.yaml</span></span><br><span class="line"><span class="attr">kind:</span> <span class="string">KubeletConfiguration</span></span><br><span class="line"><span class="attr">apiVersion:</span> <span class="string">kubelet.config.k8s.io/v1beta1</span></span><br><span class="line"><span class="attr">address:</span> <span class="number">10.170</span><span class="number">.0</span><span class="number">.3</span></span><br><span class="line"><span class="attr">port:</span> <span class="number">10250</span></span><br><span class="line"><span class="attr">readOnlyPort:</span> <span class="number">10255</span></span><br><span class="line"><span class="attr">cgroupDriver:</span> <span class="string">systemd</span></span><br><span class="line"><span class="attr">clusterDNS:</span> <span class="string">["10.96.0.10"]</span></span><br><span class="line"><span class="attr">clusterDomain:</span> <span class="string">cluster.local</span></span><br><span class="line"><span class="attr">failSwapOn:</span> <span class="literal">false</span></span><br></pre></td></tr></table></figure>
-<h3 id="流程总结"><a href="#流程总结" class="headerlink" title="流程总结"></a>流程总结</h3><blockquote>
-<ul>
-<li>kubelet 读取 bootstrap.kubeconfig，使用其 CA 与 Token 向 apiserver 发起第一次 CSR 请求(nodeclient),使用组<code>system:bootstrappers</code></li>
-<li>apiserver 根据 RBAC 规则自动批准首次 CSR 请求(approve-node-client-csr)，并下发证书(kubelet-client.crt)</li>
-<li>kubelet <strong>使用刚刚签发的证书(O=system:nodes, CN=system:node:NODE_NAME)</strong>与 apiserver 通讯，并发起申请 10250 server 所使用证书的 CSR 请求</li>
-<li>apiserver 根据 RBAC 规则自动批准 kubelet 为其 10250 端口申请的证书(kubelet-server-current.crt)</li>
-<li>证书即将到期时，kubelet 自动向 apiserver 发起用于与 apiserver 通讯所用证书的 renew CSR 请求和 renew 本身 10250 端口所用证书的 CSR 请求</li>
-<li>apiserver 根据 RBAC 规则自动批准两个证书</li>
-<li>kubelet 拿到新证书后关闭所有连接，reload 新证书，以后便一直如此</li>
-</ul>
-</blockquote>
-<p>建议大家都全手动搭建一次kubernetes,这样对Bootstrap Token机制会了解更深入.</p>
-<h3 id="参考文章"><a href="#参考文章" class="headerlink" title="参考文章:"></a><strong>参考文章:</strong></h3><blockquote>
-<ul>
-<li><a href="https://mritd.me/2018/01/07/kubernetes-tls-bootstrapping-note/" target="_blank" rel="noopener">Kubernetes TLS bootstrapping 那点事</a></li>
-<li><a href="https://mritd.me/2018/08/28/kubernetes-tls-bootstrapping-with-bootstrap-token/" target="_blank" rel="noopener">使用 Bootstrap Token 完成 TLS Bootstrapping</a></li>
-<li><a href="https://kubernetes.io/docs/reference/command-line-tools-reference/kubelet-tls-bootstrapping/" target="_blank" rel="noopener">kubelet-tls-bootstrapping</a></li>
-<li><a href="https://kubernetes.io/docs/reference/command-line-tools-reference/kubelet-tls-bootstrapping/#bootstrap-tokens" target="_blank" rel="noopener">Bootstrap Token</a></li>
-<li><a href="https://github.com/kelseyhightower/kubernetes-the-hard-way" target="_blank" rel="noopener">kubernetes-the-hard-way</a></li>
 </ul>
 </blockquote>
 <h3 id="转载请注明出处https-izsk-me"><a href="#转载请注明出处https-izsk-me" class="headerlink" title="转载请注明出处https://izsk.me"></a><strong>转载请注明出处<a href="https://izsk.me" target="_blank" rel="noopener">https://izsk.me</a></strong></h3>]]></content>
@@ -4354,6 +4356,74 @@
       </tags>
   </entry>
   <entry>
+    <title>记一次排查ES FGC导致的集群宕机异常</title>
+    <url>/2019/10/06/ES-FGC-Fix/</url>
+    <content><![CDATA[<p>有一个私有云环境的运维同事反应项目中的ES集群无法查询, 由于是私有云环境, 没有直接运维权限, 所以没有接收到一线报警, 远程登录上去后发现ES集群已经宕机了, 这次的排查过程也发现了几个比较容易忽视的细节, 在此记录一下,比较有意思.</p>
+<a id="more"></a>
+<h3 id="集群状态"><a href="#集群状态" class="headerlink" title="集群状态"></a>集群状态</h3><p>ES集群为3节点.</p>
+<p>首先肯定是查看集群状态</p>
+<figure class="highlight bash"><table><tr><td class="code"><pre><span class="line">curl <span class="string">'http://localhost:9200/_cluster/health?pretty'</span> -u xxx:yyy</span><br><span class="line"><span class="comment">#发现状态为Red</span></span><br></pre></td></tr></table></figure>
+<p>查看节点状态</p>
+<figure class="highlight bash"><table><tr><td class="code"><pre><span class="line">curl <span class="string">'http://localhost:9200/_cat/node?v'</span> -u xxx:yyy</span><br><span class="line"><span class="comment">#节点数正常</span></span><br></pre></td></tr></table></figure>
+<p>查看各节点使用的磁盘情况</p>
+<figure class="highlight bash"><table><tr><td class="code"><pre><span class="line">curl -XGET <span class="string">'localhost:9200/_cat/allocation?v&amp;pretty'</span> -u xxx:yyy</span><br><span class="line"><span class="comment">#未发现异常</span></span><br></pre></td></tr></table></figure>
+<h3 id="集群日志"><a href="#集群日志" class="headerlink" title="集群日志"></a>集群日志</h3><p>登录一个ES节点查看日志，发现以下报错，查看其它2个节点，情况相同</p>
+<p><img src="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20200204134510.png" alt></p>
+<p>从日志来看, 可以发现几个问题:</p>
+<blockquote>
+<ul>
+<li>Full GC很频繁, 而且时间也非常的长 </li>
+<li>每次GC完之后所能释放的内存非常有限</li>
+</ul>
+</blockquote>
+<p>到这，其它原因已经很明朗, <strong>内存不够导致的full gc 频繁，但是又不能释放太多的空间，又导致full gc的恶意循环</strong></p>
+<p>如果大家对gc的日志不很了解的话, 这里解释下上面日志的各个字段含义, 假如有以下一条gc日志</p>
+<figure class="highlight bash"><table><tr><td class="code"><pre><span class="line">[2018-06-30T17:57:29,020][INFO ][o.e.m.j.JvmGcMonitorService] [qoo--ES] [gc][old][228385][160772] duration [5s], collections [1]/[5.1s], total [5s]/[4.4d], memory [945.4mb]-&gt;[958.5mb]/[1007.3mb], all_pools &#123;[young] [87.8mb]-&gt;[100.9mb]/[133.1mb]&#125;&#123;[survivor] [0b]-&gt;[0b]/[16.6mb]&#125;&#123;[old] [857.6mb]-&gt;[857.6mb]/[857.6mb]&#125;</span><br></pre></td></tr></table></figure>
+<ul>
+<li><strong>gc old</strong> 本次是 old GC 这是第228385次 GC 检查][从 JVM 启动至今发生的第 160772次 G]</li>
+<li><strong>duration</strong> [本次检查到的 GC 总耗时 <strong>5</strong> 秒，可能是多次的加和</li>
+<li><strong>collections</strong> [从上次检查至今总共发生<strong>1</strong>次GC]/[从上次检查至今已过去 <strong>5.1</strong> 秒],</li>
+<li><strong>total</strong> [本次检查到的 GC 总耗时为 <strong>5</strong> 秒]/[从 JVM 启动至今发生的 GC 总耗时为 <strong>4.4</strong> 天]，</li>
+<li><strong>memory</strong> [ GC 前 Heap memory 空间]-&gt;[GC 后 Heap memory 空间]/[Heap memory 总空间],</li>
+<li><strong>all_pools</strong>(分代部分的详情) {young 区][GC 前 Memory ]-&gt;[GC后 Memory]/[young区 Memory 总大小] }</li>
+<li><strong>survivor</strong> [GC 前 Memory ]-&gt;[GC后 Memory]/[Memory 总大小] }{old 区[GC 前 Memory ]-&gt;[GC后 Memory]/[old区 Memory 总大小] }</li>
+</ul>
+<p>那为何会内存不足呢, 想起前几天服务拓展，添加收集了几个服务的日志, 日志量不算小, 而且这3个ES节点所在的机器内存只分配了8个G, 显然, 加完这几个日志之后内存不够用了.</p>
+<h3 id="Index-Mapping"><a href="#Index-Mapping" class="headerlink" title="Index Mapping"></a>Index Mapping</h3><p>而且，从日志中， 还发现几处很诡异的日志</p>
+<p><img src="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20200204141415.png" alt></p>
+<p>红框中的错误: <strong>object mapping for [msg] tried to pasrse field [msg] as object, but found a concrete</strong></p>
+<p>翻译过来就是说, 日志中的msg这个字段的类型匹配不上, ES尽力把它解析为object类型，但是它却是个确切的值.</p>
+<p>就好比你在python中定义了一个字典, 但是你给它赋值一个整形, 这确定要报错.</p>
+<p>但是这个mapping是从何而来的呢.</p>
+<p>经过网上搜索一翻, 终于明白:</p>
+<p>ES中为了加强性能，对于索引中的<strong>第一条数据, ES会默认(可设置)按照这条数据建立index mapping, 相当于是一个索引模板, 好比是mysql中表的定义一个概念, 后续这个索引中的所有日志都按照该模板进行解析</strong></p>
+<p>后来经过查看源码, 我们发现，出现上图中的问题是因为代码中的日志打印不规范, 有一个地方如果抛出异常时，打印的是一个单一字符串, 而正常情况下打印的是一个json, 所以当第一条正常的日志传递给ES时，ES建立的索引 模板记录这个字段为object类型(可以类比为python中的字典, 本身是可以新增元素的), 当应用抛出异常时，日志中又传递了一个单一字符串, 但是索引模板已经记录为object类型，所以无法匹配, 这就是问题所在</p>
+<h3 id="Fix-Bug"><a href="#Fix-Bug" class="headerlink" title="Fix Bug"></a>Fix Bug</h3><p>从3个方面解决上面的问题</p>
+<p>首先是修复代码中日志不规范问题, 这个充暴露了code view不严谨.</p>
+<p>第2个是加大ES的内存,毕竟日志量确实是上来了, 从8G添加到12G</p>
+<p>第3个是优化ES的gc问题, ES中有个逻辑是：<strong>默认情况下，主节点每30秒会去检查其他节点的状态，如果任何节点的垃圾回收时间超过30秒（Garbage collection duration）且在重复次数内都超时，则会导致主节点任务该节点脱离集群, 节点脱离集群后会引起分片的rebalance</strong></p>
+<p>这个机制让ES节点频繁的脱离集群，而又引起整个集群的rebalance，ES本身的内存就不够，rebalance更是雪上加霜, 如此往复就导致整个ES集群宕机.</p>
+<p>可修改主节点的检查时间及重复次数,让其它节点有充分的时间进行full gc.</p>
+<p>在ES的配置文件中添加以下配置:</p>
+<figure class="highlight yml"><table><tr><td class="code"><pre><span class="line"><span class="attr">discovery.zen.fd.ping_timeout:</span> <span class="string">300s</span></span><br><span class="line"><span class="attr">discovery.zen.fd.ping_retriES:</span> <span class="number">10</span></span><br></pre></td></tr></table></figure>
+<p>这样, 达到这两个条件时才能触发节点脱离集群</p>
+<p>至此, 依次重启ES节点, 问题圆满解决.</p>
+<h3 id="参考文章"><a href="#参考文章" class="headerlink" title="参考文章:"></a><strong>参考文章:</strong></h3><blockquote>
+<ul>
+<li><a href="https://www.elastic.co/guide/en/elasticsearch/reference/current/mapping.html" target="_blank" rel="noopener">elasticsearch index mapping</a></li>
+<li><a href="https://blog.csdn.net/sinat_35930259/article/details/80354732" target="_blank" rel="noopener">elasticsearch篇之mapping</a></li>
+<li><a href="https://segmentfault.com/a/1190000016494488" target="_blank" rel="noopener">你看懂 Elasticsearch Log 中的 GC 日志了吗？</a></li>
+</ul>
+</blockquote>
+<h3 id="转载请注明出处https-izsk-me"><a href="#转载请注明出处https-izsk-me" class="headerlink" title="转载请注明出处https://izsk.me"></a><strong>转载请注明出处<a href="https://izsk.me" target="_blank" rel="noopener">https://izsk.me</a></strong></h3>]]></content>
+      <categories>
+        <category>FELK</category>
+      </categories>
+      <tags>
+        <tag>FELK</tag>
+      </tags>
+  </entry>
+  <entry>
     <title>CockRoachDB学习(架构)</title>
     <url>/2019/10/06/CockroachDB-Struct/</url>
     <content><![CDATA[<p>项目中需要一个分布式数据库用于存储业务的KV数据, 在前期项目调研结合业务比对了业界常用的KV数据库模型后, 最后选择了CockRoachDB(CRDB).</p>
@@ -4488,74 +4558,6 @@
       </categories>
       <tags>
         <tag>分布式架构</tag>
-      </tags>
-  </entry>
-  <entry>
-    <title>记一次排查ES FGC导致的集群宕机异常</title>
-    <url>/2019/10/06/ES-FGC-Fix/</url>
-    <content><![CDATA[<p>有一个私有云环境的运维同事反应项目中的ES集群无法查询, 由于是私有云环境, 没有直接运维权限, 所以没有接收到一线报警, 远程登录上去后发现ES集群已经宕机了, 这次的排查过程也发现了几个比较容易忽视的细节, 在此记录一下,比较有意思.</p>
-<a id="more"></a>
-<h3 id="集群状态"><a href="#集群状态" class="headerlink" title="集群状态"></a>集群状态</h3><p>ES集群为3节点.</p>
-<p>首先肯定是查看集群状态</p>
-<figure class="highlight bash"><table><tr><td class="code"><pre><span class="line">curl <span class="string">'http://localhost:9200/_cluster/health?pretty'</span> -u xxx:yyy</span><br><span class="line"><span class="comment">#发现状态为Red</span></span><br></pre></td></tr></table></figure>
-<p>查看节点状态</p>
-<figure class="highlight bash"><table><tr><td class="code"><pre><span class="line">curl <span class="string">'http://localhost:9200/_cat/node?v'</span> -u xxx:yyy</span><br><span class="line"><span class="comment">#节点数正常</span></span><br></pre></td></tr></table></figure>
-<p>查看各节点使用的磁盘情况</p>
-<figure class="highlight bash"><table><tr><td class="code"><pre><span class="line">curl -XGET <span class="string">'localhost:9200/_cat/allocation?v&amp;pretty'</span> -u xxx:yyy</span><br><span class="line"><span class="comment">#未发现异常</span></span><br></pre></td></tr></table></figure>
-<h3 id="集群日志"><a href="#集群日志" class="headerlink" title="集群日志"></a>集群日志</h3><p>登录一个ES节点查看日志，发现以下报错，查看其它2个节点，情况相同</p>
-<p><img src="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20200204134510.png" alt></p>
-<p>从日志来看, 可以发现几个问题:</p>
-<blockquote>
-<ul>
-<li>Full GC很频繁, 而且时间也非常的长 </li>
-<li>每次GC完之后所能释放的内存非常有限</li>
-</ul>
-</blockquote>
-<p>到这，其它原因已经很明朗, <strong>内存不够导致的full gc 频繁，但是又不能释放太多的空间，又导致full gc的恶意循环</strong></p>
-<p>如果大家对gc的日志不很了解的话, 这里解释下上面日志的各个字段含义, 假如有以下一条gc日志</p>
-<figure class="highlight bash"><table><tr><td class="code"><pre><span class="line">[2018-06-30T17:57:29,020][INFO ][o.e.m.j.JvmGcMonitorService] [qoo--ES] [gc][old][228385][160772] duration [5s], collections [1]/[5.1s], total [5s]/[4.4d], memory [945.4mb]-&gt;[958.5mb]/[1007.3mb], all_pools &#123;[young] [87.8mb]-&gt;[100.9mb]/[133.1mb]&#125;&#123;[survivor] [0b]-&gt;[0b]/[16.6mb]&#125;&#123;[old] [857.6mb]-&gt;[857.6mb]/[857.6mb]&#125;</span><br></pre></td></tr></table></figure>
-<ul>
-<li><strong>gc old</strong> 本次是 old GC 这是第228385次 GC 检查][从 JVM 启动至今发生的第 160772次 G]</li>
-<li><strong>duration</strong> [本次检查到的 GC 总耗时 <strong>5</strong> 秒，可能是多次的加和</li>
-<li><strong>collections</strong> [从上次检查至今总共发生<strong>1</strong>次GC]/[从上次检查至今已过去 <strong>5.1</strong> 秒],</li>
-<li><strong>total</strong> [本次检查到的 GC 总耗时为 <strong>5</strong> 秒]/[从 JVM 启动至今发生的 GC 总耗时为 <strong>4.4</strong> 天]，</li>
-<li><strong>memory</strong> [ GC 前 Heap memory 空间]-&gt;[GC 后 Heap memory 空间]/[Heap memory 总空间],</li>
-<li><strong>all_pools</strong>(分代部分的详情) {young 区][GC 前 Memory ]-&gt;[GC后 Memory]/[young区 Memory 总大小] }</li>
-<li><strong>survivor</strong> [GC 前 Memory ]-&gt;[GC后 Memory]/[Memory 总大小] }{old 区[GC 前 Memory ]-&gt;[GC后 Memory]/[old区 Memory 总大小] }</li>
-</ul>
-<p>那为何会内存不足呢, 想起前几天服务拓展，添加收集了几个服务的日志, 日志量不算小, 而且这3个ES节点所在的机器内存只分配了8个G, 显然, 加完这几个日志之后内存不够用了.</p>
-<h3 id="Index-Mapping"><a href="#Index-Mapping" class="headerlink" title="Index Mapping"></a>Index Mapping</h3><p>而且，从日志中， 还发现几处很诡异的日志</p>
-<p><img src="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20200204141415.png" alt></p>
-<p>红框中的错误: <strong>object mapping for [msg] tried to pasrse field [msg] as object, but found a concrete</strong></p>
-<p>翻译过来就是说, 日志中的msg这个字段的类型匹配不上, ES尽力把它解析为object类型，但是它却是个确切的值.</p>
-<p>就好比你在python中定义了一个字典, 但是你给它赋值一个整形, 这确定要报错.</p>
-<p>但是这个mapping是从何而来的呢.</p>
-<p>经过网上搜索一翻, 终于明白:</p>
-<p>ES中为了加强性能，对于索引中的<strong>第一条数据, ES会默认(可设置)按照这条数据建立index mapping, 相当于是一个索引模板, 好比是mysql中表的定义一个概念, 后续这个索引中的所有日志都按照该模板进行解析</strong></p>
-<p>后来经过查看源码, 我们发现，出现上图中的问题是因为代码中的日志打印不规范, 有一个地方如果抛出异常时，打印的是一个单一字符串, 而正常情况下打印的是一个json, 所以当第一条正常的日志传递给ES时，ES建立的索引 模板记录这个字段为object类型(可以类比为python中的字典, 本身是可以新增元素的), 当应用抛出异常时，日志中又传递了一个单一字符串, 但是索引模板已经记录为object类型，所以无法匹配, 这就是问题所在</p>
-<h3 id="Fix-Bug"><a href="#Fix-Bug" class="headerlink" title="Fix Bug"></a>Fix Bug</h3><p>从3个方面解决上面的问题</p>
-<p>首先是修复代码中日志不规范问题, 这个充暴露了code view不严谨.</p>
-<p>第2个是加大ES的内存,毕竟日志量确实是上来了, 从8G添加到12G</p>
-<p>第3个是优化ES的gc问题, ES中有个逻辑是：<strong>默认情况下，主节点每30秒会去检查其他节点的状态，如果任何节点的垃圾回收时间超过30秒（Garbage collection duration）且在重复次数内都超时，则会导致主节点任务该节点脱离集群, 节点脱离集群后会引起分片的rebalance</strong></p>
-<p>这个机制让ES节点频繁的脱离集群，而又引起整个集群的rebalance，ES本身的内存就不够，rebalance更是雪上加霜, 如此往复就导致整个ES集群宕机.</p>
-<p>可修改主节点的检查时间及重复次数,让其它节点有充分的时间进行full gc.</p>
-<p>在ES的配置文件中添加以下配置:</p>
-<figure class="highlight yml"><table><tr><td class="code"><pre><span class="line"><span class="attr">discovery.zen.fd.ping_timeout:</span> <span class="string">300s</span></span><br><span class="line"><span class="attr">discovery.zen.fd.ping_retriES:</span> <span class="number">10</span></span><br></pre></td></tr></table></figure>
-<p>这样, 达到这两个条件时才能触发节点脱离集群</p>
-<p>至此, 依次重启ES节点, 问题圆满解决.</p>
-<h3 id="参考文章"><a href="#参考文章" class="headerlink" title="参考文章:"></a><strong>参考文章:</strong></h3><blockquote>
-<ul>
-<li><a href="https://www.elastic.co/guide/en/elasticsearch/reference/current/mapping.html" target="_blank" rel="noopener">elasticsearch index mapping</a></li>
-<li><a href="https://blog.csdn.net/sinat_35930259/article/details/80354732" target="_blank" rel="noopener">elasticsearch篇之mapping</a></li>
-<li><a href="https://segmentfault.com/a/1190000016494488" target="_blank" rel="noopener">你看懂 Elasticsearch Log 中的 GC 日志了吗？</a></li>
-</ul>
-</blockquote>
-<h3 id="转载请注明出处https-izsk-me"><a href="#转载请注明出处https-izsk-me" class="headerlink" title="转载请注明出处https://izsk.me"></a><strong>转载请注明出处<a href="https://izsk.me" target="_blank" rel="noopener">https://izsk.me</a></strong></h3>]]></content>
-      <categories>
-        <category>FELK</category>
-      </categories>
-      <tags>
-        <tag>FELK</tag>
       </tags>
   </entry>
   <entry>
