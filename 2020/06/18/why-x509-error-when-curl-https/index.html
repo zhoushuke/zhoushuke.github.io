@@ -68,7 +68,7 @@
 <link href="/css/main.css?v=5.1.0" rel="stylesheet" type="text/css">
 
 
-  <meta name="keywords" content="Kubernetes,">
+  <meta name="keywords" content="Http-Tcp-Ip,">
 
 
 
@@ -86,20 +86,20 @@
 
 
 
-<meta name="description" content="在kubernetes中, 如果某个pod需要使用到volume, 且要将该volume挂载到宿主机上, 则需要注意存在被覆盖的情况，在这做一个汇总.">
-<meta name="keywords" content="Kubernetes">
+<meta name="description" content="今天排查了一个HTTPS证书的问题, 虽然很快的就解决了, 但里面涉及到的东西学是蛮多啊的，学习一下">
+<meta name="keywords" content="Http-Tcp-Ip">
 <meta property="og:type" content="article">
-<meta property="og:title" content="Kubernetes学习(volume挂载情况汇总)">
-<meta property="og:url" content="https://zhoushuke.github.io/2020/02/04/Kubernetes-Volumes-Mount/index.html">
+<meta property="og:title" content="访问https时为何会出现x509 certificate signed by unknown authority">
+<meta property="og:url" content="https://zhoushuke.github.io/2020/06/18/why-x509-error-when-curl-https/index.html">
 <meta property="og:site_name" content="Z.S.K.&#39;s Records">
-<meta property="og:description" content="在kubernetes中, 如果某个pod需要使用到volume, 且要将该volume挂载到宿主机上, 则需要注意存在被覆盖的情况，在这做一个汇总.">
+<meta property="og:description" content="今天排查了一个HTTPS证书的问题, 虽然很快的就解决了, 但里面涉及到的东西学是蛮多啊的，学习一下">
 <meta property="og:locale" content="zh-Hans">
-<meta property="og:image" content="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/2060F5C5-4E0F-4EC6-A4CD-1CF7AC3CCBAA.png">
-<meta property="og:updated_time" content="2020-02-04T06:58:53.587Z">
+<meta property="og:image" content="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20200618211710.png">
+<meta property="og:updated_time" content="2020-06-18T13:53:17.910Z">
 <meta name="twitter:card" content="summary">
-<meta name="twitter:title" content="Kubernetes学习(volume挂载情况汇总)">
-<meta name="twitter:description" content="在kubernetes中, 如果某个pod需要使用到volume, 且要将该volume挂载到宿主机上, 则需要注意存在被覆盖的情况，在这做一个汇总.">
-<meta name="twitter:image" content="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/2060F5C5-4E0F-4EC6-A4CD-1CF7AC3CCBAA.png">
+<meta name="twitter:title" content="访问https时为何会出现x509 certificate signed by unknown authority">
+<meta name="twitter:description" content="今天排查了一个HTTPS证书的问题, 虽然很快的就解决了, 但里面涉及到的东西学是蛮多啊的，学习一下">
+<meta name="twitter:image" content="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20200618211710.png">
 
 
 
@@ -127,13 +127,13 @@
 
 
 
-  <link rel="canonical" href="https://zhoushuke.github.io/2020/02/04/Kubernetes-Volumes-Mount/">
+  <link rel="canonical" href="https://zhoushuke.github.io/2020/06/18/why-x509-error-when-curl-https/">
 
 
 
 
 
-  <title> Kubernetes学习(volume挂载情况汇总) | Z.S.K.'s Records </title>
+  <title> 访问https时为何会出现x509 certificate signed by unknown authority | Z.S.K.'s Records </title>
 </head>
 
 <body itemscope itemtype="http://schema.org/WebPage" lang="zh-Hans">
@@ -299,7 +299,7 @@
   
 
   <article class="post post-type-normal " itemscope itemtype="http://schema.org/Article">
-  <link itemprop="mainEntityOfPage" href="https://zhoushuke.github.io/2020/02/04/Kubernetes-Volumes-Mount/">
+  <link itemprop="mainEntityOfPage" href="https://zhoushuke.github.io/2020/06/18/why-x509-error-when-curl-https/">
 
   <span style="display:none" itemprop="author" itemscope itemtype="http://schema.org/Person">
     <meta itemprop="name" content="Z.S.K.">
@@ -323,7 +323,7 @@
             
             
               
-                Kubernetes学习(volume挂载情况汇总)
+                访问https时为何会出现x509 certificate signed by unknown authority
               
             
           </h1>
@@ -338,8 +338,8 @@
               
                 <span class="post-meta-item-text">发表于</span>
               
-              <time title="Post created" itemprop="dateCreated datePublished" datetime="2020-02-04T10:30:53+08:00">
-                2020-02-04
+              <time title="Post created" itemprop="dateCreated datePublished" datetime="2020-06-18T21:10:53+08:00">
+                2020-06-18
               </time>
             
 
@@ -361,8 +361,8 @@
               
               
                 <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
-                  <a href="/categories/Kubernetes/" itemprop="url" rel="index">
-                    <span itemprop="name">Kubernetes</span>
+                  <a href="/categories/Http-Tcp-Ip/" itemprop="url" rel="index">
+                    <span itemprop="name">Http-Tcp-Ip</span>
                   </a>
                 </span>
 
@@ -396,86 +396,48 @@
       
 
       
-        <p>在kubernetes中, 如果某个pod需要使用到volume, 且要将该volume挂载到宿主机上, 则需要注意存在被覆盖的情况，在这做一个汇总.</p>
+        <p>今天排查了一个HTTPS证书的问题, 虽然很快的就解决了, 但里面涉及到的东西学是蛮多啊的，学习一下</p>
 <a id="more"></a>
-<p>当挂载一个文件或者目录，宿主机或者容器存在与否, 所有情况如下:</p>
-<table>
-<thead>
-<tr>
-<th><strong>宿主机</strong></th>
-<th><strong>容器</strong></th>
-<th><strong>运行结果</strong></th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td>文件存在</td>
-<td>文件不存在</td>
-<td>挂载成功，容器中新建文件</td>
-</tr>
-<tr>
-<td>目录存在</td>
-<td>目录不存在</td>
-<td>挂载成功，容器中新建目录</td>
-</tr>
-<tr>
-<td>文件不存在</td>
-<td>文件存在</td>
-<td>挂载成功，宿主机新建该文件，容器中的文件被覆盖为空</td>
-</tr>
-<tr>
-<td>文件存在</td>
-<td>文件存在</td>
-<td>挂载成功，容器内的文件内容被覆盖</td>
-</tr>
-<tr>
-<td>目录存在</td>
-<td>目录存在</td>
-<td>挂载成功，容器内目录内容被覆盖</td>
-</tr>
-<tr>
-<td>——</td>
-<td>——</td>
-<td>——</td>
-</tr>
-<tr>
-<td>文件存在</td>
-<td>目录存在</td>
-<td>容器启动失败</td>
-</tr>
-<tr>
-<td>目录存在</td>
-<td>文件存在</td>
-<td>容器启动失败</td>
-</tr>
-<tr>
-<td>——</td>
-<td>——</td>
-<td>——</td>
-</tr>
-<tr>
-<td>目录不存在</td>
-<td>目录不存在</td>
-<td>挂载成功，docker会自动在宿主机和容器内新建此目录</td>
-</tr>
-<tr>
-<td>目录不存在</td>
-<td>文件存在</td>
-<td>容器启动失败</td>
-</tr>
-<tr>
-<td>目录不存在</td>
-<td>目录存在</td>
-<td>挂载成功，容器内目录内容被覆盖（空）</td>
-</tr>
-</tbody>
-</table>
-<p>除了使用volume之外，还经常使用到cofigmap对象，需要特别注意的是，如果使用configmap提示以下错误，</p>
-<p>说明这次的挂载将一个路径挂载到了一个文件中, 这里需要使用subpath.</p>
-<p><img src="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/2060F5C5-4E0F-4EC6-A4CD-1CF7AC3CCBAA.png" alt></p>
+<p>问题是这样, 一个运行在容器中的服务给一个https地址发送POST请求时提示<code>x509: certificate signed by unknown authority</code></p>
+<p>大家都知道, 一般https都需要通过ca认证，问题很显然, 证书认证不过, 但是为何会出这个问题呢?</p>
+<p>要回答这个问题, 自然就引出另一个问题:<code>当我们访问https的问题, 一般不会带上跟证书相关的参数，那又是如何验证网站身份的呢</code></p>
+<p>这里使用curl来模拟，效果一样</p>
+<h3 id="curl"><a href="#curl" class="headerlink" title="curl"></a>curl</h3><p>在ubuntu上16.04， 内核<code>4.4.0-130-generic</code>上运行curl</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br></pre></td><td class="code"><pre><span class="line">curl https://baidu.com -v</span><br><span class="line"><span class="comment"># 输出</span></span><br><span class="line">* Rebuilt URL to: https://baidu.com/</span><br><span class="line">*   Trying 39.156.69.79...</span><br><span class="line">* Connected to baidu.com (39.156.69.79) port 443 (<span class="comment">#0)</span></span><br><span class="line">* found 148 certificates <span class="keyword">in</span> /etc/ssl/certs/ca-certificates.crt</span><br><span class="line">* found 592 certificates <span class="keyword">in</span> /etc/ssl/certs</span><br><span class="line">* ALPN, offering http/1.1</span><br><span class="line">* SSL connection using TLS1.2 / ECDHE_RSA_AES_128_GCM_SHA256</span><br><span class="line">* 	 server certificate verification OK</span><br><span class="line">* 	 server certificate status verification SKIPPED</span><br><span class="line">* 	 common name: www.baidu.cn (matched)</span><br><span class="line">* 	 server certificate expiration date OK</span><br><span class="line">* 	 server certificate activation date OK</span><br><span class="line">* 	 certificate public key: RSA</span><br><span class="line">* 	 certificate version: <span class="comment">#3</span></span><br><span class="line">* 	 subject: C=CN,ST=Beijing,O=BeiJing Baidu Netcom Science Technology Co.\, Ltd,OU=service operation department,CN=www.baidu.cn</span><br><span class="line">* 	 start date: Thu, 27 Feb 2020 00:00:00 GMT</span><br><span class="line">* 	 expire date: Fri, 26 Feb 2021 12:00:00 GMT</span><br><span class="line">* 	 issuer: C=US,O=DigiCert Inc,CN=DigiCert SHA2 Secure Server CA</span><br><span class="line">* 	 compression: NULL</span><br><span class="line">* ALPN, server accepted to use http/1.1</span><br><span class="line"><span class="comment"># ....</span></span><br></pre></td></tr></table></figure>
+<p>关注重点信息:</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">* found 148 certificates <span class="keyword">in</span> /etc/ssl/certs/ca-certificates.crt</span><br><span class="line">* found 592 certificates <span class="keyword">in</span> /etc/ssl/certs</span><br></pre></td></tr></table></figure>
+<h3 id="etc-ssl"><a href="#etc-ssl" class="headerlink" title="/etc/ssl"></a>/etc/ssl</h3><p>从上面可以看出, 在<code>/etc/ssl</code>中发现大量的<code>certificates</code>, 可以来看看<code>/etc/ssl</code>,</p>
+<p>这个目录在使用命令<code>apt install ca-certificates</code>后生成</p>
+<p><code>/etc/ssl</code> 该目录下只有<code>certs  openssl.cnf  private</code></p>
+<p>这几个文件,有用的为certs目录，这个目录下有大量跟证书相关的pem文件, 其中就包含<code>ca-certificates.crt</code>文件.</p>
+<p>pem跟crt都是证书相关的文件，不同的格式罢了，这个不是重点</p>
+<p>重点在于,在使用curl的时候，如果不带证书相关的参数,则会引用默认的证书路径(依操作系统不同而不同)</p>
+<p>这个默认值怎么来确定呢? 可以确认是curl底层的代码根据环境因素定义的默认值，可以通过<code>strace</code>方式来查看</p>
+<p><code>strace curl https://www.baidu.com |&amp; grep open</code></p>
+<p><img src="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20200618211710.png" alt></p>
+<p>从上面可以看到, curl如果不指定ca参数的话,则会到<code>/etc/ssl</code>目录下查找</p>
+<p>同时, curl也是支持传递参数来实现https的访问</p>
+<p>我们可以通过 <code>man curl</code>来查看几个重要的跟参数相关的参数,写的很详细，这里就不翻译了</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br></pre></td><td class="code"><pre><span class="line">--cacert &lt;CA certificate&gt;</span><br><span class="line">              (SSL)  Tells  curl  to use the specified certificate file to verify the peer. The file may contain multiple CA certificates. The cer‐</span><br><span class="line">              tificate(s) must be <span class="keyword">in</span> PEM format. Normally curl is built to use a default file <span class="keyword">for</span> this, so this option is typically used  to  alter</span><br><span class="line">              that default file.</span><br><span class="line">              curl  recognizes the environment variable named <span class="string">'CURL_CA_BUNDLE'</span> <span class="keyword">if</span> it is <span class="built_in">set</span>, and uses the given path as a path to a CA cert bundle.</span><br><span class="line">              This option overrides that variable.</span><br><span class="line">              The windows version of curl will automatically look <span class="keyword">for</span> a CA certs file named ´curl-ca-bundle.crt´, either <span class="keyword">in</span> the same  directory  as</span><br><span class="line">              curl.exe, or <span class="keyword">in</span> the Current Working Directory, or <span class="keyword">in</span> any folder along your PATH.</span><br><span class="line">              If curl is built against the NSS SSL library, the NSS PEM PKCS<span class="comment">#11 module (libnsspem.so) needs to be available for this option to work</span></span><br><span class="line">              properly.</span><br><span class="line">              If this option is used several <span class="built_in">times</span>, the last one will be used.</span><br></pre></td></tr></table></figure>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line">--capath &lt;CA certificate directory&gt;</span><br><span class="line">              (SSL) Tells curl to use the specified certificate directory to verify the peer. Multiple paths can be  provided  by  separating  them</span><br><span class="line">              with  <span class="string">":"</span>  (e.g.   <span class="string">"path1:path2:path3"</span>).  The certificates must be <span class="keyword">in</span> PEM format, and <span class="keyword">if</span> curl is built against OpenSSL, the directory</span><br><span class="line">              must have been processed using the c_rehash utility supplied with OpenSSL. Using --capath can allow OpenSSL-powered curl to make SSL-</span><br><span class="line">              connections much more efficiently than using --cacert <span class="keyword">if</span> the --cacert file contains many CA certificates.</span><br><span class="line">              If this option is <span class="built_in">set</span>, the default capath value will be ignored, and <span class="keyword">if</span> it is used several <span class="built_in">times</span>, the last one will be used.</span><br></pre></td></tr></table></figure>
+<h3 id="ca-certificates"><a href="#ca-certificates" class="headerlink" title="ca-certificates"></a>ca-certificates</h3><p>ca-certificates则是一个包, 用于维护根证书库, 所有的 CA 根证书实际上是由 Mozilla 维护的</p>
+<p>可以通过<code>dpkg  -L ca-certificates</code>来查看证书相关信息</p>
+<p>也可以通过<code>apt-cache show ca-certificates</code> 查看相关信息，当然太多，看不出什么来,就是一堆证书</p>
+<p>那么可能有人会问, 一般情况下, 系统安装好之后基本就不会再做操作了，那如何更新根证书呢?</p>
+<p>有一个工具<code>update-ca-certificates</code>可以手动更新根证书信息, 可以使用<code>man</code>update-ca-certificates`, 说的非常清楚</p>
+<p>因此可以手工执行以下命令来更新根证书列表    </p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line">update-ca-certificates</span><br><span class="line"><span class="comment"># 全输出</span></span><br><span class="line">Updating certificates <span class="keyword">in</span> /etc/ssl/certs...</span><br><span class="line">0 added, 0 removed; <span class="keyword">done</span>.</span><br><span class="line">Running hooks <span class="keyword">in</span> /etc/ca-certificates/update.d...</span><br><span class="line"><span class="keyword">done</span>.</span><br></pre></td></tr></table></figure>
+<h3 id="Resolve"><a href="#Resolve" class="headerlink" title="Resolve"></a>Resolve</h3><p>通过curl可以知道, 访问https的时候默认会到/etc/ssl目录下查找根证书，通过根证书验证对端网站的身份,因为对端的证书一般也是由这些根证书签名我, 因此可以难通过</p>
+<p>那么出现开头的问题的原因在于, <strong>使用的镜像本身没有包含<code>/etc/ssl</code>目录，同时在Dockerfile中也没有使用<code>apt install ca-certificates</code>来安装, 因此在所有请求https时都会出现问题</strong>.</p>
+<p>这里提一下， 在安装<code>curl</code>的时候，默认会安装<code>ca-certificates</code>，实际上这个包由 OpenSSL 安装的</p>
+<p>Curl 是通过 OpenSSL 实现客户端 HTTPS 协议的，就是说在 Curl/OpenSSL 平台下，Curl 使用的根证书库都是由 ca-certificates 包处理</p>
+<p>curl也是一种上层应用, 对于其它的比如golang程序出现这个问题，原理都是一样的.</p>
+<p>修改镜像，问题解决</p>
 <h3 id="参考文章"><a href="#参考文章" class="headerlink" title="参考文章:"></a><strong>参考文章:</strong></h3><blockquote>
 <ul>
-<li><a href="https://kubernetes.io" target="_blank" rel="noopener">Kubernetes.io</a></li>
+<li><a href="http://manpages.ubuntu.com/manpages/bionic/man8/update-ca-certificates.8.html" target="_blank" rel="noopener">http://manpages.ubuntu.com/manpages/bionic/man8/update-ca-certificates.8.html</a></li>
+<li><a href="https://www.jianshu.com/p/abcee3270e9a" target="_blank" rel="noopener">https://www.jianshu.com/p/abcee3270e9a</a></li>
+<li><a href="https://curl.haxx.se/docs/sslcerts.html" target="_blank" rel="noopener">https://curl.haxx.se/docs/sslcerts.html</a></li>
 </ul>
 </blockquote>
 <h3 id="转载请注明出处https-izsk-me"><a href="#转载请注明出处https-izsk-me" class="headerlink" title="转载请注明出处https://izsk.me"></a><strong>转载请注明出处<a href="https://izsk.me" target="_blank" rel="noopener">https://izsk.me</a></strong></h3>
@@ -527,7 +489,7 @@
       
         <div class="post-tags">
           
-            <a href="/tags/Kubernetes/" rel="tag"># Kubernetes</a>
+            <a href="/tags/Http-Tcp-Ip/" rel="tag"># Http-Tcp-Ip</a>
           
         </div>
       
@@ -536,8 +498,8 @@
         <div class="post-nav">
           <div class="post-nav-next post-nav-item">
             
-              <a href="/2020/02/02/shell-funny-snippet/" rel="next" title="有趣的Shell Snippet">
-                <i class="fa fa-chevron-left"></i> 有趣的Shell Snippet
+              <a href="/2020/06/10/Kubernetes-coredns-5s-timeout/" rel="next" title="Kubernetes学习(关于CoreDNS的5s超时问题)">
+                <i class="fa fa-chevron-left"></i> Kubernetes学习(关于CoreDNS的5s超时问题)
               </a>
             
           </div>
@@ -545,10 +507,6 @@
           <span class="post-nav-divider"></span>
 
           <div class="post-nav-prev post-nav-item">
-            
-              <a href="/2020/02/09/Istio-Struct/" rel="prev" title="Istio学习(架构)">
-                Istio学习(架构) <i class="fa fa-chevron-right"></i>
-              </a>
             
           </div>
         </div>
@@ -676,7 +634,7 @@
             
 
             
-              <div class="post-toc-content"><ol class="nav"><li class="nav-item nav-level-3"><a class="nav-link" href="#参考文章"><span class="nav-number">1.</span> <span class="nav-text">参考文章:</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#转载请注明出处https-izsk-me"><span class="nav-number">2.</span> <span class="nav-text">转载请注明出处https://izsk.me</span></a></li></ol></div>
+              <div class="post-toc-content"><ol class="nav"><li class="nav-item nav-level-3"><a class="nav-link" href="#curl"><span class="nav-number">1.</span> <span class="nav-text">curl</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#etc-ssl"><span class="nav-number">2.</span> <span class="nav-text">/etc/ssl</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#ca-certificates"><span class="nav-number">3.</span> <span class="nav-text">ca-certificates</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#Resolve"><span class="nav-number">4.</span> <span class="nav-text">Resolve</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#参考文章"><span class="nav-number">5.</span> <span class="nav-text">参考文章:</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#转载请注明出处https-izsk-me"><span class="nav-number">6.</span> <span class="nav-text">转载请注明出处https://izsk.me</span></a></li></ol></div>
             
 
           </div>
