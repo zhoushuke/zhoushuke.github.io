@@ -100,7 +100,7 @@
 <meta property="og:image" content="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20200624140831.png">
 <meta property="og:image" content="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20200624142108.png">
 <meta property="og:image" content="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20200624190637.png">
-<meta property="og:updated_time" content="2020-06-24T12:00:26.805Z">
+<meta property="og:updated_time" content="2020-06-29T10:33:51.022Z">
 <meta name="twitter:card" content="summary">
 <meta name="twitter:title" content="Kubernetes学习(Sealed Secrets如何安全地将密码存储在git中)">
 <meta name="twitter:description" content="在Devops中经常面对的一个问题就是，如何将敏感信息保存在git中, 虽然kubernetes提供了secret，但它也只是Base64转换了一下, 任何人拿到这个串都可以反转出来，不安全. 在GitOps的流程上, 如何解决save everything on git but secrets的问题一直是个非常有趣的话题，而今天要说的Sealed Secrets就是一个很好的工具, 可以与Kub">
@@ -435,7 +435,7 @@
 <figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">kubeseal --format=yaml &lt; secret.yaml &gt; sealed-secret.yaml  --controller-namespace senserealty</span><br><span class="line"><span class="comment"># 默认情况下 controller是安装在kube-system下的, 如果指定在其它ns,则需要使用--controller-namespace</span></span><br></pre></td></tr></table></figure>
 <p>会在当前目录下生成sealed-secret.yaml，该文件内容已被加密，将该文件发布到集群中</p>
 <figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">kubectl apply -f sealed-secret.yaml</span><br></pre></td></tr></table></figure>
-<p>查看集群中的secret, 会发现secret也是被加密的</p>
+<p>查看集群中的secret, 会发现secret被解密成正常的secret(通过base64加密过后的)</p>
 <p><img src="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20200624140240.png" alt></p>
 <p>同样, 可以在controller中查看到日志，显示该secret被成功解密.</p>
 <p><img src="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20200624140831.png" alt></p>
@@ -545,6 +545,10 @@
 
           <div class="post-nav-prev post-nav-item">
             
+              <a href="/2020/06/28/Kubernetes-configmap-reference-var-from-secret/" rel="prev" title="Kubernetes学习(在configmap中引用secret)">
+                Kubernetes学习(在configmap中引用secret) <i class="fa fa-chevron-right"></i>
+              </a>
+            
           </div>
         </div>
       
@@ -611,7 +615,7 @@
           
             <div class="site-state-item site-state-posts">
               <a href="/archives">
-                <span class="site-state-item-count">128</span>
+                <span class="site-state-item-count">129</span>
                 <span class="site-state-item-name">日志</span>
               </a>
             </div>

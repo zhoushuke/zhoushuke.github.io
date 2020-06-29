@@ -1,6 +1,63 @@
 <?xml version="1.0" encoding="utf-8"?>
 <search>
   <entry>
+    <title>Kubernetes学习(在configmap中引用secret)</title>
+    <url>/2020/06/28/Kubernetes-configmap-reference-var-from-secret/</url>
+    <content><![CDATA[<p>使用kubernetes做为底层平台, 对于配置文件的部署形式, 如果没有统一的配置管理, 使用最多的就是configmap及secret</p>
+<p>但有时候只会将敏感的信息放在secret中，而大多数的配置会放在configmap, 这就造成要么把secret以env的形式存在于容器中,要么就以volumn的形式挂载到容器中, 需要从两个源来引用配置， 从本质上, configmap与secret是一个东西, 有时候会觉得这种场景其实可以优化到一个配置中， 官方到目前为止并不打算支持在configmap中引用secret, 这是在github上讨论的<a href="https://github.com/kubernetes/kubernetes/issues/79224" target="_blank" rel="noopener">issue</a></p>
+<a id="more"></a>
+<p>某天随便逛github时，发现一个可以实现该功能的开源库<a href="https://github.com/machinezone/configmapsecrets" target="_blank" rel="noopener">configmapsecrets</a>,它能够在configmap中引用secret中的变量, 最后生成一个完整的secret. 这样， 应用直接把这个secret挂载到指定路径即可, 同时，支持热更新.</p>
+<p>经过一番研究后，发现用在GitOps流程中还是非常方便的, 结合<a href="https://github.com/bitnami-labs/sealed-secrets" target="_blank" rel="noopener">SealedSecrets</a>对secret的加密， 两者结合更好的支持了配置安全，方便统一管理</p>
+<h3 id="原理"><a href="#原理" class="headerlink" title="原理"></a>原理</h3><p>原理非常简单，通过CRD来监控集群中特定资源(configmapSecret), 分析该资源引用的secret, 填充变量生成secret. </p>
+<p>同时为了支持多个实例，多实例之间的竞争关系, 使用了<code>sync.RWMutex</code></p>
+<h3 id="使用"><a href="#使用" class="headerlink" title="使用"></a>使用</h3><h4 id="安装CRD"><a href="#安装CRD" class="headerlink" title="安装CRD"></a>安装CRD</h4><p>按照github上的说明, 先生成CRD, 这里需要注意的是, 如果只想监视特定的ns中有效, 修改deployment.yaml中的容器的启动参数，</p>
+<p>添加<code>all-namespaces=false</code>，这样，configmapsecret只会处理这个ns中的对象</p>
+<p><code>kubectl apply -f manifest</code></p>
+<h4 id="secret"><a href="#secret" class="headerlink" title="secret"></a>secret</h4><figure class="highlight yaml"><table><tr><td class="code"><pre><span class="line"><span class="attr">apiVersion:</span> <span class="string">v1</span></span><br><span class="line"><span class="attr">kind:</span> <span class="string">Secret</span></span><br><span class="line"><span class="attr">metadata:</span></span><br><span class="line">  <span class="attr">name:</span> <span class="string">alertmanager-keys</span></span><br><span class="line">  <span class="attr">namespace:</span> <span class="string">monitoring</span></span><br><span class="line">  <span class="attr">labels:</span></span><br><span class="line">    <span class="attr">app:</span> <span class="string">alertmanager</span></span><br><span class="line"><span class="attr">stringData:</span> <span class="comment"># 使用stringData，不需要事先使用base64加密</span></span><br><span class="line">  <span class="attr">opsgenieKey:</span> <span class="string">9eccf784-bbad-11e9-9cb5-2a2ae2dbcce4xxxxyyyyyyzzzzz</span></span><br><span class="line">  <span class="attr">slackURL:</span> <span class="string">https://hooks.slack.com/services/EFNPN1/EVU44X/J51NVTYSKwuPtCz3yyyy</span></span><br><span class="line"><span class="attr">type:</span> <span class="string">Opaque</span></span><br></pre></td></tr></table></figure>
+<h4 id="ConfigmapSecret"><a href="#ConfigmapSecret" class="headerlink" title="ConfigmapSecret"></a>ConfigmapSecret</h4><figure class="highlight yaml"><table><tr><td class="code"><pre><span class="line"><span class="attr">apiVersion:</span> <span class="string">secrets.mz.com/v1alpha1</span></span><br><span class="line"><span class="attr">kind:</span> <span class="string">ConfigMapSecret</span></span><br><span class="line"><span class="attr">metadata:</span></span><br><span class="line">  <span class="attr">name:</span> <span class="string">alertmanager-config</span></span><br><span class="line">  <span class="attr">namespace:</span> <span class="string">monitoring</span></span><br><span class="line">  <span class="attr">labels:</span></span><br><span class="line">    <span class="attr">app:</span> <span class="string">alertmanager</span></span><br><span class="line"><span class="attr">spec:</span></span><br><span class="line">  <span class="attr">template:</span></span><br><span class="line">    <span class="attr">metadata:</span></span><br><span class="line">      <span class="attr">name:</span> <span class="string">alertmanager-config</span></span><br><span class="line">      <span class="attr">labels:</span></span><br><span class="line">        <span class="attr">app:</span> <span class="string">alertmanager</span></span><br><span class="line">    <span class="attr">data:</span></span><br><span class="line">      <span class="attr">alertmanager.yaml:</span> <span class="string">|</span></span><br><span class="line">          <span class="attr">global:</span></span><br><span class="line">            <span class="attr">resolve_timeout:</span> <span class="string">5m</span></span><br><span class="line">            <span class="attr">opsgenie_api_key:</span> <span class="string">$(OPSGENIE_API_KEY)</span>  <span class="comment"># 在 Var中定义</span></span><br><span class="line">            <span class="attr">slack_api_url:</span> <span class="string">$(SLACK_API_URL)</span></span><br><span class="line">            <span class="attr">special_how:</span> <span class="string">$(CONFIGMAP_HOW)</span></span><br><span class="line">            <span class="attr">special_type:</span> <span class="string">$(CONFIGMAP_TYPE)</span></span><br><span class="line">          <span class="attr">route:</span></span><br><span class="line">            <span class="attr">receiver:</span> <span class="string">default</span></span><br><span class="line">            <span class="attr">group_by:</span> <span class="string">["alertname",</span> <span class="string">"job"</span><span class="string">,</span> <span class="string">"team"</span><span class="string">]</span></span><br><span class="line">            <span class="attr">group_wait:</span> <span class="string">30s</span></span><br><span class="line">            <span class="attr">group_interval:</span> <span class="string">5m</span></span><br><span class="line">            <span class="attr">repeat_interval:</span> <span class="string">12h</span></span><br><span class="line">            <span class="attr">routes:</span></span><br><span class="line">              <span class="bullet">-</span> <span class="attr">receiver:</span> <span class="string">foobar-sre</span></span><br><span class="line">                <span class="attr">match:</span></span><br><span class="line">                  <span class="attr">team:</span> <span class="string">foobar-sre</span></span><br><span class="line">              <span class="bullet">-</span> <span class="attr">receiver:</span> <span class="string">widget-sre</span></span><br><span class="line">                <span class="attr">match:</span></span><br><span class="line">                  <span class="attr">team:</span> <span class="string">widget-sre</span></span><br><span class="line">          <span class="attr">receivers:</span></span><br><span class="line">            <span class="bullet">-</span> <span class="attr">name:</span> <span class="string">default</span></span><br><span class="line">              <span class="attr">slack_configs:</span></span><br><span class="line">                <span class="bullet">-</span> <span class="attr">channel:</span> <span class="string">unrouted-alerts</span></span><br><span class="line">            <span class="bullet">-</span> <span class="attr">name:</span> <span class="string">foobar-sre</span></span><br><span class="line">              <span class="attr">opsgenie_configs:</span></span><br><span class="line">                <span class="bullet">-</span> <span class="attr">responders:</span></span><br><span class="line">                    <span class="bullet">-</span> <span class="attr">name:</span> <span class="string">foobar-sre</span></span><br><span class="line">                      <span class="attr">type:</span> <span class="string">team</span></span><br><span class="line">              <span class="attr">slack_configs:</span></span><br><span class="line">                <span class="bullet">-</span> <span class="attr">channel:</span> <span class="string">foobar-sre-alerts</span></span><br><span class="line">            <span class="bullet">-</span> <span class="attr">name:</span> <span class="string">widget-sre</span></span><br><span class="line">              <span class="attr">opsgenie_configs:</span></span><br><span class="line">                <span class="bullet">-</span> <span class="attr">responders:</span></span><br><span class="line">                    <span class="bullet">-</span> <span class="attr">name:</span> <span class="string">widget-sre</span></span><br><span class="line">                      <span class="attr">type:</span> <span class="string">team</span></span><br><span class="line">              <span class="attr">slack_configs:</span></span><br><span class="line">                <span class="bullet">-</span> <span class="attr">channel:</span> <span class="string">widget-sre</span></span><br><span class="line">  <span class="attr">vars:</span></span><br><span class="line">    <span class="bullet">-</span> <span class="attr">name:</span> <span class="string">OPSGENIE_API_KEY</span></span><br><span class="line">      <span class="attr">secretValue:</span> <span class="comment"># 引用secret </span></span><br><span class="line">        <span class="attr">name:</span> <span class="string">alertmanager-keys</span> <span class="comment"># secret 名字</span></span><br><span class="line">        <span class="attr">key:</span> <span class="string">opsgenieKey</span> <span class="comment"># secret key</span></span><br><span class="line">    <span class="bullet">-</span> <span class="attr">name:</span> <span class="string">SLACK_API_URL</span></span><br><span class="line">      <span class="attr">secretValue:</span></span><br><span class="line">        <span class="attr">name:</span> <span class="string">alertmanager-keys</span></span><br><span class="line">        <span class="attr">key:</span> <span class="string">slackURL</span></span><br><span class="line">    <span class="bullet">-</span> <span class="attr">name:</span> <span class="string">CONFIGMAP_HOW</span> <span class="comment"># 引用configmap</span></span><br><span class="line">      <span class="attr">configMapValue:</span></span><br><span class="line">        <span class="attr">name:</span> <span class="string">special-config</span></span><br><span class="line">        <span class="attr">key:</span> <span class="string">special.how</span></span><br><span class="line">    <span class="bullet">-</span> <span class="attr">name:</span> <span class="string">CONFIGMAP_TYPE</span></span><br><span class="line">      <span class="attr">configMapValue:</span></span><br><span class="line">        <span class="attr">name:</span> <span class="string">special-config</span></span><br><span class="line">        <span class="attr">key:</span> <span class="string">special.type</span></span><br></pre></td></tr></table></figure>
+<p>vars中内容即是引用的变量, 上面引用的是secret, 当然也可以引用configmap.</p>
+<p><strong>注意: 引用的必须是同一ns中secret/configmap</strong></p>
+<p>使用命令生成以上2个对象</p>
+<figure class="highlight bash"><table><tr><td class="code"><pre><span class="line">kubectl apply -f secret.yaml</span><br><span class="line">kubectl apply -f confsec.yaml</span><br></pre></td></tr></table></figure>
+<p>最终会在同一ns中生成一个secret，名字跟ConfigMapSecret对象的名字相同， 当然secret的data数据是被base64加密的</p>
+<h3 id="其它测试"><a href="#其它测试" class="headerlink" title="其它测试"></a>其它测试</h3><ol>
+<li>如果修改引用的secret，会提示以下日志</li>
+</ol>
+<figure class="highlight bash"><table><tr><td class="code"><pre><span class="line">&#123;<span class="string">"level"</span>:<span class="string">"INFO"</span>,<span class="string">"time"</span>:<span class="string">"2020-06-28T03:52:57.386Z"</span>,<span class="string">"source"</span>:<span class="string">"controllers.controller.ConfigMapSecret"</span>,<span class="string">"caller"</span>:<span class="string">"controllers/configmapsecret_controller.go:271"</span>,<span class="string">"msg"</span>:<span class="string">"Updating Secret"</span>,<span class="string">"configmapsecret"</span>:<span class="string">"monitoring/alertmanager-config"</span>,<span class="string">"secret"</span>:<span class="string">"monitoring/alertmanager-config"</span>&#125;</span><br></pre></td></tr></table></figure>
+<ol start="2">
+<li>修改configmapsecret本身,会提示以下错误, 但并不影响</li>
+</ol>
+<figure class="highlight bash"><table><tr><td class="code"><pre><span class="line">&#123;<span class="string">"level"</span>:<span class="string">"ERROR"</span>,<span class="string">"time"</span>:<span class="string">"2020-06-28T03:50:08.555Z"</span>,<span class="string">"source"</span>:<span class="string">"controllers.controller.ConfigMapSecret"</span>,<span class="string">"caller"</span>:<span class="string">"controllers/configmapsecret_controller.go:462"</span>,<span class="string">"msg"</span>:<span class="string">"Unable to update status"</span>,<span class="string">"configmapsecret"</span>:<span class="string">"monitoring/alertmanager-config"</span>,<span class="string">"error"</span>:<span class="string">"Operation cannot be fulfilled on configmapsecrets.secrets.mz.com \"alertmanager-config\": the object has been modified; please apply your changes to the latest version and try again"</span></span><br></pre></td></tr></table></figure>
+<p>1、2两种情况最终的secret会跟着被修改</p>
+<ol start="3">
+<li>而如果直接修改最终生成的secret，修改完之后会立即被复原.</li>
+</ol>
+<figure class="highlight bash"><table><tr><td class="code"><pre><span class="line">&#123;<span class="string">"level"</span>:<span class="string">"INFO"</span>,<span class="string">"time"</span>:<span class="string">"2020-06-28T04:23:43.699Z"</span>,<span class="string">"source"</span>:<span class="string">"controllers.controller.ConfigMapSecret"</span>,<span class="string">"caller"</span>:<span class="string">"controllers/configmapsecret_controller.go:271"</span>,<span class="string">"msg"</span>:<span class="string">"Updating Secret"</span>,<span class="string">"configmapsecret"</span>:<span class="string">"monitoring/alertmanager-config"</span>,<span class="string">"secret"</span>:<span class="string">"monitoring/alertmanager-config"</span>&#125;</span><br></pre></td></tr></table></figure>
+<ol start="4">
+<li>删除configmapsecret, 则最终生成的secret也会被删除, 引用的secret则不会.</li>
+</ol>
+<h3 id="源码分析"><a href="#源码分析" class="headerlink" title="源码分析"></a>源码分析</h3><p>关键代码在<code>/pkg/controllers/configmapsecret_controller.go</code>中</p>
+<p>首先通过<code>SetupWithManager</code>启动manager， 该manager用于监控configmapsecret及secret</p>
+<p>关键函数<code>sync</code>用于同步相关资源的变更，通过对比OwnerReferences的UID来判断是否有变更，它调用<code>renderSecret</code>根据configmapsecret及引用的secret/configmap来渲染生成最终的secret</p>
+<p>而处理引用变量的逻辑则是在<code>makeVariables</code>函数</p>
+<h3 id="不足"><a href="#不足" class="headerlink" title="不足"></a>不足</h3><p>如果使用容器平台，如rancher, UI上不支持显示crd， 因此configmapsecret无法显示在页面上.</p>
+<p>如果最终生成的形式为secret， 被base64编码，不能够直观地显示配置, 如果能够直接生成configmap，我觉得更合理</p>
+<p>但生成的secret也不影响这个库用于GitOps中，结合<a href="https://github.com/bitnami-labs/sealed-secrets" target="_blank" rel="noopener">SealedSecrets</a>对secret的加密处理, 至此可以实现整个资源端到端的闭环.</p>
+<h3 id="参考文章"><a href="#参考文章" class="headerlink" title="参考文章:"></a><strong>参考文章:</strong></h3><blockquote>
+<ul>
+<li><a href="https://github.com/kubernetes/kubernetes/issues/79224" target="_blank" rel="noopener">https://github.com/kubernetes/kubernetes/issues/79224</a></li>
+<li><a href="https://github.com/machinezone/configmapsecrets" target="_blank" rel="noopener">https://github.com/machinezone/configmapsecrets</a></li>
+</ul>
+</blockquote>
+<h3 id="转载请注明出处https-izsk-me"><a href="#转载请注明出处https-izsk-me" class="headerlink" title="转载请注明出处https://izsk.me"></a><strong>转载请注明出处<a href="https://izsk.me" target="_blank" rel="noopener">https://izsk.me</a></strong></h3>]]></content>
+      <categories>
+        <category>Kubernetes</category>
+      </categories>
+      <tags>
+        <tag>Kubernetes</tag>
+      </tags>
+  </entry>
+  <entry>
     <title>Kubernetes学习(Sealed Secrets如何安全地将密码存储在git中)</title>
     <url>/2020/06/24/Kubernetes-sealed-secrets/</url>
     <content><![CDATA[<p>在Devops中经常面对的一个问题就是，如何将敏感信息保存在git中, 虽然kubernetes提供了secret，但它也只是Base64转换了一下, 任何人拿到这个串都可以反转出来，不安全.</p>
@@ -37,7 +94,7 @@
 <figure class="highlight bash"><table><tr><td class="code"><pre><span class="line">kubeseal --format=yaml &lt; secret.yaml &gt; sealed-secret.yaml  --controller-namespace senserealty</span><br><span class="line"><span class="comment"># 默认情况下 controller是安装在kube-system下的, 如果指定在其它ns,则需要使用--controller-namespace</span></span><br></pre></td></tr></table></figure>
 <p>会在当前目录下生成sealed-secret.yaml，该文件内容已被加密，将该文件发布到集群中</p>
 <figure class="highlight bash"><table><tr><td class="code"><pre><span class="line">kubectl apply -f sealed-secret.yaml</span><br></pre></td></tr></table></figure>
-<p>查看集群中的secret, 会发现secret也是被加密的</p>
+<p>查看集群中的secret, 会发现secret被解密成正常的secret(通过base64加密过后的)</p>
 <p><img src="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20200624140240.png" alt></p>
 <p>同样, 可以在controller中查看到日志，显示该secret被成功解密.</p>
 <p><img src="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20200624140831.png" alt></p>
@@ -4548,74 +4605,6 @@
       </tags>
   </entry>
   <entry>
-    <title>记一次排查ES FGC导致的集群宕机异常</title>
-    <url>/2019/10/06/ES-FGC-Fix/</url>
-    <content><![CDATA[<p>有一个私有云环境的运维同事反应项目中的ES集群无法查询, 由于是私有云环境, 没有直接运维权限, 所以没有接收到一线报警, 远程登录上去后发现ES集群已经宕机了, 这次的排查过程也发现了几个比较容易忽视的细节, 在此记录一下,比较有意思.</p>
-<a id="more"></a>
-<h3 id="集群状态"><a href="#集群状态" class="headerlink" title="集群状态"></a>集群状态</h3><p>ES集群为3节点.</p>
-<p>首先肯定是查看集群状态</p>
-<figure class="highlight bash"><table><tr><td class="code"><pre><span class="line">curl <span class="string">'http://localhost:9200/_cluster/health?pretty'</span> -u xxx:yyy</span><br><span class="line"><span class="comment">#发现状态为Red</span></span><br></pre></td></tr></table></figure>
-<p>查看节点状态</p>
-<figure class="highlight bash"><table><tr><td class="code"><pre><span class="line">curl <span class="string">'http://localhost:9200/_cat/node?v'</span> -u xxx:yyy</span><br><span class="line"><span class="comment">#节点数正常</span></span><br></pre></td></tr></table></figure>
-<p>查看各节点使用的磁盘情况</p>
-<figure class="highlight bash"><table><tr><td class="code"><pre><span class="line">curl -XGET <span class="string">'localhost:9200/_cat/allocation?v&amp;pretty'</span> -u xxx:yyy</span><br><span class="line"><span class="comment">#未发现异常</span></span><br></pre></td></tr></table></figure>
-<h3 id="集群日志"><a href="#集群日志" class="headerlink" title="集群日志"></a>集群日志</h3><p>登录一个ES节点查看日志，发现以下报错，查看其它2个节点，情况相同</p>
-<p><img src="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20200204134510.png" alt></p>
-<p>从日志来看, 可以发现几个问题:</p>
-<blockquote>
-<ul>
-<li>Full GC很频繁, 而且时间也非常的长 </li>
-<li>每次GC完之后所能释放的内存非常有限</li>
-</ul>
-</blockquote>
-<p>到这，其它原因已经很明朗, <strong>内存不够导致的full gc 频繁，但是又不能释放太多的空间，又导致full gc的恶意循环</strong></p>
-<p>如果大家对gc的日志不很了解的话, 这里解释下上面日志的各个字段含义, 假如有以下一条gc日志</p>
-<figure class="highlight bash"><table><tr><td class="code"><pre><span class="line">[2018-06-30T17:57:29,020][INFO ][o.e.m.j.JvmGcMonitorService] [qoo--ES] [gc][old][228385][160772] duration [5s], collections [1]/[5.1s], total [5s]/[4.4d], memory [945.4mb]-&gt;[958.5mb]/[1007.3mb], all_pools &#123;[young] [87.8mb]-&gt;[100.9mb]/[133.1mb]&#125;&#123;[survivor] [0b]-&gt;[0b]/[16.6mb]&#125;&#123;[old] [857.6mb]-&gt;[857.6mb]/[857.6mb]&#125;</span><br></pre></td></tr></table></figure>
-<ul>
-<li><strong>gc old</strong> 本次是 old GC 这是第228385次 GC 检查][从 JVM 启动至今发生的第 160772次 G]</li>
-<li><strong>duration</strong> [本次检查到的 GC 总耗时 <strong>5</strong> 秒，可能是多次的加和</li>
-<li><strong>collections</strong> [从上次检查至今总共发生<strong>1</strong>次GC]/[从上次检查至今已过去 <strong>5.1</strong> 秒],</li>
-<li><strong>total</strong> [本次检查到的 GC 总耗时为 <strong>5</strong> 秒]/[从 JVM 启动至今发生的 GC 总耗时为 <strong>4.4</strong> 天]，</li>
-<li><strong>memory</strong> [ GC 前 Heap memory 空间]-&gt;[GC 后 Heap memory 空间]/[Heap memory 总空间],</li>
-<li><strong>all_pools</strong>(分代部分的详情) {young 区][GC 前 Memory ]-&gt;[GC后 Memory]/[young区 Memory 总大小] }</li>
-<li><strong>survivor</strong> [GC 前 Memory ]-&gt;[GC后 Memory]/[Memory 总大小] }{old 区[GC 前 Memory ]-&gt;[GC后 Memory]/[old区 Memory 总大小] }</li>
-</ul>
-<p>那为何会内存不足呢, 想起前几天服务拓展，添加收集了几个服务的日志, 日志量不算小, 而且这3个ES节点所在的机器内存只分配了8个G, 显然, 加完这几个日志之后内存不够用了.</p>
-<h3 id="Index-Mapping"><a href="#Index-Mapping" class="headerlink" title="Index Mapping"></a>Index Mapping</h3><p>而且，从日志中， 还发现几处很诡异的日志</p>
-<p><img src="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20200204141415.png" alt></p>
-<p>红框中的错误: <strong>object mapping for [msg] tried to pasrse field [msg] as object, but found a concrete</strong></p>
-<p>翻译过来就是说, 日志中的msg这个字段的类型匹配不上, ES尽力把它解析为object类型，但是它却是个确切的值.</p>
-<p>就好比你在python中定义了一个字典, 但是你给它赋值一个整形, 这确定要报错.</p>
-<p>但是这个mapping是从何而来的呢.</p>
-<p>经过网上搜索一翻, 终于明白:</p>
-<p>ES中为了加强性能，对于索引中的<strong>第一条数据, ES会默认(可设置)按照这条数据建立index mapping, 相当于是一个索引模板, 好比是mysql中表的定义一个概念, 后续这个索引中的所有日志都按照该模板进行解析</strong></p>
-<p>后来经过查看源码, 我们发现，出现上图中的问题是因为代码中的日志打印不规范, 有一个地方如果抛出异常时，打印的是一个单一字符串, 而正常情况下打印的是一个json, 所以当第一条正常的日志传递给ES时，ES建立的索引 模板记录这个字段为object类型(可以类比为python中的字典, 本身是可以新增元素的), 当应用抛出异常时，日志中又传递了一个单一字符串, 但是索引模板已经记录为object类型，所以无法匹配, 这就是问题所在</p>
-<h3 id="Fix-Bug"><a href="#Fix-Bug" class="headerlink" title="Fix Bug"></a>Fix Bug</h3><p>从3个方面解决上面的问题</p>
-<p>首先是修复代码中日志不规范问题, 这个充暴露了code view不严谨.</p>
-<p>第2个是加大ES的内存,毕竟日志量确实是上来了, 从8G添加到12G</p>
-<p>第3个是优化ES的gc问题, ES中有个逻辑是：<strong>默认情况下，主节点每30秒会去检查其他节点的状态，如果任何节点的垃圾回收时间超过30秒（Garbage collection duration）且在重复次数内都超时，则会导致主节点任务该节点脱离集群, 节点脱离集群后会引起分片的rebalance</strong></p>
-<p>这个机制让ES节点频繁的脱离集群，而又引起整个集群的rebalance，ES本身的内存就不够，rebalance更是雪上加霜, 如此往复就导致整个ES集群宕机.</p>
-<p>可修改主节点的检查时间及重复次数,让其它节点有充分的时间进行full gc.</p>
-<p>在ES的配置文件中添加以下配置:</p>
-<figure class="highlight yml"><table><tr><td class="code"><pre><span class="line"><span class="attr">discovery.zen.fd.ping_timeout:</span> <span class="string">300s</span></span><br><span class="line"><span class="attr">discovery.zen.fd.ping_retriES:</span> <span class="number">10</span></span><br></pre></td></tr></table></figure>
-<p>这样, 达到这两个条件时才能触发节点脱离集群</p>
-<p>至此, 依次重启ES节点, 问题圆满解决.</p>
-<h3 id="参考文章"><a href="#参考文章" class="headerlink" title="参考文章:"></a><strong>参考文章:</strong></h3><blockquote>
-<ul>
-<li><a href="https://www.elastic.co/guide/en/elasticsearch/reference/current/mapping.html" target="_blank" rel="noopener">elasticsearch index mapping</a></li>
-<li><a href="https://blog.csdn.net/sinat_35930259/article/details/80354732" target="_blank" rel="noopener">elasticsearch篇之mapping</a></li>
-<li><a href="https://segmentfault.com/a/1190000016494488" target="_blank" rel="noopener">你看懂 Elasticsearch Log 中的 GC 日志了吗？</a></li>
-</ul>
-</blockquote>
-<h3 id="转载请注明出处https-izsk-me"><a href="#转载请注明出处https-izsk-me" class="headerlink" title="转载请注明出处https://izsk.me"></a><strong>转载请注明出处<a href="https://izsk.me" target="_blank" rel="noopener">https://izsk.me</a></strong></h3>]]></content>
-      <categories>
-        <category>FELK</category>
-      </categories>
-      <tags>
-        <tag>FELK</tag>
-      </tags>
-  </entry>
-  <entry>
     <title>CockRoachDB学习(架构)</title>
     <url>/2019/10/06/CockroachDB-Struct/</url>
     <content><![CDATA[<p>项目中需要一个分布式数据库用于存储业务的KV数据, 在前期项目调研结合业务比对了业界常用的KV数据库模型后, 最后选择了CockRoachDB(CRDB).</p>
@@ -4750,6 +4739,74 @@
       </categories>
       <tags>
         <tag>分布式架构</tag>
+      </tags>
+  </entry>
+  <entry>
+    <title>记一次排查ES FGC导致的集群宕机异常</title>
+    <url>/2019/10/06/ES-FGC-Fix/</url>
+    <content><![CDATA[<p>有一个私有云环境的运维同事反应项目中的ES集群无法查询, 由于是私有云环境, 没有直接运维权限, 所以没有接收到一线报警, 远程登录上去后发现ES集群已经宕机了, 这次的排查过程也发现了几个比较容易忽视的细节, 在此记录一下,比较有意思.</p>
+<a id="more"></a>
+<h3 id="集群状态"><a href="#集群状态" class="headerlink" title="集群状态"></a>集群状态</h3><p>ES集群为3节点.</p>
+<p>首先肯定是查看集群状态</p>
+<figure class="highlight bash"><table><tr><td class="code"><pre><span class="line">curl <span class="string">'http://localhost:9200/_cluster/health?pretty'</span> -u xxx:yyy</span><br><span class="line"><span class="comment">#发现状态为Red</span></span><br></pre></td></tr></table></figure>
+<p>查看节点状态</p>
+<figure class="highlight bash"><table><tr><td class="code"><pre><span class="line">curl <span class="string">'http://localhost:9200/_cat/node?v'</span> -u xxx:yyy</span><br><span class="line"><span class="comment">#节点数正常</span></span><br></pre></td></tr></table></figure>
+<p>查看各节点使用的磁盘情况</p>
+<figure class="highlight bash"><table><tr><td class="code"><pre><span class="line">curl -XGET <span class="string">'localhost:9200/_cat/allocation?v&amp;pretty'</span> -u xxx:yyy</span><br><span class="line"><span class="comment">#未发现异常</span></span><br></pre></td></tr></table></figure>
+<h3 id="集群日志"><a href="#集群日志" class="headerlink" title="集群日志"></a>集群日志</h3><p>登录一个ES节点查看日志，发现以下报错，查看其它2个节点，情况相同</p>
+<p><img src="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20200204134510.png" alt></p>
+<p>从日志来看, 可以发现几个问题:</p>
+<blockquote>
+<ul>
+<li>Full GC很频繁, 而且时间也非常的长 </li>
+<li>每次GC完之后所能释放的内存非常有限</li>
+</ul>
+</blockquote>
+<p>到这，其它原因已经很明朗, <strong>内存不够导致的full gc 频繁，但是又不能释放太多的空间，又导致full gc的恶意循环</strong></p>
+<p>如果大家对gc的日志不很了解的话, 这里解释下上面日志的各个字段含义, 假如有以下一条gc日志</p>
+<figure class="highlight bash"><table><tr><td class="code"><pre><span class="line">[2018-06-30T17:57:29,020][INFO ][o.e.m.j.JvmGcMonitorService] [qoo--ES] [gc][old][228385][160772] duration [5s], collections [1]/[5.1s], total [5s]/[4.4d], memory [945.4mb]-&gt;[958.5mb]/[1007.3mb], all_pools &#123;[young] [87.8mb]-&gt;[100.9mb]/[133.1mb]&#125;&#123;[survivor] [0b]-&gt;[0b]/[16.6mb]&#125;&#123;[old] [857.6mb]-&gt;[857.6mb]/[857.6mb]&#125;</span><br></pre></td></tr></table></figure>
+<ul>
+<li><strong>gc old</strong> 本次是 old GC 这是第228385次 GC 检查][从 JVM 启动至今发生的第 160772次 G]</li>
+<li><strong>duration</strong> [本次检查到的 GC 总耗时 <strong>5</strong> 秒，可能是多次的加和</li>
+<li><strong>collections</strong> [从上次检查至今总共发生<strong>1</strong>次GC]/[从上次检查至今已过去 <strong>5.1</strong> 秒],</li>
+<li><strong>total</strong> [本次检查到的 GC 总耗时为 <strong>5</strong> 秒]/[从 JVM 启动至今发生的 GC 总耗时为 <strong>4.4</strong> 天]，</li>
+<li><strong>memory</strong> [ GC 前 Heap memory 空间]-&gt;[GC 后 Heap memory 空间]/[Heap memory 总空间],</li>
+<li><strong>all_pools</strong>(分代部分的详情) {young 区][GC 前 Memory ]-&gt;[GC后 Memory]/[young区 Memory 总大小] }</li>
+<li><strong>survivor</strong> [GC 前 Memory ]-&gt;[GC后 Memory]/[Memory 总大小] }{old 区[GC 前 Memory ]-&gt;[GC后 Memory]/[old区 Memory 总大小] }</li>
+</ul>
+<p>那为何会内存不足呢, 想起前几天服务拓展，添加收集了几个服务的日志, 日志量不算小, 而且这3个ES节点所在的机器内存只分配了8个G, 显然, 加完这几个日志之后内存不够用了.</p>
+<h3 id="Index-Mapping"><a href="#Index-Mapping" class="headerlink" title="Index Mapping"></a>Index Mapping</h3><p>而且，从日志中， 还发现几处很诡异的日志</p>
+<p><img src="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20200204141415.png" alt></p>
+<p>红框中的错误: <strong>object mapping for [msg] tried to pasrse field [msg] as object, but found a concrete</strong></p>
+<p>翻译过来就是说, 日志中的msg这个字段的类型匹配不上, ES尽力把它解析为object类型，但是它却是个确切的值.</p>
+<p>就好比你在python中定义了一个字典, 但是你给它赋值一个整形, 这确定要报错.</p>
+<p>但是这个mapping是从何而来的呢.</p>
+<p>经过网上搜索一翻, 终于明白:</p>
+<p>ES中为了加强性能，对于索引中的<strong>第一条数据, ES会默认(可设置)按照这条数据建立index mapping, 相当于是一个索引模板, 好比是mysql中表的定义一个概念, 后续这个索引中的所有日志都按照该模板进行解析</strong></p>
+<p>后来经过查看源码, 我们发现，出现上图中的问题是因为代码中的日志打印不规范, 有一个地方如果抛出异常时，打印的是一个单一字符串, 而正常情况下打印的是一个json, 所以当第一条正常的日志传递给ES时，ES建立的索引 模板记录这个字段为object类型(可以类比为python中的字典, 本身是可以新增元素的), 当应用抛出异常时，日志中又传递了一个单一字符串, 但是索引模板已经记录为object类型，所以无法匹配, 这就是问题所在</p>
+<h3 id="Fix-Bug"><a href="#Fix-Bug" class="headerlink" title="Fix Bug"></a>Fix Bug</h3><p>从3个方面解决上面的问题</p>
+<p>首先是修复代码中日志不规范问题, 这个充暴露了code view不严谨.</p>
+<p>第2个是加大ES的内存,毕竟日志量确实是上来了, 从8G添加到12G</p>
+<p>第3个是优化ES的gc问题, ES中有个逻辑是：<strong>默认情况下，主节点每30秒会去检查其他节点的状态，如果任何节点的垃圾回收时间超过30秒（Garbage collection duration）且在重复次数内都超时，则会导致主节点任务该节点脱离集群, 节点脱离集群后会引起分片的rebalance</strong></p>
+<p>这个机制让ES节点频繁的脱离集群，而又引起整个集群的rebalance，ES本身的内存就不够，rebalance更是雪上加霜, 如此往复就导致整个ES集群宕机.</p>
+<p>可修改主节点的检查时间及重复次数,让其它节点有充分的时间进行full gc.</p>
+<p>在ES的配置文件中添加以下配置:</p>
+<figure class="highlight yml"><table><tr><td class="code"><pre><span class="line"><span class="attr">discovery.zen.fd.ping_timeout:</span> <span class="string">300s</span></span><br><span class="line"><span class="attr">discovery.zen.fd.ping_retriES:</span> <span class="number">10</span></span><br></pre></td></tr></table></figure>
+<p>这样, 达到这两个条件时才能触发节点脱离集群</p>
+<p>至此, 依次重启ES节点, 问题圆满解决.</p>
+<h3 id="参考文章"><a href="#参考文章" class="headerlink" title="参考文章:"></a><strong>参考文章:</strong></h3><blockquote>
+<ul>
+<li><a href="https://www.elastic.co/guide/en/elasticsearch/reference/current/mapping.html" target="_blank" rel="noopener">elasticsearch index mapping</a></li>
+<li><a href="https://blog.csdn.net/sinat_35930259/article/details/80354732" target="_blank" rel="noopener">elasticsearch篇之mapping</a></li>
+<li><a href="https://segmentfault.com/a/1190000016494488" target="_blank" rel="noopener">你看懂 Elasticsearch Log 中的 GC 日志了吗？</a></li>
+</ul>
+</blockquote>
+<h3 id="转载请注明出处https-izsk-me"><a href="#转载请注明出处https-izsk-me" class="headerlink" title="转载请注明出处https://izsk.me"></a><strong>转载请注明出处<a href="https://izsk.me" target="_blank" rel="noopener">https://izsk.me</a></strong></h3>]]></content>
+      <categories>
+        <category>FELK</category>
+      </categories>
+      <tags>
+        <tag>FELK</tag>
       </tags>
   </entry>
   <entry>
