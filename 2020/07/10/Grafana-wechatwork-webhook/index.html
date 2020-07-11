@@ -68,7 +68,7 @@
 <link href="/css/main.css?v=5.1.0" rel="stylesheet" type="text/css">
 
 
-  <meta name="keywords" content="Http-Tcp-Ip,">
+  <meta name="keywords" content="CloudNavi,">
 
 
 
@@ -86,22 +86,22 @@
 
 
 
-<meta name="description" content="今天在测试服务器上压测时发现并发数不在正常范围,使用netstat查看tcp连接存在很多连接的状态为time_wait状态,比established多很多,这是个不正常的现象,time_wait是什么鬼？ netstat -n | awk &amp;#39;/^tcp/ {++state[$NF]} END {for(key in state) print key,&amp;quot;\t&amp;quot;,state">
-<meta name="keywords" content="Http-Tcp-Ip">
+<meta name="description" content="grafana支持的告警方式很多种, 偏偏不直接支持wechat">
+<meta name="keywords" content="CloudNavi">
 <meta property="og:type" content="article">
-<meta property="og:title" content="TCP协议中四次分手的time_wait状态">
-<meta property="og:url" content="https://zhoushuke.github.io/2017/11/12/TCP协议中四次分手的time_wait状态/index.html">
+<meta property="og:title" content="Grafana学习(使用webhook实现微信图文告警)">
+<meta property="og:url" content="https://zhoushuke.github.io/2020/07/10/Grafana-wechatwork-webhook/index.html">
 <meta property="og:site_name" content="Z.S.K.&#39;s Records">
-<meta property="og:description" content="今天在测试服务器上压测时发现并发数不在正常范围,使用netstat查看tcp连接存在很多连接的状态为time_wait状态,比established多很多,这是个不正常的现象,time_wait是什么鬼？ netstat -n | awk &amp;#39;/^tcp/ {++state[$NF]} END {for(key in state) print key,&amp;quot;\t&amp;quot;,state">
+<meta property="og:description" content="grafana支持的告警方式很多种, 偏偏不直接支持wechat">
 <meta property="og:locale" content="zh-Hans">
-<meta property="og:image" content="http://zskgithubblog.oss-cn-beijing.aliyuncs.com/blogpic/tcp_timewait1.png">
-<meta property="og:image" content="http://zskgithubblog.oss-cn-beijing.aliyuncs.com/blogpic/tcp_timewait2.png">
-<meta property="og:image" content="http://zskgithubblog.oss-cn-beijing.aliyuncs.com/blogpic/tcp_timewait3.png">
-<meta property="og:updated_time" content="2020-01-14T12:12:54.308Z">
+<meta property="og:image" content="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20200711192627.png">
+<meta property="og:image" content="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20200711193159.png">
+<meta property="og:image" content="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20200711193350.png">
+<meta property="og:updated_time" content="2020-07-11T11:42:32.162Z">
 <meta name="twitter:card" content="summary">
-<meta name="twitter:title" content="TCP协议中四次分手的time_wait状态">
-<meta name="twitter:description" content="今天在测试服务器上压测时发现并发数不在正常范围,使用netstat查看tcp连接存在很多连接的状态为time_wait状态,比established多很多,这是个不正常的现象,time_wait是什么鬼？ netstat -n | awk &amp;#39;/^tcp/ {++state[$NF]} END {for(key in state) print key,&amp;quot;\t&amp;quot;,state">
-<meta name="twitter:image" content="http://zskgithubblog.oss-cn-beijing.aliyuncs.com/blogpic/tcp_timewait1.png">
+<meta name="twitter:title" content="Grafana学习(使用webhook实现微信图文告警)">
+<meta name="twitter:description" content="grafana支持的告警方式很多种, 偏偏不直接支持wechat">
+<meta name="twitter:image" content="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20200711192627.png">
 
 
 
@@ -129,13 +129,13 @@
 
 
 
-  <link rel="canonical" href="https://zhoushuke.github.io/2017/11/12/TCP协议中四次分手的time_wait状态/">
+  <link rel="canonical" href="https://zhoushuke.github.io/2020/07/10/Grafana-wechatwork-webhook/">
 
 
 
 
 
-  <title> TCP协议中四次分手的time_wait状态 | Z.S.K.'s Records </title>
+  <title> Grafana学习(使用webhook实现微信图文告警) | Z.S.K.'s Records </title>
 </head>
 
 <body itemscope itemtype="http://schema.org/WebPage" lang="zh-Hans">
@@ -301,7 +301,7 @@
   
 
   <article class="post post-type-normal " itemscope itemtype="http://schema.org/Article">
-  <link itemprop="mainEntityOfPage" href="https://zhoushuke.github.io/2017/11/12/TCP协议中四次分手的time_wait状态/">
+  <link itemprop="mainEntityOfPage" href="https://zhoushuke.github.io/2020/07/10/Grafana-wechatwork-webhook/">
 
   <span style="display:none" itemprop="author" itemscope itemtype="http://schema.org/Person">
     <meta itemprop="name" content="Z.S.K.">
@@ -325,7 +325,7 @@
             
             
               
-                TCP协议中四次分手的time_wait状态
+                Grafana学习(使用webhook实现微信图文告警)
               
             
           </h1>
@@ -340,8 +340,8 @@
               
                 <span class="post-meta-item-text">发表于</span>
               
-              <time title="Post created" itemprop="dateCreated datePublished" datetime="2017-11-12T18:20:53+08:00">
-                2017-11-12
+              <time title="Post created" itemprop="dateCreated datePublished" datetime="2020-07-10T21:30:53+08:00">
+                2020-07-10
               </time>
             
 
@@ -363,8 +363,8 @@
               
               
                 <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
-                  <a href="/categories/Http-Tcp-Ip/" itemprop="url" rel="index">
-                    <span itemprop="name">Http-Tcp-Ip</span>
+                  <a href="/categories/CloudNavi/" itemprop="url" rel="index">
+                    <span itemprop="name">CloudNavi</span>
                   </a>
                 </span>
 
@@ -398,55 +398,54 @@
       
 
       
-        <p>今天在测试服务器上压测时发现并发数不在正常范围,使用netstat查看tcp连接存在很多连接的状态为time_wait状态,比established多很多,这是个不正常的现象,time_wait是什么鬼？</p>
-<p><code>netstat -n | awk &#39;/^tcp/ {++state[$NF]} END {for(key in state) print key,&quot;\t&quot;,state[key]}&#39;</code></p>
+        <p>grafana支持的告警方式很多种, 偏偏不直接支持<code>wechat</code></p>
 <a id="more"></a>
-<h3 id="三次握手"><a href="#三次握手" class="headerlink" title="三次握手"></a><strong>三次握手</strong></h3><p>这里还得从tcp的四次分手说起,在这之前,稍微带上三次握手的状态转变:</p>
-<p><img src="http://zskgithubblog.oss-cn-beijing.aliyuncs.com/blogpic/tcp_timewait1.png" alt="tcp_timewait1"></p>
-<p>三次握手不是这篇笔记的重点,这里只扯一个问题:</p>
-<p><code>为什么需要3次握手而不是2次就够?</code></p>
-<p>以下引用谢希仁版《计算机网络》中的话:</p>
-<p>“已失效的连接请求报文段”的产生在这样一种情况下:client发出的第一个连接请求报文段并没有丢失,而是在某个网络结点长时间的滞留了,以致延误到连接释放以后的某个时间才到达server.本来这是一个早已失效的报文段.但server收到此失效的连接请求报文段后,就误认为是client再次发出的一个新的连接请求.于是就向client发出确认报文段,同意建立连接.假设不采用“三次握手”,那么只要server发出确认,新的连接就建立了.由于现在client并没有发出建立连接的请求,因此不会理睬server的确认,也不会向server发送数据.但server却以为新的运输连接已经建立,并一直等待client发来数据.这样,server的很多资源就白白浪费掉了.采用“三次握手”的办法可以防止上述现象发生.例如刚才那种情况,client不会向server的确认发出确认.server由于收不到确认,就知道client并没有要求建立连接.”</p>
-<p>总结一句话就是:</p>
-<p><strong>防止已经失效的请求再次到达服务端导致服务器连接资源浪费.</strong></p>
-<p>注:失效的连接请求：若客户端向服务端发送的连接请求丢失,客户端等待应答超时后就会再次发送连接请求,此时,上一个连接请求就是『失效的』</p>
-<h3 id="四次分手"><a href="#四次分手" class="headerlink" title="四次分手"></a><strong>四次分手</strong></h3><p>tcp的四次分手过程如下:</p>
-<p><img src="http://zskgithubblog.oss-cn-beijing.aliyuncs.com/blogpic/tcp_timewait2.png" alt="tcp_timewait2"></p>
-<p>这里说一下,在实际环境下,FIN-WAIT1的状态其实很难看见,这是因为当有一端请求close时,会很快得到对方ACK,所以FIN-WAIT1有状态很快的会变成FIN-WAIT2,我们这里重点关注Time-Wait状态的2MSL(Maximum Segment Lifetime )</p>
-<h3 id="TIME-WAIT"><a href="#TIME-WAIT" class="headerlink" title="TIME-WAIT"></a><strong>TIME-WAIT</strong></h3><p>每个具体TCP实现必须选择一个报文段最大生存时间MSL(Maximum Segment Lifetime),它是任何报文段被丢弃前在网络内的最长时间,我们知道这个时间是有限的,因为TCP报文段以IP数据报在网络内传输,而IP数据报则有限制其生存时间的TTL(time to live)字段,TTL为8位,所以最大值为255,我们来看下ip数据报头的格式:</p>
-<p><img src="http://zskgithubblog.oss-cn-beijing.aliyuncs.com/blogpic/tcp_timewait3.png" alt="tcp_timewait3"></p>
-<p>我们姑且认为ip数据报在网络中每经过一个跳数TTL字段-1,最后减到0时则会丢弃这个数据报,(或者这样理解:一个IP数据报可以经过的最大路由数,每经过一个处理他的路由器此值就减1,当此值为0则数据报将被丢弃,同时发送ICMP报文通知源主机)一般情况下,具有最大跳数(255)的分组在网络中的存活时间不可能超过MSL,所以这里设置为2MSL就可以确保TCP的可靠性.</p>
-<h3 id="必要性"><a href="#必要性" class="headerlink" title="必要性"></a><strong>必要性</strong></h3><blockquote>
-<ul>
-<li>我们没有任何机制保证最后的一个ACK能够正常传输</li>
-<li>网络上仍然有可能有残余的数据包(wandering duplicates),我们也必须能够正常处理TCP是建立在不可靠网络上的可靠的协议.</li>
-</ul>
-</blockquote>
-<p>1.假设最后一个ACK丢失了,被动关闭一方会重发它的FIN。主动关闭一方必须维持一个有效状态信息（TIMEWAIT状态下维持）,以便能够重发ACK。如果主动关闭的socket不维持这种状态而进入CLOSED状态,那么主动关闭的socket在处于CLOSED状态时,接收到FIN后将会响应一个RST。被动关闭一方接收到RST后会认为出错了。如果TCP协议想要正常完成必要的操作而终止双方的数据流传输,就必须完全正确的传输四次握手的四个节,不能有任何的丢失。这就是为什么socket在关闭后,仍然处于TIME_WAIT状态的第一个原因,因为他要等待以便重发ACK。<br>2.假设目前连接的通信双方都已经调用了close(),双方同时进入CLOSED的终结状态,而没有走TIME_WAIT状态。会出现如下问题,现在有一个新的连接被建立起来,使用的IP地址与端口与先前的完全相同,后建立的连接是原先连接的一个完全复用。还假定原先的连接中有数据报残存于网络之中,这样新的连接收到的数据报中有可能是先前连接的数据报。为了防止这一点,TCP不允许新连接复用TIME_WAIT状态下的socket。处于TIME_WAIT状态的socket在等待两倍的MSL时间以后（之所以是两倍的MSL,是由于MSL是一个数据报在网络中单向发出到认定丢失的时间,一个数据报有可能在发送途中或是其响应过程中成为残余数据报,确认一个数据报及其响应的丢弃的需要两倍的MSL）,将会转变为CLOSED状态。这就意味着,一个成功建立的连接,必然使得先前网络中残余的数据报都丢失了.</p>
-<h3 id="负作用"><a href="#负作用" class="headerlink" title="负作用"></a><strong>负作用</strong></h3><p>处于Time-Wait状态的连接必须等待2MSL的时间才能变成CLOSED,RFC 793指出MSL时间为2分钟,2MSL就为4分钟,在这个时间内,这个连接处于不可用状态,也就是不能被复用,只能干等着这个时间结束后再新建新的连接,这对应用程序来说是个巨大的浪费,特别是对于短连接类的应用来说,更是性能的一大损耗,那有什么办法来缩短这个时间或者复用这个连接呢?</p>
-<p>当然是有的,linux下可通过修改内核的配置来做到快回收重复用time-wait:</p>
-<figure class="highlight shell"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">#</span><span class="bash">vim /etc/sysctl.conf</span></span><br><span class="line"></span><br><span class="line">net.ipv4.tcp_tw_reuse = 1</span><br><span class="line">net.ipv4.tcp_tw_recycle = 1</span><br><span class="line"><span class="meta">#</span><span class="bash">主要是就是上面两个,下面的这些参数可根据实际情况是否开启</span></span><br><span class="line"><span class="meta">#</span><span class="bash">net.ipv4.tcp_fin_timeout = 30</span></span><br><span class="line"><span class="meta">#</span><span class="bash">net.ipv4.tcp_keepalive_time = 1800</span></span><br><span class="line"><span class="meta">#</span><span class="bash">net.ipv4.tcp_syncookies = 1</span></span><br><span class="line"><span class="meta">#</span><span class="bash">net.ipv4.ip_local_port_range = 1024 65000</span></span><br><span class="line"><span class="meta">#</span><span class="bash">net.ipv4.tcp_max_syn_backlog = 8192</span></span><br><span class="line"><span class="meta">#</span><span class="bash">net.ipv4.tcp_max_tw_buckets = 5000</span></span><br><span class="line"><span class="meta">#</span><span class="bash">net.ipv4.route.gc_timeout = 100</span></span><br><span class="line"><span class="meta">#</span><span class="bash">net.ipv4.tcp_syn_retries = 1</span></span><br><span class="line"><span class="meta">#</span><span class="bash">net.ipv4.tcp_synack_retries = 1</span></span><br><span class="line"><span class="meta">#</span><span class="bash">1、开启tcp_timestamp是开启tcp_tw_reuse的前提条件.</span></span><br><span class="line"><span class="meta">#</span><span class="bash">2、但是在nat模式下,不用将tcp_tw_recycle和tcp_timestamp同时开启,这会造成tcp超时引发故障</span></span><br><span class="line"></span><br><span class="line"><span class="meta">#</span><span class="bash"> 使用sysctl -p 重启生效</span></span><br></pre></td></tr></table></figure>
-<p>内核参数说明:</p>
+<p>就算最新版的prometheus也是不支持企业微信的,github已经有多个开发者提交了支持企业微信的branch, 但一直都没有合并到主分支中, 官方认为已经存在webhook的方式, 企业微信的alert完全可以由webook实现</p>
+<p>因此要让grafana支持企业微信, 有两种方式:</p>
 <ol>
-<li>net.ipv4.tcp_syncookies = 1 表示开启SYN Cookies.当出现SYN等待队列溢出时,启用cookies来处理,可防范少量SYN攻击,默认为0,表示关闭,打开这个syncookies的目的实际上是：“在服务器资源（并非单指端口资源,拒绝服务有很多种资源不足的情况）不足的情况下,尽量不要拒绝TCP的syn（连接）请求,尽量把syn请求缓存起来,留着过会儿有能力的时候处理这些TCP的连接请求。</li>
-<li>net.ipv4.tcp_tw_reuse = 1 表示开启重用.允许将TIME-WAIT sockets重新用于新的TCP连接,默认为0,表示关闭</li>
-<li>net.ipv4.tcp_tw_recycle = 1 表示开启TCP连接中TIME-WAIT sockets的快速回收,默认为0,表示关闭.</li>
-<li>net.ipv4.tcp_fin_timeout = 30 表示如果套接字由本端要求关闭,这个参数决定了它保持在FIN-WAIT-2状态的时间.</li>
-<li>net.ipv4.tcp_keepalive_time = 1800 表示当keepalive起用的时候,TCP发送keepalive消息的频度.缺省是2小时,改为20分钟.</li>
-<li>net.ipv4.ip_local_port_range = 1024  65000 表示用于向外连接的端口范围.缺省情况下很小:32768到61000,改为1024到65000.</li>
-<li>net.ipv4.tcp_max_syn_backlog = 8192 表示SYN队列的长度,默认为1024,加大队列长度为8192,可以容纳更多等待连接的网络连接数.</li>
-<li>net.ipv4.tcp_max_tw_buckets = 5000 表示系统同时保持TIME_WAIT套接字的最大数量,如果超过这个数字,TIME_WAIT套接字将立刻被清除并打印警告信息.默认为180000,改为5000.对于Apache、Nginx等服务器,上几行的参数可以很好地减少TIME_WAIT套接字数量</li>
-<li>net.ipv4.route.gc_timeout = 100 路由缓存刷新频率,当一个路由失败后多长时间跳到另一个,默认是300</li>
-<li>net.ipv4.tcp_syn_retries = 1 对于一个新建连接,内核要发送多少个 SYN 连接请求才决定放弃.不应该大于255,默认值是5,对应于180秒左右.</li>
+<li>基于开发者支持的企业微信分支进行源码编译grafana,</li>
+<li>使用webhook</li>
 </ol>
-<p>这样一来,状态为time-wait的连接数就刷刷的下来了.</p>
+<p>第一种方式github上有好几个实现，最新的一个分支实现可<a href="https://github.com/grafana/grafana/pull/26109" target="_blank" rel="noopener">参考</a>, </p>
+<p>我看了一下，这个开发者同时也使用webhook的方式实现了企业微信的对接，非常的简洁，见<a href="https://github.com/n0vad3v/g2ww" target="_blank" rel="noopener">github</a></p>
+<h3 id="g2ww"><a href="#g2ww" class="headerlink" title="g2ww"></a><a href="https://github.com/n0vad3v/g2ww" target="_blank" rel="noopener">g2ww</a></h3><p>可以来简单分析一下, 最核心的发送消息的代码如下:</p>
+<figure class="highlight go"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br></pre></td><td class="code"><pre><span class="line">url := <span class="string">"https://qyapi.weixin.qq.com/cgi-bin/webhook/send?key="</span> + c.Params(<span class="string">"key"</span>)</span><br><span class="line"></span><br><span class="line">		msgStr := fmt.Sprintf(<span class="string">`</span></span><br><span class="line"><span class="string">		&#123;</span></span><br><span class="line"><span class="string">			"msgtype": "news",</span></span><br><span class="line"><span class="string">			"news": &#123;</span></span><br><span class="line"><span class="string">			  "articles": [</span></span><br><span class="line"><span class="string">				&#123;</span></span><br><span class="line"><span class="string">				  "title": "%s",</span></span><br><span class="line"><span class="string">				  "description": "%s",</span></span><br><span class="line"><span class="string">				  "url": "%s",</span></span><br><span class="line"><span class="string">				  "picurl": "%s"</span></span><br><span class="line"><span class="string">				&#125;</span></span><br><span class="line"><span class="string">			  ]</span></span><br><span class="line"><span class="string">			&#125;</span></span><br><span class="line"><span class="string">		  &#125;</span></span><br><span class="line"><span class="string">		`</span>, h.Title, h.Message, h.RuleUrl, h.ImageUrl)</span><br></pre></td></tr></table></figure>
+<p><code>https://qyapi.weixin.qq.com/cgi-bin/webhook/send</code>可以看到使用了机器人来发送群消息</p>
+<p>从msgtype可以看到，群消息机器人使用的是<code>news</code>类型, 对于支持的消息类型可以<a href="https://work.weixin.qq.com/api/doc/90000/90136/91770" target="_blank" rel="noopener">参考</a></p>
+<p>本人需求的最大一个点在于能够通过个人微信来接收企业微信的消息, 测试了下, 机器人发送的消息只会发送到企业微信里，而无法将信息发送到关联的个人微信中.</p>
+<p>该库虽然简单，本人并未采用</p>
+<h3 id="wechat-work-message-push-go"><a href="#wechat-work-message-push-go" class="headerlink" title="wechat-work-message-push-go"></a><a href="https://github.com/cloverzrg/wechat-work-message-push-go" target="_blank" rel="noopener">wechat-work-message-push-go</a></h3><p>这个库同样可以实现使用webhook来实现grafana的告警发送到企业微信中，然后通过个人微信关联企业微信实现消息同步.</p>
+<p>也来简单分析一下</p>
+<p>通过gin实现路由规则</p>
+<figure class="highlight go"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">func</span> <span class="title">SetRoute</span><span class="params">(r *gin.Engine)</span></span> &#123;</span><br><span class="line">	r.GET(<span class="string">"/"</span>, controller.Index)</span><br><span class="line">	r.POST(<span class="string">"/push"</span>, middleware.TokenMiddleware, controller.Push)</span><br><span class="line">	r.POST(<span class="string">"/grafana"</span>, middleware.BasicAuth(), controller.GrafaneHandler)</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>实现了两个方法, 一个push，这个用于发送消息, 主要看一下/grafana的实现</p>
+<figure class="highlight go"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br></pre></td><td class="code"><pre><span class="line">url := fmt.Sprintf(<span class="string">"https://qyapi.weixin.qq.com/cgi-bin/message/send?access_token=%s"</span>, token)</span><br><span class="line">m := TextCardMessage&#123;</span><br><span class="line">	Msgtype: <span class="string">"textcard"</span>,</span><br><span class="line">	Agentid: config.Config.WechatWork.AgentId,</span><br><span class="line">&#125;</span><br><span class="line"><span class="keyword">if</span> <span class="built_in">len</span>(toUser) == <span class="number">0</span> &#123;</span><br><span class="line">	m.Touser = config.Config.WechatWork.DefaultReceiverUserId</span><br><span class="line">&#125; <span class="keyword">else</span> &#123;</span><br><span class="line">	m.Touser = toUser</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line">m.TextCard.Title = title</span><br><span class="line">m.TextCard.URL = imageUrl</span><br><span class="line">m.TextCard.Description = content</span><br><span class="line"></span><br><span class="line">jsonStr, err := json.Marshal(m)</span><br><span class="line"><span class="keyword">if</span> err != <span class="literal">nil</span> &#123;</span><br><span class="line">	logger.Error(<span class="string">"sendMessage error:%s"</span>, err)</span><br><span class="line">	SendMessage(err.Error(), <span class="string">""</span>)</span><br><span class="line">	<span class="keyword">return</span> err</span><br><span class="line">&#125;</span><br><span class="line">postJson(url, jsonStr)</span><br></pre></td></tr></table></figure>
+<p><code>https://qyapi.weixin.qq.com/cgi-bin/message/send</code>这里跟上面的区别在于上面是<code>webhook</code>这里是<code>message</code>, 从企业微信的官方文档来看, 两者支持的消息的类型也不一样, 可<a href="[https://work.weixin.qq.com/api/doc/90002/90151/90854#%E5%9B%BE%E6%96%87%E6%B6%88%E6%81%AF](https://work.weixin.qq.com/api/doc/90002/90151/90854#图文消息">参考</a>) ，这里使用的是<code>textCard</code></p>
+<p>同时，该库使用了一个用户密码认证的过程, 也增加了一层安全.</p>
+<p>本人基于该库修改了一点源码编译后通过容器Run.</p>
+<p>通过将相关的信息填入到容器的ENV中, 然后在grafana中填入相关信息即可</p>
+<p><img src="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20200711192627.png" alt></p>
+<p>可以来测试一下<code>/push</code>接口:</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line">curl -X POST \</span><br><span class="line">  http://127.0.0.1:80/push \</span><br><span class="line">  -H <span class="string">'Content-Type: application/x-www-form-urlencoded'</span> \</span><br><span class="line">  -H <span class="string">'token: your_token'</span> \</span><br><span class="line">  -d <span class="string">'message=1234'</span></span><br></pre></td></tr></table></figure>
+<p>即可在企业微信及个人微信中(前提是两者关联)收到信息</p>
+<p>在上面的grafana的配置界面点击<code>send test</code>, 然后即可在微信中收到以下信息</p>
+<p><img src="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20200711193159.png" alt></p>
+<p>点击进去之后会出现grafana的告警现场</p>
+<p><img src="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20200711193350.png" alt></p>
 <h3 id="参考文章"><a href="#参考文章" class="headerlink" title="参考文章:"></a><strong>参考文章:</strong></h3><blockquote>
 <ul>
-<li><a href="http://blog.csdn.net/sctq8888/article/details/11180519" target="_blank" rel="noopener">修改Linux内核参数,解决TCP连接中的TIME-WAIT socket</a></li>
+<li><p><a href="https://github.com/grafana/grafana/pull/26109" target="_blank" rel="noopener">https://github.com/grafana/grafana/pull/26109</a></p>
+</li>
+<li><p><a href="https://github.com/n0vad3v/g2ww" target="_blank" rel="noopener">https://github.com/n0vad3v/g2ww</a></p>
+</li>
+<li><p><a href="https://github.com/cloverzrg/wechat-work-message-push-go" target="_blank" rel="noopener">https://github.com/cloverzrg/wechat-work-message-push-go</a></p>
+</li>
+<li><p><a href="https://work.weixin.qq.com/api/doc/90002/90151/90854#图文消息" target="_blank" rel="noopener">https://work.weixin.qq.com/api/doc/90002/90151/90854#%E5%9B%BE%E6%96%87%E6%B6%88%E6%81%AF</a></p>
+<p><a href="https://work.weixin.qq.com/api/doc/90000/90136/91770" target="_blank" rel="noopener">https://work.weixin.qq.com/api/doc/90000/90136/91770</a></p>
+</li>
 </ul>
 </blockquote>
-<h3 id="转载请注明出处https-izsk-me"><a href="#转载请注明出处https-izsk-me" class="headerlink" title="转载请注明出处https://izsk.me"></a><strong>转载请注明出处<a href="https://izsk.me" target="_blank" rel="noopener">https://izsk.me</a></strong></h3><hr>
-
+<h3 id="转载请注明出处https-izsk-me"><a href="#转载请注明出处https-izsk-me" class="headerlink" title="转载请注明出处https://izsk.me"></a><strong>转载请注明出处<a href="https://izsk.me" target="_blank" rel="noopener">https://izsk.me</a></strong></h3>
       
     </div>
 
@@ -495,7 +494,7 @@
       
         <div class="post-tags">
           
-            <a href="/tags/Http-Tcp-Ip/" rel="tag"># Http-Tcp-Ip</a>
+            <a href="/tags/CloudNavi/" rel="tag"># CloudNavi</a>
           
         </div>
       
@@ -504,8 +503,8 @@
         <div class="post-nav">
           <div class="post-nav-next post-nav-item">
             
-              <a href="/2017/11/04/iptables学习二(iptables常用命令)/" rel="next" title="iptables学习二(iptables常用命令)">
-                <i class="fa fa-chevron-left"></i> iptables学习二(iptables常用命令)
+              <a href="/2020/07/07/Kubernetes-prombles/" rel="next" title="Kubernetes学习(Kubernetes踩坑记)">
+                <i class="fa fa-chevron-left"></i> Kubernetes学习(Kubernetes踩坑记)
               </a>
             
           </div>
@@ -513,10 +512,6 @@
           <span class="post-nav-divider"></span>
 
           <div class="post-nav-prev post-nav-item">
-            
-              <a href="/2017/11/20/python中的copy及deepcopy/" rel="prev" title="python中的copy及deepcopy">
-                python中的copy及deepcopy <i class="fa fa-chevron-right"></i>
-              </a>
             
           </div>
         </div>
@@ -644,7 +639,7 @@
             
 
             
-              <div class="post-toc-content"><ol class="nav"><li class="nav-item nav-level-3"><a class="nav-link" href="#三次握手"><span class="nav-number">1.</span> <span class="nav-text">三次握手</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#四次分手"><span class="nav-number">2.</span> <span class="nav-text">四次分手</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#TIME-WAIT"><span class="nav-number">3.</span> <span class="nav-text">TIME-WAIT</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#必要性"><span class="nav-number">4.</span> <span class="nav-text">必要性</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#负作用"><span class="nav-number">5.</span> <span class="nav-text">负作用</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#参考文章"><span class="nav-number">6.</span> <span class="nav-text">参考文章:</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#转载请注明出处https-izsk-me"><span class="nav-number">7.</span> <span class="nav-text">转载请注明出处https://izsk.me</span></a></li></ol></div>
+              <div class="post-toc-content"><ol class="nav"><li class="nav-item nav-level-3"><a class="nav-link" href="#g2ww"><span class="nav-number">1.</span> <span class="nav-text">g2ww</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#wechat-work-message-push-go"><span class="nav-number">2.</span> <span class="nav-text">wechat-work-message-push-go</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#参考文章"><span class="nav-number">3.</span> <span class="nav-text">参考文章:</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#转载请注明出处https-izsk-me"><span class="nav-number">4.</span> <span class="nav-text">转载请注明出处https://izsk.me</span></a></li></ol></div>
             
 
           </div>
