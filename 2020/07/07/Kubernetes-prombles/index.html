@@ -110,7 +110,7 @@
 <meta property="og:image" content="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20200506120151.png">
 <meta property="og:image" content="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20200506120040.png">
 <meta property="og:image" content="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20200511180743.png">
-<meta property="og:updated_time" content="2020-07-08T05:45:24.271Z">
+<meta property="og:updated_time" content="2020-07-11T11:59:05.609Z">
 <meta name="twitter:card" content="summary">
 <meta name="twitter:title" content="Kubernetes学习(Kubernetes踩坑记)">
 <meta name="twitter:description" content="记录在使用Kubernetes中遇到的各种问题及解决方案, 好记性不如烂笔头 不定期更新">
@@ -415,7 +415,6 @@
 <p><strong>不定期更新</strong></p>
 <a id="more"></a>
 <h3 id="metrics-server-10255-connection-refused"><a href="#metrics-server-10255-connection-refused" class="headerlink" title="metrics-server: 10255 connection refused"></a>metrics-server: 10255 connection refused</h3><figure class="highlight yaml"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line"><span class="attr">unable to fully collect metrics:</span> <span class="string">[unable</span> <span class="attr">to fully scrape metrics from source kubelet_summary:k8s-node-49:</span> <span class="string">unable</span> <span class="string">to</span> <span class="string">fetch</span> <span class="string">metrics</span> <span class="string">from</span> <span class="string">Kubelet</span> <span class="string">k8s-node-49</span> <span class="string">(xxx.xxx.xxx.49):</span> <span class="string">Get</span> <span class="string">http://xxx.xxx.xxx.49:10255/stats/summary?only_cpu_and_memory=true:</span> <span class="attr">dial tcp xxx.xxx.xxx.49:10255: connect:</span> <span class="string">connection</span> <span class="string">refused</span></span><br></pre></td></tr></table></figure>
-<p>原因: metrics-server的deployment中指定使用了10255端口, 但是新版本中10255已经被舍弃</p>
 <p>解决: 将<code>- --kubelet-port=10255</code>注释</p>
 <h3 id="metrics-server-no-such-host"><a href="#metrics-server-no-such-host" class="headerlink" title="metrics-server: no such host"></a>metrics-server: no such host</h3><figure class="highlight yaml"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line"><span class="string">unable</span> <span class="string">to</span> <span class="string">fetch</span> <span class="string">metrics</span> <span class="string">from</span> <span class="string">Kubelet</span> <span class="string">k8s-node-234</span> <span class="string">(k8s-node-234):</span> <span class="string">Get</span> <span class="string">https://k8s-node-234:10250/stats/summary?only_cpu_and_memory=true:</span> <span class="attr">dial tcp: lookup k8s-node-234 on 10.96.0.10:53:</span> <span class="literal">no</span> <span class="string">such</span> <span class="string">host</span></span><br></pre></td></tr></table></figure>
 <p>解决: 使用<code>kubelet-preferred-address-types=InternalIP,Hostname,InternalDNS,ExternalDNS,ExternalIP</code>参数</p>
