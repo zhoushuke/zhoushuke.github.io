@@ -1,6 +1,49 @@
 <?xml version="1.0" encoding="utf-8"?>
 <search>
   <entry>
+    <title>Kubernetes学习(rancher local path dynamic provisioner源码分析)</title>
+    <url>/2020/08/17/Kubernetes-rancher-local-path-dymanic-provisioner-source-read/</url>
+    <content><![CDATA[<p>之前在rancher上实战了一下local path的持久卷provisioner， 也读一读它的源码加深下映像.</p>
+<a id="more"></a>
+<h3 id="配置文件"><a href="#配置文件" class="headerlink" title="配置文件"></a>配置文件</h3><p>还是先贴一下配置文件:</p>
+<figure class="highlight yaml"><table><tr><td class="code"><pre><span class="line"><span class="attr">apiVersion:</span> <span class="string">storage.k8s.io/v1</span></span><br><span class="line"><span class="attr">kind:</span> <span class="string">StorageClass</span></span><br><span class="line"><span class="attr">metadata:</span></span><br><span class="line">  <span class="attr">name:</span> <span class="string">local-path</span></span><br><span class="line"><span class="attr">provisioner:</span> <span class="string">rancher.io/local-path</span></span><br><span class="line"><span class="attr">volumeBindingMode:</span> <span class="string">WaitForFirstConsumer</span></span><br><span class="line"><span class="attr">reclaimPolicy:</span> <span class="string">Delete</span></span><br><span class="line"><span class="meta">---</span></span><br><span class="line"><span class="attr">kind:</span> <span class="string">ConfigMap</span></span><br><span class="line"><span class="attr">apiVersion:</span> <span class="string">v1</span></span><br><span class="line"><span class="attr">metadata:</span></span><br><span class="line">  <span class="attr">name:</span> <span class="string">local-path-config</span></span><br><span class="line">  <span class="attr">namespace:</span> <span class="string">local-path-storage</span></span><br><span class="line"><span class="attr">data:</span></span><br><span class="line">  <span class="attr">config.json:</span> <span class="string">|-</span></span><br><span class="line">        <span class="string">&#123;</span></span><br><span class="line">                <span class="string">"nodePathMap"</span><span class="string">:[</span></span><br><span class="line">                <span class="string">&#123;</span></span><br><span class="line">                        <span class="string">"node"</span><span class="string">:"DEFAULT_PATH_FOR_NON_LISTED_NODES",</span></span><br><span class="line">                        <span class="string">"paths"</span><span class="string">:["/data"]</span></span><br><span class="line">                <span class="string">&#125;</span></span><br><span class="line">                <span class="string">]</span></span><br><span class="line">        <span class="string">&#125;</span></span><br><span class="line">  <span class="attr">setup:</span> <span class="string">|-</span></span><br><span class="line">        <span class="comment">#!/bin/sh</span></span><br><span class="line">        <span class="string">path=$1</span></span><br><span class="line">        <span class="string">mkdir</span> <span class="string">-m</span> <span class="number">0777</span> <span class="string">-p</span> <span class="string">$&#123;path&#125;</span></span><br><span class="line">  <span class="attr">teardown:</span> <span class="string">|-</span></span><br><span class="line">        <span class="comment">#!/bin/sh</span></span><br><span class="line">        <span class="string">path=$1</span></span><br><span class="line">        <span class="string">rm</span> <span class="string">-rf</span> <span class="string">$&#123;path&#125;</span></span><br></pre></td></tr></table></figure>
+<p><a href="https://github.com/rancher/local-path-provisioner" target="_blank" rel="noopener">引用</a></p>
+<p>源代码关键的就是两个go文件，一个main.go, 一个provisioner.go, 接下来分别分析</p>
+<h3 id="main-go"><a href="#main-go" class="headerlink" title="main.go"></a>main.go</h3><p>main.go中大多数都是在进行一些逻辑的判断, 比如解析启动参数，解析configmap配置等.</p>
+<p>比较重要的关键代码:</p>
+<figure class="highlight go"><table><tr><td class="code"><pre><span class="line"><span class="function"><span class="keyword">func</span> <span class="title">startDaemon</span><span class="params">(c *cli.Context)</span> <span class="title">error</span></span> &#123;</span><br><span class="line">  <span class="comment">// ...</span></span><br><span class="line">  provisioner, err := NewProvisioner(stopCh, kubeClient, configFile, namespace, helperImage, configMapName)</span><br><span class="line">	<span class="keyword">if</span> err != <span class="literal">nil</span> &#123;</span><br><span class="line">		<span class="keyword">return</span> err</span><br><span class="line">	&#125;</span><br><span class="line">	pc := pvController.NewProvisionController(</span><br><span class="line">		kubeClient,</span><br><span class="line">		provisionerName,</span><br><span class="line">		provisioner,</span><br><span class="line">		serverVersion.GitVersion,</span><br><span class="line">	)</span><br><span class="line">	logrus.Debug(<span class="string">"Provisioner started"</span>)</span><br><span class="line">	pc.Run(stopCh)</span><br><span class="line">	logrus.Debug(<span class="string">"Provisioner stopped"</span>)</span><br><span class="line">	<span class="keyword">return</span> <span class="literal">nil</span></span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>这里引用了<code>pvController.NewProvisionController</code>，这个函数是控制循环，比较复杂，本人太菜，有些看不透，可能还是对k8s的控制循环的理解不到位, 感兴趣的可以自行分析，源代码<a href="https://github.com/rancher/local-path-provisioner/blob/master/vendor/sigs.k8s.io/sig-storage-lib-external-provisioner/controller/controller.go" target="_blank" rel="noopener">controller.go</a></p>
+<p>简单理解就是这里启动了Provisioner的控制循环，这个控制循环主要检测的是provisioner对象, 这里又涉及到2个关键的接口</p>
+<figure class="highlight go"><table><tr><td class="code"><pre><span class="line"><span class="keyword">type</span> Provisioner <span class="keyword">interface</span> &#123;</span><br><span class="line">	<span class="comment">// Provision creates a volume i.e. the storage asset and returns a PV object</span></span><br><span class="line">	<span class="comment">// for the volume</span></span><br><span class="line">	Provision(ProvisionOptions) (*v1.PersistentVolume, error)</span><br><span class="line">	<span class="comment">// Delete removes the storage asset that was created by Provision backing the</span></span><br><span class="line">	<span class="comment">// given PV. Does not delete the PV object itself.</span></span><br><span class="line">	<span class="comment">//</span></span><br><span class="line">	<span class="comment">// May return IgnoredError to indicate that the call has been ignored and no</span></span><br><span class="line">	<span class="comment">// action taken.</span></span><br><span class="line">	Delete(*v1.PersistentVolume) error</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>还有</p>
+<figure class="highlight go"><table><tr><td class="code"><pre><span class="line"><span class="keyword">type</span> ProvisionOptions <span class="keyword">struct</span> &#123;</span><br><span class="line">	<span class="comment">// StorageClass is a reference to the storage class that is used for</span></span><br><span class="line">	<span class="comment">// provisioning for this volume</span></span><br><span class="line">	StorageClass *storageapis.StorageClass</span><br><span class="line"></span><br><span class="line">	<span class="comment">// PV.Name of the appropriate PersistentVolume. Used to generate cloud</span></span><br><span class="line">	<span class="comment">// volume name.</span></span><br><span class="line">	PVName <span class="keyword">string</span></span><br><span class="line"></span><br><span class="line">	<span class="comment">// PVC is reference to the claim that lead to provisioning of a new PV.</span></span><br><span class="line">	<span class="comment">// Provisioners *must* create a PV that would be matched by this PVC,</span></span><br><span class="line">	<span class="comment">// i.e. with required capacity, accessMode, labels matching PVC.Selector and</span></span><br><span class="line">	<span class="comment">// so on.</span></span><br><span class="line">	PVC *v1.PersistentVolumeClaim</span><br><span class="line"></span><br><span class="line">	<span class="comment">// Node selected by the scheduler for the volume.</span></span><br><span class="line">	SelectedNode *v1.Node</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p><a href="https://github.com/rancher/local-path-provisioner/blob/master/vendor/sigs.k8s.io/sig-storage-lib-external-provisioner/controller/volume.go" target="_blank" rel="noopener">引用</a></p>
+<p>这两个对象主要在provisioner.go中引用</p>
+<h3 id="provisioner-go"><a href="#provisioner-go" class="headerlink" title="provisioner.go"></a>provisioner.go</h3><p><code>LocalPathProvisioner</code>实现了<code>Provisioner</code>接口</p>
+<p>主要的就是<code>Provision</code>方法，关键代码:</p>
+<figure class="highlight go"><table><tr><td class="code"><pre><span class="line"><span class="function"><span class="keyword">func</span> <span class="params">(p *LocalPathProvisioner)</span> <span class="title">Provision</span><span class="params">(opts pvController.ProvisionOptions)</span> <span class="params">(*v1.PersistentVolume, error)</span></span> &#123;</span><br><span class="line">  <span class="comment">// ...</span></span><br><span class="line">  basePath, err := p.getRandomPathOnNode(node.Name) <span class="comment">// 由于支持在一个node上指定多个目录用于挂载，因此随机选择一个</span></span><br><span class="line">	<span class="keyword">if</span> err != <span class="literal">nil</span> &#123;</span><br><span class="line">		<span class="keyword">return</span> <span class="literal">nil</span>, err</span><br><span class="line">	&#125;</span><br><span class="line"></span><br><span class="line">	name := opts.PVName</span><br><span class="line">	folderName := strings.Join([]<span class="keyword">string</span>&#123;name, opts.PVC.Namespace, opts.PVC.Name&#125;, <span class="string">"_"</span>)</span><br><span class="line"></span><br><span class="line">	path := filepath.Join(basePath, folderName)</span><br><span class="line">	logrus.Infof(<span class="string">"Creating volume %v at %v:%v"</span>, name, node.Name, path)</span><br><span class="line"></span><br><span class="line">	createCmdsForPath := []<span class="keyword">string</span>&#123;  <span class="comment">//这里指定需要helpPod执行的命令，一个是创建，一个是删除，这个脚本在configmap中定义</span></span><br><span class="line">		<span class="string">"/bin/sh"</span>,</span><br><span class="line">		<span class="string">"/script/setup"</span>,</span><br><span class="line">	&#125;</span><br><span class="line">  <span class="comment">// 这里我创建了个busybox容器根据path来创建目录</span></span><br><span class="line">	<span class="keyword">if</span> err := p.createHelperPod(ActionTypeCreate, createCmdsForPath, name, path, node.Name); err != <span class="literal">nil</span> &#123;</span><br><span class="line">		<span class="keyword">return</span> <span class="literal">nil</span>, err</span><br><span class="line">	&#125;</span><br><span class="line">  ...</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>追一下<code>createhelperPod</code></p>
+<figure class="highlight go"><table><tr><td class="code"><pre><span class="line"><span class="function"><span class="keyword">func</span> <span class="params">(p *LocalPathProvisioner)</span> <span class="title">createHelperPod</span><span class="params">(action ActionType, cmdsForPath []<span class="keyword">string</span>, name, path, node <span class="keyword">string</span>)</span> <span class="params">(err error)</span></span> &#123;</span><br><span class="line">  <span class="comment">// ...</span></span><br><span class="line">  Containers: []v1.Container&#123;</span><br><span class="line">				&#123;</span><br><span class="line">					Name:    <span class="string">"local-path-"</span> + <span class="keyword">string</span>(action),</span><br><span class="line">					Image:   p.helperImage,</span><br><span class="line">					Command: <span class="built_in">append</span>(cmdsForPath, filepath.Join(<span class="string">"/data/"</span>, volumeDir)), <span class="comment">// 在这里定义了当容器启动后需要执行的命令，根据上面的参数，这里转化成mkdir -p /data/xxxx</span></span><br><span class="line">					VolumeMounts: []v1.VolumeMount&#123;</span><br><span class="line">						&#123;</span><br><span class="line">							Name:      <span class="string">"data"</span>,</span><br><span class="line">							ReadOnly:  <span class="literal">false</span>,</span><br><span class="line">							MountPath: <span class="string">"/data/"</span>, <span class="comment">// 容器会将Node上指定的路径挂载到自己的/data目录下然后进行创建pv目录</span></span><br><span class="line">						&#125;,</span><br><span class="line">						&#123;</span><br><span class="line">							Name:      <span class="string">"script"</span>,</span><br><span class="line">							ReadOnly:  <span class="literal">false</span>,</span><br><span class="line">							MountPath: <span class="string">"/script"</span>,</span><br><span class="line">						&#125;,</span><br><span class="line">					&#125;,</span><br><span class="line">					ImagePullPolicy: v1.PullIfNotPresent,</span><br><span class="line">				&#125;,</span><br><span class="line">			&#125;,</span><br><span class="line">  ...</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>这个方法中还有判断容器运行是否成功的语句, 通过这种方式，pv目录就创建成功了。</p>
+<h3 id="流程"><a href="#流程" class="headerlink" title="流程"></a>流程</h3><p>所以整个流程变成: 集群管理员只需要将local-path-dymanic发布到集群中, 如果需要使用持久化存储，只需要声明pvc， 指定local-path-dymanic的storageClass，local-path-dymanic则会自动在调度的Node上新建出pv目录，pv pvc bound，整个流程完成.</p>
+<p>具体的使用可<a href="https://izsk.me/2020/07/24/Kubernetes-Rancher-local-path-provisioner/" target="_blank" rel="noopener">参考</a></p>
+<h3 id="参考文章"><a href="#参考文章" class="headerlink" title="参考文章:"></a><strong>参考文章:</strong></h3><blockquote>
+<ul>
+<li><a href="https://izsk.me/2020/07/24/Kubernetes-Rancher-local-path-provisioner/" target="_blank" rel="noopener">https://izsk.me/2020/07/24/Kubernetes-Rancher-local-path-provisioner/</a></li>
+<li><a href="https://github.com/rancher/local-path-provisioner" target="_blank" rel="noopener">https://github.com/rancher/local-path-provisioner</a></li>
+<li><a href="https://github.com/rancher/local-path-provisioner/blob/master/vendor/sigs.k8s.io/sig-storage-lib-external-provisioner/controller/controller.go" target="_blank" rel="noopener">https://github.com/rancher/local-path-provisioner/blob/master/vendor/sigs.k8s.io/sig-storage-lib-external-provisioner/controller/controller.go</a></li>
+<li><a href="https://github.com/rancher/local-path-provisioner/blob/master/vendor/sigs.k8s.io/sig-storage-lib-external-provisioner/controller/volume.go" target="_blank" rel="noopener">https://github.com/rancher/local-path-provisioner/blob/master/vendor/sigs.k8s.io/sig-storage-lib-external-provisioner/controller/volume.go</a></li>
+</ul>
+</blockquote>
+<h3 id="转载请注明出处https-izsk-me"><a href="#转载请注明出处https-izsk-me" class="headerlink" title="转载请注明出处https://izsk.me"></a><strong>转载请注明出处<a href="https://izsk.me" target="_blank" rel="noopener">https://izsk.me</a></strong></h3>]]></content>
+      <categories>
+        <category>Kubernetes</category>
+      </categories>
+      <tags>
+        <tag>Kubernetes</tag>
+      </tags>
+  </entry>
+  <entry>
     <title>Kong学习(kong介绍)</title>
     <url>/2020/08/15/Kong-introdution/</url>
     <content><![CDATA[<p>Kong是一个Mashape开源的高性能高可用的API网关和API服务管理层，基于OpenResty,进行API管理，并提供了插件实现了API的AOP功能, 官方更是有这样的描述: <code>Next-Generation API Platform for Multi-Cloud and Hybrid Organizations</code>,可见kong的野心还是非常大的，也确实非常受欢迎,目前的Kong的版本为2.1.</p>
@@ -6048,74 +6091,6 @@
       </tags>
   </entry>
   <entry>
-    <title>记一次排查ES FGC导致的集群宕机异常</title>
-    <url>/2019/10/06/ES-FGC-Fix/</url>
-    <content><![CDATA[<p>有一个私有云环境的运维同事反应项目中的ES集群无法查询, 由于是私有云环境, 没有直接运维权限, 所以没有接收到一线报警, 远程登录上去后发现ES集群已经宕机了, 这次的排查过程也发现了几个比较容易忽视的细节, 在此记录一下,比较有意思.</p>
-<a id="more"></a>
-<h3 id="集群状态"><a href="#集群状态" class="headerlink" title="集群状态"></a>集群状态</h3><p>ES集群为3节点.</p>
-<p>首先肯定是查看集群状态</p>
-<figure class="highlight bash"><table><tr><td class="code"><pre><span class="line">curl <span class="string">'http://localhost:9200/_cluster/health?pretty'</span> -u xxx:yyy</span><br><span class="line"><span class="comment">#发现状态为Red</span></span><br></pre></td></tr></table></figure>
-<p>查看节点状态</p>
-<figure class="highlight bash"><table><tr><td class="code"><pre><span class="line">curl <span class="string">'http://localhost:9200/_cat/node?v'</span> -u xxx:yyy</span><br><span class="line"><span class="comment">#节点数正常</span></span><br></pre></td></tr></table></figure>
-<p>查看各节点使用的磁盘情况</p>
-<figure class="highlight bash"><table><tr><td class="code"><pre><span class="line">curl -XGET <span class="string">'localhost:9200/_cat/allocation?v&amp;pretty'</span> -u xxx:yyy</span><br><span class="line"><span class="comment">#未发现异常</span></span><br></pre></td></tr></table></figure>
-<h3 id="集群日志"><a href="#集群日志" class="headerlink" title="集群日志"></a>集群日志</h3><p>登录一个ES节点查看日志，发现以下报错，查看其它2个节点，情况相同</p>
-<p><img src="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20200204134510.png" alt></p>
-<p>从日志来看, 可以发现几个问题:</p>
-<blockquote>
-<ul>
-<li>Full GC很频繁, 而且时间也非常的长 </li>
-<li>每次GC完之后所能释放的内存非常有限</li>
-</ul>
-</blockquote>
-<p>到这，其它原因已经很明朗, <strong>内存不够导致的full gc 频繁，但是又不能释放太多的空间，又导致full gc的恶意循环</strong></p>
-<p>如果大家对gc的日志不很了解的话, 这里解释下上面日志的各个字段含义, 假如有以下一条gc日志</p>
-<figure class="highlight bash"><table><tr><td class="code"><pre><span class="line">[2018-06-30T17:57:29,020][INFO ][o.e.m.j.JvmGcMonitorService] [qoo--ES] [gc][old][228385][160772] duration [5s], collections [1]/[5.1s], total [5s]/[4.4d], memory [945.4mb]-&gt;[958.5mb]/[1007.3mb], all_pools &#123;[young] [87.8mb]-&gt;[100.9mb]/[133.1mb]&#125;&#123;[survivor] [0b]-&gt;[0b]/[16.6mb]&#125;&#123;[old] [857.6mb]-&gt;[857.6mb]/[857.6mb]&#125;</span><br></pre></td></tr></table></figure>
-<ul>
-<li><strong>gc old</strong> 本次是 old GC 这是第228385次 GC 检查][从 JVM 启动至今发生的第 160772次 G]</li>
-<li><strong>duration</strong> [本次检查到的 GC 总耗时 <strong>5</strong> 秒，可能是多次的加和</li>
-<li><strong>collections</strong> [从上次检查至今总共发生<strong>1</strong>次GC]/[从上次检查至今已过去 <strong>5.1</strong> 秒],</li>
-<li><strong>total</strong> [本次检查到的 GC 总耗时为 <strong>5</strong> 秒]/[从 JVM 启动至今发生的 GC 总耗时为 <strong>4.4</strong> 天]，</li>
-<li><strong>memory</strong> [ GC 前 Heap memory 空间]-&gt;[GC 后 Heap memory 空间]/[Heap memory 总空间],</li>
-<li><strong>all_pools</strong>(分代部分的详情) {young 区][GC 前 Memory ]-&gt;[GC后 Memory]/[young区 Memory 总大小] }</li>
-<li><strong>survivor</strong> [GC 前 Memory ]-&gt;[GC后 Memory]/[Memory 总大小] }{old 区[GC 前 Memory ]-&gt;[GC后 Memory]/[old区 Memory 总大小] }</li>
-</ul>
-<p>那为何会内存不足呢, 想起前几天服务拓展，添加收集了几个服务的日志, 日志量不算小, 而且这3个ES节点所在的机器内存只分配了8个G, 显然, 加完这几个日志之后内存不够用了.</p>
-<h3 id="Index-Mapping"><a href="#Index-Mapping" class="headerlink" title="Index Mapping"></a>Index Mapping</h3><p>而且，从日志中， 还发现几处很诡异的日志</p>
-<p><img src="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20200204141415.png" alt></p>
-<p>红框中的错误: <strong>object mapping for [msg] tried to pasrse field [msg] as object, but found a concrete</strong></p>
-<p>翻译过来就是说, 日志中的msg这个字段的类型匹配不上, ES尽力把它解析为object类型，但是它却是个确切的值.</p>
-<p>就好比你在python中定义了一个字典, 但是你给它赋值一个整形, 这确定要报错.</p>
-<p>但是这个mapping是从何而来的呢.</p>
-<p>经过网上搜索一翻, 终于明白:</p>
-<p>ES中为了加强性能，对于索引中的<strong>第一条数据, ES会默认(可设置)按照这条数据建立index mapping, 相当于是一个索引模板, 好比是mysql中表的定义一个概念, 后续这个索引中的所有日志都按照该模板进行解析</strong></p>
-<p>后来经过查看源码, 我们发现，出现上图中的问题是因为代码中的日志打印不规范, 有一个地方如果抛出异常时，打印的是一个单一字符串, 而正常情况下打印的是一个json, 所以当第一条正常的日志传递给ES时，ES建立的索引 模板记录这个字段为object类型(可以类比为python中的字典, 本身是可以新增元素的), 当应用抛出异常时，日志中又传递了一个单一字符串, 但是索引模板已经记录为object类型，所以无法匹配, 这就是问题所在</p>
-<h3 id="Fix-Bug"><a href="#Fix-Bug" class="headerlink" title="Fix Bug"></a>Fix Bug</h3><p>从3个方面解决上面的问题</p>
-<p>首先是修复代码中日志不规范问题, 这个充暴露了code view不严谨.</p>
-<p>第2个是加大ES的内存,毕竟日志量确实是上来了, 从8G添加到12G</p>
-<p>第3个是优化ES的gc问题, ES中有个逻辑是：<strong>默认情况下，主节点每30秒会去检查其他节点的状态，如果任何节点的垃圾回收时间超过30秒（Garbage collection duration）且在重复次数内都超时，则会导致主节点任务该节点脱离集群, 节点脱离集群后会引起分片的rebalance</strong></p>
-<p>这个机制让ES节点频繁的脱离集群，而又引起整个集群的rebalance，ES本身的内存就不够，rebalance更是雪上加霜, 如此往复就导致整个ES集群宕机.</p>
-<p>可修改主节点的检查时间及重复次数,让其它节点有充分的时间进行full gc.</p>
-<p>在ES的配置文件中添加以下配置:</p>
-<figure class="highlight yml"><table><tr><td class="code"><pre><span class="line"><span class="attr">discovery.zen.fd.ping_timeout:</span> <span class="string">300s</span></span><br><span class="line"><span class="attr">discovery.zen.fd.ping_retriES:</span> <span class="number">10</span></span><br></pre></td></tr></table></figure>
-<p>这样, 达到这两个条件时才能触发节点脱离集群</p>
-<p>至此, 依次重启ES节点, 问题圆满解决.</p>
-<h3 id="参考文章"><a href="#参考文章" class="headerlink" title="参考文章:"></a><strong>参考文章:</strong></h3><blockquote>
-<ul>
-<li><a href="https://www.elastic.co/guide/en/elasticsearch/reference/current/mapping.html" target="_blank" rel="noopener">elasticsearch index mapping</a></li>
-<li><a href="https://blog.csdn.net/sinat_35930259/article/details/80354732" target="_blank" rel="noopener">elasticsearch篇之mapping</a></li>
-<li><a href="https://segmentfault.com/a/1190000016494488" target="_blank" rel="noopener">你看懂 Elasticsearch Log 中的 GC 日志了吗？</a></li>
-</ul>
-</blockquote>
-<h3 id="转载请注明出处https-izsk-me"><a href="#转载请注明出处https-izsk-me" class="headerlink" title="转载请注明出处https://izsk.me"></a><strong>转载请注明出处<a href="https://izsk.me" target="_blank" rel="noopener">https://izsk.me</a></strong></h3>]]></content>
-      <categories>
-        <category>FELK</category>
-      </categories>
-      <tags>
-        <tag>FELK</tag>
-      </tags>
-  </entry>
-  <entry>
     <title>CockRoachDB学习(架构)</title>
     <url>/2019/10/06/CockroachDB-Struct/</url>
     <content><![CDATA[<p>项目中需要一个分布式数据库用于存储业务的KV数据, 在前期项目调研结合业务比对了业界常用的KV数据库模型后, 最后选择了CockRoachDB(CRDB).</p>
@@ -6250,6 +6225,74 @@
       </categories>
       <tags>
         <tag>分布式架构</tag>
+      </tags>
+  </entry>
+  <entry>
+    <title>记一次排查ES FGC导致的集群宕机异常</title>
+    <url>/2019/10/06/ES-FGC-Fix/</url>
+    <content><![CDATA[<p>有一个私有云环境的运维同事反应项目中的ES集群无法查询, 由于是私有云环境, 没有直接运维权限, 所以没有接收到一线报警, 远程登录上去后发现ES集群已经宕机了, 这次的排查过程也发现了几个比较容易忽视的细节, 在此记录一下,比较有意思.</p>
+<a id="more"></a>
+<h3 id="集群状态"><a href="#集群状态" class="headerlink" title="集群状态"></a>集群状态</h3><p>ES集群为3节点.</p>
+<p>首先肯定是查看集群状态</p>
+<figure class="highlight bash"><table><tr><td class="code"><pre><span class="line">curl <span class="string">'http://localhost:9200/_cluster/health?pretty'</span> -u xxx:yyy</span><br><span class="line"><span class="comment">#发现状态为Red</span></span><br></pre></td></tr></table></figure>
+<p>查看节点状态</p>
+<figure class="highlight bash"><table><tr><td class="code"><pre><span class="line">curl <span class="string">'http://localhost:9200/_cat/node?v'</span> -u xxx:yyy</span><br><span class="line"><span class="comment">#节点数正常</span></span><br></pre></td></tr></table></figure>
+<p>查看各节点使用的磁盘情况</p>
+<figure class="highlight bash"><table><tr><td class="code"><pre><span class="line">curl -XGET <span class="string">'localhost:9200/_cat/allocation?v&amp;pretty'</span> -u xxx:yyy</span><br><span class="line"><span class="comment">#未发现异常</span></span><br></pre></td></tr></table></figure>
+<h3 id="集群日志"><a href="#集群日志" class="headerlink" title="集群日志"></a>集群日志</h3><p>登录一个ES节点查看日志，发现以下报错，查看其它2个节点，情况相同</p>
+<p><img src="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20200204134510.png" alt></p>
+<p>从日志来看, 可以发现几个问题:</p>
+<blockquote>
+<ul>
+<li>Full GC很频繁, 而且时间也非常的长 </li>
+<li>每次GC完之后所能释放的内存非常有限</li>
+</ul>
+</blockquote>
+<p>到这，其它原因已经很明朗, <strong>内存不够导致的full gc 频繁，但是又不能释放太多的空间，又导致full gc的恶意循环</strong></p>
+<p>如果大家对gc的日志不很了解的话, 这里解释下上面日志的各个字段含义, 假如有以下一条gc日志</p>
+<figure class="highlight bash"><table><tr><td class="code"><pre><span class="line">[2018-06-30T17:57:29,020][INFO ][o.e.m.j.JvmGcMonitorService] [qoo--ES] [gc][old][228385][160772] duration [5s], collections [1]/[5.1s], total [5s]/[4.4d], memory [945.4mb]-&gt;[958.5mb]/[1007.3mb], all_pools &#123;[young] [87.8mb]-&gt;[100.9mb]/[133.1mb]&#125;&#123;[survivor] [0b]-&gt;[0b]/[16.6mb]&#125;&#123;[old] [857.6mb]-&gt;[857.6mb]/[857.6mb]&#125;</span><br></pre></td></tr></table></figure>
+<ul>
+<li><strong>gc old</strong> 本次是 old GC 这是第228385次 GC 检查][从 JVM 启动至今发生的第 160772次 G]</li>
+<li><strong>duration</strong> [本次检查到的 GC 总耗时 <strong>5</strong> 秒，可能是多次的加和</li>
+<li><strong>collections</strong> [从上次检查至今总共发生<strong>1</strong>次GC]/[从上次检查至今已过去 <strong>5.1</strong> 秒],</li>
+<li><strong>total</strong> [本次检查到的 GC 总耗时为 <strong>5</strong> 秒]/[从 JVM 启动至今发生的 GC 总耗时为 <strong>4.4</strong> 天]，</li>
+<li><strong>memory</strong> [ GC 前 Heap memory 空间]-&gt;[GC 后 Heap memory 空间]/[Heap memory 总空间],</li>
+<li><strong>all_pools</strong>(分代部分的详情) {young 区][GC 前 Memory ]-&gt;[GC后 Memory]/[young区 Memory 总大小] }</li>
+<li><strong>survivor</strong> [GC 前 Memory ]-&gt;[GC后 Memory]/[Memory 总大小] }{old 区[GC 前 Memory ]-&gt;[GC后 Memory]/[old区 Memory 总大小] }</li>
+</ul>
+<p>那为何会内存不足呢, 想起前几天服务拓展，添加收集了几个服务的日志, 日志量不算小, 而且这3个ES节点所在的机器内存只分配了8个G, 显然, 加完这几个日志之后内存不够用了.</p>
+<h3 id="Index-Mapping"><a href="#Index-Mapping" class="headerlink" title="Index Mapping"></a>Index Mapping</h3><p>而且，从日志中， 还发现几处很诡异的日志</p>
+<p><img src="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20200204141415.png" alt></p>
+<p>红框中的错误: <strong>object mapping for [msg] tried to pasrse field [msg] as object, but found a concrete</strong></p>
+<p>翻译过来就是说, 日志中的msg这个字段的类型匹配不上, ES尽力把它解析为object类型，但是它却是个确切的值.</p>
+<p>就好比你在python中定义了一个字典, 但是你给它赋值一个整形, 这确定要报错.</p>
+<p>但是这个mapping是从何而来的呢.</p>
+<p>经过网上搜索一翻, 终于明白:</p>
+<p>ES中为了加强性能，对于索引中的<strong>第一条数据, ES会默认(可设置)按照这条数据建立index mapping, 相当于是一个索引模板, 好比是mysql中表的定义一个概念, 后续这个索引中的所有日志都按照该模板进行解析</strong></p>
+<p>后来经过查看源码, 我们发现，出现上图中的问题是因为代码中的日志打印不规范, 有一个地方如果抛出异常时，打印的是一个单一字符串, 而正常情况下打印的是一个json, 所以当第一条正常的日志传递给ES时，ES建立的索引 模板记录这个字段为object类型(可以类比为python中的字典, 本身是可以新增元素的), 当应用抛出异常时，日志中又传递了一个单一字符串, 但是索引模板已经记录为object类型，所以无法匹配, 这就是问题所在</p>
+<h3 id="Fix-Bug"><a href="#Fix-Bug" class="headerlink" title="Fix Bug"></a>Fix Bug</h3><p>从3个方面解决上面的问题</p>
+<p>首先是修复代码中日志不规范问题, 这个充暴露了code view不严谨.</p>
+<p>第2个是加大ES的内存,毕竟日志量确实是上来了, 从8G添加到12G</p>
+<p>第3个是优化ES的gc问题, ES中有个逻辑是：<strong>默认情况下，主节点每30秒会去检查其他节点的状态，如果任何节点的垃圾回收时间超过30秒（Garbage collection duration）且在重复次数内都超时，则会导致主节点任务该节点脱离集群, 节点脱离集群后会引起分片的rebalance</strong></p>
+<p>这个机制让ES节点频繁的脱离集群，而又引起整个集群的rebalance，ES本身的内存就不够，rebalance更是雪上加霜, 如此往复就导致整个ES集群宕机.</p>
+<p>可修改主节点的检查时间及重复次数,让其它节点有充分的时间进行full gc.</p>
+<p>在ES的配置文件中添加以下配置:</p>
+<figure class="highlight yml"><table><tr><td class="code"><pre><span class="line"><span class="attr">discovery.zen.fd.ping_timeout:</span> <span class="string">300s</span></span><br><span class="line"><span class="attr">discovery.zen.fd.ping_retriES:</span> <span class="number">10</span></span><br></pre></td></tr></table></figure>
+<p>这样, 达到这两个条件时才能触发节点脱离集群</p>
+<p>至此, 依次重启ES节点, 问题圆满解决.</p>
+<h3 id="参考文章"><a href="#参考文章" class="headerlink" title="参考文章:"></a><strong>参考文章:</strong></h3><blockquote>
+<ul>
+<li><a href="https://www.elastic.co/guide/en/elasticsearch/reference/current/mapping.html" target="_blank" rel="noopener">elasticsearch index mapping</a></li>
+<li><a href="https://blog.csdn.net/sinat_35930259/article/details/80354732" target="_blank" rel="noopener">elasticsearch篇之mapping</a></li>
+<li><a href="https://segmentfault.com/a/1190000016494488" target="_blank" rel="noopener">你看懂 Elasticsearch Log 中的 GC 日志了吗？</a></li>
+</ul>
+</blockquote>
+<h3 id="转载请注明出处https-izsk-me"><a href="#转载请注明出处https-izsk-me" class="headerlink" title="转载请注明出处https://izsk.me"></a><strong>转载请注明出处<a href="https://izsk.me" target="_blank" rel="noopener">https://izsk.me</a></strong></h3>]]></content>
+      <categories>
+        <category>FELK</category>
+      </categories>
+      <tags>
+        <tag>FELK</tag>
       </tags>
   </entry>
   <entry>
