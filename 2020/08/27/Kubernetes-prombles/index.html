@@ -1,0 +1,995 @@
+<!doctype html>
+
+
+
+  
+
+
+<html class="theme-next mist use-motion" lang="zh-Hans">
+<head><meta name="generator" content="Hexo 3.9.0">
+  <meta charset="UTF-8">
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+
+
+
+<meta http-equiv="Cache-Control" content="no-transform">
+<meta http-equiv="Cache-Control" content="no-siteapp">
+
+
+
+
+
+
+
+
+
+
+
+
+  
+  
+  <link href="/lib/fancybox/source/jquery.fancybox.css?v=2.1.5" rel="stylesheet" type="text/css">
+
+
+
+
+  
+  
+  
+  
+
+  
+    
+    
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+    
+    
+    <link href="//fonts.googleapis.com/css?family=Lato:300,300italic,400,400italic,700,700italic&subset=latin,latin-ext" rel="stylesheet" type="text/css">
+  
+
+
+
+
+
+
+<link href="/lib/font-awesome/css/font-awesome.min.css?v=4.6.2" rel="stylesheet" type="text/css">
+
+<link href="/css/main.css?v=5.1.0" rel="stylesheet" type="text/css">
+
+
+  <meta name="keywords" content="Kubernetes,">
+
+
+
+
+
+  <link rel="alternate" href="/atom.xml" title="Z.S.K.'s Records" type="application/atom+xml">
+
+
+
+
+  <link rel="shortcut icon" type="image/x-icon" href="/favicon.ico?v=5.1.0">
+
+
+
+
+
+
+<meta name="description" content="记录在使用Kubernetes中遇到的各种问题及解决方案, 好记性不如烂笔头 不定期更新">
+<meta name="keywords" content="Kubernetes">
+<meta property="og:type" content="article">
+<meta property="og:title" content="Kubernetes学习(Kubernetes踩坑记)">
+<meta property="og:url" content="https://zhoushuke.github.io/2020/08/27/Kubernetes-prombles/index.html">
+<meta property="og:site_name" content="Z.S.K.&#39;s Records">
+<meta property="og:description" content="记录在使用Kubernetes中遇到的各种问题及解决方案, 好记性不如烂笔头 不定期更新">
+<meta property="og:locale" content="zh-Hans">
+<meta property="og:image" content="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20200827183609.png">
+<meta property="og:image" content="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20200827184435.png">
+<meta property="og:image" content="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20200430132115.png">
+<meta property="og:image" content="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20200430132148.png">
+<meta property="og:image" content="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/41B2684F-312C-41ED-AF56-D6014C6B74E6.png">
+<meta property="og:image" content="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20200430145913.png">
+<meta property="og:image" content="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/63611F8A-F803-46F5-8792-67111E03DF91.png">
+<meta property="og:image" content="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/FB66ABBE-FF79-48A4-8A8B-7FDC3AED6634.png">
+<meta property="og:image" content="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/ACEB6BE6-7E22-4A43-AB4A-A51E00CE9EFE.png">
+<meta property="og:image" content="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/5FECFF57-F204-4ADF-A9E0-5F1D9A917194.png">
+<meta property="og:image" content="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/447313AF-7DD6-4FB4-8F46-AE1DC468C7CA.png">
+<meta property="og:image" content="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/C73EB07F-14CD-43A7-86C0-49B4812F57A6.png">
+<meta property="og:image" content="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/2AE46262-2624-446C-909E-1FA0E76A8AD7.png">
+<meta property="og:image" content="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20200506115705.png">
+<meta property="og:image" content="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20200506115805.png">
+<meta property="og:image" content="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20200506120151.png">
+<meta property="og:image" content="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20200506120040.png">
+<meta property="og:image" content="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20200511180743.png">
+<meta property="og:updated_time" content="2020-08-27T11:15:37.671Z">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="Kubernetes学习(Kubernetes踩坑记)">
+<meta name="twitter:description" content="记录在使用Kubernetes中遇到的各种问题及解决方案, 好记性不如烂笔头 不定期更新">
+<meta name="twitter:image" content="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20200827183609.png">
+
+
+
+<script type="text/javascript" id="hexo.configurations">
+  var NexT = window.NexT || {};
+  var CONFIG = {
+    root: '/',
+    scheme: 'Mist',
+    sidebar: {"position":"left","display":"post"},
+    fancybox: true,
+    motion: true,
+    duoshuo: {
+      userId: 'undefined',
+      author: '博主'
+    },
+    algolia: {
+      applicationID: '',
+      apiKey: '',
+      indexName: '',
+      hits: {"per_page":10},
+      labels: {"input_placeholder":"Search for Posts","hits_empty":"We didn't find any results for the search: ${query}","hits_stats":"${hits} results found in ${time} ms"}
+    }
+  };
+</script>
+
+
+
+  <link rel="canonical" href="https://zhoushuke.github.io/2020/08/27/Kubernetes-prombles/">
+
+
+
+
+
+  <title> Kubernetes学习(Kubernetes踩坑记) | Z.S.K.'s Records </title>
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage" lang="zh-Hans">
+
+  
+
+
+
+
+
+
+
+
+
+
+  
+  
+    
+  
+
+  <div class="container one-collumn sidebar-position-left page-post-detail ">
+    <div class="headband"></div>
+
+    <header id="header" class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-meta ">
+  
+
+  <div class="custom-logo-site-title">
+    <a href="/" class="brand" rel="start">
+      <span class="logo-line-before"><i></i></span>
+      <span class="site-title">Z.S.K.'s Records</span>
+      <span class="logo-line-after"><i></i></span>
+    </a>
+  </div>
+    
+      <p class="site-subtitle"></p>
+    
+</div>
+
+<div class="site-nav-toggle">
+  <button>
+    <span class="btn-bar"></span>
+    <span class="btn-bar"></span>
+    <span class="btn-bar"></span>
+  </button>
+</div>
+
+<nav class="site-nav">
+  
+
+  
+    <ul id="menu" class="menu">
+      
+        
+        <li class="menu-item menu-item-home">
+          <a href="/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-home"></i> <br>
+            
+            首页
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-categories">
+          <a href="/categories" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-th"></i> <br>
+            
+            分类
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-about">
+          <a href="/about/ZSK-Profile.pdf" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-user"></i> <br>
+            
+            简历
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-archives">
+          <a href="/archives" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-archive"></i> <br>
+            
+            归档
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-tags">
+          <a href="/tags" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-tags"></i> <br>
+            
+            标签
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-commonweal">
+          <a href="/404.html" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-heartbeat"></i> <br>
+            
+            公益404
+          </a>
+        </li>
+      
+
+      
+        <li class="menu-item menu-item-search">
+          
+            <a href="javascript:;" class="popup-trigger">
+          
+            
+              <i class="menu-item-icon fa fa-search fa-fw"></i> <br>
+            
+            搜索
+          </a>
+        </li>
+      
+    </ul>
+  
+
+  
+    <div class="site-search">
+      
+  <div class="popup">
+ <span class="search-icon fa fa-search"></span>
+ <input type="text" id="local-search-input">
+ <div id="local-search-result"></div>
+ <span class="popup-btn-close">close</span>
+</div>
+
+
+    </div>
+  
+</nav>
+
+
+
+ </div>
+    </header>
+
+    <main id="main" class="main">
+      <div class="main-inner">
+        <div class="content-wrap">
+          <div id="content" class="content">
+            
+
+  <div id="posts" class="posts-expand">
+    
+
+  
+
+  
+  
+  
+
+  <article class="post post-type-normal " itemscope itemtype="http://schema.org/Article">
+  <link itemprop="mainEntityOfPage" href="https://zhoushuke.github.io/2020/08/27/Kubernetes-prombles/">
+
+  <span style="display:none" itemprop="author" itemscope itemtype="http://schema.org/Person">
+    <meta itemprop="name" content="Z.S.K.">
+    <meta itemprop="description" content>
+    <meta itemprop="image" content="/images/me.PNG">
+  </span>
+
+  <span style="display:none" itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+    <meta itemprop="name" content="Z.S.K.'s Records">
+    <span style="display:none" itemprop="logo" itemscope itemtype="http://schema.org/ImageObject">
+      <img style="display:none;" itemprop="url image" alt="Z.S.K.'s Records" src>
+    </span>
+  </span>
+
+    
+      <header class="post-header">
+
+        
+        
+          <h1 class="post-title" itemprop="name headline">
+            
+            
+              
+                Kubernetes学习(Kubernetes踩坑记)
+              
+            
+          </h1>
+        
+
+        <div class="post-meta">
+          <span class="post-time">
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">发表于</span>
+              
+              <time title="Post created" itemprop="dateCreated datePublished" datetime="2020-08-27T16:10:53+08:00">
+                2020-08-27
+              </time>
+            
+
+            
+
+            
+          </span>
+
+          
+            <span class="post-category">
+            
+              <span class="post-meta-divider">|</span>
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-folder-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">分类于</span>
+              
+              
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/Kubernetes/" itemprop="url" rel="index">
+                    <span itemprop="name">Kubernetes</span>
+                  </a>
+                </span>
+
+                
+                
+              
+            </span>
+          
+
+          
+            
+          
+
+          
+
+          
+          
+
+          
+
+          
+
+        </div>
+      </header>
+    
+
+
+    <div class="post-body" itemprop="articleBody">
+
+      
+      
+
+      
+        <p>记录在使用Kubernetes中遇到的各种问题及解决方案, 好记性不如烂笔头</p>
+<p><strong>不定期更新</strong></p>
+<a id="more"></a>
+<h3 id="but-volume-paths-are-still-present-on-disk"><a href="#but-volume-paths-are-still-present-on-disk" class="headerlink" title="but volume paths are still present on disk"></a>but volume paths are still present on disk</h3><p><img src="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20200827183609.png" alt></p>
+<p>原因: 这种pod已经被删除了，但是volume还存在于disk中</p>
+<p>解决: <code>/var/lib/kubelet/pods/3cd73...</code></p>
+<p><a href="https://github.com/longhorn/longhorn/issues/485" target="_blank" rel="noopener">参考</a></p>
+<h3 id="PLEG-is-not-healthy"><a href="#PLEG-is-not-healthy" class="headerlink" title="PLEG is not healthy"></a>PLEG is not healthy</h3><p><img src="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20200827184435.png" alt></p>
+<p>原因: PLEG(Pod Lifecycle Event Generator),宿主机上面跑的容器太多，导致pod无法在3m钟内完成生命周期检查</p>
+<p><a href="https://developers.redhat.com/blog/2019/11/13/pod-lifecycle-event-generator-understanding-the-pleg-is-not-healthy-issue-in-kubernetes/" target="_blank" rel="noopener">参考</a></p>
+<h3 id="metrics-server-10255-connection-refused"><a href="#metrics-server-10255-connection-refused" class="headerlink" title="metrics-server: 10255 connection refused"></a>metrics-server: 10255 connection refused</h3><figure class="highlight yaml"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line"><span class="attr">unable to fully collect metrics:</span> <span class="string">[unable</span> <span class="attr">to fully scrape metrics from source kubelet_summary:k8s-node-49:</span> <span class="string">unable</span> <span class="string">to</span> <span class="string">fetch</span> <span class="string">metrics</span> <span class="string">from</span> <span class="string">Kubelet</span> <span class="string">k8s-node-49</span> <span class="string">(xxx.xxx.xxx.49):</span> <span class="string">Get</span> <span class="string">http://xxx.xxx.xxx.49:10255/stats/summary?only_cpu_and_memory=true:</span> <span class="attr">dial tcp xxx.xxx.xxx.49:10255: connect:</span> <span class="string">connection</span> <span class="string">refused</span></span><br></pre></td></tr></table></figure>
+<p>解决: 将<code>- --kubelet-port=10255</code>注释</p>
+<h3 id="metrics-server-no-such-host"><a href="#metrics-server-no-such-host" class="headerlink" title="metrics-server: no such host"></a>metrics-server: no such host</h3><figure class="highlight yaml"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line"><span class="string">unable</span> <span class="string">to</span> <span class="string">fetch</span> <span class="string">metrics</span> <span class="string">from</span> <span class="string">Kubelet</span> <span class="string">k8s-node-234</span> <span class="string">(k8s-node-234):</span> <span class="string">Get</span> <span class="string">https://k8s-node-234:10250/stats/summary?only_cpu_and_memory=true:</span> <span class="attr">dial tcp: lookup k8s-node-234 on 10.96.0.10:53:</span> <span class="literal">no</span> <span class="string">such</span> <span class="string">host</span></span><br></pre></td></tr></table></figure>
+<p>解决: 使用<code>kubelet-preferred-address-types=InternalIP,Hostname,InternalDNS,ExternalDNS,ExternalIP</code>参数</p>
+<h3 id="daemonset-tolerations"><a href="#daemonset-tolerations" class="headerlink" title="daemonset tolerations"></a>daemonset tolerations</h3><p>集群中新增了几台机器用于部署clickhouse用于做大数据分析，为了不让这类占用大量资源的POD影响其它POD，因此选择给机器打taint的形式控制该类POD的调度, 创建POD后发现这些POD都会出现DNS解析异常, 这时就需要注意容器网络，比如flannel是否容忍了这些机器的taint，不然的话，flannel是无法被调度到这些机器的,因此容器间的通信会出现问题，<strong>可以将类似flannel这些的基础POD容忍所有的NoScheule与NoExecute</strong></p>
+<figure class="highlight yaml"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line"><span class="attr">tolerations:</span></span><br><span class="line"><span class="bullet">-</span> <span class="attr">effect:</span> <span class="string">NoSchedule</span></span><br><span class="line">  <span class="attr">operator:</span> <span class="string">Exists</span></span><br><span class="line"><span class="bullet">-</span> <span class="attr">effect:</span> <span class="string">NoExecute</span></span><br><span class="line">  <span class="attr">operator:</span> <span class="string">Exists</span></span><br></pre></td></tr></table></figure>
+<h3 id="Are-you-tring-to-mount-a-directory-on-to-a-file"><a href="#Are-you-tring-to-mount-a-directory-on-to-a-file" class="headerlink" title="Are you tring to mount a directory on to a file"></a>Are you tring to mount a directory on to a file</h3><p><img src="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20200430132115.png" alt></p>
+<p>原因: </p>
+<p>Yaml文件中使用了subPath, 但是mountPath指向了一个目录</p>
+<p>解决: </p>
+<p>mountPath需要加上文件名</p>
+<p><img src="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20200430132148.png" alt></p>
+<h3 id="Kubernetes启动后提示slice-no-such-file-ro-directory"><a href="#Kubernetes启动后提示slice-no-such-file-ro-directory" class="headerlink" title="Kubernetes启动后提示slice: no such file ro directory"></a>Kubernetes启动后提示slice: no such file ro directory</h3><p><img src="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/41B2684F-312C-41ED-AF56-D6014C6B74E6.png" alt></p>
+<p>原因: </p>
+<p>yum安装的kubelet默认的是cgroupfs，而docker一般默认的是systemd。但是kubernetes安装的时候建议使用systemd, kubelet跟docker的不一致, 要么修改kubelet的启动参数 , 要么修改dokcer启动参数</p>
+<p>解决:</p>
+<p>docker的启动参数文件为: <code>/etc/docker/daemon.json: &quot;exec-opts&quot;: [&quot;native.cgroupdriver=systemd”]</code></p>
+<p>kubelet的启动参数文件为: <code>/var/lib/kubelet/config.yaml:  cgroupDriver: systemd</code></p>
+<h3 id="“cni0”-already-has-an-IP-address-different-from"><a href="#“cni0”-already-has-an-IP-address-different-from" class="headerlink" title="“cni0” already has an IP address different from"></a>“cni0” already has an IP address different from</h3><p><img src="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20200430145913.png" alt></p>
+<p>原因:</p>
+<p>使用kubeadm reset 重复操作过, reset之后，之前flannel创建的bridge device cni0和网口设备flannel.1依然健在</p>
+<p> 解决:</p>
+<p>添加之前需要清除下网络</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br></pre></td><td class="code"><pre><span class="line">kubeadm reset</span><br><span class="line">systemctl stop kubelet</span><br><span class="line">systemctl stop docker</span><br><span class="line">rm -rf /var/lib/cni/</span><br><span class="line">rm -rf /var/lib/kubelet/*</span><br><span class="line">rm -rf /etc/cni/</span><br><span class="line">ifconfig cni0 down</span><br><span class="line">ifconfig flannel.1 down</span><br><span class="line">ifconfig docker0 down</span><br><span class="line">ip link delete cni0</span><br><span class="line">ip link delete flannel.1</span><br><span class="line">systemctl start docker</span><br><span class="line">systemctl start kubelet</span><br></pre></td></tr></table></figure>
+<h3 id="kubeadm初始化时提示-CPU小于2"><a href="#kubeadm初始化时提示-CPU小于2" class="headerlink" title="kubeadm初始化时提示 CPU小于2"></a>kubeadm初始化时提示 CPU小于2</h3><figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line">[preflight] Running pre-flight checks</span><br><span class="line">error execution phase preflight: [preflight] Some fatal errors occurred:</span><br><span class="line">    [ERROR NumCPU]: the number of available CPUs 1 is less than the required 2</span><br><span class="line">[preflight] If you know what you are doing, you can make a check non-fatal with `--ignore-preflight-errors=...`</span><br></pre></td></tr></table></figure>
+<p>原因:</p>
+<p>kubeadm对资源一定的要求，如果是测试环境无所谓的话,可忽略</p>
+<p>解决:</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">使用 --ignore-preflight-errors 忽略</span><br></pre></td></tr></table></figure>
+<h3 id="Unable-to-update-cni-config-no-network-found"><a href="#Unable-to-update-cni-config-no-network-found" class="headerlink" title="Unable to update cni config: no network found"></a>Unable to update cni config: no network found</h3><p><img src="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/63611F8A-F803-46F5-8792-67111E03DF91.png" alt></p>
+<p>原因:</p>
+<p>还未部署网络插件容器，导致在/etc/cni下还没有文件</p>
+<p>解决:</p>
+<p>根据实际情况部署网络插件</p>
+<h3 id="while-reading-‘google-dockercfg’-metadata"><a href="#while-reading-‘google-dockercfg’-metadata" class="headerlink" title="while reading ‘google-dockercfg’ metadata"></a>while reading ‘google-dockercfg’ metadata</h3><p><img src="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/FB66ABBE-FF79-48A4-8A8B-7FDC3AED6634.png" alt></p>
+<p>原因:</p>
+<p>无法访问上述url出现 404</p>
+<p>解决:</p>
+<p>由于是在RKE上部署k8s, 所以可能会去访问google相关的url, 不影响业务,可以忽略</p>
+<h3 id="no-providers-available-to-validate-pod-request"><a href="#no-providers-available-to-validate-pod-request" class="headerlink" title="no providers available to validate pod request"></a>no providers available to validate pod request</h3><p><img src="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/ACEB6BE6-7E22-4A43-AB4A-A51E00CE9EFE.png" alt></p>
+<p>原因:</p>
+<p>在api-server的启动参数enable-admission中设置了PodSecrityPolicy, 但是集群中又没有任何的podsecritypolicy，因此导致整个集群都无法新建出pod</p>
+<p>解决:</p>
+<p>删除相应的podsecritypolicy即可</p>
+<h3 id="unable-to-upgrade-connection-Unauthorized"><a href="#unable-to-upgrade-connection-Unauthorized" class="headerlink" title="unable to upgrade connection: Unauthorized"></a>unable to upgrade connection: Unauthorized</h3><p><img src="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/5FECFF57-F204-4ADF-A9E0-5F1D9A917194.png" alt></p>
+<p>原因:</p>
+<p>kubelet的启动参数少了x509认证方式配置证书的路径, 加上重启kubelet即可</p>
+<p>解决:</p>
+<p><img src="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/447313AF-7DD6-4FB4-8F46-AE1DC468C7CA.png" alt></p>
+<h3 id="kubectl-get-cs-提示-lt-unknown"><a href="#kubectl-get-cs-提示-lt-unknown" class="headerlink" title="kubectl get cs 提示\&lt;unknown>"></a>kubectl get cs 提示\&lt;unknown></h3><p><img src="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/C73EB07F-14CD-43A7-86C0-49B4812F57A6.png" alt></p>
+<p>原因:</p>
+<p>是个bug, 版本的问题，kubernetes有意废除get cs命令</p>
+<p>解决:</p>
+<p>目前对集群的运行无影响, 可通过加-oyaml 查看状态</p>
+<h3 id="安装kubeadm时提示Depends错误"><a href="#安装kubeadm时提示Depends错误" class="headerlink" title="安装kubeadm时提示Depends错误"></a>安装kubeadm时提示Depends错误</h3><p><img src="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/2AE46262-2624-446C-909E-1FA0E76A8AD7.png" alt></p>
+<p>原因: </p>
+<p>跟kubeadm没多大关系, 系统安装的有问题</p>
+<p>解决:</p>
+<p>执行以下命令修复</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">apt --fix-broken install </span><br><span class="line">apt-get update</span><br></pre></td></tr></table></figure>
+<h3 id="访问service时提示Connection-refused"><a href="#访问service时提示Connection-refused" class="headerlink" title="访问service时提示Connection refused"></a>访问service时提示Connection refused</h3><p>现象: 从另一环境中把yaml文件导入到新环境后有些service访问不通</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">telnet mongodb-mst.external 27017</span><br><span class="line">Trying 10.97.135.242...</span><br><span class="line">telnet: Unable to connect to remote host: Connection refused</span><br></pre></td></tr></table></figure>
+<p>首先排除了域名、端口的配置问题。</p>
+<p>会发现提示连接拒绝.可以确定的是集群内的DNS是正常的.</p>
+<p>那么就是通过clusterIP无法到达realserver. 查看iptables规则</p>
+<p>发现提示<code>default has no endpoints --reject-with icmp-port-unreachable</code></p>
+<p><img src="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20200506115705.png" alt></p>
+<p>很奇怪, 提示没有endpoints, 但是使用<code>kubectl get ep</code>又能看到ep存在且配置没有问题</p>
+<p>而且这个default是怎么来的.</p>
+<p>为了方便部署, 很多配置是从别的环境导出的配置, 有些service访问是没问题的, 只有少部分<code>connection refused</code></p>
+<p>结比一下发现一个很有趣的问题，先来看下不正常的yaml文件:</p>
+<p><img src="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20200506115805.png" alt></p>
+<p>由于服务在集群外部署的, 因此这里使用了subset方式, 开始怀疑问题在这里, 但是后来知道这个不是重点</p>
+<p>乍一看这个配置没什么问题, 部署也很正常, 但是对比正常的yaml文件，发现一个区别：</p>
+<p>如果在services中的端口指定了名字, 那么在subsets中的端口也要带名字, 没有带名字的就会出现<code>connection refused</code>，这个确实之前从来没有关注过, 一个端口的情况下也不会指定名字</p>
+<p>而且这面iptalbes中提示的default刚好就是这里的port name,虽然不敢相信，但是也只能试一试这个方法: 在subsets中也加了port name</p>
+<p><img src="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20200506120151.png" alt></p>
+<p>重新部署一个，再次查看iptalbes规则 </p>
+<p><code>iptables-save|grep mongodb-mst</code></p>
+<p><img src="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20200506120040.png" alt></p>
+<p>OMG, 居然可行, 再看下telnet的结果:</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">Trying 10.105.116.92...</span><br><span class="line">Connected to mongodb-mst.external.svc.cluster.local.</span><br><span class="line">Escape character is <span class="string">'^]'</span>.</span><br></pre></td></tr></table></figure>
+<p>访问也是没问题, 那么原因就在于:</p>
+<p><strong>在service中指定了port name时, 也需要在ep中指定port name</strong></p>
+<h3 id="error-converting-fieldPath-field-label-not-supported"><a href="#error-converting-fieldPath-field-label-not-supported" class="headerlink" title="error converting fieldPath: field label not supported"></a>error converting fieldPath: field label not supported</h3><p>今天遇到一个部署deployment出错的问题, yaml文件如下:</p>
+<figure class="highlight yaml"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br></pre></td><td class="code"><pre><span class="line"><span class="attr">apiVersion:</span> <span class="string">apps/v1</span></span><br><span class="line"><span class="attr">kind:</span> <span class="string">Deployment</span></span><br><span class="line"><span class="attr">metadata:</span></span><br><span class="line">  <span class="attr">name:</span> <span class="string">demo-deployment</span></span><br><span class="line">  <span class="attr">namespace:</span> <span class="string">4test</span></span><br><span class="line">  <span class="attr">labels:</span></span><br><span class="line">    <span class="attr">app:</span> <span class="string">config-demo-app</span></span><br><span class="line"><span class="attr">spec:</span></span><br><span class="line">  <span class="attr">replicas:</span> <span class="number">1</span></span><br><span class="line">  <span class="attr">selector:</span></span><br><span class="line">    <span class="attr">matchLabels:</span></span><br><span class="line">      <span class="attr">app:</span> <span class="string">config-demo-app</span></span><br><span class="line">  <span class="attr">template:</span></span><br><span class="line">    <span class="attr">metadata:</span></span><br><span class="line">      <span class="attr">labels:</span></span><br><span class="line">        <span class="attr">app:</span> <span class="string">config-demo-app</span></span><br><span class="line">      <span class="attr">annotations:</span></span><br><span class="line">        <span class="comment"># The field we'll use to couple our ConfigMap and Deployment</span></span><br><span class="line">        <span class="attr">configHash:</span> <span class="string">4431f6d28fdf60c8140d28c42cde331a76269ac7a0e6af01d0de0fa8392c1145</span></span><br><span class="line">    <span class="attr">spec:</span></span><br><span class="line">      <span class="attr">containers:</span></span><br><span class="line">      <span class="bullet">-</span> <span class="attr">name:</span> <span class="string">config-demo-app</span></span><br><span class="line">        <span class="attr">image:</span> <span class="string">gcr.io/optimum-rock-145719/config-demo-app</span></span><br><span class="line">        <span class="attr">ports:</span></span><br><span class="line">        <span class="bullet">-</span> <span class="attr">containerPort:</span> <span class="number">80</span></span><br><span class="line">        <span class="attr">envFrom:</span></span><br><span class="line">        <span class="comment"># The ConfigMap we want to use</span></span><br><span class="line">        <span class="bullet">-</span> <span class="attr">configMapRef:</span></span><br><span class="line">            <span class="attr">name:</span> <span class="string">demo-config</span></span><br><span class="line">        <span class="comment"># Extra-curricular: We can make the hash of our ConfigMap available at a</span></span><br><span class="line">        <span class="comment"># (e.g.) debug endpoint via a fieldRef</span></span><br><span class="line">        <span class="attr">env:</span></span><br><span class="line">        <span class="bullet">-</span> <span class="attr">name:</span> <span class="string">CONFIG_HASH</span></span><br><span class="line">          <span class="comment">#value: "4431f6d28fdf60c8140d28c42cde331a76269ac7a0e6af01d0de0fa8392c1145"</span></span><br><span class="line">          <span class="attr">valueFrom:</span></span><br><span class="line">            <span class="attr">fieldRef:</span></span><br><span class="line">              <span class="attr">fieldPath:</span> <span class="string">spec.template.metadata.annotations.configHash</span></span><br></pre></td></tr></table></figure>
+<p>提示以下错误:</p>
+<p><img src="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20200511180743.png" alt></p>
+<p>会提示<code>Unsupported value:spec.template.metadata.annotations.configHash</code></p>
+<p>目的很简单: container中的环境变量中引用configHash变量, 这个值是当configmap变更时比对两个不同的sha值以此达到重启pod的目的, 但fieldPath显然不支持<code>spec.template.metadata.annotations.configHash</code></p>
+<p>从报错提示来看, 支持列表有<code>metadata.name, metadata.namespace, metadata.uid, spec.nodeName,spec.serviceAccountName, status.hostIp, status.PodIP, status.PodIPs</code></p>
+<p><strong>这些值用于容器中需要以下信息时可以不从k8s的apiserver中获取而是可以很方便地从这些变量直接获得</strong></p>
+<p>详见:<code>https://www.magalix.com/blog/kubernetes-patterns-the-reflection-pattern</code></p>
+<h3 id="参考文章"><a href="#参考文章" class="headerlink" title="参考文章:"></a><strong>参考文章:</strong></h3><blockquote>
+<ul>
+<li><a href="http://www.xuyasong.com/?p=1725" target="_blank" rel="noopener">http://www.xuyasong.com/?p=1725</a></li>
+<li><a href="https://kubernetes.io/" target="_blank" rel="noopener">https://kubernetes.io/</a></li>
+<li><a href="https://www.cnblogs.com/breezey/p/8810039.html" target="_blank" rel="noopener">https://www.cnblogs.com/breezey/p/8810039.html</a></li>
+<li><a href="https://ieevee.com/tech/2018/04/25/downwardapi.html" target="_blank" rel="noopener">https://ieevee.com/tech/2018/04/25/downwardapi.html</a></li>
+<li><a href="https://www.magalix.com/blog/kubernetes-patterns-the-reflection-pattern" target="_blank" rel="noopener">https://www.magalix.com/blog/kubernetes-patterns-the-reflection-pattern</a></li>
+</ul>
+</blockquote>
+<h3 id="转载请注明出处https-izsk-me"><a href="#转载请注明出处https-izsk-me" class="headerlink" title="转载请注明出处https://izsk.me"></a><strong>转载请注明出处<a href="https://izsk.me" target="_blank" rel="noopener">https://izsk.me</a></strong></h3>
+      
+    </div>
+
+    <div>
+      
+        
+<div id="wechat_subscriber" style="display: block; padding: 10px 0; margin: 20px auto; width: 100%; text-align: center">
+    <img id="wechat_subscriber_qcode" src="/images/websitecode250.png" alt="Z.S.K. wechat" style="width: 200px; max-width: 100%;">
+    <div>Scan Me To Read on Phone</div>
+</div>
+
+
+      
+    </div>
+
+    <div>
+      
+        
+  <div style="padding: 10px 0; margin: 20px auto; width: 90%; text-align: center;">
+    <div>I know you won't do this,but what if you did?</div>
+    <button id="rewardButton" disable="enable" onclick="var qr = document.getElementById('QR'); if (qr.style.display === 'none') {qr.style.display='block';} else {qr.style.display='none'}">
+      <span>赏</span>
+    </button>
+    <div id="QR" style="display: none;">
+      
+        <div id="wechat" style="display: inline-block">
+          <img id="wechat_qr" src="/images/wechatpayme.png" alt="Z.S.K. WeChat Pay">
+          <p>微信打赏</p>
+        </div>
+      
+      
+        <div id="alipay" style="display: inline-block">
+          <img id="alipay_qr" src="/images/alipayme.jpg" alt="Z.S.K. Alipay">
+          <p>支付宝打赏</p>
+        </div>
+      
+    </div>
+  </div>
+
+
+      
+    </div>
+
+
+    <footer class="post-footer">
+      
+        <div class="post-tags">
+          
+            <a href="/tags/Kubernetes/" rel="tag"># Kubernetes</a>
+          
+        </div>
+      
+
+      
+        <div class="post-nav">
+          <div class="post-nav-next post-nav-item">
+            
+              <a href="/2020/08/23/shell-bats/" rel="next" title="bash的自动化测试框架-bats">
+                <i class="fa fa-chevron-left"></i> bash的自动化测试框架-bats
+              </a>
+            
+          </div>
+
+          <span class="post-nav-divider"></span>
+
+          <div class="post-nav-prev post-nav-item">
+            
+          </div>
+        </div>
+      
+
+      
+      
+    </footer>
+  </article>
+
+
+
+    <div class="post-spread">
+      
+    </div>
+  </div>
+
+
+          </div>
+          
+
+
+          
+  <div class="comments" id="comments">
+    
+  </div>
+
+
+        </div>
+        
+          
+  
+  <div class="sidebar-toggle">
+    <div class="sidebar-toggle-line-wrap">
+      <span class="sidebar-toggle-line sidebar-toggle-line-first"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-middle"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-last"></span>
+    </div>
+  </div>
+
+  <aside id="sidebar" class="sidebar">
+    <div class="sidebar-inner">
+
+      
+
+      
+        <ul class="sidebar-nav motion-element">
+          <li class="sidebar-nav-toc sidebar-nav-active" data-target="post-toc-wrap">
+            文章目录
+          </li>
+          <li class="sidebar-nav-overview" data-target="site-overview">
+            站点概览
+          </li>
+        </ul>
+      
+
+      <section class="site-overview sidebar-panel">
+        <div class="site-author motion-element" itemprop="author" itemscope itemtype="http://schema.org/Person">
+          <img class="site-author-image" itemprop="image" src="/images/me.PNG" alt="Z.S.K.">
+          <p class="site-author-name" itemprop="name">Z.S.K.</p>
+          <p class="site-description motion-element" itemprop="description">Better Later Than Never</p>
+        </div>
+        <nav class="site-state motion-element">
+        
+          
+            <div class="site-state-item site-state-posts">
+              <a href="/archives">
+                <span class="site-state-item-count">145</span>
+                <span class="site-state-item-name">日志</span>
+              </a>
+            </div>
+          
+
+          
+            <div class="site-state-item site-state-categories">
+              <a href="/categories">
+                <span class="site-state-item-count">13</span>
+                <span class="site-state-item-name">分类</span>
+              </a>
+            </div>
+          
+
+          
+            <div class="site-state-item site-state-tags">
+              <a href="/tags">
+                <span class="site-state-item-count">13</span>
+                <span class="site-state-item-name">标签</span>
+              </a>
+            </div>
+          
+
+        </nav>
+
+        
+          <div class="feed-link motion-element">
+            <a href="/atom.xml" rel="alternate">
+              <i class="fa fa-rss"></i>
+              RSS
+            </a>
+          </div>
+        
+
+        <div class="links-of-author motion-element">
+          
+        </div>
+
+        
+        
+
+        
+        
+
+        
+
+
+      </section>
+
+      
+      <!--noindex-->
+        <section class="post-toc-wrap motion-element sidebar-panel sidebar-panel-active">
+          <div class="post-toc">
+
+            
+              
+            
+
+            
+              <div class="post-toc-content"><ol class="nav"><li class="nav-item nav-level-3"><a class="nav-link" href="#but-volume-paths-are-still-present-on-disk"><span class="nav-number">1.</span> <span class="nav-text">but volume paths are still present on disk</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#PLEG-is-not-healthy"><span class="nav-number">2.</span> <span class="nav-text">PLEG is not healthy</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#metrics-server-10255-connection-refused"><span class="nav-number">3.</span> <span class="nav-text">metrics-server: 10255 connection refused</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#metrics-server-no-such-host"><span class="nav-number">4.</span> <span class="nav-text">metrics-server: no such host</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#daemonset-tolerations"><span class="nav-number">5.</span> <span class="nav-text">daemonset tolerations</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#Are-you-tring-to-mount-a-directory-on-to-a-file"><span class="nav-number">6.</span> <span class="nav-text">Are you tring to mount a directory on to a file</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#Kubernetes启动后提示slice-no-such-file-ro-directory"><span class="nav-number">7.</span> <span class="nav-text">Kubernetes启动后提示slice: no such file ro directory</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#“cni0”-already-has-an-IP-address-different-from"><span class="nav-number">8.</span> <span class="nav-text">“cni0” already has an IP address different from</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#kubeadm初始化时提示-CPU小于2"><span class="nav-number">9.</span> <span class="nav-text">kubeadm初始化时提示 CPU小于2</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#Unable-to-update-cni-config-no-network-found"><span class="nav-number">10.</span> <span class="nav-text">Unable to update cni config: no network found</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#while-reading-‘google-dockercfg’-metadata"><span class="nav-number">11.</span> <span class="nav-text">while reading ‘google-dockercfg’ metadata</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#no-providers-available-to-validate-pod-request"><span class="nav-number">12.</span> <span class="nav-text">no providers available to validate pod request</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#unable-to-upgrade-connection-Unauthorized"><span class="nav-number">13.</span> <span class="nav-text">unable to upgrade connection: Unauthorized</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#kubectl-get-cs-提示-lt-unknown"><span class="nav-number">14.</span> <span class="nav-text">kubectl get cs 提示\&lt;unknown&gt;</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#安装kubeadm时提示Depends错误"><span class="nav-number">15.</span> <span class="nav-text">安装kubeadm时提示Depends错误</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#访问service时提示Connection-refused"><span class="nav-number">16.</span> <span class="nav-text">访问service时提示Connection refused</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#error-converting-fieldPath-field-label-not-supported"><span class="nav-number">17.</span> <span class="nav-text">error converting fieldPath: field label not supported</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#参考文章"><span class="nav-number">18.</span> <span class="nav-text">参考文章:</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#转载请注明出处https-izsk-me"><span class="nav-number">19.</span> <span class="nav-text">转载请注明出处https://izsk.me</span></a></li></ol></div>
+            
+
+          </div>
+        </section>
+      <!--/noindex-->
+      
+
+    </div>
+  </aside>
+
+
+        
+      </div>
+    </main>
+
+    <footer id="footer" class="footer">
+      <div class="footer-inner">
+        <div class="copyright">
+  
+  &copy; 
+  <span itemprop="copyrightYear">2020</span>
+  <span class="with-love">
+    <i class="fa fa-heart"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">Z.S.K.</span>
+</div>
+
+
+<div class="powered-by">
+  Supported by <a class="theme-link" href="https://hexo.io">Hexo</a>
+</div>
+
+<div class="theme-info">
+  Theme -
+  <a class="theme-link" href="https://github.com/iissnan/hexo-theme-next">
+    NexT.Mist
+  </a>
+</div>
+
+
+        
+
+        
+      </div>
+    </footer>
+
+    <div class="back-to-top">
+      <i class="fa fa-arrow-up"></i>
+    </div>
+  </div>
+
+  
+
+<script type="text/javascript">
+  if (Object.prototype.toString.call(window.Promise) !== '[object Function]') {
+    window.Promise = null;
+  }
+</script>
+
+
+
+
+
+
+
+
+
+  
+
+
+
+  
+  <script type="text/javascript" src="/lib/jquery/index.js?v=2.1.3"></script>
+
+  
+  <script type="text/javascript" src="/lib/fastclick/lib/fastclick.min.js?v=1.0.6"></script>
+
+  
+  <script type="text/javascript" src="/lib/jquery_lazyload/jquery.lazyload.js?v=1.9.7"></script>
+
+  
+  <script type="text/javascript" src="/lib/velocity/velocity.min.js?v=1.2.1"></script>
+
+  
+  <script type="text/javascript" src="/lib/velocity/velocity.ui.min.js?v=1.2.1"></script>
+
+  
+  <script type="text/javascript" src="/lib/fancybox/source/jquery.fancybox.pack.js?v=2.1.5"></script>
+
+
+  
+
+
+  <script type="text/javascript" src="/js/src/utils.js?v=5.1.0"></script>
+
+  <script type="text/javascript" src="/js/src/motion.js?v=5.1.0"></script>
+
+
+
+  
+  
+
+  
+  <script type="text/javascript" src="/js/src/scrollspy.js?v=5.1.0"></script>
+<script type="text/javascript" src="/js/src/post-details.js?v=5.1.0"></script>
+
+
+
+  
+
+
+  <script type="text/javascript" src="/js/src/bootstrap.js?v=5.1.0"></script>
+
+
+
+  
+
+
+
+  
+
+
+
+
+	
+
+
+
+
+
+  
+
+
+
+
+  
+  
+  <script type="text/javascript">
+    // Popup Window;
+    var isfetched = false;
+    // Search DB path;
+    var search_path = "search.xml";
+    if (search_path.length == 0) {
+      search_path = "search.xml";
+    }
+    var path = "/" + search_path;
+    // monitor main search box;
+
+    function proceedsearch() {
+      $("body").append('<div class="popoverlay">').css('overflow', 'hidden');
+      $('.popup').toggle();
+    }
+    // search function;
+    var searchFunc = function(path, search_id, content_id) {
+      'use strict';
+      $.ajax({
+        url: path,
+        dataType: "xml",
+        async: true,
+        success: function( xmlResponse ) {
+          // get the contents from search data
+          isfetched = true;
+          $('.popup').detach().appendTo('.header-inner');
+          var datas = $( "entry", xmlResponse ).map(function() {
+            return {
+              title: $( "title", this ).text(),
+              content: $("content",this).text(),
+              url: $( "url" , this).text()
+            };
+          }).get();
+          var $input = document.getElementById(search_id);
+          var $resultContent = document.getElementById(content_id);
+          $input.addEventListener('input', function(){
+            var matchcounts = 0;
+            var str='<ul class=\"search-result-list\">';
+            var keywords = this.value.trim().toLowerCase().split(/[\s\-]+/);
+            $resultContent.innerHTML = "";
+            if (this.value.trim().length > 1) {
+              // perform local searching
+              datas.forEach(function(data) {
+                var isMatch = false;
+                var content_index = [];
+                var data_title = data.title.trim().toLowerCase();
+                var data_content = data.content.trim().replace(/<[^>]+>/g,"").toLowerCase();
+                var data_url = decodeURIComponent(data.url);
+                var index_title = -1;
+                var index_content = -1;
+                var first_occur = -1;
+                // only match artiles with not empty titles and contents
+                if(data_title != '') {
+                  keywords.forEach(function(keyword, i) {
+                    index_title = data_title.indexOf(keyword);
+                    index_content = data_content.indexOf(keyword);
+                    if( index_title >= 0 || index_content >= 0 ){
+                      isMatch = true;
+                      if (i == 0) {
+                        first_occur = index_content;
+                      }
+                    }
+
+                  });
+                }
+                // show search results
+                if (isMatch) {
+                  matchcounts += 1;
+                  str += "<li><a href='"+ data_url +"' class='search-result-title'>"+ data_title +"</a>";
+                  var content = data.content.trim().replace(/<[^>]+>/g,"");
+                  if (first_occur >= 0) {
+                    // cut out 100 characters
+                    var start = first_occur - 20;
+                    var end = first_occur + 80;
+                    if(start < 0){
+                      start = 0;
+                    }
+                    if(start == 0){
+                      end = 50;
+                    }
+                    if(end > content.length){
+                      end = content.length;
+                    }
+                    var match_content = content.substring(start, end);
+                    // highlight all keywords
+                    keywords.forEach(function(keyword){
+                      var regS = new RegExp(keyword, "gi");
+                      match_content = match_content.replace(regS, "<b class=\"search-keyword\">"+keyword+"</b>");
+                    });
+
+                    str += "<p class=\"search-result\">" + match_content +"...</p>"
+                  }
+                  str += "</li>";
+                }
+              })};
+            str += "</ul>";
+            if (matchcounts == 0) { str = '<div id="no-result"><i class="fa fa-frown-o fa-5x" /></div>' }
+            if (keywords == "") { str = '<div id="no-result"><i class="fa fa-search fa-5x" /></div>' }
+            $resultContent.innerHTML = str;
+          });
+          proceedsearch();
+        }
+      });}
+
+    // handle and trigger popup window;
+    $('.popup-trigger').click(function(e) {
+      e.stopPropagation();
+      if (isfetched == false) {
+        searchFunc(path, 'local-search-input', 'local-search-result');
+      } else {
+        proceedsearch();
+      };
+    });
+
+    $('.popup-btn-close').click(function(e){
+      $('.popup').hide();
+      $(".popoverlay").remove();
+      $('body').css('overflow', '');
+    });
+    $('.popup').click(function(e){
+      e.stopPropagation();
+    });
+  </script>
+
+
+  
+
+  
+
+  
+
+  
+
+
+</body>
+</html>
