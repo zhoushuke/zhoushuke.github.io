@@ -66,29 +66,6 @@
   
   <entry>
     <title>使用crash查看Linux系统异常重启原因</title>
-    <link href="https://zhoushuke.github.io/2020/09/27/System-kernel-panic-debug/"/>
-    <id>https://zhoushuke.github.io/2020/09/27/System-kernel-panic-debug/</id>
-    <published>2020-09-27T13:10:53.000Z</published>
-    <updated>2020-10-20T23:41:04.869Z</updated>
-    
-    <content type="html"><![CDATA[<p>最近有一台物理机间歇性的发生重启, 本以为是偶发事件就没多在意，今天又给重启了, 因此决定探探究竟</p><a id="more"></a><p>首先看一下kdump服务是否开启, kdump主要用于内核发生crash时记录相关上下文的. 用来转储运行内存的一个工具</p><p>简言之: 系统一旦崩溃，内核就没法正常工作了，这个时候将由kdump提供一个用于捕获当前运行信息的内核，</p><p>该内核会将此时内存中的所有运行状态和数据信息收集到一个dump core文件中以便之后分析崩溃原因</p><p>之后系统便会重启.</p><p>关于kdump在内核已经崩溃的前提下还能够捕获到异常信息, 原理可<a href="https://blog.csdn.net/zhangskd/article/details/38084337" target="_blank" rel="noopener">参考</a></p><p><img src="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20200927180148.png" alt></p><p>这里引用<a href="https://blog.csdn.net/zhangskd/article/details/38084337" target="_blank" rel="noopener">一张图</a></p><p><img src="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20200927185450.png" alt></p><p>要分析core文件，可以使用crash工具，首先是安装:</p><p>注意, 要安装与当前内核对应的版本, 要不然crash无法使用.</p><figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line">wget http://debuginfo.centos.org/7/x86_64/kernel-debuginfo-common-x86_64-3.10.0-693.el7.x86_64.rpm</span><br><span class="line">wget http://debuginfo.centos.org/7/x86_64/kernel-debuginfo-3.10.0-693.el7.x86_64.rpm</span><br><span class="line"></span><br><span class="line">rpm -ivh kernel-debuginfo-common-x86_64-3.10.0-693.el7.x86_64.rpm</span><br><span class="line">rpm -ivh kernel-debuginfo-3.10.0-693.el7.x86_64.rpm</span><br><span class="line"></span><br><span class="line">yum install crash</span><br></pre></td></tr></table></figure><p>通常, 内核crash后保存的core文件保存在<code>/var/crash</code>目录下，在该目录下找到最近一次crash的时间，使用以下命令启动crash分析dump.</p><figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">crash vmcore /usr/lib/debug/lib/modules/3.10.0-693.el7.x86_64/vmlinux</span><br></pre></td></tr></table></figure><p>启动之后就进入到了crash命令行，很明显地显示出crash的原因,如下图红框所示:</p><p><img src="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20200927175237.png" alt></p><p>这里简要地反应出内核crash时的一些内存信息快照，包含一些物理信息, tasks数量，最重要的就是导致crash的command与panic的原因</p><p>这里可直接使用ps查看进程的相关信息,跟linux 命令行下的ps功能相似</p><p><img src="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20200927175207.png" alt></p><p>还可以使用bt命令来查看trace信息, 当然都是一些汇编层的内容，需要有一定的专业知识，理解起来比较困难.</p><p>从上面已经知道了panic的原因后就可对症下药.</p><p>另外crash支持很多的子命令,大家可使用man crash查看，比较常用的为</p><figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line">crash ps <span class="comment"># 查看进程</span></span><br><span class="line">crash sys <span class="comment"># 查看系统信息</span></span><br><span class="line">crash bt <span class="comment"># 查看堆栈信息</span></span><br><span class="line">crash files <span class="comment"># 查看异常时进程打开的文件</span></span><br><span class="line">crash task <span class="comment"># 查看指定task的信息</span></span><br></pre></td></tr></table></figure><h3 id="参考文章"><a href="#参考文章" class="headerlink" title="参考文章:"></a><strong>参考文章:</strong></h3><blockquote><ul><li><a href="https://www.linuxtechi.com/how-to-enable-kdump-on-rhel-7-and-centos-7/" target="_blank" rel="noopener">https://www.linuxtechi.com/how-to-enable-kdump-on-rhel-7-and-centos-7/</a></li><li><a href="https://www.cnblogs.com/doctormo/p/12619485.html" target="_blank" rel="noopener">https://www.cnblogs.com/doctormo/p/12619485.html</a></li><li><a href="https://blog.csdn.net/zhangskd/article/details/38084337" target="_blank" rel="noopener">https://blog.csdn.net/zhangskd/article/details/38084337</a></li></ul></blockquote><h3 id="转载请注明出处https-izsk-me"><a href="#转载请注明出处https-izsk-me" class="headerlink" title="转载请注明出处https://izsk.me"></a><strong>转载请注明出处<a href="https://izsk.me" target="_blank" rel="noopener">https://izsk.me</a></strong></h3>]]></content>
-    
-    <summary type="html">
-    
-      &lt;p&gt;最近有一台物理机间歇性的发生重启, 本以为是偶发事件就没多在意，今天又给重启了, 因此决定探探究竟&lt;/p&gt;
-    
-    </summary>
-    
-    
-      <category term="System" scheme="https://zhoushuke.github.io/categories/System/"/>
-    
-    
-      <category term="System" scheme="https://zhoushuke.github.io/tags/System/"/>
-    
-  </entry>
-  
-  <entry>
-    <title>使用crash查看Linux系统异常重启原因</title>
     <link href="https://zhoushuke.github.io/2020/09/27/kernel-panic-debug/"/>
     <id>https://zhoushuke.github.io/2020/09/27/kernel-panic-debug/</id>
     <published>2020-09-27T13:10:53.000Z</published>
@@ -107,6 +84,29 @@
     
     
       <category term="Shell" scheme="https://zhoushuke.github.io/tags/Shell/"/>
+    
+  </entry>
+  
+  <entry>
+    <title>使用crash查看Linux系统异常重启原因</title>
+    <link href="https://zhoushuke.github.io/2020/09/27/System-kernel-panic-debug/"/>
+    <id>https://zhoushuke.github.io/2020/09/27/System-kernel-panic-debug/</id>
+    <published>2020-09-27T13:10:53.000Z</published>
+    <updated>2020-10-20T23:41:04.869Z</updated>
+    
+    <content type="html"><![CDATA[<p>最近有一台物理机间歇性的发生重启, 本以为是偶发事件就没多在意，今天又给重启了, 因此决定探探究竟</p><a id="more"></a><p>首先看一下kdump服务是否开启, kdump主要用于内核发生crash时记录相关上下文的. 用来转储运行内存的一个工具</p><p>简言之: 系统一旦崩溃，内核就没法正常工作了，这个时候将由kdump提供一个用于捕获当前运行信息的内核，</p><p>该内核会将此时内存中的所有运行状态和数据信息收集到一个dump core文件中以便之后分析崩溃原因</p><p>之后系统便会重启.</p><p>关于kdump在内核已经崩溃的前提下还能够捕获到异常信息, 原理可<a href="https://blog.csdn.net/zhangskd/article/details/38084337" target="_blank" rel="noopener">参考</a></p><p><img src="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20200927180148.png" alt></p><p>这里引用<a href="https://blog.csdn.net/zhangskd/article/details/38084337" target="_blank" rel="noopener">一张图</a></p><p><img src="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20200927185450.png" alt></p><p>要分析core文件，可以使用crash工具，首先是安装:</p><p>注意, 要安装与当前内核对应的版本, 要不然crash无法使用.</p><figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line">wget http://debuginfo.centos.org/7/x86_64/kernel-debuginfo-common-x86_64-3.10.0-693.el7.x86_64.rpm</span><br><span class="line">wget http://debuginfo.centos.org/7/x86_64/kernel-debuginfo-3.10.0-693.el7.x86_64.rpm</span><br><span class="line"></span><br><span class="line">rpm -ivh kernel-debuginfo-common-x86_64-3.10.0-693.el7.x86_64.rpm</span><br><span class="line">rpm -ivh kernel-debuginfo-3.10.0-693.el7.x86_64.rpm</span><br><span class="line"></span><br><span class="line">yum install crash</span><br></pre></td></tr></table></figure><p>通常, 内核crash后保存的core文件保存在<code>/var/crash</code>目录下，在该目录下找到最近一次crash的时间，使用以下命令启动crash分析dump.</p><figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">crash vmcore /usr/lib/debug/lib/modules/3.10.0-693.el7.x86_64/vmlinux</span><br></pre></td></tr></table></figure><p>启动之后就进入到了crash命令行，很明显地显示出crash的原因,如下图红框所示:</p><p><img src="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20200927175237.png" alt></p><p>这里简要地反应出内核crash时的一些内存信息快照，包含一些物理信息, tasks数量，最重要的就是导致crash的command与panic的原因</p><p>这里可直接使用ps查看进程的相关信息,跟linux 命令行下的ps功能相似</p><p><img src="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20200927175207.png" alt></p><p>还可以使用bt命令来查看trace信息, 当然都是一些汇编层的内容，需要有一定的专业知识，理解起来比较困难.</p><p>从上面已经知道了panic的原因后就可对症下药.</p><p>另外crash支持很多的子命令,大家可使用man crash查看，比较常用的为</p><figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line">crash ps <span class="comment"># 查看进程</span></span><br><span class="line">crash sys <span class="comment"># 查看系统信息</span></span><br><span class="line">crash bt <span class="comment"># 查看堆栈信息</span></span><br><span class="line">crash files <span class="comment"># 查看异常时进程打开的文件</span></span><br><span class="line">crash task <span class="comment"># 查看指定task的信息</span></span><br></pre></td></tr></table></figure><h3 id="参考文章"><a href="#参考文章" class="headerlink" title="参考文章:"></a><strong>参考文章:</strong></h3><blockquote><ul><li><a href="https://www.linuxtechi.com/how-to-enable-kdump-on-rhel-7-and-centos-7/" target="_blank" rel="noopener">https://www.linuxtechi.com/how-to-enable-kdump-on-rhel-7-and-centos-7/</a></li><li><a href="https://www.cnblogs.com/doctormo/p/12619485.html" target="_blank" rel="noopener">https://www.cnblogs.com/doctormo/p/12619485.html</a></li><li><a href="https://blog.csdn.net/zhangskd/article/details/38084337" target="_blank" rel="noopener">https://blog.csdn.net/zhangskd/article/details/38084337</a></li></ul></blockquote><h3 id="转载请注明出处https-izsk-me"><a href="#转载请注明出处https-izsk-me" class="headerlink" title="转载请注明出处https://izsk.me"></a><strong>转载请注明出处<a href="https://izsk.me" target="_blank" rel="noopener">https://izsk.me</a></strong></h3>]]></content>
+    
+    <summary type="html">
+    
+      &lt;p&gt;最近有一台物理机间歇性的发生重启, 本以为是偶发事件就没多在意，今天又给重启了, 因此决定探探究竟&lt;/p&gt;
+    
+    </summary>
+    
+    
+      <category term="System" scheme="https://zhoushuke.github.io/categories/System/"/>
+    
+    
+      <category term="System" scheme="https://zhoushuke.github.io/tags/System/"/>
     
   </entry>
   
