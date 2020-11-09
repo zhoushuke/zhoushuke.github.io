@@ -86,21 +86,20 @@
 
 
 
-<meta name="description" content="grafana出品的loki日志框架完美地与kubernetes的label理念结合，相对于EFK来说更加轻量级，非常适合不需要日志聚合的场景.目前新上集群考虑都彩loki做为基础工具, 直接在grafana中展示 在这里记录下使用Loki踩过的坑, 不定期更新">
+<meta name="description" content="kong中提供了两种最基本认证方式,即用户密码认证， basic-auth及basic-auth-api，这两种方式非常好理解，使用的场景类似 basic-auth的认证方式是直接验证用户名密码 而basic-auth-api会将提交的用户名密码到指定的api接口认证，比如统一认证服务 basic auth可以为Route或者Service添加简单的用户名密码认证">
 <meta name="keywords" content="CloudNavi">
 <meta property="og:type" content="article">
-<meta property="og:title" content="Grafana学习(Loki踩坑记)">
-<meta property="og:url" content="https://zhoushuke.github.io/2020/08/27/Loki-Prombles/index.html">
+<meta property="og:title" content="Kong学习(kong basic-auth及basic-auth-api认证)">
+<meta property="og:url" content="https://zhoushuke.github.io/2020/10/28/Kong-basic-auth/index.html">
 <meta property="og:site_name" content="Z.S.K.&#39;s Records">
-<meta property="og:description" content="grafana出品的loki日志框架完美地与kubernetes的label理念结合，相对于EFK来说更加轻量级，非常适合不需要日志聚合的场景.目前新上集群考虑都彩loki做为基础工具, 直接在grafana中展示 在这里记录下使用Loki踩过的坑, 不定期更新">
+<meta property="og:description" content="kong中提供了两种最基本认证方式,即用户密码认证， basic-auth及basic-auth-api，这两种方式非常好理解，使用的场景类似 basic-auth的认证方式是直接验证用户名密码 而basic-auth-api会将提交的用户名密码到指定的api接口认证，比如统一认证服务 basic auth可以为Route或者Service添加简单的用户名密码认证">
 <meta property="og:locale" content="zh-Hans">
-<meta property="og:image" content="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20200909190248.png">
-<meta property="og:image" content="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20200909200457.png">
-<meta property="og:updated_time" content="2020-09-09T12:47:36.254Z">
+<meta property="og:image" content="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20201109225550.png">
+<meta property="og:updated_time" content="2020-11-09T14:59:29.450Z">
 <meta name="twitter:card" content="summary">
-<meta name="twitter:title" content="Grafana学习(Loki踩坑记)">
-<meta name="twitter:description" content="grafana出品的loki日志框架完美地与kubernetes的label理念结合，相对于EFK来说更加轻量级，非常适合不需要日志聚合的场景.目前新上集群考虑都彩loki做为基础工具, 直接在grafana中展示 在这里记录下使用Loki踩过的坑, 不定期更新">
-<meta name="twitter:image" content="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20200909190248.png">
+<meta name="twitter:title" content="Kong学习(kong basic-auth及basic-auth-api认证)">
+<meta name="twitter:description" content="kong中提供了两种最基本认证方式,即用户密码认证， basic-auth及basic-auth-api，这两种方式非常好理解，使用的场景类似 basic-auth的认证方式是直接验证用户名密码 而basic-auth-api会将提交的用户名密码到指定的api接口认证，比如统一认证服务 basic auth可以为Route或者Service添加简单的用户名密码认证">
+<meta name="twitter:image" content="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20201109225550.png">
 
 
 
@@ -128,13 +127,13 @@
 
 
 
-  <link rel="canonical" href="https://zhoushuke.github.io/2020/08/27/Loki-Prombles/">
+  <link rel="canonical" href="https://zhoushuke.github.io/2020/10/28/Kong-basic-auth/">
 
 
 
 
 
-  <title> Grafana学习(Loki踩坑记) | Z.S.K.'s Records </title>
+  <title> Kong学习(kong basic-auth及basic-auth-api认证) | Z.S.K.'s Records </title>
 </head>
 
 <body itemscope itemtype="http://schema.org/WebPage" lang="zh-Hans">
@@ -300,7 +299,7 @@
   
 
   <article class="post post-type-normal " itemscope itemtype="http://schema.org/Article">
-  <link itemprop="mainEntityOfPage" href="https://zhoushuke.github.io/2020/08/27/Loki-Prombles/">
+  <link itemprop="mainEntityOfPage" href="https://zhoushuke.github.io/2020/10/28/Kong-basic-auth/">
 
   <span style="display:none" itemprop="author" itemscope itemtype="http://schema.org/Person">
     <meta itemprop="name" content="Z.S.K.">
@@ -324,7 +323,7 @@
             
             
               
-                Grafana学习(Loki踩坑记)
+                Kong学习(kong basic-auth及basic-auth-api认证)
               
             
           </h1>
@@ -339,8 +338,8 @@
               
                 <span class="post-meta-item-text">发表于</span>
               
-              <time title="Post created" itemprop="dateCreated datePublished" datetime="2020-08-27T17:30:53+08:00">
-                2020-08-27
+              <time title="Post created" itemprop="dateCreated datePublished" datetime="2020-10-28T19:40:53+08:00">
+                2020-10-28
               </time>
             
 
@@ -397,20 +396,33 @@
       
 
       
-        <p>grafana出品的loki日志框架完美地与kubernetes的label理念结合，相对于EFK来说更加轻量级，非常适合不需要日志聚合的场景.目前新上集群考虑都彩loki做为基础工具, 直接在grafana中展示</p>
-<p><strong>在这里记录下使用Loki踩过的坑, 不定期更新</strong></p>
+        <p>kong中提供了两种最基本认证方式,即用户密码认证， basic-auth及basic-auth-api，这两种方式非常好理解，使用的场景类似</p>
+<p>basic-auth的认证方式是直接验证用户名密码</p>
+<p>而basic-auth-api会将提交的用户名密码到指定的api接口认证，比如统一认证服务</p>
+<p>basic auth可以为Route或者Service添加简单的用户名密码认证</p>
 <a id="more"></a>
-<h3 id="promtail-too-many-open-files"><a href="#promtail-too-many-open-files" class="headerlink" title="promtail: too many open files"></a>promtail: too many open files</h3><p><img src="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20200909190248.png" alt></p>
-<p>原因: /var/log/pods下面的文件数量太多，导致超过内核参数(fs.inotify.max_user_instances)设置配置.</p>
-<p>解决：</p>
-<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># 先查看当前机器设置的配置</span></span><br><span class="line">cat /proc/sys/fs/inotify/max_user_instances</span><br><span class="line"><span class="comment"># 再查看promtail启动时watch的文件数</span></span><br><span class="line">cat /run/promtail/positions.yaml | wc -l</span><br><span class="line"><span class="comment"># 如果这个值比max_user_instances要大，则会出现上面的错误，可以通过修改内核参数进行调整</span></span><br><span class="line">sysctl -w fs.inotify.max_user_instances=512</span><br><span class="line"><span class="comment"># 生效</span></span><br><span class="line">sysctl -p</span><br></pre></td></tr></table></figure>
-<p>参考: <a href="https://github.com/grafana/loki/issues/1153" target="_blank" rel="noopener">https://github.com/grafana/loki/issues/1153</a></p>
-<h3 id="promtail-no-such-file-ro-directory"><a href="#promtail-no-such-file-ro-directory" class="headerlink" title="promtail: no such file ro directory"></a>promtail: no such file ro directory</h3><p><img src="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20200909200457.png" alt></p>
-<p>原因： promtail daemonset启动时会自动挂载好几个hostpath,如果docker containers的配置调整过，则需要volume跟volumemount都需要对应上.</p>
-<h3 id="未完待续"><a href="#未完待续" class="headerlink" title="未完待续"></a>未完待续</h3><h3 id="参考文章"><a href="#参考文章" class="headerlink" title="参考文章:"></a><strong>参考文章:</strong></h3><blockquote>
+<p>要使用basic-auth,直接在ingress的annotations中添加<code>plugins.konghq.com: xxx</code>即可，在2.x的版本中, <code>plugins.konghq.com</code>已经被抛弃, 变成<code>konghq.com/plugins</code></p>
+<p>使用非常简单:</p>
+<p>假设现在要有一个应用需要通过用户名才能访问, 则</p>
+<p>创建kongConsumer及KongCredential</p>
+<figure class="highlight yaml"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br></pre></td><td class="code"><pre><span class="line"><span class="attr">apiVersion:</span> <span class="string">configuration.konghq.com/v1</span></span><br><span class="line"><span class="attr">kind:</span> <span class="string">KongConsumer</span></span><br><span class="line"><span class="attr">metadata:</span></span><br><span class="line">  <span class="attr">name:</span> <span class="string">user1</span></span><br><span class="line">  <span class="attr">namespace:</span> <span class="string">demo-echo</span></span><br><span class="line">  <span class="attr">annotations:</span></span><br><span class="line">    <span class="attr">kubernetes.io/ingress.class:</span> <span class="string">"nginx"</span> <span class="comment">#最好指定ingress.class，且跟ingress的保持一致</span></span><br><span class="line"><span class="attr">username:</span> <span class="string">echo-user1</span> <span class="comment"># 这里的用户名跟</span></span><br><span class="line"><span class="meta">---</span></span><br><span class="line"><span class="attr">apiVersion:</span> <span class="string">configuration.konghq.com/v1</span></span><br><span class="line"><span class="attr">kind:</span> <span class="string">KongCredential</span></span><br><span class="line"><span class="attr">metadata:</span></span><br><span class="line">  <span class="attr">name:</span> <span class="string">user1-basic-auth</span></span><br><span class="line">  <span class="attr">namespace:</span> <span class="string">demo-echo</span></span><br><span class="line">  <span class="attr">annotations:</span></span><br><span class="line">    <span class="attr">kubernetes.io/ingress.class:</span> <span class="string">"nginx"</span> <span class="comment">#最好指定ingress.class，且跟ingress的保持一致</span></span><br><span class="line"><span class="attr">consumerRef:</span> <span class="string">user1</span>  <span class="comment"># 这里绑定KongConsumer</span></span><br><span class="line"><span class="attr">type:</span> <span class="string">basic-auth</span>  <span class="comment"># 指定认证类型</span></span><br><span class="line"><span class="attr">config:</span></span><br><span class="line">  <span class="attr">username:</span> <span class="string">user1</span> <span class="comment"># 这里指定用户名密码</span></span><br><span class="line">  <span class="attr">password:</span> <span class="number">123456</span></span><br></pre></td></tr></table></figure>
+<p>2.x的版本<code>KongCredential</code>正在被淘汰，建议使用<code>credential Secrets</code></p>
+<p>首先是申明了kongConsumer及KongCredential这两个对象，在kong中，</p>
+<p>同时，需要申明kongplugin, </p>
+<figure class="highlight yaml"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line"><span class="attr">apiVersion:</span> <span class="string">configuration.konghq.com/v1</span></span><br><span class="line"><span class="attr">kind:</span> <span class="string">KongPlugin</span></span><br><span class="line"><span class="attr">metadata:</span></span><br><span class="line">  <span class="attr">name:</span> <span class="string">user1-basic-auth</span></span><br><span class="line">  <span class="attr">namespace:</span> <span class="string">kong</span></span><br><span class="line"><span class="attr">disabled:</span> <span class="literal">false</span></span><br><span class="line"><span class="attr">plugin:</span> <span class="string">basic-auth</span> <span class="comment"># 指定plugin绑定的类型</span></span><br></pre></td></tr></table></figure>
+<p>之后则添加ingress</p>
+<figure class="highlight yaml"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br></pre></td><td class="code"><pre><span class="line"><span class="attr">apiVersion:</span> <span class="string">v1</span></span><br><span class="line"><span class="attr">items:</span></span><br><span class="line"><span class="bullet">-</span> <span class="attr">apiVersion:</span> <span class="string">extensions/v1beta1</span></span><br><span class="line">  <span class="attr">kind:</span> <span class="string">Ingress</span></span><br><span class="line">  <span class="attr">metadata:</span></span><br><span class="line">    <span class="attr">annotations:</span></span><br><span class="line">      <span class="attr">kubernetes.io/ingress.class:</span> <span class="string">nginx</span></span><br><span class="line">      <span class="attr">plugins.konghq.com:</span> <span class="string">user1-basic-auth</span> <span class="comment"># 这里指定插件名称</span></span><br><span class="line">    <span class="attr">name:</span> <span class="string">infra-model-manager-ingress</span></span><br><span class="line">  <span class="attr">spec:</span></span><br><span class="line">    <span class="attr">rules:</span></span><br><span class="line">    <span class="bullet">-</span> <span class="attr">http:</span></span><br><span class="line">        <span class="attr">paths:</span></span><br><span class="line">        <span class="bullet">-</span> <span class="attr">backend:</span></span><br><span class="line">            <span class="attr">serviceName:</span> <span class="string">nginx-svc</span></span><br><span class="line">            <span class="attr">servicePort:</span> <span class="number">30222</span></span><br><span class="line">          <span class="attr">path:</span> <span class="string">/</span></span><br></pre></td></tr></table></figure>
+<p>如果是basic-auth-api的话，则kongplugin为</p>
+<figure class="highlight yaml"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br></pre></td><td class="code"><pre><span class="line"><span class="attr">apiVersion:</span> <span class="string">configuration.konghq.com/v1</span></span><br><span class="line"><span class="attr">config:</span></span><br><span class="line">  <span class="attr">auth_url:</span> <span class="string">http://infra-console.default:8087/v1/kong/authorization</span> <span class="comment"># 这里则是认证api地址</span></span><br><span class="line">  <span class="attr">keepalive:</span> <span class="number">60000</span></span><br><span class="line">  <span class="attr">method:</span> <span class="string">POST</span></span><br><span class="line">  <span class="attr">retry_count:</span> <span class="number">3</span></span><br><span class="line">  <span class="attr">timeout:</span> <span class="number">10000</span></span><br><span class="line"><span class="attr">kind:</span> <span class="string">KongPlugin</span></span><br><span class="line"><span class="attr">metadata:</span></span><br><span class="line">  <span class="attr">name:</span> <span class="string">basicauth</span></span><br><span class="line"><span class="attr">plugin:</span> <span class="string">basic-auth-api</span> <span class="comment"># 指定插件类型</span></span><br></pre></td></tr></table></figure>
+<p>效果为:</p>
+<p><img src="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20201109225550.png" alt></p>
+<p>这个界面是不是很熟悉，没错，这个其实就是nginx的认证， kong本身就是基于nginxLUA的封装</p>
+<p>如果密码输入错误的话，则会直接提示<code>{&quot;message&quot;:&quot;Invalid authentication credentials&quot;}</code></p>
+<p>basic-auth-api的方式可以更好地把统一认证服务集成到应用中，这样避免每个服务都需要加入认证相关的代码.</p>
+<h3 id="参考文章"><a href="#参考文章" class="headerlink" title="参考文章:"></a><strong>参考文章:</strong></h3><blockquote>
 <ul>
-<li><a href="https://github.com/grafana/loki/issues/429" target="_blank" rel="noopener">https://github.com/grafana/loki/issues/429</a></li>
-<li><a href="https://github.com/grafana/loki/issues/1153" target="_blank" rel="noopener">https://github.com/grafana/loki/issues/1153</a></li>
+<li><a href="https://github.com/Kong/" target="_blank" rel="noopener">https://github.com/Kong/</a></li>
+<li><a href="https://www.lijiaocn.com/%E9%A1%B9%E7%9B%AE/2018/09/30/kong-features-01-auth.html#basic-auth" target="_blank" rel="noopener">https://www.lijiaocn.com/%E9%A1%B9%E7%9B%AE/2018/09/30/kong-features-01-auth.html#basic-auth</a></li>
 </ul>
 </blockquote>
 <h3 id="转载请注明出处https-izsk-me"><a href="#转载请注明出处https-izsk-me" class="headerlink" title="转载请注明出处https://izsk.me"></a><strong>转载请注明出处<a href="https://izsk.me" target="_blank" rel="noopener">https://izsk.me</a></strong></h3>
@@ -471,8 +483,8 @@
         <div class="post-nav">
           <div class="post-nav-next post-nav-item">
             
-              <a href="/2020/08/23/shell-bats/" rel="next" title="bash的自动化测试框架-bats">
-                <i class="fa fa-chevron-left"></i> bash的自动化测试框架-bats
+              <a href="/2020/10/17/Kubernetes-prombles/" rel="next" title="Kubernetes学习(Kubernetes踩坑记)">
+                <i class="fa fa-chevron-left"></i> Kubernetes学习(Kubernetes踩坑记)
               </a>
             
           </div>
@@ -480,10 +492,6 @@
           <span class="post-nav-divider"></span>
 
           <div class="post-nav-prev post-nav-item">
-            
-              <a href="/2020/09/15/System-use-lvm-manager-disks/" rel="prev" title="Linux下使用lvm将多块盘合并">
-                Linux下使用lvm将多块盘合并 <i class="fa fa-chevron-right"></i>
-              </a>
             
           </div>
         </div>
@@ -611,7 +619,7 @@
             
 
             
-              <div class="post-toc-content"><ol class="nav"><li class="nav-item nav-level-3"><a class="nav-link" href="#promtail-too-many-open-files"><span class="nav-number">1.</span> <span class="nav-text">promtail: too many open files</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#promtail-no-such-file-ro-directory"><span class="nav-number">2.</span> <span class="nav-text">promtail: no such file ro directory</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#未完待续"><span class="nav-number">3.</span> <span class="nav-text">未完待续</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#参考文章"><span class="nav-number">4.</span> <span class="nav-text">参考文章:</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#转载请注明出处https-izsk-me"><span class="nav-number">5.</span> <span class="nav-text">转载请注明出处https://izsk.me</span></a></li></ol></div>
+              <div class="post-toc-content"><ol class="nav"><li class="nav-item nav-level-3"><a class="nav-link" href="#参考文章"><span class="nav-number">1.</span> <span class="nav-text">参考文章:</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#转载请注明出处https-izsk-me"><span class="nav-number">2.</span> <span class="nav-text">转载请注明出处https://izsk.me</span></a></li></ol></div>
             
 
           </div>
