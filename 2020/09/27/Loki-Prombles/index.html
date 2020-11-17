@@ -68,7 +68,7 @@
 <link href="/css/main.css?v=5.1.0" rel="stylesheet" type="text/css">
 
 
-  <meta name="keywords" content="Http-Tcp-Ip,">
+  <meta name="keywords" content="CloudNavi,">
 
 
 
@@ -86,18 +86,22 @@
 
 
 
-<meta name="description" content="我们都说HTTP协议是无状态的,我们又都说HTTP分长连接及短连接,’无状态’到底是个什么意思？">
-<meta name="keywords" content="Http-Tcp-Ip">
+<meta name="description" content="grafana出品的loki日志框架完美地与kubernetes的label理念结合，相对于EFK来说更加轻量级，非常适合不需要日志聚合的场景.目前新上集群考虑都彩loki做为基础工具, 直接在grafana中展示 在这里记录下使用Loki踩过的坑, 不定期更新">
+<meta name="keywords" content="CloudNavi">
 <meta property="og:type" content="article">
-<meta property="og:title" content="HTTP之长连接及短连接">
-<meta property="og:url" content="https://zhoushuke.github.io/2017/08/12/HTTP之长连接及短连接/index.html">
+<meta property="og:title" content="Grafana学习(Loki踩坑记)">
+<meta property="og:url" content="https://zhoushuke.github.io/2020/09/27/Loki-Prombles/index.html">
 <meta property="og:site_name" content="Z.S.K.&#39;s Records">
-<meta property="og:description" content="我们都说HTTP协议是无状态的,我们又都说HTTP分长连接及短连接,’无状态’到底是个什么意思？">
+<meta property="og:description" content="grafana出品的loki日志框架完美地与kubernetes的label理念结合，相对于EFK来说更加轻量级，非常适合不需要日志聚合的场景.目前新上集群考虑都彩loki做为基础工具, 直接在grafana中展示 在这里记录下使用Loki踩过的坑, 不定期更新">
 <meta property="og:locale" content="zh-Hans">
-<meta property="og:updated_time" content="2020-01-14T12:12:54.308Z">
+<meta property="og:image" content="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20201110195022.png">
+<meta property="og:image" content="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20200909190248.png">
+<meta property="og:image" content="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20200909200457.png">
+<meta property="og:updated_time" content="2020-11-17T15:23:34.839Z">
 <meta name="twitter:card" content="summary">
-<meta name="twitter:title" content="HTTP之长连接及短连接">
-<meta name="twitter:description" content="我们都说HTTP协议是无状态的,我们又都说HTTP分长连接及短连接,’无状态’到底是个什么意思？">
+<meta name="twitter:title" content="Grafana学习(Loki踩坑记)">
+<meta name="twitter:description" content="grafana出品的loki日志框架完美地与kubernetes的label理念结合，相对于EFK来说更加轻量级，非常适合不需要日志聚合的场景.目前新上集群考虑都彩loki做为基础工具, 直接在grafana中展示 在这里记录下使用Loki踩过的坑, 不定期更新">
+<meta name="twitter:image" content="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20201110195022.png">
 
 
 
@@ -125,13 +129,13 @@
 
 
 
-  <link rel="canonical" href="https://zhoushuke.github.io/2017/08/12/HTTP之长连接及短连接/">
+  <link rel="canonical" href="https://zhoushuke.github.io/2020/09/27/Loki-Prombles/">
 
 
 
 
 
-  <title> HTTP之长连接及短连接 | Z.S.K.'s Records </title>
+  <title> Grafana学习(Loki踩坑记) | Z.S.K.'s Records </title>
 </head>
 
 <body itemscope itemtype="http://schema.org/WebPage" lang="zh-Hans">
@@ -297,7 +301,7 @@
   
 
   <article class="post post-type-normal " itemscope itemtype="http://schema.org/Article">
-  <link itemprop="mainEntityOfPage" href="https://zhoushuke.github.io/2017/08/12/HTTP之长连接及短连接/">
+  <link itemprop="mainEntityOfPage" href="https://zhoushuke.github.io/2020/09/27/Loki-Prombles/">
 
   <span style="display:none" itemprop="author" itemscope itemtype="http://schema.org/Person">
     <meta itemprop="name" content="Z.S.K.">
@@ -321,7 +325,7 @@
             
             
               
-                HTTP之长连接及短连接
+                Grafana学习(Loki踩坑记)
               
             
           </h1>
@@ -336,8 +340,8 @@
               
                 <span class="post-meta-item-text">发表于</span>
               
-              <time title="Post created" itemprop="dateCreated datePublished" datetime="2017-08-12T22:50:53+08:00">
-                2017-08-12
+              <time title="Post created" itemprop="dateCreated datePublished" datetime="2020-09-27T17:30:53+08:00">
+                2020-09-27
               </time>
             
 
@@ -359,8 +363,8 @@
               
               
                 <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
-                  <a href="/categories/Http-Tcp-Ip/" itemprop="url" rel="index">
-                    <span itemprop="name">Http-Tcp-Ip</span>
+                  <a href="/categories/CloudNavi/" itemprop="url" rel="index">
+                    <span itemprop="name">CloudNavi</span>
                   </a>
                 </span>
 
@@ -394,36 +398,26 @@
       
 
       
-        <p>我们都说HTTP协议是无状态的,我们又都说HTTP分长连接及短连接,’无状态’到底是个什么意思？</p>
+        <p>grafana出品的loki日志框架完美地与kubernetes的label理念结合，相对于EFK来说更加轻量级，非常适合不需要日志聚合的场景.目前新上集群考虑都彩loki做为基础工具, 直接在grafana中展示</p>
+<p><strong>在这里记录下使用Loki踩过的坑, 不定期更新</strong></p>
 <a id="more"></a>
-<h3 id="无状态"><a href="#无状态" class="headerlink" title="无状态"></a><strong>无状态</strong></h3><p>HTTP无状态其实指的是协议对于事务处理没有记忆能力,服务器不知道客户端是什么状态.也就是说,打开一个服务器上的网页和你之前打开这个服务器上的网页之间没有任何联系.HTTP是一个无状态的面向连接的协议,无状态不代表HTTP不能保持TCP连接,更不能代表HTTP使用的是UDP协议(无连接).</p>
-<p>那http又是如何保持长连接的呢?</p>
-<p>在<code>HTTP/1.0</code>中,默认使用的是短连接.也就是说,浏览器和服务器每进行一次HTTP操作,就建立一次连接,但任务结束就中断连接.如果客户端浏览器访问的某个HTML或其他类型的 Web页中包含有其他的Web资源,如JavaScript文件、图像文件、CSS文件等；当浏览器每遇到这样一个Web资源,就会建立一个HTTP会话.<br>但从<code>HTTP/1.1</code>起,默认使用长连接,用以保持连接特性.使用长连接的HTTP协议,会在响应头有加入这行代码:</p>
-<p><code>Connection:keep-alive</code></p>
-<p>　　在使用长连接的情况下,当一个网页打开完成后,客户端和服务器之间用于传输HTTP数据的 TCP连接不会关闭,如果客户端再次访问这个服务器上的网页,会继续使用这一条已经建立的连接.<code>Keep-Alive</code>不会永久保持连接,它有一个保持时间,可以在不同的服务器软件（如Apache）中设定这个时间.实现长连接要客户端和服务端都支持长连接.</p>
-<p>当然,在很多web服务器中可以设置这个keep-Alive的保持时间,比如nginx的配置文件nginx.conf中可直接使用:</p>
-<p><code>keepalive_timeout  60;</code></p>
-<p><strong>HTTP协议的长连接和短连接,实质上是TCP协议的长连接和短连接.</strong></p>
-<p>那长短连接各自对应的场景有哪些呢(各自的优缺点)?</p>
-<h3 id="短连接"><a href="#短连接" class="headerlink" title="短连接"></a><strong>短连接</strong></h3><p>场景: client向server发起连接请求,server接到请求,然后双方建立连接.client向server 发送消息,server回应client,然后一次读写就完成了,这时候双方任何一个都可以发起close操作,不过一般都是client先发起 close操作.为什么呢,一般的server不会回复完client后立即关闭连接的,当然不排除有特殊的情况.从上面的描述看,短连接一般只会在 client/server间传递一次读写操作</p>
-<p><strong>短连接管理起来比较简单,存在的连接都是有用的连接,不需要额外的控制手段,但是频繁的创建大量的连接也很耗资源</strong></p>
-<h3 id="长连接"><a href="#长连接" class="headerlink" title="长连接"></a><strong>长连接</strong></h3><p>流程是:client向server发起连接,server接受client连接,双方建立连接.Client与server完成一次读写之后,它们之间的连接并不会主动关闭,后续的读写操作会继续使用这个连接.</p>
-<p>首先说一下TCP/IP详解上讲到的TCP保活功能,保活功能主要为服务器应用提供,服务器应用希望知道客户主机是否崩溃,从而可以代表客户使用资源.如果客户已经消失,使得服务器上保留一个半开放的连接,而服务器又在等待来自客户端的数据,则服务器将应远等待客户端的数据,保活功能就是试图在服务 器端检测到这种半开放的连接.</p>
-<p>如果一个给定的连接在两小时内没有任何的动作,服务器就向客户发一个探测报文段,客户主机必须处于以下4个状态之一:</p>
-<blockquote>
+<h3 id="Please-verify-permissions"><a href="#Please-verify-permissions" class="headerlink" title="Please verify permissions"></a>Please verify permissions</h3><p><img src="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20201110195022.png" alt></p>
+<p>原因: 这条其实是warn,不影响logtail的正常工作，如果调整过日志的路径的话要确认logtail挂载的路径是否正常</p>
+<h3 id="loki-invalid-schema-config"><a href="#loki-invalid-schema-config" class="headerlink" title="loki: invalid schema config"></a>loki: invalid schema config</h3><p>原因: loki的配置文件格式错误.</p>
+<h3 id="promtail-too-many-open-files"><a href="#promtail-too-many-open-files" class="headerlink" title="promtail: too many open files"></a>promtail: too many open files</h3><p><img src="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20200909190248.png" alt></p>
+<p>原因: /var/log/pods下面的文件数量太多，导致超过内核参数(fs.inotify.max_user_instances)设置配置.</p>
+<p>解决：</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># 先查看当前机器设置的配置</span></span><br><span class="line">cat /proc/sys/fs/inotify/max_user_instances</span><br><span class="line"><span class="comment"># 再查看promtail启动时watch的文件数</span></span><br><span class="line">cat /run/promtail/positions.yaml | wc -l</span><br><span class="line"><span class="comment"># 如果这个值比max_user_instances要大，则会出现上面的错误，可以通过修改内核参数进行调整</span></span><br><span class="line">sysctl -w fs.inotify.max_user_instances=1024</span><br><span class="line"><span class="comment"># 生效</span></span><br><span class="line">sysctl -p</span><br></pre></td></tr></table></figure>
+<p>参考: <a href="https://github.com/grafana/loki/issues/1153" target="_blank" rel="noopener">https://github.com/grafana/loki/issues/1153</a></p>
+<h3 id="promtail-no-such-file-ro-directory"><a href="#promtail-no-such-file-ro-directory" class="headerlink" title="promtail: no such file ro directory"></a>promtail: no such file ro directory</h3><p><img src="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20200909200457.png" alt></p>
+<p>原因： promtail daemonset启动时会自动挂载好几个hostpath,如果docker containers的配置调整过，则需要volume跟volumemount都需要对应上.</p>
+<h3 id="未完待续"><a href="#未完待续" class="headerlink" title="未完待续"></a>未完待续</h3><h3 id="参考文章"><a href="#参考文章" class="headerlink" title="参考文章:"></a><strong>参考文章:</strong></h3><blockquote>
 <ul>
-<li>客户主机依然正常运行,并从服务器可达.客户的TCP响应正常,而服务器也知道对方是正常的,服务器在两小时后将保活定时器复位.</li>
-<li>客户主机已经崩溃,并且关闭或者正在重新启动.在任何一种情况下,客户的TCP都没有响应.服务端将不能收到对探测的响应,并在75秒后超时.服务器总共发送10个这样的探测 ,每个间隔75秒.如果服务器没有收到一个响应,它就认为客户主机已经关闭并终止连接.</li>
-<li>客户主机崩溃并已经重新启动.服务器将收到一个对其保活探测的响应,这个响应是一个复位,使得服务器终止这个连接.</li>
+<li><a href="https://github.com/grafana/loki/issues/429" target="_blank" rel="noopener">https://github.com/grafana/loki/issues/429</a></li>
+<li><a href="https://github.com/grafana/loki/issues/1153" target="_blank" rel="noopener">https://github.com/grafana/loki/issues/1153</a></li>
 </ul>
 </blockquote>
-<p>客户机正常运行,但是服务器不可达,这种情况与2类似,TCP能发现的就是没有收到探查的响应.</p>
-<p><strong>从上可以看出http要保持长连接需要做很多次的向客户端试探是否存活,这对性能是个很大的损耗,但是从另一方面来说长连接减少了很多的创关闭连接带来的开销,节约时间.</strong></p>
-<h3 id="场景"><a href="#场景" class="headerlink" title="场景"></a><strong>场景</strong></h3><p><code>长连接</code>多用于操作频繁,点对点的通讯,而且连接数不能太多情况,.每个TCP连接都需要三步握手,这需要时间,如果每个操作都是先连接,再操作的话那么处理速度会降低很多,所以每个操作完后都不断开,次处理时直接发送数据包就OK了,不用建立TCP连接.例如：数据库的连接用长连接, 如果用短连接频繁的通信会造成socket错误,而且频繁的socket 创建也是对资源的浪费. </p>
-<p>而像WEB网站的http服务一般都用<code>短链接</code>,因为长连接对于服务端来说会耗费一定的资源,而像WEB网站这么频繁的成千上万甚至上亿客户端的连接用短连接会更省一些资源,如果用长连接,而且同时有成千上万的用户,如果每个用户都占用一个连接的话,那可想而知吧.所以并发量大,但每个用户无需频繁操作情况下需用短连好.</p>
-<p><strong>没有哪一个更好,只有哪一个最适合,一切跟着场景走,总有一款适合你!</strong></p>
-<h3 id="转载请注明出处https-izsk-me"><a href="#转载请注明出处https-izsk-me" class="headerlink" title="转载请注明出处https://izsk.me"></a><strong>转载请注明出处<a href="https://izsk.me" target="_blank" rel="noopener">https://izsk.me</a></strong></h3><hr>
-
+<h3 id="转载请注明出处https-izsk-me"><a href="#转载请注明出处https-izsk-me" class="headerlink" title="转载请注明出处https://izsk.me"></a><strong>转载请注明出处<a href="https://izsk.me" target="_blank" rel="noopener">https://izsk.me</a></strong></h3>
       
     </div>
 
@@ -472,7 +466,7 @@
       
         <div class="post-tags">
           
-            <a href="/tags/Http-Tcp-Ip/" rel="tag"># Http-Tcp-Ip</a>
+            <a href="/tags/CloudNavi/" rel="tag"># CloudNavi</a>
           
         </div>
       
@@ -481,8 +475,8 @@
         <div class="post-nav">
           <div class="post-nav-next post-nav-item">
             
-              <a href="/2017/08/12/flask学习二(flask应用)/" rel="next" title="Flask学习(flask应用)">
-                <i class="fa fa-chevron-left"></i> Flask学习(flask应用)
+              <a href="/2020/09/25/Kong-ingress-proxy-https-to-upstream/" rel="next" title="Kong学习(kong ingress代理https请求到upstream)">
+                <i class="fa fa-chevron-left"></i> Kong学习(kong ingress代理https请求到upstream)
               </a>
             
           </div>
@@ -491,8 +485,8 @@
 
           <div class="post-nav-prev post-nav-item">
             
-              <a href="/2017/08/12/python中调用sqlplus生成多实例oracle-awr-html报告/" rel="prev" title="python中调用sqlplus生成多实例oracle-awr-html报告">
-                python中调用sqlplus生成多实例oracle-awr-html报告 <i class="fa fa-chevron-right"></i>
+              <a href="/2020/09/27/System-kernel-panic-debug/" rel="prev" title="使用crash查看Linux系统异常重启原因">
+                使用crash查看Linux系统异常重启原因 <i class="fa fa-chevron-right"></i>
               </a>
             
           </div>
@@ -621,7 +615,7 @@
             
 
             
-              <div class="post-toc-content"><ol class="nav"><li class="nav-item nav-level-3"><a class="nav-link" href="#无状态"><span class="nav-number">1.</span> <span class="nav-text">无状态</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#短连接"><span class="nav-number">2.</span> <span class="nav-text">短连接</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#长连接"><span class="nav-number">3.</span> <span class="nav-text">长连接</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#场景"><span class="nav-number">4.</span> <span class="nav-text">场景</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#转载请注明出处https-izsk-me"><span class="nav-number">5.</span> <span class="nav-text">转载请注明出处https://izsk.me</span></a></li></ol></div>
+              <div class="post-toc-content"><ol class="nav"><li class="nav-item nav-level-3"><a class="nav-link" href="#Please-verify-permissions"><span class="nav-number">1.</span> <span class="nav-text">Please verify permissions</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#loki-invalid-schema-config"><span class="nav-number">2.</span> <span class="nav-text">loki: invalid schema config</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#promtail-too-many-open-files"><span class="nav-number">3.</span> <span class="nav-text">promtail: too many open files</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#promtail-no-such-file-ro-directory"><span class="nav-number">4.</span> <span class="nav-text">promtail: no such file ro directory</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#未完待续"><span class="nav-number">5.</span> <span class="nav-text">未完待续</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#参考文章"><span class="nav-number">6.</span> <span class="nav-text">参考文章:</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#转载请注明出处https-izsk-me"><span class="nav-number">7.</span> <span class="nav-text">转载请注明出处https://izsk.me</span></a></li></ol></div>
             
 
           </div>
