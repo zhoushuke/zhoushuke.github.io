@@ -410,6 +410,125 @@
       </tags>
   </entry>
   <entry>
+    <title>Kong学习(解决诡异的Kong Error超时及重试问题)</title>
+    <url>/2020/09/23/Kong-upstream-timeout-60s-and-retry-5/</url>
+    <content><![CDATA[<p>现在业务使用的kong做为api gateway, 最近碰到一个的kong error超时及重试的问题，记录下排查过程</p>
+<a id="more"></a>
+<p>在浏览器中下载后端一个好几G的文件，会出现Kong Error错误，如下图所示</p>
+<p><img src="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20201117193533.png" alt></p>
+<p>这里说一下，下载文件这个动作整个端到端的请求路径如下:</p>
+<p>backend是则java，提供数据下载，然后返回给前端</p>
+<p>frontend与backend之间是通过k8s service 进行访问的</p>
+<p>在frontend请求下载的过程中，backend需要先从resource-factory中获取文件保存在bakend本地，这个时间会比较长，backend下载完成之后才会返回到frontend</p>
+<h3 id="排查过程"><a href="#排查过程" class="headerlink" title="排查过程"></a>排查过程</h3><p>从kong的错误提示来看，很明显，<code>upstream server</code>超时（这个<code>upstream</code>很重要），最开始没注意，只关注到<code>timeout</code>这个关键字了</p>
+<h4 id="backend"><a href="#backend" class="headerlink" title="backend"></a>backend</h4><p>先从backend的日志开始排查，意料之中，backend日志出现一堆的error，但是意料之外的是，在这过程中出现了每隔60s就会对文件重新下载， 总共进行了5次重新下载的操作，这个比较奇怪，正常只是在页面上点击了一次操作，为何会出现连续下载5次的流程，而且每次下载都没有下载完就进行重试，而且都是每隔60s， 像是有重试的操作，比较诡异</p>
+<p>从日志可以肯定的是，<strong>下载文件的代码逻辑是没有问题的</strong>，因此在这里出现了两个问题:</p>
+<ol>
+<li>下载代码没问题，但下载为何会失败</li>
+<li><strong>60s, 5次下载是怎么产生的</strong></li>
+</ol>
+<p>下面主要是在排查问题2是如何产生的，还是比较有意思</p>
+<h4 id="frontend"><a href="#frontend" class="headerlink" title="frontend"></a>frontend</h4><p>从backend没有找到最有价值的信息，那么看看frontend打印的日志中有没有什么思路，由于frontend中包含了一个nginx，大部分的请求都会被记录下来，首先将nginx的日志调整为<code>debug</code></p>
+<ol>
+<li><code>client xxx.xxx.xxx.xxx closed keepalive connection</code></li>
+<li><code>epoll_wait() reported that client prematurely closed connection</code></li>
+<li>nginx 499状态码</li>
+</ol>
+<p><img src="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20201117103815.png" alt></p>
+<p>关于第1个<code>错误</code>(后来被证实这不是错误)看到keepalive closed，那么是不是很自然地想到nginx中有关于keepalive的相关参数，keepalive默认情况下是75s,跟60s好像也不太符合，但是不是确实是这个值太小了呢? 因些作者还是调整了frontend中nginx的keepalive为600s, 但是问题依旧</p>
+<p>因此转到第2个错误，网上查找了一翻发现这个跟上面两行出现代码499的原因一致，<code>nginx 499</code>这个状态码可能接触地比较少，当时也不是很明白这个状态码应对的含义，如果有不清楚的可以参考<a href="https://imajinyun.xyz/2019/11/15/nginx-499-faq/" target="_blank" rel="noopener">nginx-499-faq</a></p>
+<p>499一句话概括就是: <strong>Nginx 把请求转发上游服务器，上游服务器慢吞吞的处理，客户端等不及了主动断开链接，Nginx 就负责记录了 <code>499</code></strong>, 是不是刚好跟epoll_wait那句话的意思相近。</p>
+<p>因此出现错误499及错误2的原因就是客户端主动关闭了连接，</p>
+<p>由于下载的文件非常大，大小在4G+， 作者还以为是nginx某些配置的timeout设置的不准确</p>
+<p>frontend中的nginx主要调整过的配置项如下:</p>
+<figure class="highlight bash"><table><tr><td class="code"><pre><span class="line">keepalive_timeout 1200s;</span><br><span class="line">send_timeout 1200s;</span><br><span class="line">proxy_read_timeout 1200s;</span><br><span class="line">proxy_send_timeout 1200s;</span><br></pre></td></tr></table></figure>
+<p>重启之后发现问题依旧, 这时作者怀疑是浏览器是不是也存在timeout不够长导致连接被断开了</p>
+<p>因此直接使用<strong>curl的方式请求</strong>，发现问题依旧，<strong>因此可以排除浏览器的问题</strong></p>
+<p>这时作者想起另外一个也同样使用VUE写的前端，VUE的axios(<a href="https://blog.csdn.net/qq_36727756/article/details/93738441" target="_blank" rel="noopener">参考</a>)是可以设置http请求的超时时间的，那是不是会由于前端对每个http设置的timeout太短了呢，经过询问前端的同事，果然，前端配置了这个时间为60s，这明显不够，作者欣喜若狂，以为见到了曙光, 然而</p>
+<p><strong> too young, too simple</strong></p>
+<p>前端将60s调整为600s，<strong>问题依旧</strong> 同样提示上面的错误，同样重复下载5次</p>
+<p><strong> WHAT FXXK</strong></p>
+<p>同时，作者跟前端同事反复确认frontend的逻辑中会不会有重试的代码，前端同事很明确地说：NO</p>
+<p>冷静下来</p>
+<p>VUE的axios超时时间一定有影响，消除这部分的影响问题依旧，那一定还有别的地方存在timeout时间过短导致问题，既然对于frotend的nginx来说，是客户端主动断开了连接，除了frontend代码本身，那客户端还有谁呢?</p>
+<h4 id="kong"><a href="#kong" class="headerlink" title="kong"></a>kong</h4><p>在frontend前面的就是kong了，那么它就是客户端，难道是kong这边把连接主动断开了？</p>
+<p>为了验证是不是kong这边的问题，作者使用curl直接请求frontend，绕过了kong这一层，发现居然下载没问题了，同时，也不存在每隔60s重复下载一次的现象</p>
+<p><img src="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20201117110709.png" alt></p>
+<p>从下载的流程来看，前2分44s应该是backend向resource-factory中获取文件下载到本地的时间，果然时间比较长</p>
+<p>后面的10分37s则是backend向frontend的nginx加传文件的时间，时间也比较长</p>
+<p>好歹直接通过frontend可以下载文件成功.</p>
+<p><strong>柳暗花明又一村</strong></p>
+<p>截止到现在归纳一下做过的调整</p>
+<ol>
+<li>调整了VUE的axios的超时时间，这个是对每个经过frontend的请求都生效</li>
+<li>调整了frontend中nginx的timeout配置</li>
+</ol>
+<p>老规矩，看kong proxy的日志如下:</p>
+<p><img src="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20201117114330.png" alt></p>
+<p>也是timeout,不过这次作者终于看到了<strong>upstream</strong>这个词了</p>
+<p><strong>这里说的upstream不就是frontend么, 难道是当backend向resource-factory下载文件的时候，也就是2分44s这个时间内，frontend没有收到backend返回的response，frontend也就没有response返回给kong， 在一定时间内(也就是日志中出现的60s)kong无法从frontend中获取到response，出现timeout,然后开始重试，重试5次之后frontend还是没有response，最后kong将这条请求断开了.</strong></p>
+<p>这个猜想其实是合理的，符合看到的日志报错，同时也符合5次重试的这个现象</p>
+<p><strong>但是5次重启到底是怎么回事，upstream真的就是frontend</strong></p>
+<p>作者这里也想到kong其实openresty, 不也是nginx呢?那是不是kong也需要设置一下nginx的timeout配置呢?</p>
+<p>嗯，加上再说</p>
+<figure class="highlight bash"><table><tr><td class="code"><pre><span class="line">- name: KONG_NGINX_PROXY_CLIENT_BODY_TIMEOUT</span><br><span class="line">  value: 600s</span><br><span class="line">- name: KONG_NGINX_PROXY_CLIENT_HEADER_TIMEOUT</span><br><span class="line">  value: 600s</span><br><span class="line">- name: KONG_NGINX_PROXY_KEEPALIVE_TIMEOUT</span><br><span class="line">  value: 600s</span><br><span class="line">- name: KONG_NGINX_PROXY_PROXY_READ_TIMEOUT</span><br><span class="line">  value: 600s</span><br><span class="line">- name: KONG_NGINX_PROXY_PROXY_SEND_TIMEOUT</span><br><span class="line">  value: 600s</span><br><span class="line">- name: KONG_NGINX_PROXY_SEND_TIMEOUT</span><br><span class="line">  value: 600s</span><br><span class="line">- name: KONG_NGINX_UPSTREAM_KEEPALIVE_TIMEOUT</span><br><span class="line">  value: 600s</span><br></pre></td></tr></table></figure>
+<p>按照<a href="https://docs.konghq.com/1.1.x/configuration/" target="_blank" rel="noopener">官方文档</a>将这些参数到容器的env中，然后重启kong</p>
+<p><strong>擦，问题依旧</strong></p>
+<p>这里看到问题没有解决，第一时间难道是加的参数都没有生效，不能使用environment，作者还特意到容器中验证了一下验证</p>
+<p><img src="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20201117120250.png" alt></p>
+<p><img src="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20201117120312.png" alt></p>
+<p>发现都是没有问题的，那为什么还是不行呢?</p>
+<p>再次网上搜索一翻，发现kong中对于service(<strong>是kong中的service,而不是k8s中的service</strong>),还有3个timeout参数</p>
+<p><img src="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20201117225634.png" alt></p>
+<p>然后到kong中查看对应的service, 如下:</p>
+<p><img src="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20201117164812.png" alt></p>
+<p><strong>发现这3个timeout都是默认值，为60s， 而且，retries为5</strong>，刚好跟重试的现象对应上了</p>
+<p>先不管，使用如下命令更新一下这个记录，将timeout改长一点</p>
+<figure class="highlight bash"><table><tr><td class="code"><pre><span class="line">curl -X PATCH --url https://127.0.0.1:8444/services/791f94ae-7971-54e5-8996-e66083af6617 \</span><br><span class="line">-d <span class="string">'connect_timeout=800000'</span> \</span><br><span class="line">-d <span class="string">'read_timeout=800000'</span> \</span><br><span class="line">-d <span class="string">'write_timeout=800000'</span></span><br></pre></td></tr></table></figure>
+<p>发现提示下面的错误:</p>
+<p><img src="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20201117170805.png" alt></p>
+<p>真是一步一个坎， 更新操作不支持，作者也试过删除操作，发现也是同样的错误</p>
+<p>这个错误的原因在于作者使用的kong是DB-less的模式，对于db-less下是不能修改绑定在kong上的<code>entities serivces</code>的</p>
+<p>那不能更新也不能删除，那么就只能重建了service了,kong中的service对应的是<code>kongingress中的proxy</code>,更新如下</p>
+<figure class="highlight yaml"><table><tr><td class="code"><pre><span class="line"><span class="meta">---</span></span><br><span class="line"><span class="attr">apiVersion:</span> <span class="string">configuration.konghq.com/v1</span></span><br><span class="line"><span class="attr">kind:</span> <span class="string">KongIngress</span></span><br><span class="line"><span class="attr">metadata:</span></span><br><span class="line">  <span class="attr">name:</span> <span class="string">kongingress-resource</span></span><br><span class="line"><span class="attr">proxy:</span>  <span class="comment"># proxy是新增的</span></span><br><span class="line">  <span class="attr">connect_timeout:</span> <span class="number">800000</span></span><br><span class="line">  <span class="attr">path:</span> <span class="string">/</span></span><br><span class="line">  <span class="attr">port:</span> <span class="number">8080</span></span><br><span class="line">  <span class="attr">protocols:</span></span><br><span class="line">  <span class="bullet">-</span> <span class="string">http</span></span><br><span class="line">  <span class="bullet">-</span> <span class="string">https</span></span><br><span class="line">  <span class="attr">read_timeout:</span> <span class="number">800000</span></span><br><span class="line">  <span class="attr">retries:</span> <span class="number">0</span></span><br><span class="line">  <span class="attr">write_timeout:</span> <span class="number">800000</span></span><br></pre></td></tr></table></figure>
+<p>这样更新之后会发现kong中serivce的记录还是不变，经过多次的实验，正确的操作如下:</p>
+<ol>
+<li>先将ingress删除后，会发现kong中的service记录也删除掉了</li>
+<li>然后将k8s中的service加上annotations指定<code>konghq.com/override: kongingress-resource</code></li>
+<li>再发布ingress, 同样指定<code>konghq.com/override: kongingress-resource</code></li>
+</ol>
+<p>经过上面的3个操作之后，再来看kong中service的记录，更新成功</p>
+<p><img src="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20201117174434.png" alt></p>
+<p>这个时候再测试页面的下载功能，就没有再出现过超时及重试的现象了，</p>
+<p><strong>完美</strong></p>
+<h3 id="总结"><a href="#总结" class="headerlink" title="总结"></a>总结</h3><p>对于这次<code>诡异</code>的timeout问题可以看出， 中间的转发层一多，因为每一层都可能超时，原因排查起来就比较费力</p>
+<p>在排查过程中，每个错误都可能是关键信息，不要选择性忽略，对于这次作者其实就忽略了<code>upstream</code>这个信息</p>
+<p>当然如果从一开始就关注到upstream，也还是要将上面的排查过程走一遍，因为确实有好几个地方都是有问题的</p>
+<p>比如UVE的axios的超时配置，nginx的超时配置，作者在这过程中甚至还想到过k8s中service的超时机制</p>
+<p>有用的知识又增加了一些.</p>
+<h3 id="参考文章"><a href="#参考文章" class="headerlink" title="参考文章:"></a><strong>参考文章:</strong></h3><blockquote>
+<ul>
+<li><a href="https://docs.konghq.com/1.1.x/configuration/" target="_blank" rel="noopener">https://docs.konghq.com/1.1.x/configuration/</a></li>
+<li><a href="https://docs.konghq.com/1.1.x/configuration/" target="_blank" rel="noopener">https://docs.konghq.com/1.1.x/configuration/</a></li>
+<li><a href="https://github.com/Kong/kubernetes-ingress-controller/issues/472" target="_blank" rel="noopener">https://github.com/Kong/kubernetes-ingress-controller/issues/472</a></li>
+<li><a href="https://github.com/Kong/kubernetes-ingress-controller/issues/905" target="_blank" rel="noopener">https://github.com/Kong/kubernetes-ingress-controller/issues/905</a></li>
+<li><a href="https://linuxops.org/blog/kong/admin.html" target="_blank" rel="noopener">https://linuxops.org/blog/kong/admin.html</a></li>
+<li><a href="https://docs.konghq.com/1.1.x/admin-api/#update-service" target="_blank" rel="noopener">https://docs.konghq.com/1.1.x/admin-api/#update-service</a></li>
+<li><a href="https://imajinyun.xyz/2019/11/15/nginx-499-faq/" target="_blank" rel="noopener">https://imajinyun.xyz/2019/11/15/nginx-499-faq/</a></li>
+<li><a href="https://lanjingling.github.io/2016/06/11/nginx-https-keepalived-youhua/" target="_blank" rel="noopener">https://lanjingling.github.io/2016/06/11/nginx-https-keepalived-youhua/</a></li>
+<li><a href="https://luanlengli.github.io/2019/07/02/Kong-Ingress-Controller%E9%83%A8%E7%BD%B2.html" target="_blank" rel="noopener">https://luanlengli.github.io/2019/07/02/Kong-Ingress-Controller%E9%83%A8%E7%BD%B2.html</a></li>
+<li><a href="https://blog.csdn.net/qq_36727756/article/details/93738441" target="_blank" rel="noopener">https://blog.csdn.net/qq_36727756/article/details/93738441</a></li>
+</ul>
+</blockquote>
+<h3 id="转载请注明出处https-izsk-me"><a href="#转载请注明出处https-izsk-me" class="headerlink" title="转载请注明出处https://izsk.me"></a><strong>转载请注明出处<a href="https://izsk.me" target="_blank" rel="noopener">https://izsk.me</a></strong></h3>]]></content>
+      <categories>
+        <category>CloudNavi</category>
+      </categories>
+      <tags>
+        <tag>CloudNavi</tag>
+      </tags>
+  </entry>
+  <entry>
     <title>Linux下使用lvm将多块盘合并</title>
     <url>/2020/09/15/System-use-lvm-manager-disks/</url>
     <content><![CDATA[<p>需求: 将vdb vdc这两个500G的盘合并成一个1000G的盘，然后新建一个目录挂载到大盘上，当大盘出现磁盘紧张的时候还可以自动扩容.</p>
@@ -6506,6 +6625,74 @@
       </tags>
   </entry>
   <entry>
+    <title>记一次排查ES FGC导致的集群宕机异常</title>
+    <url>/2019/10/06/ES-FGC-Fix/</url>
+    <content><![CDATA[<p>有一个私有云环境的运维同事反应项目中的ES集群无法查询, 由于是私有云环境, 没有直接运维权限, 所以没有接收到一线报警, 远程登录上去后发现ES集群已经宕机了, 这次的排查过程也发现了几个比较容易忽视的细节, 在此记录一下,比较有意思.</p>
+<a id="more"></a>
+<h3 id="集群状态"><a href="#集群状态" class="headerlink" title="集群状态"></a>集群状态</h3><p>ES集群为3节点.</p>
+<p>首先肯定是查看集群状态</p>
+<figure class="highlight bash"><table><tr><td class="code"><pre><span class="line">curl <span class="string">'http://localhost:9200/_cluster/health?pretty'</span> -u xxx:yyy</span><br><span class="line"><span class="comment">#发现状态为Red</span></span><br></pre></td></tr></table></figure>
+<p>查看节点状态</p>
+<figure class="highlight bash"><table><tr><td class="code"><pre><span class="line">curl <span class="string">'http://localhost:9200/_cat/node?v'</span> -u xxx:yyy</span><br><span class="line"><span class="comment">#节点数正常</span></span><br></pre></td></tr></table></figure>
+<p>查看各节点使用的磁盘情况</p>
+<figure class="highlight bash"><table><tr><td class="code"><pre><span class="line">curl -XGET <span class="string">'localhost:9200/_cat/allocation?v&amp;pretty'</span> -u xxx:yyy</span><br><span class="line"><span class="comment">#未发现异常</span></span><br></pre></td></tr></table></figure>
+<h3 id="集群日志"><a href="#集群日志" class="headerlink" title="集群日志"></a>集群日志</h3><p>登录一个ES节点查看日志，发现以下报错，查看其它2个节点，情况相同</p>
+<p><img src="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20200204134510.png" alt></p>
+<p>从日志来看, 可以发现几个问题:</p>
+<blockquote>
+<ul>
+<li>Full GC很频繁, 而且时间也非常的长 </li>
+<li>每次GC完之后所能释放的内存非常有限</li>
+</ul>
+</blockquote>
+<p>到这，其它原因已经很明朗, <strong>内存不够导致的full gc 频繁，但是又不能释放太多的空间，又导致full gc的恶意循环</strong></p>
+<p>如果大家对gc的日志不很了解的话, 这里解释下上面日志的各个字段含义, 假如有以下一条gc日志</p>
+<figure class="highlight bash"><table><tr><td class="code"><pre><span class="line">[2018-06-30T17:57:29,020][INFO ][o.e.m.j.JvmGcMonitorService] [qoo--ES] [gc][old][228385][160772] duration [5s], collections [1]/[5.1s], total [5s]/[4.4d], memory [945.4mb]-&gt;[958.5mb]/[1007.3mb], all_pools &#123;[young] [87.8mb]-&gt;[100.9mb]/[133.1mb]&#125;&#123;[survivor] [0b]-&gt;[0b]/[16.6mb]&#125;&#123;[old] [857.6mb]-&gt;[857.6mb]/[857.6mb]&#125;</span><br></pre></td></tr></table></figure>
+<ul>
+<li><strong>gc old</strong> 本次是 old GC 这是第228385次 GC 检查][从 JVM 启动至今发生的第 160772次 G]</li>
+<li><strong>duration</strong> [本次检查到的 GC 总耗时 <strong>5</strong> 秒，可能是多次的加和</li>
+<li><strong>collections</strong> [从上次检查至今总共发生<strong>1</strong>次GC]/[从上次检查至今已过去 <strong>5.1</strong> 秒],</li>
+<li><strong>total</strong> [本次检查到的 GC 总耗时为 <strong>5</strong> 秒]/[从 JVM 启动至今发生的 GC 总耗时为 <strong>4.4</strong> 天]，</li>
+<li><strong>memory</strong> [ GC 前 Heap memory 空间]-&gt;[GC 后 Heap memory 空间]/[Heap memory 总空间],</li>
+<li><strong>all_pools</strong>(分代部分的详情) {young 区][GC 前 Memory ]-&gt;[GC后 Memory]/[young区 Memory 总大小] }</li>
+<li><strong>survivor</strong> [GC 前 Memory ]-&gt;[GC后 Memory]/[Memory 总大小] }{old 区[GC 前 Memory ]-&gt;[GC后 Memory]/[old区 Memory 总大小] }</li>
+</ul>
+<p>那为何会内存不足呢, 想起前几天服务拓展，添加收集了几个服务的日志, 日志量不算小, 而且这3个ES节点所在的机器内存只分配了8个G, 显然, 加完这几个日志之后内存不够用了.</p>
+<h3 id="Index-Mapping"><a href="#Index-Mapping" class="headerlink" title="Index Mapping"></a>Index Mapping</h3><p>而且，从日志中， 还发现几处很诡异的日志</p>
+<p><img src="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20200204141415.png" alt></p>
+<p>红框中的错误: <strong>object mapping for [msg] tried to pasrse field [msg] as object, but found a concrete</strong></p>
+<p>翻译过来就是说, 日志中的msg这个字段的类型匹配不上, ES尽力把它解析为object类型，但是它却是个确切的值.</p>
+<p>就好比你在python中定义了一个字典, 但是你给它赋值一个整形, 这确定要报错.</p>
+<p>但是这个mapping是从何而来的呢.</p>
+<p>经过网上搜索一翻, 终于明白:</p>
+<p>ES中为了加强性能，对于索引中的<strong>第一条数据, ES会默认(可设置)按照这条数据建立index mapping, 相当于是一个索引模板, 好比是mysql中表的定义一个概念, 后续这个索引中的所有日志都按照该模板进行解析</strong></p>
+<p>后来经过查看源码, 我们发现，出现上图中的问题是因为代码中的日志打印不规范, 有一个地方如果抛出异常时，打印的是一个单一字符串, 而正常情况下打印的是一个json, 所以当第一条正常的日志传递给ES时，ES建立的索引 模板记录这个字段为object类型(可以类比为python中的字典, 本身是可以新增元素的), 当应用抛出异常时，日志中又传递了一个单一字符串, 但是索引模板已经记录为object类型，所以无法匹配, 这就是问题所在</p>
+<h3 id="Fix-Bug"><a href="#Fix-Bug" class="headerlink" title="Fix Bug"></a>Fix Bug</h3><p>从3个方面解决上面的问题</p>
+<p>首先是修复代码中日志不规范问题, 这个充暴露了code view不严谨.</p>
+<p>第2个是加大ES的内存,毕竟日志量确实是上来了, 从8G添加到12G</p>
+<p>第3个是优化ES的gc问题, ES中有个逻辑是：<strong>默认情况下，主节点每30秒会去检查其他节点的状态，如果任何节点的垃圾回收时间超过30秒（Garbage collection duration）且在重复次数内都超时，则会导致主节点任务该节点脱离集群, 节点脱离集群后会引起分片的rebalance</strong></p>
+<p>这个机制让ES节点频繁的脱离集群，而又引起整个集群的rebalance，ES本身的内存就不够，rebalance更是雪上加霜, 如此往复就导致整个ES集群宕机.</p>
+<p>可修改主节点的检查时间及重复次数,让其它节点有充分的时间进行full gc.</p>
+<p>在ES的配置文件中添加以下配置:</p>
+<figure class="highlight yml"><table><tr><td class="code"><pre><span class="line"><span class="attr">discovery.zen.fd.ping_timeout:</span> <span class="string">300s</span></span><br><span class="line"><span class="attr">discovery.zen.fd.ping_retriES:</span> <span class="number">10</span></span><br></pre></td></tr></table></figure>
+<p>这样, 达到这两个条件时才能触发节点脱离集群</p>
+<p>至此, 依次重启ES节点, 问题圆满解决.</p>
+<h3 id="参考文章"><a href="#参考文章" class="headerlink" title="参考文章:"></a><strong>参考文章:</strong></h3><blockquote>
+<ul>
+<li><a href="https://www.elastic.co/guide/en/elasticsearch/reference/current/mapping.html" target="_blank" rel="noopener">elasticsearch index mapping</a></li>
+<li><a href="https://blog.csdn.net/sinat_35930259/article/details/80354732" target="_blank" rel="noopener">elasticsearch篇之mapping</a></li>
+<li><a href="https://segmentfault.com/a/1190000016494488" target="_blank" rel="noopener">你看懂 Elasticsearch Log 中的 GC 日志了吗？</a></li>
+</ul>
+</blockquote>
+<h3 id="转载请注明出处https-izsk-me"><a href="#转载请注明出处https-izsk-me" class="headerlink" title="转载请注明出处https://izsk.me"></a><strong>转载请注明出处<a href="https://izsk.me" target="_blank" rel="noopener">https://izsk.me</a></strong></h3>]]></content>
+      <categories>
+        <category>FELK</category>
+      </categories>
+      <tags>
+        <tag>FELK</tag>
+      </tags>
+  </entry>
+  <entry>
     <title>CockRoachDB学习(架构)</title>
     <url>/2019/10/06/CockroachDB-Struct/</url>
     <content><![CDATA[<p>项目中需要一个分布式数据库用于存储业务的KV数据, 在前期项目调研结合业务比对了业界常用的KV数据库模型后, 最后选择了CockRoachDB(CRDB).</p>
@@ -6640,74 +6827,6 @@
       </categories>
       <tags>
         <tag>分布式架构</tag>
-      </tags>
-  </entry>
-  <entry>
-    <title>记一次排查ES FGC导致的集群宕机异常</title>
-    <url>/2019/10/06/ES-FGC-Fix/</url>
-    <content><![CDATA[<p>有一个私有云环境的运维同事反应项目中的ES集群无法查询, 由于是私有云环境, 没有直接运维权限, 所以没有接收到一线报警, 远程登录上去后发现ES集群已经宕机了, 这次的排查过程也发现了几个比较容易忽视的细节, 在此记录一下,比较有意思.</p>
-<a id="more"></a>
-<h3 id="集群状态"><a href="#集群状态" class="headerlink" title="集群状态"></a>集群状态</h3><p>ES集群为3节点.</p>
-<p>首先肯定是查看集群状态</p>
-<figure class="highlight bash"><table><tr><td class="code"><pre><span class="line">curl <span class="string">'http://localhost:9200/_cluster/health?pretty'</span> -u xxx:yyy</span><br><span class="line"><span class="comment">#发现状态为Red</span></span><br></pre></td></tr></table></figure>
-<p>查看节点状态</p>
-<figure class="highlight bash"><table><tr><td class="code"><pre><span class="line">curl <span class="string">'http://localhost:9200/_cat/node?v'</span> -u xxx:yyy</span><br><span class="line"><span class="comment">#节点数正常</span></span><br></pre></td></tr></table></figure>
-<p>查看各节点使用的磁盘情况</p>
-<figure class="highlight bash"><table><tr><td class="code"><pre><span class="line">curl -XGET <span class="string">'localhost:9200/_cat/allocation?v&amp;pretty'</span> -u xxx:yyy</span><br><span class="line"><span class="comment">#未发现异常</span></span><br></pre></td></tr></table></figure>
-<h3 id="集群日志"><a href="#集群日志" class="headerlink" title="集群日志"></a>集群日志</h3><p>登录一个ES节点查看日志，发现以下报错，查看其它2个节点，情况相同</p>
-<p><img src="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20200204134510.png" alt></p>
-<p>从日志来看, 可以发现几个问题:</p>
-<blockquote>
-<ul>
-<li>Full GC很频繁, 而且时间也非常的长 </li>
-<li>每次GC完之后所能释放的内存非常有限</li>
-</ul>
-</blockquote>
-<p>到这，其它原因已经很明朗, <strong>内存不够导致的full gc 频繁，但是又不能释放太多的空间，又导致full gc的恶意循环</strong></p>
-<p>如果大家对gc的日志不很了解的话, 这里解释下上面日志的各个字段含义, 假如有以下一条gc日志</p>
-<figure class="highlight bash"><table><tr><td class="code"><pre><span class="line">[2018-06-30T17:57:29,020][INFO ][o.e.m.j.JvmGcMonitorService] [qoo--ES] [gc][old][228385][160772] duration [5s], collections [1]/[5.1s], total [5s]/[4.4d], memory [945.4mb]-&gt;[958.5mb]/[1007.3mb], all_pools &#123;[young] [87.8mb]-&gt;[100.9mb]/[133.1mb]&#125;&#123;[survivor] [0b]-&gt;[0b]/[16.6mb]&#125;&#123;[old] [857.6mb]-&gt;[857.6mb]/[857.6mb]&#125;</span><br></pre></td></tr></table></figure>
-<ul>
-<li><strong>gc old</strong> 本次是 old GC 这是第228385次 GC 检查][从 JVM 启动至今发生的第 160772次 G]</li>
-<li><strong>duration</strong> [本次检查到的 GC 总耗时 <strong>5</strong> 秒，可能是多次的加和</li>
-<li><strong>collections</strong> [从上次检查至今总共发生<strong>1</strong>次GC]/[从上次检查至今已过去 <strong>5.1</strong> 秒],</li>
-<li><strong>total</strong> [本次检查到的 GC 总耗时为 <strong>5</strong> 秒]/[从 JVM 启动至今发生的 GC 总耗时为 <strong>4.4</strong> 天]，</li>
-<li><strong>memory</strong> [ GC 前 Heap memory 空间]-&gt;[GC 后 Heap memory 空间]/[Heap memory 总空间],</li>
-<li><strong>all_pools</strong>(分代部分的详情) {young 区][GC 前 Memory ]-&gt;[GC后 Memory]/[young区 Memory 总大小] }</li>
-<li><strong>survivor</strong> [GC 前 Memory ]-&gt;[GC后 Memory]/[Memory 总大小] }{old 区[GC 前 Memory ]-&gt;[GC后 Memory]/[old区 Memory 总大小] }</li>
-</ul>
-<p>那为何会内存不足呢, 想起前几天服务拓展，添加收集了几个服务的日志, 日志量不算小, 而且这3个ES节点所在的机器内存只分配了8个G, 显然, 加完这几个日志之后内存不够用了.</p>
-<h3 id="Index-Mapping"><a href="#Index-Mapping" class="headerlink" title="Index Mapping"></a>Index Mapping</h3><p>而且，从日志中， 还发现几处很诡异的日志</p>
-<p><img src="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20200204141415.png" alt></p>
-<p>红框中的错误: <strong>object mapping for [msg] tried to pasrse field [msg] as object, but found a concrete</strong></p>
-<p>翻译过来就是说, 日志中的msg这个字段的类型匹配不上, ES尽力把它解析为object类型，但是它却是个确切的值.</p>
-<p>就好比你在python中定义了一个字典, 但是你给它赋值一个整形, 这确定要报错.</p>
-<p>但是这个mapping是从何而来的呢.</p>
-<p>经过网上搜索一翻, 终于明白:</p>
-<p>ES中为了加强性能，对于索引中的<strong>第一条数据, ES会默认(可设置)按照这条数据建立index mapping, 相当于是一个索引模板, 好比是mysql中表的定义一个概念, 后续这个索引中的所有日志都按照该模板进行解析</strong></p>
-<p>后来经过查看源码, 我们发现，出现上图中的问题是因为代码中的日志打印不规范, 有一个地方如果抛出异常时，打印的是一个单一字符串, 而正常情况下打印的是一个json, 所以当第一条正常的日志传递给ES时，ES建立的索引 模板记录这个字段为object类型(可以类比为python中的字典, 本身是可以新增元素的), 当应用抛出异常时，日志中又传递了一个单一字符串, 但是索引模板已经记录为object类型，所以无法匹配, 这就是问题所在</p>
-<h3 id="Fix-Bug"><a href="#Fix-Bug" class="headerlink" title="Fix Bug"></a>Fix Bug</h3><p>从3个方面解决上面的问题</p>
-<p>首先是修复代码中日志不规范问题, 这个充暴露了code view不严谨.</p>
-<p>第2个是加大ES的内存,毕竟日志量确实是上来了, 从8G添加到12G</p>
-<p>第3个是优化ES的gc问题, ES中有个逻辑是：<strong>默认情况下，主节点每30秒会去检查其他节点的状态，如果任何节点的垃圾回收时间超过30秒（Garbage collection duration）且在重复次数内都超时，则会导致主节点任务该节点脱离集群, 节点脱离集群后会引起分片的rebalance</strong></p>
-<p>这个机制让ES节点频繁的脱离集群，而又引起整个集群的rebalance，ES本身的内存就不够，rebalance更是雪上加霜, 如此往复就导致整个ES集群宕机.</p>
-<p>可修改主节点的检查时间及重复次数,让其它节点有充分的时间进行full gc.</p>
-<p>在ES的配置文件中添加以下配置:</p>
-<figure class="highlight yml"><table><tr><td class="code"><pre><span class="line"><span class="attr">discovery.zen.fd.ping_timeout:</span> <span class="string">300s</span></span><br><span class="line"><span class="attr">discovery.zen.fd.ping_retriES:</span> <span class="number">10</span></span><br></pre></td></tr></table></figure>
-<p>这样, 达到这两个条件时才能触发节点脱离集群</p>
-<p>至此, 依次重启ES节点, 问题圆满解决.</p>
-<h3 id="参考文章"><a href="#参考文章" class="headerlink" title="参考文章:"></a><strong>参考文章:</strong></h3><blockquote>
-<ul>
-<li><a href="https://www.elastic.co/guide/en/elasticsearch/reference/current/mapping.html" target="_blank" rel="noopener">elasticsearch index mapping</a></li>
-<li><a href="https://blog.csdn.net/sinat_35930259/article/details/80354732" target="_blank" rel="noopener">elasticsearch篇之mapping</a></li>
-<li><a href="https://segmentfault.com/a/1190000016494488" target="_blank" rel="noopener">你看懂 Elasticsearch Log 中的 GC 日志了吗？</a></li>
-</ul>
-</blockquote>
-<h3 id="转载请注明出处https-izsk-me"><a href="#转载请注明出处https-izsk-me" class="headerlink" title="转载请注明出处https://izsk.me"></a><strong>转载请注明出处<a href="https://izsk.me" target="_blank" rel="noopener">https://izsk.me</a></strong></h3>]]></content>
-      <categories>
-        <category>FELK</category>
-      </categories>
-      <tags>
-        <tag>FELK</tag>
       </tags>
   </entry>
   <entry>
@@ -9322,22 +9441,6 @@
       </tags>
   </entry>
   <entry>
-    <title>python中调用sqlplus生成多实例oracle-awr-html报告</title>
-    <url>/2017/08/12/python%E4%B8%AD%E8%B0%83%E7%94%A8sqlplus%E7%94%9F%E6%88%90%E5%A4%9A%E5%AE%9E%E4%BE%8Boracle-awr-html%E6%8A%A5%E5%91%8A/</url>
-    <content><![CDATA[<p>这里不多说,说是稍微改了下官方的脚本,这里使用了subprocess调用sqlplus,关于subprocess,可以参考<a href="https://izsk.me/2017/04/08/python%E4%B8%AD%E8%B0%83%E7%94%A8sqlplus/" target="_blank" rel="noopener">这里</a></p>
-<a id="more"></a>
-<p>其中,包含了两个业务相关的参数,这里就不过多说明…</p>
-<figure class="highlight python"><table><tr><td class="code"><pre><span class="line"><span class="function"><span class="keyword">def</span> <span class="title">gen_sqlfile</span><span class="params">(_file)</span>:</span></span><br><span class="line">    <span class="keyword">with</span> open(_file,<span class="string">"w"</span>) <span class="keyword">as</span> f:</span><br><span class="line">        f.write(</span><br><span class="line"><span class="string">"""set define off</span></span><br><span class="line"><span class="string">set feedback off</span></span><br><span class="line"><span class="string">set termout off</span></span><br><span class="line"><span class="string">set pages 0</span></span><br><span class="line"><span class="string">set lines 120</span></span><br><span class="line"><span class="string">set serveroutput on </span></span><br><span class="line"><span class="string">spool oracle_awr_html.sql</span></span><br><span class="line"><span class="string">declare</span></span><br><span class="line"><span class="string">   v_str varchar2(180);</span></span><br><span class="line"><span class="string">   procedure p (l_str  varchar2)</span></span><br><span class="line"><span class="string">   is</span></span><br><span class="line"><span class="string">   begin</span></span><br><span class="line"><span class="string">     dbms_output.put_line(l_str);</span></span><br><span class="line"><span class="string">   end;</span></span><br><span class="line"><span class="string">begin</span></span><br><span class="line"><span class="string">	p('set pages 0');</span></span><br><span class="line"><span class="string">	p('variable dbid number');</span></span><br><span class="line"><span class="string">	p('variable inst_num number');</span></span><br><span class="line"><span class="string">	p('variable inst_name varchar2(20)');</span></span><br><span class="line"><span class="string">	p('variable bid number');</span></span><br><span class="line"><span class="string">	p('variable eid number');</span></span><br><span class="line"><span class="string">	p('variable rpt_options number');</span></span><br><span class="line"><span class="string">	p('variable ENABLE_ADDM number');</span></span><br><span class="line"><span class="string">	p('variable cur_date varchar2(20)');</span></span><br><span class="line"><span class="string">	p('variable city varchar2(20)');</span></span><br><span class="line"><span class="string">	p('');</span></span><br><span class="line"><span class="string">	p('declare');</span></span><br><span class="line"><span class="string">	p('begin');</span></span><br><span class="line"><span class="string">  	p('select distinct first_value (snap_id) over( ');</span></span><br><span class="line"><span class="string">	p('		order by snap_id desc rows between unbounded preceding and unbounded following) max_snap_id ');</span></span><br><span class="line"><span class="string">	p('into :eid ');</span></span><br><span class="line"><span class="string">  	p('	    from  dba_hist_snapshot;');</span></span><br><span class="line"><span class="string">	p('select dbid into :dbid from dba_hist_database_instance where rownum=1;');</span></span><br><span class="line"><span class="string">p('end;');</span></span><br><span class="line"><span class="string">p('/');</span></span><br><span class="line"><span class="string"></span></span><br><span class="line"><span class="string">p('exec :rpt_options :=0;');</span></span><br><span class="line"><span class="string">p('exec :ENABLE_ADDM :=8;');</span></span><br><span class="line"><span class="string">p('exec :cur_date :=to_char(sysdate,''yyyymmdd'');');</span></span><br><span class="line"><span class="string">p('exec :city :=''&amp;1'';');</span></span><br><span class="line"><span class="string">p('exec :bid :=:eid-to_number(''&amp;2'');');</span></span><br><span class="line"><span class="string">p('column rpt_name new_value rpt_name noprint;');</span></span><br><span class="line"><span class="string"></span></span><br><span class="line"><span class="string">for c1 in  (select instance_number,instance_name from gv$instance order by instance_number) </span></span><br><span class="line"><span class="string">loop   </span></span><br><span class="line"><span class="string">   p('exec :inst_num :='||c1.instance_number||';');</span></span><br><span class="line"><span class="string">   p('exec :inst_name :='''||c1.instance_name||''';');</span></span><br><span class="line"><span class="string">   v_str:= q'[select :cur_date||'_'||:city||'_'||:inst_name||'_'||:inst_num||'_'||:bid||'_'||:eid||'.html' rpt_name from dual;]';</span></span><br><span class="line"><span class="string">   p(v_str);</span></span><br><span class="line"><span class="string">   p('set lines 8000');</span></span><br><span class="line"><span class="string">   p('spool &amp;rpt_name');</span></span><br><span class="line"><span class="string">   p(' select output from table(sys.dbms_workload_repository.awr_report_html( :dbid,');</span></span><br><span class="line"><span class="string">   p('                                                         :inst_num,');</span></span><br><span class="line"><span class="string">   p('                                                         :bid, :eid,');</span></span><br><span class="line"><span class="string">   p('                                                         :rpt_options ));');</span></span><br><span class="line"><span class="string">   p('spool off');</span></span><br><span class="line"><span class="string">   v_str := q'[select :cur_date||'_'||:city||'_'||:inst_name||'_'||:inst_num||'_'||:bid||'_'||:eid||'.html' file_name from dual;]';</span></span><br><span class="line"><span class="string">   p(v_str);</span></span><br><span class="line"><span class="string">   p('set termout off');</span></span><br><span class="line"><span class="string">end loop;</span></span><br><span class="line"><span class="string">p('exit');</span></span><br><span class="line"><span class="string">end;</span></span><br><span class="line"><span class="string">/</span></span><br><span class="line"><span class="string">spool off</span></span><br><span class="line"><span class="string">set define on</span></span><br><span class="line"><span class="string">set feedback off</span></span><br><span class="line"><span class="string">set termout on</span></span><br><span class="line"><span class="string">set termout off</span></span><br><span class="line"><span class="string">@oracle_awr_html.sql &amp;1 &amp;2</span></span><br><span class="line"><span class="string">set termout on</span></span><br><span class="line"><span class="string">set pagesize 24</span></span><br><span class="line"><span class="string">"""</span>)</span><br><span class="line"></span><br><span class="line"><span class="class"><span class="keyword">class</span> <span class="title">callsqluldr</span><span class="params">()</span>:</span></span><br><span class="line">    <span class="function"><span class="keyword">def</span> <span class="title">__init__</span><span class="params">(self,username,password,databaseName,city,beforethis)</span>:</span></span><br><span class="line">        self.username = username</span><br><span class="line">        self.password = password</span><br><span class="line">        self.databaseName = databaseName</span><br><span class="line">        self.city = city</span><br><span class="line">        self.beforethis = beforethis</span><br><span class="line">    <span class="function"><span class="keyword">def</span> <span class="title">run</span><span class="params">(self)</span>:</span></span><br><span class="line">        <span class="keyword">try</span>:</span><br><span class="line">            command = <span class="string">"sqlplus "</span> + self.username + <span class="string">"/"</span> + self.password + <span class="string">"@"</span> + self.databaseName + <span class="string">" @gen_oracle_awr_html.sql "</span> + self.city + <span class="string">" "</span> + self.beforethis</span><br><span class="line">            child = subprocess.Popen(command,shell=<span class="literal">True</span>)</span><br><span class="line">            child.wait()</span><br><span class="line">            <span class="comment">#print("&lt;&lt;%s done.&gt;&gt;" %self.city)</span></span><br><span class="line">        <span class="keyword">except</span> Exception <span class="keyword">as</span> e:</span><br><span class="line">            err_txt = <span class="string">"ERROR: CALL ORACLE SQLPLUS ERROR!"</span></span><br><span class="line">            print(err_txt)</span><br><span class="line">            write_errtxt(err_txt)</span><br><span class="line">            </span><br><span class="line"><span class="function"><span class="keyword">def</span> <span class="title">write_errtxt</span><span class="params">(err_txt)</span>:</span></span><br><span class="line">    <span class="keyword">pass</span></span><br></pre></td></tr></table></figure>
-<h3 id="参考文章"><a href="#参考文章" class="headerlink" title="参考文章:"></a><strong>参考文章:</strong></h3><h3 id="转载请注明出处https-izsk-me"><a href="#转载请注明出处https-izsk-me" class="headerlink" title="转载请注明出处https://izsk.me"></a><strong>转载请注明出处<a href="https://izsk.me" target="_blank" rel="noopener">https://izsk.me</a></strong></h3><hr>
-]]></content>
-      <categories>
-        <category>Python</category>
-      </categories>
-      <tags>
-        <tag>Python</tag>
-      </tags>
-  </entry>
-  <entry>
     <title>HTTP之长连接及短连接</title>
     <url>/2017/08/12/HTTP%E4%B9%8B%E9%95%BF%E8%BF%9E%E6%8E%A5%E5%8F%8A%E7%9F%AD%E8%BF%9E%E6%8E%A5/</url>
     <content><![CDATA[<p>我们都说HTTP协议是无状态的,我们又都说HTTP分长连接及短连接,’无状态’到底是个什么意思？</p>
@@ -9375,6 +9478,22 @@
       </categories>
       <tags>
         <tag>Http-Tcp-Ip</tag>
+      </tags>
+  </entry>
+  <entry>
+    <title>python中调用sqlplus生成多实例oracle-awr-html报告</title>
+    <url>/2017/08/12/python%E4%B8%AD%E8%B0%83%E7%94%A8sqlplus%E7%94%9F%E6%88%90%E5%A4%9A%E5%AE%9E%E4%BE%8Boracle-awr-html%E6%8A%A5%E5%91%8A/</url>
+    <content><![CDATA[<p>这里不多说,说是稍微改了下官方的脚本,这里使用了subprocess调用sqlplus,关于subprocess,可以参考<a href="https://izsk.me/2017/04/08/python%E4%B8%AD%E8%B0%83%E7%94%A8sqlplus/" target="_blank" rel="noopener">这里</a></p>
+<a id="more"></a>
+<p>其中,包含了两个业务相关的参数,这里就不过多说明…</p>
+<figure class="highlight python"><table><tr><td class="code"><pre><span class="line"><span class="function"><span class="keyword">def</span> <span class="title">gen_sqlfile</span><span class="params">(_file)</span>:</span></span><br><span class="line">    <span class="keyword">with</span> open(_file,<span class="string">"w"</span>) <span class="keyword">as</span> f:</span><br><span class="line">        f.write(</span><br><span class="line"><span class="string">"""set define off</span></span><br><span class="line"><span class="string">set feedback off</span></span><br><span class="line"><span class="string">set termout off</span></span><br><span class="line"><span class="string">set pages 0</span></span><br><span class="line"><span class="string">set lines 120</span></span><br><span class="line"><span class="string">set serveroutput on </span></span><br><span class="line"><span class="string">spool oracle_awr_html.sql</span></span><br><span class="line"><span class="string">declare</span></span><br><span class="line"><span class="string">   v_str varchar2(180);</span></span><br><span class="line"><span class="string">   procedure p (l_str  varchar2)</span></span><br><span class="line"><span class="string">   is</span></span><br><span class="line"><span class="string">   begin</span></span><br><span class="line"><span class="string">     dbms_output.put_line(l_str);</span></span><br><span class="line"><span class="string">   end;</span></span><br><span class="line"><span class="string">begin</span></span><br><span class="line"><span class="string">	p('set pages 0');</span></span><br><span class="line"><span class="string">	p('variable dbid number');</span></span><br><span class="line"><span class="string">	p('variable inst_num number');</span></span><br><span class="line"><span class="string">	p('variable inst_name varchar2(20)');</span></span><br><span class="line"><span class="string">	p('variable bid number');</span></span><br><span class="line"><span class="string">	p('variable eid number');</span></span><br><span class="line"><span class="string">	p('variable rpt_options number');</span></span><br><span class="line"><span class="string">	p('variable ENABLE_ADDM number');</span></span><br><span class="line"><span class="string">	p('variable cur_date varchar2(20)');</span></span><br><span class="line"><span class="string">	p('variable city varchar2(20)');</span></span><br><span class="line"><span class="string">	p('');</span></span><br><span class="line"><span class="string">	p('declare');</span></span><br><span class="line"><span class="string">	p('begin');</span></span><br><span class="line"><span class="string">  	p('select distinct first_value (snap_id) over( ');</span></span><br><span class="line"><span class="string">	p('		order by snap_id desc rows between unbounded preceding and unbounded following) max_snap_id ');</span></span><br><span class="line"><span class="string">	p('into :eid ');</span></span><br><span class="line"><span class="string">  	p('	    from  dba_hist_snapshot;');</span></span><br><span class="line"><span class="string">	p('select dbid into :dbid from dba_hist_database_instance where rownum=1;');</span></span><br><span class="line"><span class="string">p('end;');</span></span><br><span class="line"><span class="string">p('/');</span></span><br><span class="line"><span class="string"></span></span><br><span class="line"><span class="string">p('exec :rpt_options :=0;');</span></span><br><span class="line"><span class="string">p('exec :ENABLE_ADDM :=8;');</span></span><br><span class="line"><span class="string">p('exec :cur_date :=to_char(sysdate,''yyyymmdd'');');</span></span><br><span class="line"><span class="string">p('exec :city :=''&amp;1'';');</span></span><br><span class="line"><span class="string">p('exec :bid :=:eid-to_number(''&amp;2'');');</span></span><br><span class="line"><span class="string">p('column rpt_name new_value rpt_name noprint;');</span></span><br><span class="line"><span class="string"></span></span><br><span class="line"><span class="string">for c1 in  (select instance_number,instance_name from gv$instance order by instance_number) </span></span><br><span class="line"><span class="string">loop   </span></span><br><span class="line"><span class="string">   p('exec :inst_num :='||c1.instance_number||';');</span></span><br><span class="line"><span class="string">   p('exec :inst_name :='''||c1.instance_name||''';');</span></span><br><span class="line"><span class="string">   v_str:= q'[select :cur_date||'_'||:city||'_'||:inst_name||'_'||:inst_num||'_'||:bid||'_'||:eid||'.html' rpt_name from dual;]';</span></span><br><span class="line"><span class="string">   p(v_str);</span></span><br><span class="line"><span class="string">   p('set lines 8000');</span></span><br><span class="line"><span class="string">   p('spool &amp;rpt_name');</span></span><br><span class="line"><span class="string">   p(' select output from table(sys.dbms_workload_repository.awr_report_html( :dbid,');</span></span><br><span class="line"><span class="string">   p('                                                         :inst_num,');</span></span><br><span class="line"><span class="string">   p('                                                         :bid, :eid,');</span></span><br><span class="line"><span class="string">   p('                                                         :rpt_options ));');</span></span><br><span class="line"><span class="string">   p('spool off');</span></span><br><span class="line"><span class="string">   v_str := q'[select :cur_date||'_'||:city||'_'||:inst_name||'_'||:inst_num||'_'||:bid||'_'||:eid||'.html' file_name from dual;]';</span></span><br><span class="line"><span class="string">   p(v_str);</span></span><br><span class="line"><span class="string">   p('set termout off');</span></span><br><span class="line"><span class="string">end loop;</span></span><br><span class="line"><span class="string">p('exit');</span></span><br><span class="line"><span class="string">end;</span></span><br><span class="line"><span class="string">/</span></span><br><span class="line"><span class="string">spool off</span></span><br><span class="line"><span class="string">set define on</span></span><br><span class="line"><span class="string">set feedback off</span></span><br><span class="line"><span class="string">set termout on</span></span><br><span class="line"><span class="string">set termout off</span></span><br><span class="line"><span class="string">@oracle_awr_html.sql &amp;1 &amp;2</span></span><br><span class="line"><span class="string">set termout on</span></span><br><span class="line"><span class="string">set pagesize 24</span></span><br><span class="line"><span class="string">"""</span>)</span><br><span class="line"></span><br><span class="line"><span class="class"><span class="keyword">class</span> <span class="title">callsqluldr</span><span class="params">()</span>:</span></span><br><span class="line">    <span class="function"><span class="keyword">def</span> <span class="title">__init__</span><span class="params">(self,username,password,databaseName,city,beforethis)</span>:</span></span><br><span class="line">        self.username = username</span><br><span class="line">        self.password = password</span><br><span class="line">        self.databaseName = databaseName</span><br><span class="line">        self.city = city</span><br><span class="line">        self.beforethis = beforethis</span><br><span class="line">    <span class="function"><span class="keyword">def</span> <span class="title">run</span><span class="params">(self)</span>:</span></span><br><span class="line">        <span class="keyword">try</span>:</span><br><span class="line">            command = <span class="string">"sqlplus "</span> + self.username + <span class="string">"/"</span> + self.password + <span class="string">"@"</span> + self.databaseName + <span class="string">" @gen_oracle_awr_html.sql "</span> + self.city + <span class="string">" "</span> + self.beforethis</span><br><span class="line">            child = subprocess.Popen(command,shell=<span class="literal">True</span>)</span><br><span class="line">            child.wait()</span><br><span class="line">            <span class="comment">#print("&lt;&lt;%s done.&gt;&gt;" %self.city)</span></span><br><span class="line">        <span class="keyword">except</span> Exception <span class="keyword">as</span> e:</span><br><span class="line">            err_txt = <span class="string">"ERROR: CALL ORACLE SQLPLUS ERROR!"</span></span><br><span class="line">            print(err_txt)</span><br><span class="line">            write_errtxt(err_txt)</span><br><span class="line">            </span><br><span class="line"><span class="function"><span class="keyword">def</span> <span class="title">write_errtxt</span><span class="params">(err_txt)</span>:</span></span><br><span class="line">    <span class="keyword">pass</span></span><br></pre></td></tr></table></figure>
+<h3 id="参考文章"><a href="#参考文章" class="headerlink" title="参考文章:"></a><strong>参考文章:</strong></h3><h3 id="转载请注明出处https-izsk-me"><a href="#转载请注明出处https-izsk-me" class="headerlink" title="转载请注明出处https://izsk.me"></a><strong>转载请注明出处<a href="https://izsk.me" target="_blank" rel="noopener">https://izsk.me</a></strong></h3><hr>
+]]></content>
+      <categories>
+        <category>Python</category>
+      </categories>
+      <tags>
+        <tag>Python</tag>
       </tags>
   </entry>
   <entry>
