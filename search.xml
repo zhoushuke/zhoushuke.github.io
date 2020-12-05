@@ -1,6 +1,168 @@
 <?xml version="1.0" encoding="utf-8"?>
 <search>
   <entry>
+    <title>Kubernetes学习(Kubernetes踩坑记)</title>
+    <url>/2020/12/01/Kubernetes-prombles/</url>
+    <content><![CDATA[<p>记录在使用Kubernetes中遇到的各种问题及解决方案, 好记性不如烂笔头</p>
+<p><strong>不定期更新</strong></p>
+<a id="more"></a>
+<h3 id="使用Kubectl命令行时提示-Unable-to-connect-to-the-server-x509-certificate-relies-on-legacy-Common-Name-field-use-SANs-or-temporarily-enable-Common-Name-matching-with-GODEBUG-x509ignoreCN-0"><a href="#使用Kubectl命令行时提示-Unable-to-connect-to-the-server-x509-certificate-relies-on-legacy-Common-Name-field-use-SANs-or-temporarily-enable-Common-Name-matching-with-GODEBUG-x509ignoreCN-0" class="headerlink" title="使用Kubectl命令行时提示: Unable to connect to the server: x509: certificate relies on legacy Common Name field, use SANs or temporarily enable Common Name matching with GODEBUG=x509ignoreCN=0"></a>使用Kubectl命令行时提示: Unable to connect to the server: x509: certificate relies on legacy Common Name field, use SANs or temporarily enable Common Name matching with GODEBUG=x509ignoreCN=0</h3><p>原因: 这个跟本地的go环境有关</p>
+<p>解决: 使用命令<code>export GODEBUG=x509ignoreCN=0</code>即可</p>
+<h3 id="namespaces-”kube-system-”-is-forbidden-this-namespace-may-not-be-deleted"><a href="#namespaces-”kube-system-”-is-forbidden-this-namespace-may-not-be-deleted" class="headerlink" title="namespaces \”kube-system\” is forbidden: this namespace may not be deleted"></a>namespaces \”kube-system\” is forbidden: this namespace may not be deleted</h3><p>原因: kube-system是集群中受保护的ns, 被禁止删除，主要是防止误操作，如果需要删除的话，可以使用–force</p>
+<p>参考: <a href="https://github.com/kubernetes/kubernetes/pull/62167/files" target="_blank" rel="noopener">https://github.com/kubernetes/kubernetes/pull/62167/files</a></p>
+<h3 id="提示-unknown-field-volumeClaimTemplates"><a href="#提示-unknown-field-volumeClaimTemplates" class="headerlink" title="提示 unknown field volumeClaimTemplates"></a>提示 unknown field volumeClaimTemplates</h3><p><img src="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20201112171302.png" alt></p>
+<p>原因: 提示这个错误的原因是资源对象是deployment, 而deployment本就是无状态的， 所以也就没有使用pv这一说法了，可以参考api</p>
+<p>参考: <a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.19/#deploymentspec-v1-apps" target="_blank" rel="noopener">deploymentspec-v1-apps</a></p>
+<h3 id="CoreDNS提示Loop-127-0-0-1-38827-gt-53-detected-for-zone-“-”"><a href="#CoreDNS提示Loop-127-0-0-1-38827-gt-53-detected-for-zone-“-”" class="headerlink" title="CoreDNS提示Loop (127.0.0.1:38827 -&gt; :53) detected for zone “.”"></a>CoreDNS提示Loop (127.0.0.1:38827 -&gt; :53) detected for zone “.”</h3><p><img src="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20201017221807.png" alt></p>
+<p>原因: CoreDNS所在的宿主机上<code>/etc/resolv.conf</code>中存在有127.0.xx的nameserver,这样会造成解析死循环.</p>
+<p>解决: 修改宿主机<code>/etc/resolv.conf</code>或者将CoreDNS的configmap中的forward修改为一个可用的地址, 如<code>8.8.8.8</code></p>
+<h3 id="hostPath-volumes-are-not-allowed-to-be-used"><a href="#hostPath-volumes-are-not-allowed-to-be-used" class="headerlink" title="hostPath volumes are not allowed to be used"></a>hostPath volumes are not allowed to be used</h3><p><img src="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20200909154834.png" alt></p>
+<p>原因: 集群中存在psp禁止pod直接挂载hostpath.</p>
+<p>解决: 通过添加psp来允许或者删除存在的psp都可</p>
+<h3 id="container-has-runAsNonRoot-and-image-has-non-numeric-user-grafana-cannot-verify-user-is-non-root"><a href="#container-has-runAsNonRoot-and-image-has-non-numeric-user-grafana-cannot-verify-user-is-non-root" class="headerlink" title="container has runAsNonRoot and image has non-numeric user (grafana), cannot verify user is non-root"></a>container has runAsNonRoot and image has non-numeric user (grafana), cannot verify user is non-root</h3><p><img src="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20200908211841.png" alt></p>
+<p>原因: 这是由于在deploy中设置了<code>securityContext: runAsNonRoot: true</code>, 在这种情况下，当pod启动时，使用的默认用户比如上面的grafana，k8s无法确定他是不是root用户，因此需要再指定<code></code>securityContext:runAsUser: 1000`, 随便一个数据即可, 只要不是0(指定0时指的是root)即可</p>
+<p><a href="https://stackoverflow.com/questions/51544003/using-runasnonroot-in-kubernetes" target="_blank" rel="noopener">参考</a> </p>
+<h3 id="OCI-runtime-create-failed"><a href="#OCI-runtime-create-failed" class="headerlink" title="OCI runtime create failed"></a>OCI runtime create failed</h3><p><img src="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20200902132758.png" alt></p>
+<p>原因: /var/lib/kubelet/pod下的数据目录已经损坏.</p>
+<h3 id="ImageInspectError"><a href="#ImageInspectError" class="headerlink" title="ImageInspectError"></a>ImageInspectError</h3><p><img src="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20200902123531.png" alt></p>
+<p>原因: 这种情况下一般都是镜像损坏了</p>
+<p>解决: 把相关的镜像删除后重新拉取</p>
+<h3 id="node-not-found"><a href="#node-not-found" class="headerlink" title="node not found"></a>node not found</h3><p><img src="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20200901183122.png" alt></p>
+<p>原因: 这个报错只是中间过程，真正的原因在于apiserver没有启动成功，导致会一直出现这个错误</p>
+<h3 id="OCI-runtime-create-failed-1"><a href="#OCI-runtime-create-failed-1" class="headerlink" title="OCI runtime create failed"></a>OCI runtime create failed</h3><p><img src="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20200902101139.png" alt></p>
+<p>原因: 在path中没有nvidia-container-runtime-hook这个二进制文件，可能跟本人删除nvidia显卡驱动有关.</p>
+<h3 id="Nginx-Ingress-Empty-address"><a href="#Nginx-Ingress-Empty-address" class="headerlink" title="Nginx Ingress Empty address"></a>Nginx Ingress Empty address</h3><figure class="highlight bash"><table><tr><td class="code"><pre><span class="line"><span class="comment"># kubectl get ingress</span></span><br><span class="line">NAME         HOSTS                                       ADDRESS   PORTS   AGE</span><br><span class="line">prometheus   prometheus.1box.com                                   80      31d</span><br></pre></td></tr></table></figure>
+<p>会发现address中的ip是空的，而查看生产环境时却是有ip列表的.</p>
+<p>原因: 这个其实不是一个错误，也不影响使用，原因在于测试环境中是不存在LoadBalance类型的svc, 如果需要address中显示ip的话需要在，需要做些额外的设置</p>
+<p>解决: </p>
+<ol>
+<li>在nginx controller的容器中指定启动参数<code>-report-ingress-status</code></li>
+<li>在nginx controller引用的configmap中添加<code>external-status-address: &quot;10.164.15.220&quot;</code></li>
+</ol>
+<p>这样的话,在address中变会显示<code>10.164.15.220</code>了</p>
+<p>参考:</p>
+<p><a href="https://github.com/nginxinc/kubernetes-ingress/issues/587" target="_blank" rel="noopener">https://github.com/nginxinc/kubernetes-ingress/issues/587</a></p>
+<p><a href="https://docs.nginx.com/nginx-ingress-controller/configuration/global-configuration/reporting-resources-status/" target="_blank" rel="noopener">https://docs.nginx.com/nginx-ingress-controller/configuration/global-configuration/reporting-resources-status/</a></p>
+<h3 id="but-volume-paths-are-still-present-on-disk"><a href="#but-volume-paths-are-still-present-on-disk" class="headerlink" title="but volume paths are still present on disk"></a>but volume paths are still present on disk</h3><p><img src="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20200827183609.png" alt></p>
+<p>原因: 这种pod已经被删除了，但是volume还存在于disk中</p>
+<p>解决: <code>/var/lib/kubelet/pods/3cd73...</code></p>
+<p><a href="https://github.com/longhorn/longhorn/issues/485" target="_blank" rel="noopener">参考</a></p>
+<h3 id="PLEG-is-not-healthy"><a href="#PLEG-is-not-healthy" class="headerlink" title="PLEG is not healthy"></a>PLEG is not healthy</h3><p><img src="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20200827184435.png" alt></p>
+<p>原因: PLEG(Pod Lifecycle Event Generator),宿主机上面跑的容器太多，导致pod无法在3m钟内完成生命周期检查</p>
+<p><a href="https://developers.redhat.com/blog/2019/11/13/pod-lifecycle-event-generator-understanding-the-pleg-is-not-healthy-issue-in-kubernetes/" target="_blank" rel="noopener">参考</a></p>
+<h3 id="metrics-server-10255-connection-refused"><a href="#metrics-server-10255-connection-refused" class="headerlink" title="metrics-server: 10255 connection refused"></a>metrics-server: 10255 connection refused</h3><figure class="highlight yaml"><table><tr><td class="code"><pre><span class="line"><span class="attr">unable to fully collect metrics:</span> <span class="string">[unable</span> <span class="attr">to fully scrape metrics from source kubelet_summary:k8s-node-49:</span> <span class="string">unable</span> <span class="string">to</span> <span class="string">fetch</span> <span class="string">metrics</span> <span class="string">from</span> <span class="string">Kubelet</span> <span class="string">k8s-node-49</span> <span class="string">(xxx.xxx.xxx.49):</span> <span class="string">Get</span> <span class="string">http://xxx.xxx.xxx.49:10255/stats/summary?only_cpu_and_memory=true:</span> <span class="attr">dial tcp xxx.xxx.xxx.49:10255: connect:</span> <span class="string">connection</span> <span class="string">refused</span></span><br></pre></td></tr></table></figure>
+<p>解决: 将<code>- --kubelet-port=10255</code>注释</p>
+<h3 id="metrics-server-no-such-host"><a href="#metrics-server-no-such-host" class="headerlink" title="metrics-server: no such host"></a>metrics-server: no such host</h3><figure class="highlight yaml"><table><tr><td class="code"><pre><span class="line"><span class="string">unable</span> <span class="string">to</span> <span class="string">fetch</span> <span class="string">metrics</span> <span class="string">from</span> <span class="string">Kubelet</span> <span class="string">k8s-node-234</span> <span class="string">(k8s-node-234):</span> <span class="string">Get</span> <span class="string">https://k8s-node-234:10250/stats/summary?only_cpu_and_memory=true:</span> <span class="attr">dial tcp: lookup k8s-node-234 on 10.96.0.10:53:</span> <span class="literal">no</span> <span class="string">such</span> <span class="string">host</span></span><br></pre></td></tr></table></figure>
+<p>解决: 使用<code>kubelet-preferred-address-types=InternalIP,Hostname,InternalDNS,ExternalDNS,ExternalIP</code>参数</p>
+<h3 id="daemonset-tolerations"><a href="#daemonset-tolerations" class="headerlink" title="daemonset tolerations"></a>daemonset tolerations</h3><p>集群中新增了几台机器用于部署clickhouse用于做大数据分析，为了不让这类占用大量资源的POD影响其它POD，因此选择给机器打taint的形式控制该类POD的调度, 创建POD后发现这些POD都会出现DNS解析异常, 这时就需要注意容器网络，比如flannel是否容忍了这些机器的taint，不然的话，flannel是无法被调度到这些机器的,因此容器间的通信会出现问题，<strong>可以将类似flannel这些的基础POD容忍所有的NoScheule与NoExecute</strong></p>
+<figure class="highlight yaml"><table><tr><td class="code"><pre><span class="line"><span class="attr">tolerations:</span></span><br><span class="line"><span class="bullet">-</span> <span class="attr">effect:</span> <span class="string">NoSchedule</span></span><br><span class="line">  <span class="attr">operator:</span> <span class="string">Exists</span></span><br><span class="line"><span class="bullet">-</span> <span class="attr">effect:</span> <span class="string">NoExecute</span></span><br><span class="line">  <span class="attr">operator:</span> <span class="string">Exists</span></span><br></pre></td></tr></table></figure>
+<h3 id="Are-you-tring-to-mount-a-directory-on-to-a-file"><a href="#Are-you-tring-to-mount-a-directory-on-to-a-file" class="headerlink" title="Are you tring to mount a directory on to a file"></a>Are you tring to mount a directory on to a file</h3><p><img src="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20200430132115.png" alt></p>
+<p>原因: </p>
+<p>Yaml文件中使用了subPath, 但是mountPath指向了一个目录</p>
+<p>解决: </p>
+<p>mountPath需要加上文件名</p>
+<p><img src="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20200430132148.png" alt></p>
+<h3 id="Kubernetes启动后提示slice-no-such-file-ro-directory"><a href="#Kubernetes启动后提示slice-no-such-file-ro-directory" class="headerlink" title="Kubernetes启动后提示slice: no such file ro directory"></a>Kubernetes启动后提示slice: no such file ro directory</h3><p><img src="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/41B2684F-312C-41ED-AF56-D6014C6B74E6.png" alt></p>
+<p>原因: </p>
+<p>yum安装的kubelet默认的是cgroupfs，而docker一般默认的是systemd。但是kubernetes安装的时候建议使用systemd, kubelet跟docker的不一致, 要么修改kubelet的启动参数 , 要么修改dokcer启动参数</p>
+<p>解决:</p>
+<p>docker的启动参数文件为: <code>/etc/docker/daemon.json: &quot;exec-opts&quot;: [&quot;native.cgroupdriver=systemd”]</code></p>
+<p>kubelet的启动参数文件为: <code>/var/lib/kubelet/config.yaml:  cgroupDriver: systemd</code></p>
+<h3 id="“cni0”-already-has-an-IP-address-different-from"><a href="#“cni0”-already-has-an-IP-address-different-from" class="headerlink" title="“cni0” already has an IP address different from"></a>“cni0” already has an IP address different from</h3><p><img src="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20200430145913.png" alt></p>
+<p>原因:</p>
+<p>使用kubeadm reset 重复操作过, reset之后，之前flannel创建的bridge device cni0和网口设备flannel.1依然健在</p>
+<p> 解决:</p>
+<p>添加之前需要清除下网络</p>
+<figure class="highlight bash"><table><tr><td class="code"><pre><span class="line">kubeadm reset</span><br><span class="line">systemctl stop kubelet</span><br><span class="line">systemctl stop docker</span><br><span class="line">rm -rf /var/lib/cni/</span><br><span class="line">rm -rf /var/lib/kubelet/*</span><br><span class="line">rm -rf /etc/cni/</span><br><span class="line">ifconfig cni0 down</span><br><span class="line">ifconfig flannel.1 down</span><br><span class="line">ifconfig docker0 down</span><br><span class="line">ip link delete cni0</span><br><span class="line">ip link delete flannel.1</span><br><span class="line">systemctl start docker</span><br><span class="line">systemctl start kubelet</span><br></pre></td></tr></table></figure>
+<h3 id="kubeadm初始化时提示-CPU小于2"><a href="#kubeadm初始化时提示-CPU小于2" class="headerlink" title="kubeadm初始化时提示 CPU小于2"></a>kubeadm初始化时提示 CPU小于2</h3><figure class="highlight bash"><table><tr><td class="code"><pre><span class="line">[preflight] Running pre-flight checks</span><br><span class="line">error execution phase preflight: [preflight] Some fatal errors occurred:</span><br><span class="line">    [ERROR NumCPU]: the number of available CPUs 1 is less than the required 2</span><br><span class="line">[preflight] If you know what you are doing, you can make a check non-fatal with `--ignore-preflight-errors=...`</span><br></pre></td></tr></table></figure>
+<p>原因:</p>
+<p>kubeadm对资源一定的要求，如果是测试环境无所谓的话,可忽略</p>
+<p>解决:</p>
+<figure class="highlight bash"><table><tr><td class="code"><pre><span class="line">使用 --ignore-preflight-errors 忽略</span><br></pre></td></tr></table></figure>
+<h3 id="Unable-to-update-cni-config-no-network-found"><a href="#Unable-to-update-cni-config-no-network-found" class="headerlink" title="Unable to update cni config: no network found"></a>Unable to update cni config: no network found</h3><p><img src="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/63611F8A-F803-46F5-8792-67111E03DF91.png" alt></p>
+<p>原因:</p>
+<p>还未部署网络插件容器，导致在/etc/cni下还没有文件</p>
+<p>解决:</p>
+<p>根据实际情况部署网络插件</p>
+<h3 id="while-reading-‘google-dockercfg’-metadata"><a href="#while-reading-‘google-dockercfg’-metadata" class="headerlink" title="while reading ‘google-dockercfg’ metadata"></a>while reading ‘google-dockercfg’ metadata</h3><p><img src="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/FB66ABBE-FF79-48A4-8A8B-7FDC3AED6634.png" alt></p>
+<p>原因:</p>
+<p>无法访问上述url出现 404</p>
+<p>解决:</p>
+<p>由于是在RKE上部署k8s, 所以可能会去访问google相关的url, 不影响业务,可以忽略</p>
+<h3 id="no-providers-available-to-validate-pod-request"><a href="#no-providers-available-to-validate-pod-request" class="headerlink" title="no providers available to validate pod request"></a>no providers available to validate pod request</h3><p><img src="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/ACEB6BE6-7E22-4A43-AB4A-A51E00CE9EFE.png" alt></p>
+<p>原因:</p>
+<p>在api-server的启动参数enable-admission中设置了PodSecrityPolicy, 但是集群中又没有任何的podsecritypolicy，因此导致整个集群都无法新建出pod</p>
+<p>解决:</p>
+<p>删除相应的podsecritypolicy即可</p>
+<h3 id="unable-to-upgrade-connection-Unauthorized"><a href="#unable-to-upgrade-connection-Unauthorized" class="headerlink" title="unable to upgrade connection: Unauthorized"></a>unable to upgrade connection: Unauthorized</h3><p><img src="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/5FECFF57-F204-4ADF-A9E0-5F1D9A917194.png" alt></p>
+<p>原因:</p>
+<p>kubelet的启动参数少了x509认证方式配置证书的路径, 加上重启kubelet即可</p>
+<p>解决:</p>
+<p><img src="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/447313AF-7DD6-4FB4-8F46-AE1DC468C7CA.png" alt></p>
+<h3 id="kubectl-get-cs-提示-lt-unknown"><a href="#kubectl-get-cs-提示-lt-unknown" class="headerlink" title="kubectl get cs 提示\&lt;unknown>"></a>kubectl get cs 提示\&lt;unknown></h3><p><img src="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/C73EB07F-14CD-43A7-86C0-49B4812F57A6.png" alt></p>
+<p>原因:</p>
+<p>是个bug, 版本的问题，kubernetes有意废除get cs命令</p>
+<p>解决:</p>
+<p>目前对集群的运行无影响, 可通过加-oyaml 查看状态</p>
+<h3 id="安装kubeadm时提示Depends错误"><a href="#安装kubeadm时提示Depends错误" class="headerlink" title="安装kubeadm时提示Depends错误"></a>安装kubeadm时提示Depends错误</h3><p><img src="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/2AE46262-2624-446C-909E-1FA0E76A8AD7.png" alt></p>
+<p>原因: </p>
+<p>跟kubeadm没多大关系, 系统安装的有问题</p>
+<p>解决:</p>
+<p>执行以下命令修复</p>
+<figure class="highlight bash"><table><tr><td class="code"><pre><span class="line">apt --fix-broken install </span><br><span class="line">apt-get update</span><br></pre></td></tr></table></figure>
+<h3 id="访问service时提示Connection-refused"><a href="#访问service时提示Connection-refused" class="headerlink" title="访问service时提示Connection refused"></a>访问service时提示Connection refused</h3><p>现象: 从另一环境中把yaml文件导入到新环境后有些service访问不通</p>
+<figure class="highlight bash"><table><tr><td class="code"><pre><span class="line">telnet mongodb-mst.external 27017</span><br><span class="line">Trying 10.97.135.242...</span><br><span class="line">telnet: Unable to connect to remote host: Connection refused</span><br></pre></td></tr></table></figure>
+<p>首先排除了域名、端口的配置问题。</p>
+<p>会发现提示连接拒绝.可以确定的是集群内的DNS是正常的.</p>
+<p>那么就是通过clusterIP无法到达realserver. 查看iptables规则</p>
+<p>发现提示<code>default has no endpoints --reject-with icmp-port-unreachable</code></p>
+<p><img src="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20200506115705.png" alt></p>
+<p>很奇怪, 提示没有endpoints, 但是使用<code>kubectl get ep</code>又能看到ep存在且配置没有问题</p>
+<p>而且这个default是怎么来的.</p>
+<p>为了方便部署, 很多配置是从别的环境导出的配置, 有些service访问是没问题的, 只有少部分<code>connection refused</code></p>
+<p>结比一下发现一个很有趣的问题，先来看下不正常的yaml文件:</p>
+<p><img src="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20200506115805.png" alt></p>
+<p>由于服务在集群外部署的, 因此这里使用了subset方式, 开始怀疑问题在这里, 但是后来知道这个不是重点</p>
+<p>乍一看这个配置没什么问题, 部署也很正常, 但是对比正常的yaml文件，发现一个区别：</p>
+<p>如果在services中的端口指定了名字, 那么在subsets中的端口也要带名字, 没有带名字的就会出现<code>connection refused</code>，这个确实之前从来没有关注过, 一个端口的情况下也不会指定名字</p>
+<p>而且这面iptalbes中提示的default刚好就是这里的port name,虽然不敢相信，但是也只能试一试这个方法: 在subsets中也加了port name</p>
+<p><img src="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20200506120151.png" alt></p>
+<p>重新部署一个，再次查看iptalbes规则 </p>
+<p><code>iptables-save|grep mongodb-mst</code></p>
+<p><img src="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20200506120040.png" alt></p>
+<p>OMG, 居然可行, 再看下telnet的结果:</p>
+<figure class="highlight bash"><table><tr><td class="code"><pre><span class="line">Trying 10.105.116.92...</span><br><span class="line">Connected to mongodb-mst.external.svc.cluster.local.</span><br><span class="line">Escape character is <span class="string">'^]'</span>.</span><br></pre></td></tr></table></figure>
+<p>访问也是没问题, 那么原因就在于:</p>
+<p><strong>在service中指定了port name时, 也需要在ep中指定port name</strong></p>
+<h3 id="error-converting-fieldPath-field-label-not-supported"><a href="#error-converting-fieldPath-field-label-not-supported" class="headerlink" title="error converting fieldPath: field label not supported"></a>error converting fieldPath: field label not supported</h3><p>今天遇到一个部署deployment出错的问题, yaml文件如下:</p>
+<figure class="highlight yaml"><table><tr><td class="code"><pre><span class="line"><span class="attr">apiVersion:</span> <span class="string">apps/v1</span></span><br><span class="line"><span class="attr">kind:</span> <span class="string">Deployment</span></span><br><span class="line"><span class="attr">metadata:</span></span><br><span class="line">  <span class="attr">name:</span> <span class="string">demo-deployment</span></span><br><span class="line">  <span class="attr">namespace:</span> <span class="string">4test</span></span><br><span class="line">  <span class="attr">labels:</span></span><br><span class="line">    <span class="attr">app:</span> <span class="string">config-demo-app</span></span><br><span class="line"><span class="attr">spec:</span></span><br><span class="line">  <span class="attr">replicas:</span> <span class="number">1</span></span><br><span class="line">  <span class="attr">selector:</span></span><br><span class="line">    <span class="attr">matchLabels:</span></span><br><span class="line">      <span class="attr">app:</span> <span class="string">config-demo-app</span></span><br><span class="line">  <span class="attr">template:</span></span><br><span class="line">    <span class="attr">metadata:</span></span><br><span class="line">      <span class="attr">labels:</span></span><br><span class="line">        <span class="attr">app:</span> <span class="string">config-demo-app</span></span><br><span class="line">      <span class="attr">annotations:</span></span><br><span class="line">        <span class="comment"># The field we'll use to couple our ConfigMap and Deployment</span></span><br><span class="line">        <span class="attr">configHash:</span> <span class="string">4431f6d28fdf60c8140d28c42cde331a76269ac7a0e6af01d0de0fa8392c1145</span></span><br><span class="line">    <span class="attr">spec:</span></span><br><span class="line">      <span class="attr">containers:</span></span><br><span class="line">      <span class="bullet">-</span> <span class="attr">name:</span> <span class="string">config-demo-app</span></span><br><span class="line">        <span class="attr">image:</span> <span class="string">gcr.io/optimum-rock-145719/config-demo-app</span></span><br><span class="line">        <span class="attr">ports:</span></span><br><span class="line">        <span class="bullet">-</span> <span class="attr">containerPort:</span> <span class="number">80</span></span><br><span class="line">        <span class="attr">envFrom:</span></span><br><span class="line">        <span class="comment"># The ConfigMap we want to use</span></span><br><span class="line">        <span class="bullet">-</span> <span class="attr">configMapRef:</span></span><br><span class="line">            <span class="attr">name:</span> <span class="string">demo-config</span></span><br><span class="line">        <span class="comment"># Extra-curricular: We can make the hash of our ConfigMap available at a</span></span><br><span class="line">        <span class="comment"># (e.g.) debug endpoint via a fieldRef</span></span><br><span class="line">        <span class="attr">env:</span></span><br><span class="line">        <span class="bullet">-</span> <span class="attr">name:</span> <span class="string">CONFIG_HASH</span></span><br><span class="line">          <span class="comment">#value: "4431f6d28fdf60c8140d28c42cde331a76269ac7a0e6af01d0de0fa8392c1145"</span></span><br><span class="line">          <span class="attr">valueFrom:</span></span><br><span class="line">            <span class="attr">fieldRef:</span></span><br><span class="line">              <span class="attr">fieldPath:</span> <span class="string">spec.template.metadata.annotations.configHash</span></span><br></pre></td></tr></table></figure>
+<p>提示以下错误:</p>
+<p><img src="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20200511180743.png" alt></p>
+<p>会提示<code>Unsupported value:spec.template.metadata.annotations.configHash</code></p>
+<p>目的很简单: container中的环境变量中引用configHash变量, 这个值是当configmap变更时比对两个不同的sha值以此达到重启pod的目的, 但fieldPath显然不支持<code>spec.template.metadata.annotations.configHash</code></p>
+<p>从报错提示来看, 支持列表有<code>metadata.name, metadata.namespace, metadata.uid, spec.nodeName,spec.serviceAccountName, status.hostIp, status.PodIP, status.PodIPs</code></p>
+<p><strong>这些值用于容器中需要以下信息时可以不从k8s的apiserver中获取而是可以很方便地从这些变量直接获得</strong></p>
+<p><a href="https://www.magalix.com/blog/kubernetes-patterns-the-reflection-pattern" target="_blank" rel="noopener">参考</a></p>
+<h3 id="参考文章"><a href="#参考文章" class="headerlink" title="参考文章:"></a><strong>参考文章:</strong></h3><blockquote>
+<ul>
+<li><a href="http://www.xuyasong.com/?p=1725" target="_blank" rel="noopener">http://www.xuyasong.com/?p=1725</a></li>
+<li><a href="https://kubernetes.io/" target="_blank" rel="noopener">https://kubernetes.io/</a></li>
+<li><a href="https://www.cnblogs.com/breezey/p/8810039.html" target="_blank" rel="noopener">https://www.cnblogs.com/breezey/p/8810039.html</a></li>
+<li><a href="https://ieevee.com/tech/2018/04/25/downwardapi.html" target="_blank" rel="noopener">https://ieevee.com/tech/2018/04/25/downwardapi.html</a></li>
+<li><a href="https://www.magalix.com/blog/kubernetes-patterns-the-reflection-pattern" target="_blank" rel="noopener">https://www.magalix.com/blog/kubernetes-patterns-the-reflection-pattern</a></li>
+<li><a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.19/#deploymentspec-v1-apps" target="_blank" rel="noopener">https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.19/#deploymentspec-v1-apps</a></li>
+<li><a href="https://github.com/kubernetes/kubernetes/pull/62167/files" target="_blank" rel="noopener">https://github.com/kubernetes/kubernetes/pull/62167/files</a></li>
+</ul>
+</blockquote>
+<h3 id="转载请注明出处https-izsk-me"><a href="#转载请注明出处https-izsk-me" class="headerlink" title="转载请注明出处https://izsk.me"></a><strong>转载请注明出处<a href="https://izsk.me" target="_blank" rel="noopener">https://izsk.me</a></strong></h3>]]></content>
+      <categories>
+        <category>Kubernetes</category>
+      </categories>
+      <tags>
+        <tag>Kubernetes</tag>
+      </tags>
+  </entry>
+  <entry>
     <title>Kong学习(解决诡异的Kong Error超时及重试问题)</title>
     <url>/2020/11/17/Kong-upstream-timeout-60s-and-retry-5/</url>
     <content><![CDATA[<p>现在业务使用的kong做为api gateway, 最近碰到一个的kong error超时及重试的问题，记录下排查过程</p>
@@ -158,159 +320,6 @@
       </categories>
       <tags>
         <tag>CloudNavi</tag>
-      </tags>
-  </entry>
-  <entry>
-    <title>Kubernetes学习(Kubernetes踩坑记)</title>
-    <url>/2020/10/17/Kubernetes-prombles/</url>
-    <content><![CDATA[<p>记录在使用Kubernetes中遇到的各种问题及解决方案, 好记性不如烂笔头</p>
-<p><strong>不定期更新</strong></p>
-<a id="more"></a>
-<h3 id="CoreDNS提示Loop-127-0-0-1-38827-gt-53-detected-for-zone-“-”"><a href="#CoreDNS提示Loop-127-0-0-1-38827-gt-53-detected-for-zone-“-”" class="headerlink" title="CoreDNS提示Loop (127.0.0.1:38827 -&gt; :53) detected for zone “.”"></a>CoreDNS提示Loop (127.0.0.1:38827 -&gt; :53) detected for zone “.”</h3><p><img src="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20201017221807.png" alt></p>
-<p>原因: CoreDNS所在的宿主机上<code>/etc/resolv.conf</code>中存在有127.0.xx的nameserver,这样会造成解析死循环.</p>
-<p>解决: 修改宿主机<code>/etc/resolv.conf</code>或者将CoreDNS的configmap中的forward修改为一个可用的地址, 如<code>8.8.8.8</code></p>
-<h3 id="hostPath-volumes-are-not-allowed-to-be-used"><a href="#hostPath-volumes-are-not-allowed-to-be-used" class="headerlink" title="hostPath volumes are not allowed to be used"></a>hostPath volumes are not allowed to be used</h3><p><img src="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20200909154834.png" alt></p>
-<p>原因: 集群中存在psp禁止pod直接挂载hostpath.</p>
-<p>解决: 通过添加psp来允许或者删除存在的psp都可</p>
-<h3 id="container-has-runAsNonRoot-and-image-has-non-numeric-user-grafana-cannot-verify-user-is-non-root"><a href="#container-has-runAsNonRoot-and-image-has-non-numeric-user-grafana-cannot-verify-user-is-non-root" class="headerlink" title="container has runAsNonRoot and image has non-numeric user (grafana), cannot verify user is non-root"></a>container has runAsNonRoot and image has non-numeric user (grafana), cannot verify user is non-root</h3><p><img src="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20200908211841.png" alt></p>
-<p>原因: 这是由于在deploy中设置了<code>securityContext: runAsNonRoot: true</code>, 在这种情况下，当pod启动时，使用的默认用户比如上面的grafana，k8s无法确定他是不是root用户，因此需要再指定<code></code>securityContext:runAsUser: 1000`, 随便一个数据即可, 只要不是0(指定0时指的是root)即可</p>
-<p><a href="https://stackoverflow.com/questions/51544003/using-runasnonroot-in-kubernetes" target="_blank" rel="noopener">参考</a> </p>
-<h3 id="OCI-runtime-create-failed"><a href="#OCI-runtime-create-failed" class="headerlink" title="OCI runtime create failed"></a>OCI runtime create failed</h3><p><img src="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20200902132758.png" alt></p>
-<p>原因: /var/lib/kubelet/pod下的数据目录已经损坏.</p>
-<h3 id="ImageInspectError"><a href="#ImageInspectError" class="headerlink" title="ImageInspectError"></a>ImageInspectError</h3><p><img src="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20200902123531.png" alt></p>
-<p>原因: 这种情况下一般都是镜像损坏了</p>
-<p>解决: 把相关的镜像删除后重新拉取</p>
-<h3 id="node-not-found"><a href="#node-not-found" class="headerlink" title="node not found"></a>node not found</h3><p><img src="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20200901183122.png" alt></p>
-<p>原因: 这个报错只是中间过程，真正的原因在于apiserver没有启动成功，导致会一直出现这个错误</p>
-<h3 id="OCI-runtime-create-failed-1"><a href="#OCI-runtime-create-failed-1" class="headerlink" title="OCI runtime create failed"></a>OCI runtime create failed</h3><p><img src="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20200902101139.png" alt></p>
-<p>原因: 在path中没有nvidia-container-runtime-hook这个二进制文件，可能跟本人删除nvidia显卡驱动有关.</p>
-<h3 id="Nginx-Ingress-Empty-address"><a href="#Nginx-Ingress-Empty-address" class="headerlink" title="Nginx Ingress Empty address"></a>Nginx Ingress Empty address</h3><figure class="highlight bash"><table><tr><td class="code"><pre><span class="line"><span class="comment"># kubectl get ingress</span></span><br><span class="line">NAME         HOSTS                                       ADDRESS   PORTS   AGE</span><br><span class="line">prometheus   prometheus.1box.com                                   80      31d</span><br></pre></td></tr></table></figure>
-<p>会发现address中的ip是空的，而查看生产环境时却是有ip列表的.</p>
-<p>原因: 这个其实不是一个错误，也不影响使用，原因在于测试环境中是不存在LoadBalance类型的svc, 如果需要address中显示ip的话需要在，需要做些额外的设置</p>
-<p>解决: </p>
-<ol>
-<li>在nginx controller的容器中指定启动参数<code>-report-ingress-status</code></li>
-<li>在nginx controller引用的configmap中添加<code>external-status-address: &quot;10.164.15.220&quot;</code></li>
-</ol>
-<p>这样的话,在address中变会显示<code>10.164.15.220</code>了</p>
-<p>参考:</p>
-<p><a href="https://github.com/nginxinc/kubernetes-ingress/issues/587" target="_blank" rel="noopener">https://github.com/nginxinc/kubernetes-ingress/issues/587</a></p>
-<p><a href="https://docs.nginx.com/nginx-ingress-controller/configuration/global-configuration/reporting-resources-status/" target="_blank" rel="noopener">https://docs.nginx.com/nginx-ingress-controller/configuration/global-configuration/reporting-resources-status/</a></p>
-<h3 id="but-volume-paths-are-still-present-on-disk"><a href="#but-volume-paths-are-still-present-on-disk" class="headerlink" title="but volume paths are still present on disk"></a>but volume paths are still present on disk</h3><p><img src="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20200827183609.png" alt></p>
-<p>原因: 这种pod已经被删除了，但是volume还存在于disk中</p>
-<p>解决: <code>/var/lib/kubelet/pods/3cd73...</code></p>
-<p><a href="https://github.com/longhorn/longhorn/issues/485" target="_blank" rel="noopener">参考</a></p>
-<h3 id="PLEG-is-not-healthy"><a href="#PLEG-is-not-healthy" class="headerlink" title="PLEG is not healthy"></a>PLEG is not healthy</h3><p><img src="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20200827184435.png" alt></p>
-<p>原因: PLEG(Pod Lifecycle Event Generator),宿主机上面跑的容器太多，导致pod无法在3m钟内完成生命周期检查</p>
-<p><a href="https://developers.redhat.com/blog/2019/11/13/pod-lifecycle-event-generator-understanding-the-pleg-is-not-healthy-issue-in-kubernetes/" target="_blank" rel="noopener">参考</a></p>
-<h3 id="metrics-server-10255-connection-refused"><a href="#metrics-server-10255-connection-refused" class="headerlink" title="metrics-server: 10255 connection refused"></a>metrics-server: 10255 connection refused</h3><figure class="highlight yaml"><table><tr><td class="code"><pre><span class="line"><span class="attr">unable to fully collect metrics:</span> <span class="string">[unable</span> <span class="attr">to fully scrape metrics from source kubelet_summary:k8s-node-49:</span> <span class="string">unable</span> <span class="string">to</span> <span class="string">fetch</span> <span class="string">metrics</span> <span class="string">from</span> <span class="string">Kubelet</span> <span class="string">k8s-node-49</span> <span class="string">(xxx.xxx.xxx.49):</span> <span class="string">Get</span> <span class="string">http://xxx.xxx.xxx.49:10255/stats/summary?only_cpu_and_memory=true:</span> <span class="attr">dial tcp xxx.xxx.xxx.49:10255: connect:</span> <span class="string">connection</span> <span class="string">refused</span></span><br></pre></td></tr></table></figure>
-<p>解决: 将<code>- --kubelet-port=10255</code>注释</p>
-<h3 id="metrics-server-no-such-host"><a href="#metrics-server-no-such-host" class="headerlink" title="metrics-server: no such host"></a>metrics-server: no such host</h3><figure class="highlight yaml"><table><tr><td class="code"><pre><span class="line"><span class="string">unable</span> <span class="string">to</span> <span class="string">fetch</span> <span class="string">metrics</span> <span class="string">from</span> <span class="string">Kubelet</span> <span class="string">k8s-node-234</span> <span class="string">(k8s-node-234):</span> <span class="string">Get</span> <span class="string">https://k8s-node-234:10250/stats/summary?only_cpu_and_memory=true:</span> <span class="attr">dial tcp: lookup k8s-node-234 on 10.96.0.10:53:</span> <span class="literal">no</span> <span class="string">such</span> <span class="string">host</span></span><br></pre></td></tr></table></figure>
-<p>解决: 使用<code>kubelet-preferred-address-types=InternalIP,Hostname,InternalDNS,ExternalDNS,ExternalIP</code>参数</p>
-<h3 id="daemonset-tolerations"><a href="#daemonset-tolerations" class="headerlink" title="daemonset tolerations"></a>daemonset tolerations</h3><p>集群中新增了几台机器用于部署clickhouse用于做大数据分析，为了不让这类占用大量资源的POD影响其它POD，因此选择给机器打taint的形式控制该类POD的调度, 创建POD后发现这些POD都会出现DNS解析异常, 这时就需要注意容器网络，比如flannel是否容忍了这些机器的taint，不然的话，flannel是无法被调度到这些机器的,因此容器间的通信会出现问题，<strong>可以将类似flannel这些的基础POD容忍所有的NoScheule与NoExecute</strong></p>
-<figure class="highlight yaml"><table><tr><td class="code"><pre><span class="line"><span class="attr">tolerations:</span></span><br><span class="line"><span class="bullet">-</span> <span class="attr">effect:</span> <span class="string">NoSchedule</span></span><br><span class="line">  <span class="attr">operator:</span> <span class="string">Exists</span></span><br><span class="line"><span class="bullet">-</span> <span class="attr">effect:</span> <span class="string">NoExecute</span></span><br><span class="line">  <span class="attr">operator:</span> <span class="string">Exists</span></span><br></pre></td></tr></table></figure>
-<h3 id="Are-you-tring-to-mount-a-directory-on-to-a-file"><a href="#Are-you-tring-to-mount-a-directory-on-to-a-file" class="headerlink" title="Are you tring to mount a directory on to a file"></a>Are you tring to mount a directory on to a file</h3><p><img src="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20200430132115.png" alt></p>
-<p>原因: </p>
-<p>Yaml文件中使用了subPath, 但是mountPath指向了一个目录</p>
-<p>解决: </p>
-<p>mountPath需要加上文件名</p>
-<p><img src="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20200430132148.png" alt></p>
-<h3 id="Kubernetes启动后提示slice-no-such-file-ro-directory"><a href="#Kubernetes启动后提示slice-no-such-file-ro-directory" class="headerlink" title="Kubernetes启动后提示slice: no such file ro directory"></a>Kubernetes启动后提示slice: no such file ro directory</h3><p><img src="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/41B2684F-312C-41ED-AF56-D6014C6B74E6.png" alt></p>
-<p>原因: </p>
-<p>yum安装的kubelet默认的是cgroupfs，而docker一般默认的是systemd。但是kubernetes安装的时候建议使用systemd, kubelet跟docker的不一致, 要么修改kubelet的启动参数 , 要么修改dokcer启动参数</p>
-<p>解决:</p>
-<p>docker的启动参数文件为: <code>/etc/docker/daemon.json: &quot;exec-opts&quot;: [&quot;native.cgroupdriver=systemd”]</code></p>
-<p>kubelet的启动参数文件为: <code>/var/lib/kubelet/config.yaml:  cgroupDriver: systemd</code></p>
-<h3 id="“cni0”-already-has-an-IP-address-different-from"><a href="#“cni0”-already-has-an-IP-address-different-from" class="headerlink" title="“cni0” already has an IP address different from"></a>“cni0” already has an IP address different from</h3><p><img src="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20200430145913.png" alt></p>
-<p>原因:</p>
-<p>使用kubeadm reset 重复操作过, reset之后，之前flannel创建的bridge device cni0和网口设备flannel.1依然健在</p>
-<p> 解决:</p>
-<p>添加之前需要清除下网络</p>
-<figure class="highlight bash"><table><tr><td class="code"><pre><span class="line">kubeadm reset</span><br><span class="line">systemctl stop kubelet</span><br><span class="line">systemctl stop docker</span><br><span class="line">rm -rf /var/lib/cni/</span><br><span class="line">rm -rf /var/lib/kubelet/*</span><br><span class="line">rm -rf /etc/cni/</span><br><span class="line">ifconfig cni0 down</span><br><span class="line">ifconfig flannel.1 down</span><br><span class="line">ifconfig docker0 down</span><br><span class="line">ip link delete cni0</span><br><span class="line">ip link delete flannel.1</span><br><span class="line">systemctl start docker</span><br><span class="line">systemctl start kubelet</span><br></pre></td></tr></table></figure>
-<h3 id="kubeadm初始化时提示-CPU小于2"><a href="#kubeadm初始化时提示-CPU小于2" class="headerlink" title="kubeadm初始化时提示 CPU小于2"></a>kubeadm初始化时提示 CPU小于2</h3><figure class="highlight bash"><table><tr><td class="code"><pre><span class="line">[preflight] Running pre-flight checks</span><br><span class="line">error execution phase preflight: [preflight] Some fatal errors occurred:</span><br><span class="line">    [ERROR NumCPU]: the number of available CPUs 1 is less than the required 2</span><br><span class="line">[preflight] If you know what you are doing, you can make a check non-fatal with `--ignore-preflight-errors=...`</span><br></pre></td></tr></table></figure>
-<p>原因:</p>
-<p>kubeadm对资源一定的要求，如果是测试环境无所谓的话,可忽略</p>
-<p>解决:</p>
-<figure class="highlight bash"><table><tr><td class="code"><pre><span class="line">使用 --ignore-preflight-errors 忽略</span><br></pre></td></tr></table></figure>
-<h3 id="Unable-to-update-cni-config-no-network-found"><a href="#Unable-to-update-cni-config-no-network-found" class="headerlink" title="Unable to update cni config: no network found"></a>Unable to update cni config: no network found</h3><p><img src="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/63611F8A-F803-46F5-8792-67111E03DF91.png" alt></p>
-<p>原因:</p>
-<p>还未部署网络插件容器，导致在/etc/cni下还没有文件</p>
-<p>解决:</p>
-<p>根据实际情况部署网络插件</p>
-<h3 id="while-reading-‘google-dockercfg’-metadata"><a href="#while-reading-‘google-dockercfg’-metadata" class="headerlink" title="while reading ‘google-dockercfg’ metadata"></a>while reading ‘google-dockercfg’ metadata</h3><p><img src="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/FB66ABBE-FF79-48A4-8A8B-7FDC3AED6634.png" alt></p>
-<p>原因:</p>
-<p>无法访问上述url出现 404</p>
-<p>解决:</p>
-<p>由于是在RKE上部署k8s, 所以可能会去访问google相关的url, 不影响业务,可以忽略</p>
-<h3 id="no-providers-available-to-validate-pod-request"><a href="#no-providers-available-to-validate-pod-request" class="headerlink" title="no providers available to validate pod request"></a>no providers available to validate pod request</h3><p><img src="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/ACEB6BE6-7E22-4A43-AB4A-A51E00CE9EFE.png" alt></p>
-<p>原因:</p>
-<p>在api-server的启动参数enable-admission中设置了PodSecrityPolicy, 但是集群中又没有任何的podsecritypolicy，因此导致整个集群都无法新建出pod</p>
-<p>解决:</p>
-<p>删除相应的podsecritypolicy即可</p>
-<h3 id="unable-to-upgrade-connection-Unauthorized"><a href="#unable-to-upgrade-connection-Unauthorized" class="headerlink" title="unable to upgrade connection: Unauthorized"></a>unable to upgrade connection: Unauthorized</h3><p><img src="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/5FECFF57-F204-4ADF-A9E0-5F1D9A917194.png" alt></p>
-<p>原因:</p>
-<p>kubelet的启动参数少了x509认证方式配置证书的路径, 加上重启kubelet即可</p>
-<p>解决:</p>
-<p><img src="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/447313AF-7DD6-4FB4-8F46-AE1DC468C7CA.png" alt></p>
-<h3 id="kubectl-get-cs-提示-lt-unknown"><a href="#kubectl-get-cs-提示-lt-unknown" class="headerlink" title="kubectl get cs 提示\&lt;unknown>"></a>kubectl get cs 提示\&lt;unknown></h3><p><img src="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/C73EB07F-14CD-43A7-86C0-49B4812F57A6.png" alt></p>
-<p>原因:</p>
-<p>是个bug, 版本的问题，kubernetes有意废除get cs命令</p>
-<p>解决:</p>
-<p>目前对集群的运行无影响, 可通过加-oyaml 查看状态</p>
-<h3 id="安装kubeadm时提示Depends错误"><a href="#安装kubeadm时提示Depends错误" class="headerlink" title="安装kubeadm时提示Depends错误"></a>安装kubeadm时提示Depends错误</h3><p><img src="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/2AE46262-2624-446C-909E-1FA0E76A8AD7.png" alt></p>
-<p>原因: </p>
-<p>跟kubeadm没多大关系, 系统安装的有问题</p>
-<p>解决:</p>
-<p>执行以下命令修复</p>
-<figure class="highlight bash"><table><tr><td class="code"><pre><span class="line">apt --fix-broken install </span><br><span class="line">apt-get update</span><br></pre></td></tr></table></figure>
-<h3 id="访问service时提示Connection-refused"><a href="#访问service时提示Connection-refused" class="headerlink" title="访问service时提示Connection refused"></a>访问service时提示Connection refused</h3><p>现象: 从另一环境中把yaml文件导入到新环境后有些service访问不通</p>
-<figure class="highlight bash"><table><tr><td class="code"><pre><span class="line">telnet mongodb-mst.external 27017</span><br><span class="line">Trying 10.97.135.242...</span><br><span class="line">telnet: Unable to connect to remote host: Connection refused</span><br></pre></td></tr></table></figure>
-<p>首先排除了域名、端口的配置问题。</p>
-<p>会发现提示连接拒绝.可以确定的是集群内的DNS是正常的.</p>
-<p>那么就是通过clusterIP无法到达realserver. 查看iptables规则</p>
-<p>发现提示<code>default has no endpoints --reject-with icmp-port-unreachable</code></p>
-<p><img src="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20200506115705.png" alt></p>
-<p>很奇怪, 提示没有endpoints, 但是使用<code>kubectl get ep</code>又能看到ep存在且配置没有问题</p>
-<p>而且这个default是怎么来的.</p>
-<p>为了方便部署, 很多配置是从别的环境导出的配置, 有些service访问是没问题的, 只有少部分<code>connection refused</code></p>
-<p>结比一下发现一个很有趣的问题，先来看下不正常的yaml文件:</p>
-<p><img src="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20200506115805.png" alt></p>
-<p>由于服务在集群外部署的, 因此这里使用了subset方式, 开始怀疑问题在这里, 但是后来知道这个不是重点</p>
-<p>乍一看这个配置没什么问题, 部署也很正常, 但是对比正常的yaml文件，发现一个区别：</p>
-<p>如果在services中的端口指定了名字, 那么在subsets中的端口也要带名字, 没有带名字的就会出现<code>connection refused</code>，这个确实之前从来没有关注过, 一个端口的情况下也不会指定名字</p>
-<p>而且这面iptalbes中提示的default刚好就是这里的port name,虽然不敢相信，但是也只能试一试这个方法: 在subsets中也加了port name</p>
-<p><img src="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20200506120151.png" alt></p>
-<p>重新部署一个，再次查看iptalbes规则 </p>
-<p><code>iptables-save|grep mongodb-mst</code></p>
-<p><img src="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20200506120040.png" alt></p>
-<p>OMG, 居然可行, 再看下telnet的结果:</p>
-<figure class="highlight bash"><table><tr><td class="code"><pre><span class="line">Trying 10.105.116.92...</span><br><span class="line">Connected to mongodb-mst.external.svc.cluster.local.</span><br><span class="line">Escape character is <span class="string">'^]'</span>.</span><br></pre></td></tr></table></figure>
-<p>访问也是没问题, 那么原因就在于:</p>
-<p><strong>在service中指定了port name时, 也需要在ep中指定port name</strong></p>
-<h3 id="error-converting-fieldPath-field-label-not-supported"><a href="#error-converting-fieldPath-field-label-not-supported" class="headerlink" title="error converting fieldPath: field label not supported"></a>error converting fieldPath: field label not supported</h3><p>今天遇到一个部署deployment出错的问题, yaml文件如下:</p>
-<figure class="highlight yaml"><table><tr><td class="code"><pre><span class="line"><span class="attr">apiVersion:</span> <span class="string">apps/v1</span></span><br><span class="line"><span class="attr">kind:</span> <span class="string">Deployment</span></span><br><span class="line"><span class="attr">metadata:</span></span><br><span class="line">  <span class="attr">name:</span> <span class="string">demo-deployment</span></span><br><span class="line">  <span class="attr">namespace:</span> <span class="string">4test</span></span><br><span class="line">  <span class="attr">labels:</span></span><br><span class="line">    <span class="attr">app:</span> <span class="string">config-demo-app</span></span><br><span class="line"><span class="attr">spec:</span></span><br><span class="line">  <span class="attr">replicas:</span> <span class="number">1</span></span><br><span class="line">  <span class="attr">selector:</span></span><br><span class="line">    <span class="attr">matchLabels:</span></span><br><span class="line">      <span class="attr">app:</span> <span class="string">config-demo-app</span></span><br><span class="line">  <span class="attr">template:</span></span><br><span class="line">    <span class="attr">metadata:</span></span><br><span class="line">      <span class="attr">labels:</span></span><br><span class="line">        <span class="attr">app:</span> <span class="string">config-demo-app</span></span><br><span class="line">      <span class="attr">annotations:</span></span><br><span class="line">        <span class="comment"># The field we'll use to couple our ConfigMap and Deployment</span></span><br><span class="line">        <span class="attr">configHash:</span> <span class="string">4431f6d28fdf60c8140d28c42cde331a76269ac7a0e6af01d0de0fa8392c1145</span></span><br><span class="line">    <span class="attr">spec:</span></span><br><span class="line">      <span class="attr">containers:</span></span><br><span class="line">      <span class="bullet">-</span> <span class="attr">name:</span> <span class="string">config-demo-app</span></span><br><span class="line">        <span class="attr">image:</span> <span class="string">gcr.io/optimum-rock-145719/config-demo-app</span></span><br><span class="line">        <span class="attr">ports:</span></span><br><span class="line">        <span class="bullet">-</span> <span class="attr">containerPort:</span> <span class="number">80</span></span><br><span class="line">        <span class="attr">envFrom:</span></span><br><span class="line">        <span class="comment"># The ConfigMap we want to use</span></span><br><span class="line">        <span class="bullet">-</span> <span class="attr">configMapRef:</span></span><br><span class="line">            <span class="attr">name:</span> <span class="string">demo-config</span></span><br><span class="line">        <span class="comment"># Extra-curricular: We can make the hash of our ConfigMap available at a</span></span><br><span class="line">        <span class="comment"># (e.g.) debug endpoint via a fieldRef</span></span><br><span class="line">        <span class="attr">env:</span></span><br><span class="line">        <span class="bullet">-</span> <span class="attr">name:</span> <span class="string">CONFIG_HASH</span></span><br><span class="line">          <span class="comment">#value: "4431f6d28fdf60c8140d28c42cde331a76269ac7a0e6af01d0de0fa8392c1145"</span></span><br><span class="line">          <span class="attr">valueFrom:</span></span><br><span class="line">            <span class="attr">fieldRef:</span></span><br><span class="line">              <span class="attr">fieldPath:</span> <span class="string">spec.template.metadata.annotations.configHash</span></span><br></pre></td></tr></table></figure>
-<p>提示以下错误:</p>
-<p><img src="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20200511180743.png" alt></p>
-<p>会提示<code>Unsupported value:spec.template.metadata.annotations.configHash</code></p>
-<p>目的很简单: container中的环境变量中引用configHash变量, 这个值是当configmap变更时比对两个不同的sha值以此达到重启pod的目的, 但fieldPath显然不支持<code>spec.template.metadata.annotations.configHash</code></p>
-<p>从报错提示来看, 支持列表有<code>metadata.name, metadata.namespace, metadata.uid, spec.nodeName,spec.serviceAccountName, status.hostIp, status.PodIP, status.PodIPs</code></p>
-<p><strong>这些值用于容器中需要以下信息时可以不从k8s的apiserver中获取而是可以很方便地从这些变量直接获得</strong></p>
-<p><a href="https://www.magalix.com/blog/kubernetes-patterns-the-reflection-pattern" target="_blank" rel="noopener">参考</a></p>
-<h3 id="参考文章"><a href="#参考文章" class="headerlink" title="参考文章:"></a><strong>参考文章:</strong></h3><blockquote>
-<ul>
-<li><a href="http://www.xuyasong.com/?p=1725" target="_blank" rel="noopener">http://www.xuyasong.com/?p=1725</a></li>
-<li><a href="https://kubernetes.io/" target="_blank" rel="noopener">https://kubernetes.io/</a></li>
-<li><a href="https://www.cnblogs.com/breezey/p/8810039.html" target="_blank" rel="noopener">https://www.cnblogs.com/breezey/p/8810039.html</a></li>
-<li><a href="https://ieevee.com/tech/2018/04/25/downwardapi.html" target="_blank" rel="noopener">https://ieevee.com/tech/2018/04/25/downwardapi.html</a></li>
-<li><a href="https://www.magalix.com/blog/kubernetes-patterns-the-reflection-pattern" target="_blank" rel="noopener">https://www.magalix.com/blog/kubernetes-patterns-the-reflection-pattern</a></li>
-</ul>
-</blockquote>
-<h3 id="转载请注明出处https-izsk-me"><a href="#转载请注明出处https-izsk-me" class="headerlink" title="转载请注明出处https://izsk.me"></a><strong>转载请注明出处<a href="https://izsk.me" target="_blank" rel="noopener">https://izsk.me</a></strong></h3>]]></content>
-      <categories>
-        <category>Kubernetes</category>
-      </categories>
-      <tags>
-        <tag>Kubernetes</tag>
       </tags>
   </entry>
   <entry>
@@ -6626,74 +6635,6 @@
       </tags>
   </entry>
   <entry>
-    <title>记一次排查ES FGC导致的集群宕机异常</title>
-    <url>/2019/10/06/ES-FGC-Fix/</url>
-    <content><![CDATA[<p>有一个私有云环境的运维同事反应项目中的ES集群无法查询, 由于是私有云环境, 没有直接运维权限, 所以没有接收到一线报警, 远程登录上去后发现ES集群已经宕机了, 这次的排查过程也发现了几个比较容易忽视的细节, 在此记录一下,比较有意思.</p>
-<a id="more"></a>
-<h3 id="集群状态"><a href="#集群状态" class="headerlink" title="集群状态"></a>集群状态</h3><p>ES集群为3节点.</p>
-<p>首先肯定是查看集群状态</p>
-<figure class="highlight bash"><table><tr><td class="code"><pre><span class="line">curl <span class="string">'http://localhost:9200/_cluster/health?pretty'</span> -u xxx:yyy</span><br><span class="line"><span class="comment">#发现状态为Red</span></span><br></pre></td></tr></table></figure>
-<p>查看节点状态</p>
-<figure class="highlight bash"><table><tr><td class="code"><pre><span class="line">curl <span class="string">'http://localhost:9200/_cat/node?v'</span> -u xxx:yyy</span><br><span class="line"><span class="comment">#节点数正常</span></span><br></pre></td></tr></table></figure>
-<p>查看各节点使用的磁盘情况</p>
-<figure class="highlight bash"><table><tr><td class="code"><pre><span class="line">curl -XGET <span class="string">'localhost:9200/_cat/allocation?v&amp;pretty'</span> -u xxx:yyy</span><br><span class="line"><span class="comment">#未发现异常</span></span><br></pre></td></tr></table></figure>
-<h3 id="集群日志"><a href="#集群日志" class="headerlink" title="集群日志"></a>集群日志</h3><p>登录一个ES节点查看日志，发现以下报错，查看其它2个节点，情况相同</p>
-<p><img src="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20200204134510.png" alt></p>
-<p>从日志来看, 可以发现几个问题:</p>
-<blockquote>
-<ul>
-<li>Full GC很频繁, 而且时间也非常的长 </li>
-<li>每次GC完之后所能释放的内存非常有限</li>
-</ul>
-</blockquote>
-<p>到这，其它原因已经很明朗, <strong>内存不够导致的full gc 频繁，但是又不能释放太多的空间，又导致full gc的恶意循环</strong></p>
-<p>如果大家对gc的日志不很了解的话, 这里解释下上面日志的各个字段含义, 假如有以下一条gc日志</p>
-<figure class="highlight bash"><table><tr><td class="code"><pre><span class="line">[2018-06-30T17:57:29,020][INFO ][o.e.m.j.JvmGcMonitorService] [qoo--ES] [gc][old][228385][160772] duration [5s], collections [1]/[5.1s], total [5s]/[4.4d], memory [945.4mb]-&gt;[958.5mb]/[1007.3mb], all_pools &#123;[young] [87.8mb]-&gt;[100.9mb]/[133.1mb]&#125;&#123;[survivor] [0b]-&gt;[0b]/[16.6mb]&#125;&#123;[old] [857.6mb]-&gt;[857.6mb]/[857.6mb]&#125;</span><br></pre></td></tr></table></figure>
-<ul>
-<li><strong>gc old</strong> 本次是 old GC 这是第228385次 GC 检查][从 JVM 启动至今发生的第 160772次 G]</li>
-<li><strong>duration</strong> [本次检查到的 GC 总耗时 <strong>5</strong> 秒，可能是多次的加和</li>
-<li><strong>collections</strong> [从上次检查至今总共发生<strong>1</strong>次GC]/[从上次检查至今已过去 <strong>5.1</strong> 秒],</li>
-<li><strong>total</strong> [本次检查到的 GC 总耗时为 <strong>5</strong> 秒]/[从 JVM 启动至今发生的 GC 总耗时为 <strong>4.4</strong> 天]，</li>
-<li><strong>memory</strong> [ GC 前 Heap memory 空间]-&gt;[GC 后 Heap memory 空间]/[Heap memory 总空间],</li>
-<li><strong>all_pools</strong>(分代部分的详情) {young 区][GC 前 Memory ]-&gt;[GC后 Memory]/[young区 Memory 总大小] }</li>
-<li><strong>survivor</strong> [GC 前 Memory ]-&gt;[GC后 Memory]/[Memory 总大小] }{old 区[GC 前 Memory ]-&gt;[GC后 Memory]/[old区 Memory 总大小] }</li>
-</ul>
-<p>那为何会内存不足呢, 想起前几天服务拓展，添加收集了几个服务的日志, 日志量不算小, 而且这3个ES节点所在的机器内存只分配了8个G, 显然, 加完这几个日志之后内存不够用了.</p>
-<h3 id="Index-Mapping"><a href="#Index-Mapping" class="headerlink" title="Index Mapping"></a>Index Mapping</h3><p>而且，从日志中， 还发现几处很诡异的日志</p>
-<p><img src="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20200204141415.png" alt></p>
-<p>红框中的错误: <strong>object mapping for [msg] tried to pasrse field [msg] as object, but found a concrete</strong></p>
-<p>翻译过来就是说, 日志中的msg这个字段的类型匹配不上, ES尽力把它解析为object类型，但是它却是个确切的值.</p>
-<p>就好比你在python中定义了一个字典, 但是你给它赋值一个整形, 这确定要报错.</p>
-<p>但是这个mapping是从何而来的呢.</p>
-<p>经过网上搜索一翻, 终于明白:</p>
-<p>ES中为了加强性能，对于索引中的<strong>第一条数据, ES会默认(可设置)按照这条数据建立index mapping, 相当于是一个索引模板, 好比是mysql中表的定义一个概念, 后续这个索引中的所有日志都按照该模板进行解析</strong></p>
-<p>后来经过查看源码, 我们发现，出现上图中的问题是因为代码中的日志打印不规范, 有一个地方如果抛出异常时，打印的是一个单一字符串, 而正常情况下打印的是一个json, 所以当第一条正常的日志传递给ES时，ES建立的索引 模板记录这个字段为object类型(可以类比为python中的字典, 本身是可以新增元素的), 当应用抛出异常时，日志中又传递了一个单一字符串, 但是索引模板已经记录为object类型，所以无法匹配, 这就是问题所在</p>
-<h3 id="Fix-Bug"><a href="#Fix-Bug" class="headerlink" title="Fix Bug"></a>Fix Bug</h3><p>从3个方面解决上面的问题</p>
-<p>首先是修复代码中日志不规范问题, 这个充暴露了code view不严谨.</p>
-<p>第2个是加大ES的内存,毕竟日志量确实是上来了, 从8G添加到12G</p>
-<p>第3个是优化ES的gc问题, ES中有个逻辑是：<strong>默认情况下，主节点每30秒会去检查其他节点的状态，如果任何节点的垃圾回收时间超过30秒（Garbage collection duration）且在重复次数内都超时，则会导致主节点任务该节点脱离集群, 节点脱离集群后会引起分片的rebalance</strong></p>
-<p>这个机制让ES节点频繁的脱离集群，而又引起整个集群的rebalance，ES本身的内存就不够，rebalance更是雪上加霜, 如此往复就导致整个ES集群宕机.</p>
-<p>可修改主节点的检查时间及重复次数,让其它节点有充分的时间进行full gc.</p>
-<p>在ES的配置文件中添加以下配置:</p>
-<figure class="highlight yml"><table><tr><td class="code"><pre><span class="line"><span class="attr">discovery.zen.fd.ping_timeout:</span> <span class="string">300s</span></span><br><span class="line"><span class="attr">discovery.zen.fd.ping_retriES:</span> <span class="number">10</span></span><br></pre></td></tr></table></figure>
-<p>这样, 达到这两个条件时才能触发节点脱离集群</p>
-<p>至此, 依次重启ES节点, 问题圆满解决.</p>
-<h3 id="参考文章"><a href="#参考文章" class="headerlink" title="参考文章:"></a><strong>参考文章:</strong></h3><blockquote>
-<ul>
-<li><a href="https://www.elastic.co/guide/en/elasticsearch/reference/current/mapping.html" target="_blank" rel="noopener">elasticsearch index mapping</a></li>
-<li><a href="https://blog.csdn.net/sinat_35930259/article/details/80354732" target="_blank" rel="noopener">elasticsearch篇之mapping</a></li>
-<li><a href="https://segmentfault.com/a/1190000016494488" target="_blank" rel="noopener">你看懂 Elasticsearch Log 中的 GC 日志了吗？</a></li>
-</ul>
-</blockquote>
-<h3 id="转载请注明出处https-izsk-me"><a href="#转载请注明出处https-izsk-me" class="headerlink" title="转载请注明出处https://izsk.me"></a><strong>转载请注明出处<a href="https://izsk.me" target="_blank" rel="noopener">https://izsk.me</a></strong></h3>]]></content>
-      <categories>
-        <category>FELK</category>
-      </categories>
-      <tags>
-        <tag>FELK</tag>
-      </tags>
-  </entry>
-  <entry>
     <title>CockRoachDB学习(架构)</title>
     <url>/2019/10/06/CockroachDB-Struct/</url>
     <content><![CDATA[<p>项目中需要一个分布式数据库用于存储业务的KV数据, 在前期项目调研结合业务比对了业界常用的KV数据库模型后, 最后选择了CockRoachDB(CRDB).</p>
@@ -6828,6 +6769,74 @@
       </categories>
       <tags>
         <tag>分布式架构</tag>
+      </tags>
+  </entry>
+  <entry>
+    <title>记一次排查ES FGC导致的集群宕机异常</title>
+    <url>/2019/10/06/ES-FGC-Fix/</url>
+    <content><![CDATA[<p>有一个私有云环境的运维同事反应项目中的ES集群无法查询, 由于是私有云环境, 没有直接运维权限, 所以没有接收到一线报警, 远程登录上去后发现ES集群已经宕机了, 这次的排查过程也发现了几个比较容易忽视的细节, 在此记录一下,比较有意思.</p>
+<a id="more"></a>
+<h3 id="集群状态"><a href="#集群状态" class="headerlink" title="集群状态"></a>集群状态</h3><p>ES集群为3节点.</p>
+<p>首先肯定是查看集群状态</p>
+<figure class="highlight bash"><table><tr><td class="code"><pre><span class="line">curl <span class="string">'http://localhost:9200/_cluster/health?pretty'</span> -u xxx:yyy</span><br><span class="line"><span class="comment">#发现状态为Red</span></span><br></pre></td></tr></table></figure>
+<p>查看节点状态</p>
+<figure class="highlight bash"><table><tr><td class="code"><pre><span class="line">curl <span class="string">'http://localhost:9200/_cat/node?v'</span> -u xxx:yyy</span><br><span class="line"><span class="comment">#节点数正常</span></span><br></pre></td></tr></table></figure>
+<p>查看各节点使用的磁盘情况</p>
+<figure class="highlight bash"><table><tr><td class="code"><pre><span class="line">curl -XGET <span class="string">'localhost:9200/_cat/allocation?v&amp;pretty'</span> -u xxx:yyy</span><br><span class="line"><span class="comment">#未发现异常</span></span><br></pre></td></tr></table></figure>
+<h3 id="集群日志"><a href="#集群日志" class="headerlink" title="集群日志"></a>集群日志</h3><p>登录一个ES节点查看日志，发现以下报错，查看其它2个节点，情况相同</p>
+<p><img src="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20200204134510.png" alt></p>
+<p>从日志来看, 可以发现几个问题:</p>
+<blockquote>
+<ul>
+<li>Full GC很频繁, 而且时间也非常的长 </li>
+<li>每次GC完之后所能释放的内存非常有限</li>
+</ul>
+</blockquote>
+<p>到这，其它原因已经很明朗, <strong>内存不够导致的full gc 频繁，但是又不能释放太多的空间，又导致full gc的恶意循环</strong></p>
+<p>如果大家对gc的日志不很了解的话, 这里解释下上面日志的各个字段含义, 假如有以下一条gc日志</p>
+<figure class="highlight bash"><table><tr><td class="code"><pre><span class="line">[2018-06-30T17:57:29,020][INFO ][o.e.m.j.JvmGcMonitorService] [qoo--ES] [gc][old][228385][160772] duration [5s], collections [1]/[5.1s], total [5s]/[4.4d], memory [945.4mb]-&gt;[958.5mb]/[1007.3mb], all_pools &#123;[young] [87.8mb]-&gt;[100.9mb]/[133.1mb]&#125;&#123;[survivor] [0b]-&gt;[0b]/[16.6mb]&#125;&#123;[old] [857.6mb]-&gt;[857.6mb]/[857.6mb]&#125;</span><br></pre></td></tr></table></figure>
+<ul>
+<li><strong>gc old</strong> 本次是 old GC 这是第228385次 GC 检查][从 JVM 启动至今发生的第 160772次 G]</li>
+<li><strong>duration</strong> [本次检查到的 GC 总耗时 <strong>5</strong> 秒，可能是多次的加和</li>
+<li><strong>collections</strong> [从上次检查至今总共发生<strong>1</strong>次GC]/[从上次检查至今已过去 <strong>5.1</strong> 秒],</li>
+<li><strong>total</strong> [本次检查到的 GC 总耗时为 <strong>5</strong> 秒]/[从 JVM 启动至今发生的 GC 总耗时为 <strong>4.4</strong> 天]，</li>
+<li><strong>memory</strong> [ GC 前 Heap memory 空间]-&gt;[GC 后 Heap memory 空间]/[Heap memory 总空间],</li>
+<li><strong>all_pools</strong>(分代部分的详情) {young 区][GC 前 Memory ]-&gt;[GC后 Memory]/[young区 Memory 总大小] }</li>
+<li><strong>survivor</strong> [GC 前 Memory ]-&gt;[GC后 Memory]/[Memory 总大小] }{old 区[GC 前 Memory ]-&gt;[GC后 Memory]/[old区 Memory 总大小] }</li>
+</ul>
+<p>那为何会内存不足呢, 想起前几天服务拓展，添加收集了几个服务的日志, 日志量不算小, 而且这3个ES节点所在的机器内存只分配了8个G, 显然, 加完这几个日志之后内存不够用了.</p>
+<h3 id="Index-Mapping"><a href="#Index-Mapping" class="headerlink" title="Index Mapping"></a>Index Mapping</h3><p>而且，从日志中， 还发现几处很诡异的日志</p>
+<p><img src="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20200204141415.png" alt></p>
+<p>红框中的错误: <strong>object mapping for [msg] tried to pasrse field [msg] as object, but found a concrete</strong></p>
+<p>翻译过来就是说, 日志中的msg这个字段的类型匹配不上, ES尽力把它解析为object类型，但是它却是个确切的值.</p>
+<p>就好比你在python中定义了一个字典, 但是你给它赋值一个整形, 这确定要报错.</p>
+<p>但是这个mapping是从何而来的呢.</p>
+<p>经过网上搜索一翻, 终于明白:</p>
+<p>ES中为了加强性能，对于索引中的<strong>第一条数据, ES会默认(可设置)按照这条数据建立index mapping, 相当于是一个索引模板, 好比是mysql中表的定义一个概念, 后续这个索引中的所有日志都按照该模板进行解析</strong></p>
+<p>后来经过查看源码, 我们发现，出现上图中的问题是因为代码中的日志打印不规范, 有一个地方如果抛出异常时，打印的是一个单一字符串, 而正常情况下打印的是一个json, 所以当第一条正常的日志传递给ES时，ES建立的索引 模板记录这个字段为object类型(可以类比为python中的字典, 本身是可以新增元素的), 当应用抛出异常时，日志中又传递了一个单一字符串, 但是索引模板已经记录为object类型，所以无法匹配, 这就是问题所在</p>
+<h3 id="Fix-Bug"><a href="#Fix-Bug" class="headerlink" title="Fix Bug"></a>Fix Bug</h3><p>从3个方面解决上面的问题</p>
+<p>首先是修复代码中日志不规范问题, 这个充暴露了code view不严谨.</p>
+<p>第2个是加大ES的内存,毕竟日志量确实是上来了, 从8G添加到12G</p>
+<p>第3个是优化ES的gc问题, ES中有个逻辑是：<strong>默认情况下，主节点每30秒会去检查其他节点的状态，如果任何节点的垃圾回收时间超过30秒（Garbage collection duration）且在重复次数内都超时，则会导致主节点任务该节点脱离集群, 节点脱离集群后会引起分片的rebalance</strong></p>
+<p>这个机制让ES节点频繁的脱离集群，而又引起整个集群的rebalance，ES本身的内存就不够，rebalance更是雪上加霜, 如此往复就导致整个ES集群宕机.</p>
+<p>可修改主节点的检查时间及重复次数,让其它节点有充分的时间进行full gc.</p>
+<p>在ES的配置文件中添加以下配置:</p>
+<figure class="highlight yml"><table><tr><td class="code"><pre><span class="line"><span class="attr">discovery.zen.fd.ping_timeout:</span> <span class="string">300s</span></span><br><span class="line"><span class="attr">discovery.zen.fd.ping_retriES:</span> <span class="number">10</span></span><br></pre></td></tr></table></figure>
+<p>这样, 达到这两个条件时才能触发节点脱离集群</p>
+<p>至此, 依次重启ES节点, 问题圆满解决.</p>
+<h3 id="参考文章"><a href="#参考文章" class="headerlink" title="参考文章:"></a><strong>参考文章:</strong></h3><blockquote>
+<ul>
+<li><a href="https://www.elastic.co/guide/en/elasticsearch/reference/current/mapping.html" target="_blank" rel="noopener">elasticsearch index mapping</a></li>
+<li><a href="https://blog.csdn.net/sinat_35930259/article/details/80354732" target="_blank" rel="noopener">elasticsearch篇之mapping</a></li>
+<li><a href="https://segmentfault.com/a/1190000016494488" target="_blank" rel="noopener">你看懂 Elasticsearch Log 中的 GC 日志了吗？</a></li>
+</ul>
+</blockquote>
+<h3 id="转载请注明出处https-izsk-me"><a href="#转载请注明出处https-izsk-me" class="headerlink" title="转载请注明出处https://izsk.me"></a><strong>转载请注明出处<a href="https://izsk.me" target="_blank" rel="noopener">https://izsk.me</a></strong></h3>]]></content>
+      <categories>
+        <category>FELK</category>
+      </categories>
+      <tags>
+        <tag>FELK</tag>
       </tags>
   </entry>
   <entry>
@@ -9442,6 +9451,46 @@
       </tags>
   </entry>
   <entry>
+    <title>HTTP之长连接及短连接</title>
+    <url>/2017/08/12/HTTP%E4%B9%8B%E9%95%BF%E8%BF%9E%E6%8E%A5%E5%8F%8A%E7%9F%AD%E8%BF%9E%E6%8E%A5/</url>
+    <content><![CDATA[<p>我们都说HTTP协议是无状态的,我们又都说HTTP分长连接及短连接,’无状态’到底是个什么意思？</p>
+<a id="more"></a>
+<h3 id="无状态"><a href="#无状态" class="headerlink" title="无状态"></a><strong>无状态</strong></h3><p>HTTP无状态其实指的是协议对于事务处理没有记忆能力,服务器不知道客户端是什么状态.也就是说,打开一个服务器上的网页和你之前打开这个服务器上的网页之间没有任何联系.HTTP是一个无状态的面向连接的协议,无状态不代表HTTP不能保持TCP连接,更不能代表HTTP使用的是UDP协议(无连接).</p>
+<p>那http又是如何保持长连接的呢?</p>
+<p>在<code>HTTP/1.0</code>中,默认使用的是短连接.也就是说,浏览器和服务器每进行一次HTTP操作,就建立一次连接,但任务结束就中断连接.如果客户端浏览器访问的某个HTML或其他类型的 Web页中包含有其他的Web资源,如JavaScript文件、图像文件、CSS文件等；当浏览器每遇到这样一个Web资源,就会建立一个HTTP会话.<br>但从<code>HTTP/1.1</code>起,默认使用长连接,用以保持连接特性.使用长连接的HTTP协议,会在响应头有加入这行代码:</p>
+<p><code>Connection:keep-alive</code></p>
+<p>　　在使用长连接的情况下,当一个网页打开完成后,客户端和服务器之间用于传输HTTP数据的 TCP连接不会关闭,如果客户端再次访问这个服务器上的网页,会继续使用这一条已经建立的连接.<code>Keep-Alive</code>不会永久保持连接,它有一个保持时间,可以在不同的服务器软件（如Apache）中设定这个时间.实现长连接要客户端和服务端都支持长连接.</p>
+<p>当然,在很多web服务器中可以设置这个keep-Alive的保持时间,比如nginx的配置文件nginx.conf中可直接使用:</p>
+<p><code>keepalive_timeout  60;</code></p>
+<p><strong>HTTP协议的长连接和短连接,实质上是TCP协议的长连接和短连接.</strong></p>
+<p>那长短连接各自对应的场景有哪些呢(各自的优缺点)?</p>
+<h3 id="短连接"><a href="#短连接" class="headerlink" title="短连接"></a><strong>短连接</strong></h3><p>场景: client向server发起连接请求,server接到请求,然后双方建立连接.client向server 发送消息,server回应client,然后一次读写就完成了,这时候双方任何一个都可以发起close操作,不过一般都是client先发起 close操作.为什么呢,一般的server不会回复完client后立即关闭连接的,当然不排除有特殊的情况.从上面的描述看,短连接一般只会在 client/server间传递一次读写操作</p>
+<p><strong>短连接管理起来比较简单,存在的连接都是有用的连接,不需要额外的控制手段,但是频繁的创建大量的连接也很耗资源</strong></p>
+<h3 id="长连接"><a href="#长连接" class="headerlink" title="长连接"></a><strong>长连接</strong></h3><p>流程是:client向server发起连接,server接受client连接,双方建立连接.Client与server完成一次读写之后,它们之间的连接并不会主动关闭,后续的读写操作会继续使用这个连接.</p>
+<p>首先说一下TCP/IP详解上讲到的TCP保活功能,保活功能主要为服务器应用提供,服务器应用希望知道客户主机是否崩溃,从而可以代表客户使用资源.如果客户已经消失,使得服务器上保留一个半开放的连接,而服务器又在等待来自客户端的数据,则服务器将应远等待客户端的数据,保活功能就是试图在服务 器端检测到这种半开放的连接.</p>
+<p>如果一个给定的连接在两小时内没有任何的动作,服务器就向客户发一个探测报文段,客户主机必须处于以下4个状态之一:</p>
+<blockquote>
+<ul>
+<li>客户主机依然正常运行,并从服务器可达.客户的TCP响应正常,而服务器也知道对方是正常的,服务器在两小时后将保活定时器复位.</li>
+<li>客户主机已经崩溃,并且关闭或者正在重新启动.在任何一种情况下,客户的TCP都没有响应.服务端将不能收到对探测的响应,并在75秒后超时.服务器总共发送10个这样的探测 ,每个间隔75秒.如果服务器没有收到一个响应,它就认为客户主机已经关闭并终止连接.</li>
+<li>客户主机崩溃并已经重新启动.服务器将收到一个对其保活探测的响应,这个响应是一个复位,使得服务器终止这个连接.</li>
+</ul>
+</blockquote>
+<p>客户机正常运行,但是服务器不可达,这种情况与2类似,TCP能发现的就是没有收到探查的响应.</p>
+<p><strong>从上可以看出http要保持长连接需要做很多次的向客户端试探是否存活,这对性能是个很大的损耗,但是从另一方面来说长连接减少了很多的创关闭连接带来的开销,节约时间.</strong></p>
+<h3 id="场景"><a href="#场景" class="headerlink" title="场景"></a><strong>场景</strong></h3><p><code>长连接</code>多用于操作频繁,点对点的通讯,而且连接数不能太多情况,.每个TCP连接都需要三步握手,这需要时间,如果每个操作都是先连接,再操作的话那么处理速度会降低很多,所以每个操作完后都不断开,次处理时直接发送数据包就OK了,不用建立TCP连接.例如：数据库的连接用长连接, 如果用短连接频繁的通信会造成socket错误,而且频繁的socket 创建也是对资源的浪费. </p>
+<p>而像WEB网站的http服务一般都用<code>短链接</code>,因为长连接对于服务端来说会耗费一定的资源,而像WEB网站这么频繁的成千上万甚至上亿客户端的连接用短连接会更省一些资源,如果用长连接,而且同时有成千上万的用户,如果每个用户都占用一个连接的话,那可想而知吧.所以并发量大,但每个用户无需频繁操作情况下需用短连好.</p>
+<p><strong>没有哪一个更好,只有哪一个最适合,一切跟着场景走,总有一款适合你!</strong></p>
+<h3 id="转载请注明出处https-izsk-me"><a href="#转载请注明出处https-izsk-me" class="headerlink" title="转载请注明出处https://izsk.me"></a><strong>转载请注明出处<a href="https://izsk.me" target="_blank" rel="noopener">https://izsk.me</a></strong></h3><hr>
+]]></content>
+      <categories>
+        <category>Http-Tcp-Ip</category>
+      </categories>
+      <tags>
+        <tag>Http-Tcp-Ip</tag>
+      </tags>
+  </entry>
+  <entry>
     <title>python中调用sqlplus生成多实例oracle-awr-html报告</title>
     <url>/2017/08/12/python%E4%B8%AD%E8%B0%83%E7%94%A8sqlplus%E7%94%9F%E6%88%90%E5%A4%9A%E5%AE%9E%E4%BE%8Boracle-awr-html%E6%8A%A5%E5%91%8A/</url>
     <content><![CDATA[<p>这里不多说,说是稍微改了下官方的脚本,这里使用了subprocess调用sqlplus,关于subprocess,可以参考<a href="https://izsk.me/2017/04/08/python%E4%B8%AD%E8%B0%83%E7%94%A8sqlplus/" target="_blank" rel="noopener">这里</a></p>
@@ -9522,46 +9571,6 @@
       </categories>
       <tags>
         <tag>Python</tag>
-      </tags>
-  </entry>
-  <entry>
-    <title>HTTP之长连接及短连接</title>
-    <url>/2017/08/12/HTTP%E4%B9%8B%E9%95%BF%E8%BF%9E%E6%8E%A5%E5%8F%8A%E7%9F%AD%E8%BF%9E%E6%8E%A5/</url>
-    <content><![CDATA[<p>我们都说HTTP协议是无状态的,我们又都说HTTP分长连接及短连接,’无状态’到底是个什么意思？</p>
-<a id="more"></a>
-<h3 id="无状态"><a href="#无状态" class="headerlink" title="无状态"></a><strong>无状态</strong></h3><p>HTTP无状态其实指的是协议对于事务处理没有记忆能力,服务器不知道客户端是什么状态.也就是说,打开一个服务器上的网页和你之前打开这个服务器上的网页之间没有任何联系.HTTP是一个无状态的面向连接的协议,无状态不代表HTTP不能保持TCP连接,更不能代表HTTP使用的是UDP协议(无连接).</p>
-<p>那http又是如何保持长连接的呢?</p>
-<p>在<code>HTTP/1.0</code>中,默认使用的是短连接.也就是说,浏览器和服务器每进行一次HTTP操作,就建立一次连接,但任务结束就中断连接.如果客户端浏览器访问的某个HTML或其他类型的 Web页中包含有其他的Web资源,如JavaScript文件、图像文件、CSS文件等；当浏览器每遇到这样一个Web资源,就会建立一个HTTP会话.<br>但从<code>HTTP/1.1</code>起,默认使用长连接,用以保持连接特性.使用长连接的HTTP协议,会在响应头有加入这行代码:</p>
-<p><code>Connection:keep-alive</code></p>
-<p>　　在使用长连接的情况下,当一个网页打开完成后,客户端和服务器之间用于传输HTTP数据的 TCP连接不会关闭,如果客户端再次访问这个服务器上的网页,会继续使用这一条已经建立的连接.<code>Keep-Alive</code>不会永久保持连接,它有一个保持时间,可以在不同的服务器软件（如Apache）中设定这个时间.实现长连接要客户端和服务端都支持长连接.</p>
-<p>当然,在很多web服务器中可以设置这个keep-Alive的保持时间,比如nginx的配置文件nginx.conf中可直接使用:</p>
-<p><code>keepalive_timeout  60;</code></p>
-<p><strong>HTTP协议的长连接和短连接,实质上是TCP协议的长连接和短连接.</strong></p>
-<p>那长短连接各自对应的场景有哪些呢(各自的优缺点)?</p>
-<h3 id="短连接"><a href="#短连接" class="headerlink" title="短连接"></a><strong>短连接</strong></h3><p>场景: client向server发起连接请求,server接到请求,然后双方建立连接.client向server 发送消息,server回应client,然后一次读写就完成了,这时候双方任何一个都可以发起close操作,不过一般都是client先发起 close操作.为什么呢,一般的server不会回复完client后立即关闭连接的,当然不排除有特殊的情况.从上面的描述看,短连接一般只会在 client/server间传递一次读写操作</p>
-<p><strong>短连接管理起来比较简单,存在的连接都是有用的连接,不需要额外的控制手段,但是频繁的创建大量的连接也很耗资源</strong></p>
-<h3 id="长连接"><a href="#长连接" class="headerlink" title="长连接"></a><strong>长连接</strong></h3><p>流程是:client向server发起连接,server接受client连接,双方建立连接.Client与server完成一次读写之后,它们之间的连接并不会主动关闭,后续的读写操作会继续使用这个连接.</p>
-<p>首先说一下TCP/IP详解上讲到的TCP保活功能,保活功能主要为服务器应用提供,服务器应用希望知道客户主机是否崩溃,从而可以代表客户使用资源.如果客户已经消失,使得服务器上保留一个半开放的连接,而服务器又在等待来自客户端的数据,则服务器将应远等待客户端的数据,保活功能就是试图在服务 器端检测到这种半开放的连接.</p>
-<p>如果一个给定的连接在两小时内没有任何的动作,服务器就向客户发一个探测报文段,客户主机必须处于以下4个状态之一:</p>
-<blockquote>
-<ul>
-<li>客户主机依然正常运行,并从服务器可达.客户的TCP响应正常,而服务器也知道对方是正常的,服务器在两小时后将保活定时器复位.</li>
-<li>客户主机已经崩溃,并且关闭或者正在重新启动.在任何一种情况下,客户的TCP都没有响应.服务端将不能收到对探测的响应,并在75秒后超时.服务器总共发送10个这样的探测 ,每个间隔75秒.如果服务器没有收到一个响应,它就认为客户主机已经关闭并终止连接.</li>
-<li>客户主机崩溃并已经重新启动.服务器将收到一个对其保活探测的响应,这个响应是一个复位,使得服务器终止这个连接.</li>
-</ul>
-</blockquote>
-<p>客户机正常运行,但是服务器不可达,这种情况与2类似,TCP能发现的就是没有收到探查的响应.</p>
-<p><strong>从上可以看出http要保持长连接需要做很多次的向客户端试探是否存活,这对性能是个很大的损耗,但是从另一方面来说长连接减少了很多的创关闭连接带来的开销,节约时间.</strong></p>
-<h3 id="场景"><a href="#场景" class="headerlink" title="场景"></a><strong>场景</strong></h3><p><code>长连接</code>多用于操作频繁,点对点的通讯,而且连接数不能太多情况,.每个TCP连接都需要三步握手,这需要时间,如果每个操作都是先连接,再操作的话那么处理速度会降低很多,所以每个操作完后都不断开,次处理时直接发送数据包就OK了,不用建立TCP连接.例如：数据库的连接用长连接, 如果用短连接频繁的通信会造成socket错误,而且频繁的socket 创建也是对资源的浪费. </p>
-<p>而像WEB网站的http服务一般都用<code>短链接</code>,因为长连接对于服务端来说会耗费一定的资源,而像WEB网站这么频繁的成千上万甚至上亿客户端的连接用短连接会更省一些资源,如果用长连接,而且同时有成千上万的用户,如果每个用户都占用一个连接的话,那可想而知吧.所以并发量大,但每个用户无需频繁操作情况下需用短连好.</p>
-<p><strong>没有哪一个更好,只有哪一个最适合,一切跟着场景走,总有一款适合你!</strong></p>
-<h3 id="转载请注明出处https-izsk-me"><a href="#转载请注明出处https-izsk-me" class="headerlink" title="转载请注明出处https://izsk.me"></a><strong>转载请注明出处<a href="https://izsk.me" target="_blank" rel="noopener">https://izsk.me</a></strong></h3><hr>
-]]></content>
-      <categories>
-        <category>Http-Tcp-Ip</category>
-      </categories>
-      <tags>
-        <tag>Http-Tcp-Ip</tag>
       </tags>
   </entry>
   <entry>
