@@ -1,6 +1,104 @@
 <?xml version="1.0" encoding="utf-8"?>
 <search>
   <entry>
+    <title>Kubernetes学习(使用argoCD实现多集群应用同步一)</title>
+    <url>/2020/12/04/argoCD-Usage/</url>
+    <content><![CDATA[<p>运维中经常会存在多套的环境，开发、测试、stagging、prod等，这么多的环境，对于开发同学，如何通过一次部署多环境上线，打通开发与测试间的gap，而对于运维同学来说，则关心如何保障环境之间应用版本一致，而argoCD就是这样一个工具，配合GitOps思路，可以实现对多集群的应用版本管理.</p>
+<a id="more"></a>
+<h3 id="argoCD"><a href="#argoCD" class="headerlink" title="argoCD"></a>argoCD</h3><p>Declarative GitOps CD for Kubernetes</p>
+<p>官方的说明很简单，为k8s提供GitOps能力</p>
+<h3 id="原理"><a href="#原理" class="headerlink" title="原理"></a>原理</h3><p><img src="https://argoproj.github.io/argo-cd/assets/argocd_architecture.png" alt="架构图"></p>
+<p>上面是官方的提供的架构图, 可以很清晰的看到argocd的工作机制.</p>
+<p>argoCD通过发布到k8s的crd控制器连续监视正在运行的应用程序,并将当前的活动状态与所需的目标状态（在Git存储库中指定）进行比较</p>
+<p>下面就从一个demo来体验一下，先从安装开始</p>
+<h3 id="安装"><a href="#安装" class="headerlink" title="安装"></a>安装</h3><h4 id="在线安装"><a href="#在线安装" class="headerlink" title="在线安装"></a>在线安装</h4><figure class="highlight bash"><table><tr><td class="code"><pre><span class="line">kubectl create namespace argocd</span><br><span class="line">kubectl apply -n argocd -f https://raw.githubusercontent.com/argoproj/argo-cd/stable/manifests/install.yaml</span><br></pre></td></tr></table></figure>
+<h4 id="helm安装"><a href="#helm安装" class="headerlink" title="helm安装"></a>helm安装</h4><figure class="highlight bash"><table><tr><td class="code"><pre><span class="line">helm repo add argo https://argoproj.github.io/argo-helm</span><br><span class="line">helm install argocd -n argocd argo/argo-cd --values values.yaml</span><br><span class="line"></span><br><span class="line"><span class="comment"># cat values.yaml,可以在安装的时候就指定使用ingress</span></span><br><span class="line">server:</span><br><span class="line">  ingress:</span><br><span class="line">    enabled: <span class="literal">true</span></span><br><span class="line">    annotations: </span><br><span class="line">      kubernetes.io/ingress.class: <span class="string">"nginx"</span></span><br><span class="line">      nginx.ingress.kubernetes.io/force-ssl-redirect: <span class="string">"true"</span></span><br><span class="line">      nginx.ingress.kubernetes.io/ssl-passthrough: <span class="string">"true"</span></span><br><span class="line">      nginx.ingress.kubernetes.io/backend-protocol: <span class="string">"HTTPS"</span></span><br><span class="line">    hosts:</span><br><span class="line">    - argocd.local</span><br></pre></td></tr></table></figure>
+<p>所有pod起来之后即可访问web页面</p>
+<p>默认的用户名为 admin，密码为 server Pod 的名称，可以通过如下所示的命令来获取：</p>
+<figure class="highlight bash"><table><tr><td class="code"><pre><span class="line">$ kubectl get pods -n argocd -l app.kubernetes.io/name=argocd-server -o name | cut -d<span class="string">'/'</span> -f 2</span><br><span class="line"></span><br><span class="line"><span class="comment"># 可以使用以下命令暴露argocd ui， (不建议)</span></span><br><span class="line">kubectl port-forward service/argocd-server -n argocd 38888:443</span><br></pre></td></tr></table></figure>
+<h4 id="ingress"><a href="#ingress" class="headerlink" title="ingress"></a>ingress</h4><p>添加ingress用于暴露argo cd UI</p>
+<figure class="highlight bash"><table><tr><td class="code"><pre><span class="line">apiVersion: extensions/v1beta1</span><br><span class="line">kind: Ingress</span><br><span class="line">metadata:</span><br><span class="line">  name: argocd-server-ingress</span><br><span class="line">  namespace: argocd</span><br><span class="line">  annotations:</span><br><span class="line">    cert-manager.io/cluster-issuer: letsencrypt-prod</span><br><span class="line">    kubernetes.io/ingress.class: nginx</span><br><span class="line">    kubernetes.io/tls-acme: <span class="string">"true"</span></span><br><span class="line">    nginx.ingress.kubernetes.io/ssl-passthrough: <span class="string">"true"</span></span><br><span class="line">    <span class="comment"># If you encounter a redirect loop or are getting a 307 response code</span></span><br><span class="line">    <span class="comment"># then you need to force the nginx ingress to connect to the backend using HTTPS.</span></span><br><span class="line">    <span class="comment">#</span></span><br><span class="line">    <span class="comment"># nginx.ingress.kubernetes.io/backend-protocol: "HTTPS"</span></span><br><span class="line">spec:</span><br><span class="line">  rules:</span><br><span class="line">  - host: argocd.local</span><br><span class="line">    http:</span><br><span class="line">      paths:</span><br><span class="line">      - backend:</span><br><span class="line">          serviceName: argocd-server</span><br><span class="line">          servicePort: https</span><br><span class="line">        path: /</span><br><span class="line">  tls:</span><br><span class="line">  - hosts:</span><br><span class="line">    - argocd.example.com</span><br><span class="line">    secretName: argocd-secret <span class="comment"># do not change, this is provided by Argo CD</span></span><br></pre></td></tr></table></figure>
+<h3 id="多集群支持"><a href="#多集群支持" class="headerlink" title="多集群支持"></a>多集群支持</h3><p>目前无法直接在UI上添加其它集群，可使用以下命令添加外部集群，这样就可<strong>使用一套argoCD来同步到多个集群环境</strong></p>
+<figure class="highlight bash"><table><tr><td class="code"><pre><span class="line"><span class="comment"># 先进行argocd的登录</span></span><br><span class="line">argocd loginargocd.example.com:4433 --grpc-web</span><br><span class="line"><span class="comment"># 输入用户名密码即可，出现successfully</span></span><br><span class="line">argocd cluster add mysql-cluster --server <span class="string">'argocd.example.com:4433'</span></span><br><span class="line"><span class="comment"># 出现以下提示则说明添加成功</span></span><br><span class="line">INFO[0000] ServiceAccount <span class="string">"argocd-manager"</span> already exists <span class="keyword">in</span> namespace <span class="string">"kube-system"</span></span><br><span class="line">INFO[0000] ClusterRole <span class="string">"argocd-manager-role"</span> updated</span><br><span class="line">INFO[0000] ClusterRoleBinding <span class="string">"argocd-manager-role-binding"</span> updated</span><br><span class="line">Cluster <span class="string">'https://xxx.xxx.xxx.xxx:6443'</span> added</span><br></pre></td></tr></table></figure>
+<p>那么对于多集群发同步来说，最终实现的效果为:</p>
+<p><img src="https://www.gitops.tech/images/multiple.png" alt></p>
+<p>当然，每个集群的下的应用的触发逻辑可以在CI阶段定义, 这样可以跟测试stag更好地集成,从而实现真正的一次Push，多次发布.</p>
+<h3 id="使用"><a href="#使用" class="headerlink" title="使用"></a>使用</h3><p>通过上面的方式安装完成之后，即可访问argoCD的web页，可以按照不同的环境将app进行分类，同时argocd提供了project的概念, 可以将你认为可以属于同一个project的所有应用划为一类，这样可以避免同一个应用要在多个环境下发布需要多次添加的问题.</p>
+<h4 id="添加Project"><a href="#添加Project" class="headerlink" title="添加Project"></a>添加Project</h4><p><img src="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20201121212553.png" alt></p>
+<p>主要的就是sources跟destinations</p>
+<p>sources指定的是git repo的地址，可以添加多个</p>
+<p>destinations指定集群，也可以指定多个</p>
+<p>这样添加之后在新增app时即可从project中选择了</p>
+<h4 id="添加Repository"><a href="#添加Repository" class="headerlink" title="添加Repository"></a>添加Repository</h4><p>repository指的是git repo的地址，在发布时argocd会连接到该git上拉取资源, 这里需要提供git的认证方式，常用的为用户名、密码.</p>
+<p><img src="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20201121211926.png" alt></p>
+<p>要注意的是: <strong>repository URL需要以.gti结尾， 要不然连接的时候会提示301</strong></p>
+<p>参考 : <a href="https://argoproj.github.io/argo-cd/user-guide/private-repositories/" target="_blank" rel="noopener">https://argoproj.github.io/argo-cd/user-guide/private-repositories/</a></p>
+<h4 id="添加APP"><a href="#添加APP" class="headerlink" title="添加APP"></a>添加APP</h4><p>app做为GitOps的最小发布单元, 一个app中包含了所有的跟发布相关的资源文件，比如策略，代码，配置，甚至监控事件和版本控制等</p>
+<p><img src="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20201121212553.png" alt></p>
+<p>上面要指定git地址及要发布的kubernetes集群及git上的目录，这个目录用于argoCD检测是否具有<code>更新</code>.</p>
+<p>argoCD支持了目前常用的资源管理工具，比如helm， kustomize, directory, Ksonnet, Jsonnet等工具，我这里使用的是Kustomize,k8s原生就支持，没有任何依赖，非常方便.</p>
+<p><strong>最重要的是指定是自动同步还是手动同步</strong>, 不同的同步策略使用场景不同</p>
+<p>添加成功后如下图所示:</p>
+<p><img src="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20201206154807.png" alt></p>
+<p>应用发布成功后，效果如下:</p>
+<p><img src="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20201122003139.png" alt></p>
+<p>从上面可以看到应用的发布历史，出于数据存储限制，默认情况下只会保留最新的10条，如果觉得不合理可以通过修改app进行调整，同时也能看到同步的状态及发布是否成功</p>
+<p>这里要注意的是<code>Sync OK</code>只是代表从git上同步资源成功了，但能不能发布成功是通过<code>Healthy</code>来看的</p>
+<h3 id="同步策略及发布状态"><a href="#同步策略及发布状态" class="headerlink" title="同步策略及发布状态"></a>同步策略及发布状态</h3><h4 id="同步策略"><a href="#同步策略" class="headerlink" title="同步策略"></a>同步策略</h4><p>argoCD应用可以选择是自动同步还是手工同步来触发发布上线，这个就要看具体的场合了</p>
+<p>自动同步: 指的是git如果发生变化则直接触发发布,不需要人介入， 这个比较适合用于持续发布的测试环境</p>
+<p>手工同步: 指的则是人为地去页面上点击同步的方式进行,比较适合生产类稳定环境</p>
+<p>同时，还有一些同步策略，比如是否强制对线上资源进行强制删除后再更新、指定需要同步的文件、同步时间窗口等等比较人性化的策略</p>
+<p>详情可参考<a href="https://argoproj.github.io/argo-cd/user-guide/selective_sync/" target="_blank" rel="noopener">这里</a></p>
+<h4 id="发布状态"><a href="#发布状态" class="headerlink" title="发布状态"></a>发布状态</h4><p>在同步完成之后便会触发发布上线，状态分为Processing、unHealty、Healty</p>
+<p>Processing表示正在更新资源</p>
+<p>unHealty表示发布失败, 发布失败可以通过点击详情进行查看原因</p>
+<p>Healty则表示发布成功, 所有的资源都以git上的版本运行.</p>
+<h3 id="不足"><a href="#不足" class="headerlink" title="不足"></a>不足</h3><p>相信大家都有这样的需求: 同一个应用需要在多个集群中做发布，目前对于单应用多集群的部署官方支持得还不是很好，因为应用名必须唯一，官方有个issue讨论了为何不支持这种场景，主要<strong>担心多个集群的查询性能</strong>，感兴趣的可以参考<a href="https://github.com/argoproj/argo-cd/issues/1673" target="_blank" rel="noopener">support multiple clusters (destinations) for an Application</a></p>
+<h3 id="问题"><a href="#问题" class="headerlink" title="问题"></a>问题</h3><ol>
+<li>执行login 登录命令时提示:</li>
+</ol>
+<figure class="highlight bash"><table><tr><td class="code"><pre><span class="line">argocd login argocd.local:4433</span><br></pre></td></tr></table></figure>
+<p>出现以下错误</p>
+<p><img src="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20201106184926.png" alt></p>
+<p>原因: </p>
+<p>参考: <a href="https://github.com/argoproj/argo-cd/issues/1415" target="_blank" rel="noopener">https://github.com/argoproj/argo-cd/issues/1415</a></p>
+<p>解决:</p>
+<figure class="highlight bash"><table><tr><td class="code"><pre><span class="line">argocd login argocd.local:4433 --grpc-web</span><br></pre></td></tr></table></figure>
+<p>如果添加集群的时候提示以下错误，则需要先使用上面的命令进行登录，登录成功后再进行集群的添加操作.</p>
+<p><img src="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20201106185339.png" alt></p>
+<ol start="2">
+<li>创建token时提示以下错误:</li>
+</ol>
+<figure class="highlight bash"><table><tr><td class="code"><pre><span class="line">Unable to generate new token: account <span class="string">'admin'</span> does not have apiKey capability</span><br></pre></td></tr></table></figure>
+<p>原因: argocd的用户也是通过角色来进行划分的，创建token的用户需要具有 apiKey的权限，这个可以从argocd部署的configmap中查看使用的用户是否具有什么权限.</p>
+<ol start="3">
+<li>回滚时提示以下错误:</li>
+</ol>
+<figure class="highlight bash"><table><tr><td class="code"><pre><span class="line">Unable to load data: revision HEAD must be resolved</span><br></pre></td></tr></table></figure>
+<p><img src="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20201122185428.png" alt></p>
+<p>原因: 如果使用argocd命令行的方式同步应用，会导致revision没有commit值，如上图，而回滚时需要revision，因此造成上面的报错.</p>
+<h3 id="CLI常用命令"><a href="#CLI常用命令" class="headerlink" title="CLI常用命令"></a>CLI常用命令</h3><p>argoCD也提供了CLI工具，可以直接使用该工具来对argoCD进行操作，常用的命令如下:</p>
+<figure class="highlight bash"><table><tr><td class="code"><pre><span class="line"><span class="comment"># 修改账号密码,然后根据提示完成</span></span><br><span class="line">argocd account update-password</span><br><span class="line"></span><br><span class="line"><span class="comment"># 登录</span></span><br><span class="line">argocd login argocd.local:4433 --grpc-web --username admin --password xxx --insecure</span><br><span class="line"></span><br><span class="line"><span class="comment"># 查看应用状态</span></span><br><span class="line">argocd app get guestbook</span><br><span class="line"></span><br><span class="line"><span class="comment"># </span></span><br><span class="line">argocd app <span class="built_in">set</span> argocd-kustomize-frontend --kustomize-image xxx/argocd-kustomize-frontend:testwithtag</span><br><span class="line"></span><br><span class="line"><span class="comment"># 同步应用</span></span><br><span class="line">argocd app sync guestbook</span><br></pre></td></tr></table></figure>
+<p>这里只是体验了一下argoCD的使用过程，很多有趣的功能还没有介绍，下次再更.</p>
+<h3 id="参考文章"><a href="#参考文章" class="headerlink" title="参考文章:"></a><strong>参考文章:</strong></h3><blockquote>
+<ul>
+<li><a href="https://argoproj.github.io/argo-cd/" target="_blank" rel="noopener">https://argoproj.github.io/argo-cd/</a></li>
+<li><a href="https://www.gitops.tech/#:~:text=GitOps%20is%20a%20way%20of,Git%20and%20Continuous%20Deployment%20tools" target="_blank" rel="noopener">https://www.gitops.tech/#:~:text=GitOps%20is%20a%20way%20of,Git%20and%20Continuous%20Deployment%20tools</a></li>
+<li><a href="https://www.jianshu.com/p/eec8e201b7e9" target="_blank" rel="noopener">https://www.jianshu.com/p/eec8e201b7e9</a></li>
+<li><a href="https://www.qikqiak.com/post/gitlab-ci-argo-cd-gitops/" target="_blank" rel="noopener">https://www.qikqiak.com/post/gitlab-ci-argo-cd-gitops/</a></li>
+<li><a href="https://argoproj.github.io/argo-cd/user-guide/private-repositories/" target="_blank" rel="noopener">https://argoproj.github.io/argo-cd/user-guide/private-repositories/</a></li>
+<li><a href="https://github.com/argoproj/argo-cd/issues/1673" target="_blank" rel="noopener">https://github.com/argoproj/argo-cd/issues/1673</a></li>
+</ul>
+</blockquote>
+<h3 id="转载请注明出处https-izsk-me"><a href="#转载请注明出处https-izsk-me" class="headerlink" title="转载请注明出处https://izsk.me"></a><strong>转载请注明出处<a href="https://izsk.me" target="_blank" rel="noopener">https://izsk.me</a></strong></h3>]]></content>
+      <categories>
+        <category>Kubernetes</category>
+      </categories>
+      <tags>
+        <tag>Kubernetes</tag>
+      </tags>
+  </entry>
+  <entry>
     <title>Kubernetes学习(Kubernetes踩坑记)</title>
     <url>/2020/12/01/Kubernetes-prombles/</url>
     <content><![CDATA[<p>记录在使用Kubernetes中遇到的各种问题及解决方案, 好记性不如烂笔头</p>
@@ -9451,46 +9549,6 @@
       </tags>
   </entry>
   <entry>
-    <title>HTTP之长连接及短连接</title>
-    <url>/2017/08/12/HTTP%E4%B9%8B%E9%95%BF%E8%BF%9E%E6%8E%A5%E5%8F%8A%E7%9F%AD%E8%BF%9E%E6%8E%A5/</url>
-    <content><![CDATA[<p>我们都说HTTP协议是无状态的,我们又都说HTTP分长连接及短连接,’无状态’到底是个什么意思？</p>
-<a id="more"></a>
-<h3 id="无状态"><a href="#无状态" class="headerlink" title="无状态"></a><strong>无状态</strong></h3><p>HTTP无状态其实指的是协议对于事务处理没有记忆能力,服务器不知道客户端是什么状态.也就是说,打开一个服务器上的网页和你之前打开这个服务器上的网页之间没有任何联系.HTTP是一个无状态的面向连接的协议,无状态不代表HTTP不能保持TCP连接,更不能代表HTTP使用的是UDP协议(无连接).</p>
-<p>那http又是如何保持长连接的呢?</p>
-<p>在<code>HTTP/1.0</code>中,默认使用的是短连接.也就是说,浏览器和服务器每进行一次HTTP操作,就建立一次连接,但任务结束就中断连接.如果客户端浏览器访问的某个HTML或其他类型的 Web页中包含有其他的Web资源,如JavaScript文件、图像文件、CSS文件等；当浏览器每遇到这样一个Web资源,就会建立一个HTTP会话.<br>但从<code>HTTP/1.1</code>起,默认使用长连接,用以保持连接特性.使用长连接的HTTP协议,会在响应头有加入这行代码:</p>
-<p><code>Connection:keep-alive</code></p>
-<p>　　在使用长连接的情况下,当一个网页打开完成后,客户端和服务器之间用于传输HTTP数据的 TCP连接不会关闭,如果客户端再次访问这个服务器上的网页,会继续使用这一条已经建立的连接.<code>Keep-Alive</code>不会永久保持连接,它有一个保持时间,可以在不同的服务器软件（如Apache）中设定这个时间.实现长连接要客户端和服务端都支持长连接.</p>
-<p>当然,在很多web服务器中可以设置这个keep-Alive的保持时间,比如nginx的配置文件nginx.conf中可直接使用:</p>
-<p><code>keepalive_timeout  60;</code></p>
-<p><strong>HTTP协议的长连接和短连接,实质上是TCP协议的长连接和短连接.</strong></p>
-<p>那长短连接各自对应的场景有哪些呢(各自的优缺点)?</p>
-<h3 id="短连接"><a href="#短连接" class="headerlink" title="短连接"></a><strong>短连接</strong></h3><p>场景: client向server发起连接请求,server接到请求,然后双方建立连接.client向server 发送消息,server回应client,然后一次读写就完成了,这时候双方任何一个都可以发起close操作,不过一般都是client先发起 close操作.为什么呢,一般的server不会回复完client后立即关闭连接的,当然不排除有特殊的情况.从上面的描述看,短连接一般只会在 client/server间传递一次读写操作</p>
-<p><strong>短连接管理起来比较简单,存在的连接都是有用的连接,不需要额外的控制手段,但是频繁的创建大量的连接也很耗资源</strong></p>
-<h3 id="长连接"><a href="#长连接" class="headerlink" title="长连接"></a><strong>长连接</strong></h3><p>流程是:client向server发起连接,server接受client连接,双方建立连接.Client与server完成一次读写之后,它们之间的连接并不会主动关闭,后续的读写操作会继续使用这个连接.</p>
-<p>首先说一下TCP/IP详解上讲到的TCP保活功能,保活功能主要为服务器应用提供,服务器应用希望知道客户主机是否崩溃,从而可以代表客户使用资源.如果客户已经消失,使得服务器上保留一个半开放的连接,而服务器又在等待来自客户端的数据,则服务器将应远等待客户端的数据,保活功能就是试图在服务 器端检测到这种半开放的连接.</p>
-<p>如果一个给定的连接在两小时内没有任何的动作,服务器就向客户发一个探测报文段,客户主机必须处于以下4个状态之一:</p>
-<blockquote>
-<ul>
-<li>客户主机依然正常运行,并从服务器可达.客户的TCP响应正常,而服务器也知道对方是正常的,服务器在两小时后将保活定时器复位.</li>
-<li>客户主机已经崩溃,并且关闭或者正在重新启动.在任何一种情况下,客户的TCP都没有响应.服务端将不能收到对探测的响应,并在75秒后超时.服务器总共发送10个这样的探测 ,每个间隔75秒.如果服务器没有收到一个响应,它就认为客户主机已经关闭并终止连接.</li>
-<li>客户主机崩溃并已经重新启动.服务器将收到一个对其保活探测的响应,这个响应是一个复位,使得服务器终止这个连接.</li>
-</ul>
-</blockquote>
-<p>客户机正常运行,但是服务器不可达,这种情况与2类似,TCP能发现的就是没有收到探查的响应.</p>
-<p><strong>从上可以看出http要保持长连接需要做很多次的向客户端试探是否存活,这对性能是个很大的损耗,但是从另一方面来说长连接减少了很多的创关闭连接带来的开销,节约时间.</strong></p>
-<h3 id="场景"><a href="#场景" class="headerlink" title="场景"></a><strong>场景</strong></h3><p><code>长连接</code>多用于操作频繁,点对点的通讯,而且连接数不能太多情况,.每个TCP连接都需要三步握手,这需要时间,如果每个操作都是先连接,再操作的话那么处理速度会降低很多,所以每个操作完后都不断开,次处理时直接发送数据包就OK了,不用建立TCP连接.例如：数据库的连接用长连接, 如果用短连接频繁的通信会造成socket错误,而且频繁的socket 创建也是对资源的浪费. </p>
-<p>而像WEB网站的http服务一般都用<code>短链接</code>,因为长连接对于服务端来说会耗费一定的资源,而像WEB网站这么频繁的成千上万甚至上亿客户端的连接用短连接会更省一些资源,如果用长连接,而且同时有成千上万的用户,如果每个用户都占用一个连接的话,那可想而知吧.所以并发量大,但每个用户无需频繁操作情况下需用短连好.</p>
-<p><strong>没有哪一个更好,只有哪一个最适合,一切跟着场景走,总有一款适合你!</strong></p>
-<h3 id="转载请注明出处https-izsk-me"><a href="#转载请注明出处https-izsk-me" class="headerlink" title="转载请注明出处https://izsk.me"></a><strong>转载请注明出处<a href="https://izsk.me" target="_blank" rel="noopener">https://izsk.me</a></strong></h3><hr>
-]]></content>
-      <categories>
-        <category>Http-Tcp-Ip</category>
-      </categories>
-      <tags>
-        <tag>Http-Tcp-Ip</tag>
-      </tags>
-  </entry>
-  <entry>
     <title>python中调用sqlplus生成多实例oracle-awr-html报告</title>
     <url>/2017/08/12/python%E4%B8%AD%E8%B0%83%E7%94%A8sqlplus%E7%94%9F%E6%88%90%E5%A4%9A%E5%AE%9E%E4%BE%8Boracle-awr-html%E6%8A%A5%E5%91%8A/</url>
     <content><![CDATA[<p>这里不多说,说是稍微改了下官方的脚本,这里使用了subprocess调用sqlplus,关于subprocess,可以参考<a href="https://izsk.me/2017/04/08/python%E4%B8%AD%E8%B0%83%E7%94%A8sqlplus/" target="_blank" rel="noopener">这里</a></p>
@@ -9571,6 +9629,46 @@
       </categories>
       <tags>
         <tag>Python</tag>
+      </tags>
+  </entry>
+  <entry>
+    <title>HTTP之长连接及短连接</title>
+    <url>/2017/08/12/HTTP%E4%B9%8B%E9%95%BF%E8%BF%9E%E6%8E%A5%E5%8F%8A%E7%9F%AD%E8%BF%9E%E6%8E%A5/</url>
+    <content><![CDATA[<p>我们都说HTTP协议是无状态的,我们又都说HTTP分长连接及短连接,’无状态’到底是个什么意思？</p>
+<a id="more"></a>
+<h3 id="无状态"><a href="#无状态" class="headerlink" title="无状态"></a><strong>无状态</strong></h3><p>HTTP无状态其实指的是协议对于事务处理没有记忆能力,服务器不知道客户端是什么状态.也就是说,打开一个服务器上的网页和你之前打开这个服务器上的网页之间没有任何联系.HTTP是一个无状态的面向连接的协议,无状态不代表HTTP不能保持TCP连接,更不能代表HTTP使用的是UDP协议(无连接).</p>
+<p>那http又是如何保持长连接的呢?</p>
+<p>在<code>HTTP/1.0</code>中,默认使用的是短连接.也就是说,浏览器和服务器每进行一次HTTP操作,就建立一次连接,但任务结束就中断连接.如果客户端浏览器访问的某个HTML或其他类型的 Web页中包含有其他的Web资源,如JavaScript文件、图像文件、CSS文件等；当浏览器每遇到这样一个Web资源,就会建立一个HTTP会话.<br>但从<code>HTTP/1.1</code>起,默认使用长连接,用以保持连接特性.使用长连接的HTTP协议,会在响应头有加入这行代码:</p>
+<p><code>Connection:keep-alive</code></p>
+<p>　　在使用长连接的情况下,当一个网页打开完成后,客户端和服务器之间用于传输HTTP数据的 TCP连接不会关闭,如果客户端再次访问这个服务器上的网页,会继续使用这一条已经建立的连接.<code>Keep-Alive</code>不会永久保持连接,它有一个保持时间,可以在不同的服务器软件（如Apache）中设定这个时间.实现长连接要客户端和服务端都支持长连接.</p>
+<p>当然,在很多web服务器中可以设置这个keep-Alive的保持时间,比如nginx的配置文件nginx.conf中可直接使用:</p>
+<p><code>keepalive_timeout  60;</code></p>
+<p><strong>HTTP协议的长连接和短连接,实质上是TCP协议的长连接和短连接.</strong></p>
+<p>那长短连接各自对应的场景有哪些呢(各自的优缺点)?</p>
+<h3 id="短连接"><a href="#短连接" class="headerlink" title="短连接"></a><strong>短连接</strong></h3><p>场景: client向server发起连接请求,server接到请求,然后双方建立连接.client向server 发送消息,server回应client,然后一次读写就完成了,这时候双方任何一个都可以发起close操作,不过一般都是client先发起 close操作.为什么呢,一般的server不会回复完client后立即关闭连接的,当然不排除有特殊的情况.从上面的描述看,短连接一般只会在 client/server间传递一次读写操作</p>
+<p><strong>短连接管理起来比较简单,存在的连接都是有用的连接,不需要额外的控制手段,但是频繁的创建大量的连接也很耗资源</strong></p>
+<h3 id="长连接"><a href="#长连接" class="headerlink" title="长连接"></a><strong>长连接</strong></h3><p>流程是:client向server发起连接,server接受client连接,双方建立连接.Client与server完成一次读写之后,它们之间的连接并不会主动关闭,后续的读写操作会继续使用这个连接.</p>
+<p>首先说一下TCP/IP详解上讲到的TCP保活功能,保活功能主要为服务器应用提供,服务器应用希望知道客户主机是否崩溃,从而可以代表客户使用资源.如果客户已经消失,使得服务器上保留一个半开放的连接,而服务器又在等待来自客户端的数据,则服务器将应远等待客户端的数据,保活功能就是试图在服务 器端检测到这种半开放的连接.</p>
+<p>如果一个给定的连接在两小时内没有任何的动作,服务器就向客户发一个探测报文段,客户主机必须处于以下4个状态之一:</p>
+<blockquote>
+<ul>
+<li>客户主机依然正常运行,并从服务器可达.客户的TCP响应正常,而服务器也知道对方是正常的,服务器在两小时后将保活定时器复位.</li>
+<li>客户主机已经崩溃,并且关闭或者正在重新启动.在任何一种情况下,客户的TCP都没有响应.服务端将不能收到对探测的响应,并在75秒后超时.服务器总共发送10个这样的探测 ,每个间隔75秒.如果服务器没有收到一个响应,它就认为客户主机已经关闭并终止连接.</li>
+<li>客户主机崩溃并已经重新启动.服务器将收到一个对其保活探测的响应,这个响应是一个复位,使得服务器终止这个连接.</li>
+</ul>
+</blockquote>
+<p>客户机正常运行,但是服务器不可达,这种情况与2类似,TCP能发现的就是没有收到探查的响应.</p>
+<p><strong>从上可以看出http要保持长连接需要做很多次的向客户端试探是否存活,这对性能是个很大的损耗,但是从另一方面来说长连接减少了很多的创关闭连接带来的开销,节约时间.</strong></p>
+<h3 id="场景"><a href="#场景" class="headerlink" title="场景"></a><strong>场景</strong></h3><p><code>长连接</code>多用于操作频繁,点对点的通讯,而且连接数不能太多情况,.每个TCP连接都需要三步握手,这需要时间,如果每个操作都是先连接,再操作的话那么处理速度会降低很多,所以每个操作完后都不断开,次处理时直接发送数据包就OK了,不用建立TCP连接.例如：数据库的连接用长连接, 如果用短连接频繁的通信会造成socket错误,而且频繁的socket 创建也是对资源的浪费. </p>
+<p>而像WEB网站的http服务一般都用<code>短链接</code>,因为长连接对于服务端来说会耗费一定的资源,而像WEB网站这么频繁的成千上万甚至上亿客户端的连接用短连接会更省一些资源,如果用长连接,而且同时有成千上万的用户,如果每个用户都占用一个连接的话,那可想而知吧.所以并发量大,但每个用户无需频繁操作情况下需用短连好.</p>
+<p><strong>没有哪一个更好,只有哪一个最适合,一切跟着场景走,总有一款适合你!</strong></p>
+<h3 id="转载请注明出处https-izsk-me"><a href="#转载请注明出处https-izsk-me" class="headerlink" title="转载请注明出处https://izsk.me"></a><strong>转载请注明出处<a href="https://izsk.me" target="_blank" rel="noopener">https://izsk.me</a></strong></h3><hr>
+]]></content>
+      <categories>
+        <category>Http-Tcp-Ip</category>
+      </categories>
+      <tags>
+        <tag>Http-Tcp-Ip</tag>
       </tags>
   </entry>
   <entry>
