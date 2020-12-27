@@ -1,6 +1,88 @@
 <?xml version="1.0" encoding="utf-8"?>
 <search>
   <entry>
+    <title>Kubernetes学习(当使用kubectl apply -f 多个资源时,资源创建的顺序是怎么样的)</title>
+    <url>/2020/12/27/Kubernetes-Apply-Directory-Order/</url>
+    <content><![CDATA[<p>前几天一个开发同学跑过来跟我说，在自动发布一个应用到k8s集群中时，会出现发布成功，但是容器中的配置文件还是旧配置文件的情况，让我看看原因.第一时间我觉得不可能，但是一细想，好像是有可能发生, 立马在我脑海中出现一个疑问:</p>
+<p><strong>使用了这么多年的k8s, <code>kubectl apply -f &lt;directory&gt;</code>时，目录下多个资源文件的apply顺序到底是什么?</strong></p>
+<a id="more"></a>
+<h3 id="kubectl"><a href="#kubectl" class="headerlink" title="kubectl"></a>kubectl</h3><p>等到下一秒的我，又可以很清晰且自信地回答上面的问题, 在之前的使用<code>apply -f &lt;directory&gt;</code>时，出现过几次提示没有<code>namespace</code>的情况，类似如下:</p>
+<figure class="highlight bash"><table><tr><td class="code"><pre><span class="line"><span class="comment"># ls test</span></span><br><span class="line">config.yml</span><br><span class="line">deploy.yml</span><br><span class="line">ns.yml</span><br><span class="line">service.yml</span><br></pre></td></tr></table></figure>
+<p>如上所示，如果直接使用<code>kubectl apply -f .</code>则会出现在创建<code>deploy.yml</code>时提示找不到<code>namespace</code></p>
+<p>从输出的结果可以得到结论: <strong>在创建多个资源文件时，创建的顺序是以文件名排序的顺序,这样的话就可能存在依赖失败</strong></p>
+<p>按道理这个依赖关系对kubernetes来说不是很复杂，为何不支持呢? 个人感觉如果是原生的资源对象，那确实不复杂，但后面引入的<code>CRD</code>机制，这个依赖关系就不好处理了，所以就是现在这个局面，说不定新版本已经支持.</p>
+<p>从官方文档上也有这么<a href="https://kubernetes.io/docs/concepts/cluster-administration/manage-deployment/" target="_blank" rel="noopener">一段话</a>:</p>
+<p><img src="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20201227151502.png" alt></p>
+<p>翻译: apply 也支持指定目录，会在目录下查找<code>yaml、yml、json</code>为后缀的文件名进行apply</p>
+<p>同时，也建议将同一个服务的所有的资源放在一个文件中，这也就是为什么现在很多的服务安装时提示的url都是在一个文件中放置所有的资源.</p>
+<p>本人也查找了<code>kubernetes/kubectl</code> 的github，也未发现具体的原因，有如下讨论的issue:</p>
+<blockquote>
+<ul>
+<li><a href="https://github.com/kubernetes/kubernetes/issues/24649" target="_blank" rel="noopener">https://github.com/kubernetes/kubernetes/issues/24649</a></li>
+<li><a href="https://github.com/kubernetes/kubernetes/issues/64203" target="_blank" rel="noopener">https://github.com/kubernetes/kubernetes/issues/64203</a></li>
+<li><a href="https://github.com/kubernetes/kubernetes/issues/44511" target="_blank" rel="noopener">https://github.com/kubernetes/kubernetes/issues/44511</a></li>
+</ul>
+</blockquote>
+<p>回到开发同学的问题，如果是按照上面的逻辑确实可能存在那个问题, 即</p>
+<p>如果apply的资源在集群中已经存在，apply 又是使用的是文件名排序进行patch的，如果deploy中引用的secret，则就有可能在创建deploy时使用了集群中已存在的secret，因为此时新的secret还没有apply</p>
+<p>解决的办法也很简单:</p>
+<ol>
+<li>要么，按照依赖的顺序将所有资源放到同一个文件中</li>
+<li>要么，修改资源文件的名，依赖项靠前即可</li>
+<li>使用<code>kubectl replace --force -f</code>在创建前先删除</li>
+</ol>
+<h4 id="源码分析"><a href="#源码分析" class="headerlink" title="源码分析"></a>源码分析</h4><p>从kubectl的源码来看，确实没有看到处理资源依赖相关的代码</p>
+<p>这里使用的是v1.15.5版本的kubectl，新版本不太清楚是否已支持依赖资源的创建</p>
+<h3 id="kustomize"><a href="#kustomize" class="headerlink" title="kustomize"></a>kustomize</h3><p>但是，当前环境使用的是<code>argocd + kustomize</code>做的CI/CD pipeline，没有直接使用kubectl,发布的时候使用的是kustomize，<code>难道kustomize也不能保证顺序</code>?</p>
+<p>kustomize的版本是v1.15.9</p>
+<p>目前使用的kustomizition.yaml文件是统一的，格式如下:</p>
+<figure class="highlight yaml"><table><tr><td class="code"><pre><span class="line"><span class="attr">apiVersion:</span> <span class="string">kustomize.config.k8s.io/v1beta1</span></span><br><span class="line"><span class="attr">kind:</span> <span class="string">Kustomization</span></span><br><span class="line"></span><br><span class="line"><span class="attr">resources:</span></span><br><span class="line"><span class="bullet">-</span> <span class="string">service.yml.j2</span></span><br><span class="line"><span class="bullet">-</span> <span class="string">configmap.yml.j2</span></span><br><span class="line"><span class="bullet">-</span> <span class="string">deployment.yml.j2</span></span><br><span class="line"></span><br><span class="line"><span class="attr">namespace:</span> <span class="string">prod</span></span><br></pre></td></tr></table></figure>
+<p>为了验证kustomize生成yaml文件的顺序，可以使用<code>kustomize build .</code>来查看<code>resources</code>下的资源的顺序是怎样的，build有额外的参数可以控制输出结果，这里没有使用，因为生成的结果太长， 就不贴上来了，直接说结论:</p>
+<p>通过测试可以知道, <code>resources下的资源文件不管怎么放，都是一样的顺序且不存在资源依赖问题</code></p>
+<p>也就是说，如果deployment依赖于configmap，则一定是configmap先apply.</p>
+<p>那为何kubectl没有解决而kustomize解决了呢? 也是从官方文档看到这么一句话</p>
+<figure class="highlight bash"><table><tr><td class="code"><pre><span class="line">Resource Creation Ordering</span><br><span class="line">Certain Resource Types may be dependent on other Resource Types being created first. e.g. Namespaced</span><br><span class="line">Resources on the Namespaces, RoleBindings on Roles, CustomResources on the CRDs, etc.</span><br><span class="line"></span><br><span class="line">When used with a kustomization.yaml, Apply sorts the Resources by Resource <span class="built_in">type</span> to ensure Resources</span><br><span class="line">with these dependencies are created <span class="keyword">in</span> the correct order.</span><br></pre></td></tr></table></figure>
+<p>翻译: 简单来说，就是kustomize会解决资源之间的依赖关系.</p>
+<p>只能从kustomize build的源码来看实现了</p>
+<h4 id="源码分析-1"><a href="#源码分析-1" class="headerlink" title="源码分析"></a>源码分析</h4><p>这里不展开所有的代码了，从build子命令一步一步按调用顺序，</p>
+<p>最终在<a href="https://github.com/kubernetes-sigs/kustomize/blob/master/api/resid/gvk.go" target="_blank" rel="noopener">gvk.go</a>中发现有如下的order</p>
+<figure class="highlight bash"><table><tr><td class="code"><pre><span class="line">var orderFirst = []string&#123;</span><br><span class="line">	<span class="string">"Namespace"</span>,</span><br><span class="line">	<span class="string">"ResourceQuota"</span>,</span><br><span class="line">	<span class="string">"StorageClass"</span>,</span><br><span class="line">	<span class="string">"CustomResourceDefinition"</span>,</span><br><span class="line">	<span class="string">"ServiceAccount"</span>,</span><br><span class="line">	<span class="string">"PodSecurityPolicy"</span>,</span><br><span class="line">	<span class="string">"Role"</span>,</span><br><span class="line">	<span class="string">"ClusterRole"</span>,</span><br><span class="line">	<span class="string">"RoleBinding"</span>,</span><br><span class="line">	<span class="string">"ClusterRoleBinding"</span>,</span><br><span class="line">	<span class="string">"ConfigMap"</span>,</span><br><span class="line">	<span class="string">"Secret"</span>,</span><br><span class="line">	<span class="string">"Endpoints"</span>,</span><br><span class="line">	<span class="string">"Service"</span>,</span><br><span class="line">	<span class="string">"LimitRange"</span>,</span><br><span class="line">	<span class="string">"PriorityClass"</span>,</span><br><span class="line">	<span class="string">"PersistentVolume"</span>,</span><br><span class="line">	<span class="string">"PersistentVolumeClaim"</span>,</span><br><span class="line">	<span class="string">"Deployment"</span>,</span><br><span class="line">	<span class="string">"StatefulSet"</span>,</span><br><span class="line">	<span class="string">"CronJob"</span>,</span><br><span class="line">	<span class="string">"PodDisruptionBudget"</span>,</span><br><span class="line">&#125;</span><br><span class="line">var orderLast = []string&#123;</span><br><span class="line">	<span class="string">"MutatingWebhookConfiguration"</span>,</span><br><span class="line">	<span class="string">"ValidatingWebhookConfiguration"</span>,</span><br><span class="line">&#125;</span><br><span class="line">var typeOrders = func() map[string]int &#123;</span><br><span class="line">	m := map[string]int&#123;&#125;</span><br><span class="line">	<span class="keyword">for</span> i, n := range orderFirst &#123;</span><br><span class="line">		m[n] = -len(orderFirst) + i</span><br><span class="line">	&#125;</span><br><span class="line">	<span class="keyword">for</span> i, n := range orderLast &#123;</span><br><span class="line">		m[n] = 1 + i</span><br><span class="line">	&#125;</span><br><span class="line">	<span class="built_in">return</span> m</span><br><span class="line">&#125;()</span><br></pre></td></tr></table></figure>
+<p>这里引用了一个名词，<code>gvk</code>， 可参考这篇<a href="https://liqiang.io/post/kubernetes-all-about-crd-part02-api-server-and-gvkr-dc53e1f1" target="_blank" rel="noopener">文章</a></p>
+<p>简单来说<code>gvk</code>其实就是<code>group、kind、version</code>,是定位一种类型的方式,k8s中使用的资源都会使用到</p>
+<figure class="highlight bash"><table><tr><td class="code"><pre><span class="line">apiVersion: apps/v1  <span class="comment"># group version</span></span><br><span class="line">kind: DaemonSet  <span class="comment"># kind</span></span><br><span class="line">metadata:</span><br><span class="line">  name: node-exporter</span><br></pre></td></tr></table></figure>
+<p>回到上面的代码底下那部分代码，是给资源对象计算资源id的，这个id就是在执行<code>kustomize build .</code>命令时用于控制输出的，相关代码在<a href="https://github.com/kubernetes-sigs/kustomize/blob/master/api/builtins/LegacyOrderTransformer.go" target="_blank" rel="noopener">这里</a></p>
+<figure class="highlight go"><table><tr><td class="code"><pre><span class="line"><span class="function"><span class="keyword">func</span> <span class="params">(p *LegacyOrderTransformerPlugin)</span> <span class="title">Transform</span><span class="params">(m resmap.ResMap)</span> <span class="params">(err error)</span></span> &#123;</span><br><span class="line">	resources := <span class="built_in">make</span>([]*resource.Resource, m.Size())</span><br><span class="line">	ids := m.AllIds()</span><br><span class="line">	sort.Sort(resmap.IdSlice(ids))</span><br><span class="line">	<span class="keyword">for</span> i, id := <span class="keyword">range</span> ids &#123;</span><br><span class="line">		resources[i], err = m.GetByCurrentId(id)</span><br><span class="line">		<span class="keyword">if</span> err != <span class="literal">nil</span> &#123;</span><br><span class="line">			<span class="keyword">return</span> errors.Wrap(err, <span class="string">"expected match for sorting"</span>)</span><br><span class="line">		&#125;</span><br><span class="line">	&#125;</span><br><span class="line">	m.Clear()</span><br><span class="line">	<span class="keyword">for</span> _, r := <span class="keyword">range</span> resources &#123;</span><br><span class="line">		m.Append(r)</span><br><span class="line">	&#125;</span><br><span class="line">	<span class="keyword">return</span> <span class="literal">nil</span></span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p><code>m.AllIds()</code>先解析<code>kustomization.yaml</code>中resource字段中的资源文件, 获取到所有的资源ids</p>
+<p><code>sort.Sort(resmap.IdSlice(ids))</code>对所有ids进行排序</p>
+<p>最后将排序后的资源文件内容写回到文件中，这个文件就是最终build的结果</p>
+<p>分析到了这里，基本可以排除开发同学反馈的问题.</p>
+<h3 id="helm"><a href="#helm" class="headerlink" title="helm"></a>helm</h3><p>另一个使用最多的资源生成工具, helm又是什么情况呢?</p>
+<p>从helm的源码来看，很直接，直接维护了个资源的优先级，v2版本是集成在tiller中，参考<a href="https://github.com/helm/helm/blob/release-2.10/pkg/tiller/kind_sorter.go#L29" target="_blank" rel="noopener">这里</a></p>
+<p>v3版本因为废弃了tiller，代码移到了<a href="https://github.com/helm/helm/blob/master/pkg/releaseutil/kind_sorter.go" target="_blank" rel="noopener">这里</a></p>
+<figure class="highlight go"><table><tr><td class="code"><pre><span class="line"><span class="keyword">var</span> InstallOrder KindSortOrder = []<span class="keyword">string</span>&#123;</span><br><span class="line">	<span class="string">"Namespace"</span>,</span><br><span class="line">	<span class="string">"NetworkPolicy"</span>,</span><br><span class="line">	<span class="string">"ResourceQuota"</span>,</span><br><span class="line">	<span class="string">"LimitRange"</span>,</span><br><span class="line">	<span class="string">"PodSecurityPolicy"</span>,</span><br><span class="line">	<span class="string">"PodDisruptionBudget"</span>,</span><br><span class="line">	<span class="string">"ServiceAccount"</span>,</span><br><span class="line">	<span class="string">"Secret"</span>,</span><br><span class="line">	<span class="string">"SecretList"</span>,</span><br><span class="line">	<span class="string">"ConfigMap"</span>,</span><br><span class="line">	<span class="string">"StorageClass"</span>,</span><br><span class="line">	<span class="string">"PersistentVolume"</span>,</span><br><span class="line">	<span class="string">"PersistentVolumeClaim"</span>,</span><br><span class="line">	<span class="string">"CustomResourceDefinition"</span>,</span><br><span class="line">	<span class="string">"ClusterRole"</span>,</span><br><span class="line">	<span class="string">"ClusterRoleList"</span>,</span><br><span class="line">	<span class="string">"ClusterRoleBinding"</span>,</span><br><span class="line">	<span class="string">"ClusterRoleBindingList"</span>,</span><br><span class="line">	<span class="string">"Role"</span>,</span><br><span class="line">	<span class="string">"RoleList"</span>,</span><br><span class="line">	<span class="string">"RoleBinding"</span>,</span><br><span class="line">	<span class="string">"RoleBindingList"</span>,</span><br><span class="line">	<span class="string">"Service"</span>,</span><br><span class="line">	<span class="string">"DaemonSet"</span>,</span><br><span class="line">	<span class="string">"Pod"</span>,</span><br><span class="line">	<span class="string">"ReplicationController"</span>,</span><br><span class="line">	<span class="string">"ReplicaSet"</span>,</span><br><span class="line">	<span class="string">"Deployment"</span>,</span><br><span class="line">	<span class="string">"HorizontalPodAutoscaler"</span>,</span><br><span class="line">	<span class="string">"StatefulSet"</span>,</span><br><span class="line">	<span class="string">"Job"</span>,</span><br><span class="line">	<span class="string">"CronJob"</span>,</span><br><span class="line">	<span class="string">"Ingress"</span>,</span><br><span class="line">	<span class="string">"APIService"</span>,</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>在使用Helm部署时，是以这个列表的顺序进行发布的，这们就不存在资源依赖的问题, 卸载时则使用相反的顺序.</p>
+<p>有点意思</p>
+<h3 id="参考文章"><a href="#参考文章" class="headerlink" title="参考文章:"></a><strong>参考文章:</strong></h3><blockquote>
+<ul>
+<li><a href="https://kubernetes.io/docs/concepts/cluster-administration/manage-deployment/" target="_blank" rel="noopener">https://kubernetes.io/docs/concepts/cluster-administration/manage-deployment/</a></li>
+<li><a href="https://github.com/kubernetes/kubernetes/issues/24649" target="_blank" rel="noopener">https://github.com/kubernetes/kubernetes/issues/24649</a></li>
+<li><a href="https://github.com/kubernetes/kubernetes/issues/64203" target="_blank" rel="noopener">https://github.com/kubernetes/kubernetes/issues/64203</a></li>
+<li><a href="https://github.com/kubernetes/kubernetes/issues/44511" target="_blank" rel="noopener">https://github.com/kubernetes/kubernetes/issues/44511</a></li>
+<li><a href="https://github.com/helm/helm/blob/release-2.10/pkg/tiller/kind_sorter.go#L29" target="_blank" rel="noopener">https://github.com/helm/helm/blob/release-2.10/pkg/tiller/kind_sorter.go#L29</a></li>
+<li><a href="https://github.com/helm/helm/blob/master/pkg/releaseutil/kind_sorter.go" target="_blank" rel="noopener">https://github.com/helm/helm/blob/master/pkg/releaseutil/kind_sorter.go</a></li>
+<li><a href="https://liqiang.io/post/kubernetes-all-about-crd-part02-api-server-and-gvkr-dc53e1f1" target="_blank" rel="noopener">https://liqiang.io/post/kubernetes-all-about-crd-part02-api-server-and-gvkr-dc53e1f1</a></li>
+<li><a href="https://github.com/kubernetes-sigs/kustomize/blob/master/api/builtins/LegacyOrderTransformer.go" target="_blank" rel="noopener">https://github.com/kubernetes-sigs/kustomize/blob/master/api/builtins/LegacyOrderTransformer.go</a></li>
+</ul>
+</blockquote>
+<h3 id="转载请注明出处https-izsk-me"><a href="#转载请注明出处https-izsk-me" class="headerlink" title="转载请注明出处https://izsk.me"></a><strong>转载请注明出处<a href="https://izsk.me" target="_blank" rel="noopener">https://izsk.me</a></strong></h3>]]></content>
+      <categories>
+        <category>Kubernetes</category>
+      </categories>
+      <tags>
+        <tag>Kubernetes</tag>
+      </tags>
+  </entry>
+  <entry>
     <title>Kubernetes学习(k8s的资源模板生成工具-boilr)</title>
     <url>/2020/12/26/Kubernetes-Resource-Templates-Boilr/</url>
     <content><![CDATA[<p>相信在使用k8s的过程中，对于各种资源的操作一定是最多的，社区包括kubernetes本身出了多种模板生成工具，比如helm, kustomize这两种是最常用的，本人也一直在用，但有的场景依然会觉得这两个工具相对较重，helm使用的是gotemplate，而kustomize则又依赖于kubectl，两者都有一定的学习成本且没有交互能力，最近在做的一个小需求是: 如何快速地让开发同学以最简单的方式根据提供的模板生成部署文件，github上发现了个<code>boilr</code>的工具，虽然工具老了点，但是足够地小，功能足够简单，重要的是有交互功能，比较贴合需求</p>
@@ -9671,6 +9753,46 @@
       </tags>
   </entry>
   <entry>
+    <title>HTTP之长连接及短连接</title>
+    <url>/2017/08/12/HTTP%E4%B9%8B%E9%95%BF%E8%BF%9E%E6%8E%A5%E5%8F%8A%E7%9F%AD%E8%BF%9E%E6%8E%A5/</url>
+    <content><![CDATA[<p>我们都说HTTP协议是无状态的,我们又都说HTTP分长连接及短连接,’无状态’到底是个什么意思？</p>
+<a id="more"></a>
+<h3 id="无状态"><a href="#无状态" class="headerlink" title="无状态"></a><strong>无状态</strong></h3><p>HTTP无状态其实指的是协议对于事务处理没有记忆能力,服务器不知道客户端是什么状态.也就是说,打开一个服务器上的网页和你之前打开这个服务器上的网页之间没有任何联系.HTTP是一个无状态的面向连接的协议,无状态不代表HTTP不能保持TCP连接,更不能代表HTTP使用的是UDP协议(无连接).</p>
+<p>那http又是如何保持长连接的呢?</p>
+<p>在<code>HTTP/1.0</code>中,默认使用的是短连接.也就是说,浏览器和服务器每进行一次HTTP操作,就建立一次连接,但任务结束就中断连接.如果客户端浏览器访问的某个HTML或其他类型的 Web页中包含有其他的Web资源,如JavaScript文件、图像文件、CSS文件等；当浏览器每遇到这样一个Web资源,就会建立一个HTTP会话.<br>但从<code>HTTP/1.1</code>起,默认使用长连接,用以保持连接特性.使用长连接的HTTP协议,会在响应头有加入这行代码:</p>
+<p><code>Connection:keep-alive</code></p>
+<p>　　在使用长连接的情况下,当一个网页打开完成后,客户端和服务器之间用于传输HTTP数据的 TCP连接不会关闭,如果客户端再次访问这个服务器上的网页,会继续使用这一条已经建立的连接.<code>Keep-Alive</code>不会永久保持连接,它有一个保持时间,可以在不同的服务器软件（如Apache）中设定这个时间.实现长连接要客户端和服务端都支持长连接.</p>
+<p>当然,在很多web服务器中可以设置这个keep-Alive的保持时间,比如nginx的配置文件nginx.conf中可直接使用:</p>
+<p><code>keepalive_timeout  60;</code></p>
+<p><strong>HTTP协议的长连接和短连接,实质上是TCP协议的长连接和短连接.</strong></p>
+<p>那长短连接各自对应的场景有哪些呢(各自的优缺点)?</p>
+<h3 id="短连接"><a href="#短连接" class="headerlink" title="短连接"></a><strong>短连接</strong></h3><p>场景: client向server发起连接请求,server接到请求,然后双方建立连接.client向server 发送消息,server回应client,然后一次读写就完成了,这时候双方任何一个都可以发起close操作,不过一般都是client先发起 close操作.为什么呢,一般的server不会回复完client后立即关闭连接的,当然不排除有特殊的情况.从上面的描述看,短连接一般只会在 client/server间传递一次读写操作</p>
+<p><strong>短连接管理起来比较简单,存在的连接都是有用的连接,不需要额外的控制手段,但是频繁的创建大量的连接也很耗资源</strong></p>
+<h3 id="长连接"><a href="#长连接" class="headerlink" title="长连接"></a><strong>长连接</strong></h3><p>流程是:client向server发起连接,server接受client连接,双方建立连接.Client与server完成一次读写之后,它们之间的连接并不会主动关闭,后续的读写操作会继续使用这个连接.</p>
+<p>首先说一下TCP/IP详解上讲到的TCP保活功能,保活功能主要为服务器应用提供,服务器应用希望知道客户主机是否崩溃,从而可以代表客户使用资源.如果客户已经消失,使得服务器上保留一个半开放的连接,而服务器又在等待来自客户端的数据,则服务器将应远等待客户端的数据,保活功能就是试图在服务 器端检测到这种半开放的连接.</p>
+<p>如果一个给定的连接在两小时内没有任何的动作,服务器就向客户发一个探测报文段,客户主机必须处于以下4个状态之一:</p>
+<blockquote>
+<ul>
+<li>客户主机依然正常运行,并从服务器可达.客户的TCP响应正常,而服务器也知道对方是正常的,服务器在两小时后将保活定时器复位.</li>
+<li>客户主机已经崩溃,并且关闭或者正在重新启动.在任何一种情况下,客户的TCP都没有响应.服务端将不能收到对探测的响应,并在75秒后超时.服务器总共发送10个这样的探测 ,每个间隔75秒.如果服务器没有收到一个响应,它就认为客户主机已经关闭并终止连接.</li>
+<li>客户主机崩溃并已经重新启动.服务器将收到一个对其保活探测的响应,这个响应是一个复位,使得服务器终止这个连接.</li>
+</ul>
+</blockquote>
+<p>客户机正常运行,但是服务器不可达,这种情况与2类似,TCP能发现的就是没有收到探查的响应.</p>
+<p><strong>从上可以看出http要保持长连接需要做很多次的向客户端试探是否存活,这对性能是个很大的损耗,但是从另一方面来说长连接减少了很多的创关闭连接带来的开销,节约时间.</strong></p>
+<h3 id="场景"><a href="#场景" class="headerlink" title="场景"></a><strong>场景</strong></h3><p><code>长连接</code>多用于操作频繁,点对点的通讯,而且连接数不能太多情况,.每个TCP连接都需要三步握手,这需要时间,如果每个操作都是先连接,再操作的话那么处理速度会降低很多,所以每个操作完后都不断开,次处理时直接发送数据包就OK了,不用建立TCP连接.例如：数据库的连接用长连接, 如果用短连接频繁的通信会造成socket错误,而且频繁的socket 创建也是对资源的浪费. </p>
+<p>而像WEB网站的http服务一般都用<code>短链接</code>,因为长连接对于服务端来说会耗费一定的资源,而像WEB网站这么频繁的成千上万甚至上亿客户端的连接用短连接会更省一些资源,如果用长连接,而且同时有成千上万的用户,如果每个用户都占用一个连接的话,那可想而知吧.所以并发量大,但每个用户无需频繁操作情况下需用短连好.</p>
+<p><strong>没有哪一个更好,只有哪一个最适合,一切跟着场景走,总有一款适合你!</strong></p>
+<h3 id="转载请注明出处https-izsk-me"><a href="#转载请注明出处https-izsk-me" class="headerlink" title="转载请注明出处https://izsk.me"></a><strong>转载请注明出处<a href="https://izsk.me" target="_blank" rel="noopener">https://izsk.me</a></strong></h3><hr>
+]]></content>
+      <categories>
+        <category>Http-Tcp-Ip</category>
+      </categories>
+      <tags>
+        <tag>Http-Tcp-Ip</tag>
+      </tags>
+  </entry>
+  <entry>
     <title>Flask学习(flask应用)</title>
     <url>/2017/08/12/flask%E5%AD%A6%E4%B9%A0%E4%BA%8C(flask%E5%BA%94%E7%94%A8)/</url>
     <content><![CDATA[<p>距离<a href="https://izsk.me/2017/08/12/falsk%E5%AD%A6%E4%B9%A0(-" target="_blank" rel="noopener">上一篇</a>)有一段时间了,上次扯了点跟flask相关的内容,这次抽空记录下flask的机制.flask之所于上手容易,是因为我们对python语言稍微了解的话,简单几步就可以把一个小应用跑起来,不需要搭建额外的东西,所以对于并发量没有要求的话flask可以轻松应对.</p>
@@ -9735,46 +9857,6 @@
       </categories>
       <tags>
         <tag>Python</tag>
-      </tags>
-  </entry>
-  <entry>
-    <title>HTTP之长连接及短连接</title>
-    <url>/2017/08/12/HTTP%E4%B9%8B%E9%95%BF%E8%BF%9E%E6%8E%A5%E5%8F%8A%E7%9F%AD%E8%BF%9E%E6%8E%A5/</url>
-    <content><![CDATA[<p>我们都说HTTP协议是无状态的,我们又都说HTTP分长连接及短连接,’无状态’到底是个什么意思？</p>
-<a id="more"></a>
-<h3 id="无状态"><a href="#无状态" class="headerlink" title="无状态"></a><strong>无状态</strong></h3><p>HTTP无状态其实指的是协议对于事务处理没有记忆能力,服务器不知道客户端是什么状态.也就是说,打开一个服务器上的网页和你之前打开这个服务器上的网页之间没有任何联系.HTTP是一个无状态的面向连接的协议,无状态不代表HTTP不能保持TCP连接,更不能代表HTTP使用的是UDP协议(无连接).</p>
-<p>那http又是如何保持长连接的呢?</p>
-<p>在<code>HTTP/1.0</code>中,默认使用的是短连接.也就是说,浏览器和服务器每进行一次HTTP操作,就建立一次连接,但任务结束就中断连接.如果客户端浏览器访问的某个HTML或其他类型的 Web页中包含有其他的Web资源,如JavaScript文件、图像文件、CSS文件等；当浏览器每遇到这样一个Web资源,就会建立一个HTTP会话.<br>但从<code>HTTP/1.1</code>起,默认使用长连接,用以保持连接特性.使用长连接的HTTP协议,会在响应头有加入这行代码:</p>
-<p><code>Connection:keep-alive</code></p>
-<p>　　在使用长连接的情况下,当一个网页打开完成后,客户端和服务器之间用于传输HTTP数据的 TCP连接不会关闭,如果客户端再次访问这个服务器上的网页,会继续使用这一条已经建立的连接.<code>Keep-Alive</code>不会永久保持连接,它有一个保持时间,可以在不同的服务器软件（如Apache）中设定这个时间.实现长连接要客户端和服务端都支持长连接.</p>
-<p>当然,在很多web服务器中可以设置这个keep-Alive的保持时间,比如nginx的配置文件nginx.conf中可直接使用:</p>
-<p><code>keepalive_timeout  60;</code></p>
-<p><strong>HTTP协议的长连接和短连接,实质上是TCP协议的长连接和短连接.</strong></p>
-<p>那长短连接各自对应的场景有哪些呢(各自的优缺点)?</p>
-<h3 id="短连接"><a href="#短连接" class="headerlink" title="短连接"></a><strong>短连接</strong></h3><p>场景: client向server发起连接请求,server接到请求,然后双方建立连接.client向server 发送消息,server回应client,然后一次读写就完成了,这时候双方任何一个都可以发起close操作,不过一般都是client先发起 close操作.为什么呢,一般的server不会回复完client后立即关闭连接的,当然不排除有特殊的情况.从上面的描述看,短连接一般只会在 client/server间传递一次读写操作</p>
-<p><strong>短连接管理起来比较简单,存在的连接都是有用的连接,不需要额外的控制手段,但是频繁的创建大量的连接也很耗资源</strong></p>
-<h3 id="长连接"><a href="#长连接" class="headerlink" title="长连接"></a><strong>长连接</strong></h3><p>流程是:client向server发起连接,server接受client连接,双方建立连接.Client与server完成一次读写之后,它们之间的连接并不会主动关闭,后续的读写操作会继续使用这个连接.</p>
-<p>首先说一下TCP/IP详解上讲到的TCP保活功能,保活功能主要为服务器应用提供,服务器应用希望知道客户主机是否崩溃,从而可以代表客户使用资源.如果客户已经消失,使得服务器上保留一个半开放的连接,而服务器又在等待来自客户端的数据,则服务器将应远等待客户端的数据,保活功能就是试图在服务 器端检测到这种半开放的连接.</p>
-<p>如果一个给定的连接在两小时内没有任何的动作,服务器就向客户发一个探测报文段,客户主机必须处于以下4个状态之一:</p>
-<blockquote>
-<ul>
-<li>客户主机依然正常运行,并从服务器可达.客户的TCP响应正常,而服务器也知道对方是正常的,服务器在两小时后将保活定时器复位.</li>
-<li>客户主机已经崩溃,并且关闭或者正在重新启动.在任何一种情况下,客户的TCP都没有响应.服务端将不能收到对探测的响应,并在75秒后超时.服务器总共发送10个这样的探测 ,每个间隔75秒.如果服务器没有收到一个响应,它就认为客户主机已经关闭并终止连接.</li>
-<li>客户主机崩溃并已经重新启动.服务器将收到一个对其保活探测的响应,这个响应是一个复位,使得服务器终止这个连接.</li>
-</ul>
-</blockquote>
-<p>客户机正常运行,但是服务器不可达,这种情况与2类似,TCP能发现的就是没有收到探查的响应.</p>
-<p><strong>从上可以看出http要保持长连接需要做很多次的向客户端试探是否存活,这对性能是个很大的损耗,但是从另一方面来说长连接减少了很多的创关闭连接带来的开销,节约时间.</strong></p>
-<h3 id="场景"><a href="#场景" class="headerlink" title="场景"></a><strong>场景</strong></h3><p><code>长连接</code>多用于操作频繁,点对点的通讯,而且连接数不能太多情况,.每个TCP连接都需要三步握手,这需要时间,如果每个操作都是先连接,再操作的话那么处理速度会降低很多,所以每个操作完后都不断开,次处理时直接发送数据包就OK了,不用建立TCP连接.例如：数据库的连接用长连接, 如果用短连接频繁的通信会造成socket错误,而且频繁的socket 创建也是对资源的浪费. </p>
-<p>而像WEB网站的http服务一般都用<code>短链接</code>,因为长连接对于服务端来说会耗费一定的资源,而像WEB网站这么频繁的成千上万甚至上亿客户端的连接用短连接会更省一些资源,如果用长连接,而且同时有成千上万的用户,如果每个用户都占用一个连接的话,那可想而知吧.所以并发量大,但每个用户无需频繁操作情况下需用短连好.</p>
-<p><strong>没有哪一个更好,只有哪一个最适合,一切跟着场景走,总有一款适合你!</strong></p>
-<h3 id="转载请注明出处https-izsk-me"><a href="#转载请注明出处https-izsk-me" class="headerlink" title="转载请注明出处https://izsk.me"></a><strong>转载请注明出处<a href="https://izsk.me" target="_blank" rel="noopener">https://izsk.me</a></strong></h3><hr>
-]]></content>
-      <categories>
-        <category>Http-Tcp-Ip</category>
-      </categories>
-      <tags>
-        <tag>Http-Tcp-Ip</tag>
       </tags>
   </entry>
   <entry>
