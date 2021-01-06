@@ -1,175 +1,16 @@
 <?xml version="1.0" encoding="utf-8"?>
 <search>
   <entry>
-    <title>2021-努力奋斗</title>
-    <url>/2020/12/27/2021/</url>
-    <content><![CDATA[<h3 id="2021"><a href="#2021" class="headerlink" title="2021"></a><strong>2021</strong></h3><h1 id="不喝鸡汤，负重前行"><a href="#不喝鸡汤，负重前行" class="headerlink" title="不喝鸡汤，负重前行"></a><strong>不喝鸡汤，负重前行</strong></h1><a id="more"></a>
-<h3 id="生活"><a href="#生活" class="headerlink" title="生活"></a>生活</h3><p>生活如旧，没有跌宕起伏，时间不够用, 对人有辜负</p>
-<p>可能是因为疫情的关系，大家都不好过，朋友聚在一直的时间也很少</p>
-<h3 id="工作"><a href="#工作" class="headerlink" title="工作"></a>工作</h3><p>2020的工作前半年比较W/F balance，后面相对就比较忙了，</p>
-<p>好在工作规划基本都实现了，在个人Role上也开始向Manager转变</p>
-<p>在这个过程中，让我感触最深的事是:</p>
-<p><strong>面了那么多的候选人，会发现中年危机在互联网这个行业更加地严重</strong></p>
-<p>以前自己做为被面试者，体会没那么深</p>
-<p>反而是做了面试官之后，这种体会越发明显，也可能是年纪大了，比较惆怅</p>
-<p>再过几年，我会成为那个他，<strong>如果改变不了这种现状，那就只能改变自己</strong></p>
-<ol>
-<li>不管大环境如何，自身的硬素质一定要有</li>
-<li>工作重要，但也需要尽量维持人际关系</li>
-<li>保持核心竞争力，尽可能成为团队核心</li>
-<li>凡事表明态度、照顾队员情绪</li>
-</ol>
-<p>说到面试，我想说的是，面试了那么多了，其实就只有两种人:</p>
-<ol>
-<li>虚</li>
-</ol>
-<p>有些候选人为了更加自己的竞争力，简历上做了修饰，我觉得这个可以理解，竞争这么激烈，为了混口饭吃都不容易，但是也别一问细节什么都不知道，这就有点减分的效果了，写在简历上的东西，还是搞深一点比较好</p>
-<p><strong>并不是所有的厂面试，都是上来直接二道算法hard，没有意义而且带坏风气</strong></p>
-<ol start="2">
-<li>到底谁面谁</li>
-</ol>
-<p>面试官并非各方面都懂，大部分情况下他只会问他知道的，所以如果抓到机会，可以互相讨论，除非碰到面试官一根筋，大部分情况下可以加分.</p>
-<p><strong>2020，就这样</strong></p>
-<h3 id="2021-1"><a href="#2021-1" class="headerlink" title="2021"></a>2021</h3><p><strong>努力，奋斗</strong></p>
-<h3 id="参考文章"><a href="#参考文章" class="headerlink" title="参考文章:"></a><strong>参考文章:</strong></h3><h3 id="转载请注明出处https-izsk-me"><a href="#转载请注明出处https-izsk-me" class="headerlink" title="转载请注明出处https://izsk.me"></a><strong>转载请注明出处<a href="https://izsk.me" target="_blank" rel="noopener">https://izsk.me</a></strong></h3>]]></content>
-      <categories>
-        <category>随淑笔记</category>
-      </categories>
-      <tags>
-        <tag>随淑笔记</tag>
-      </tags>
-  </entry>
-  <entry>
-    <title>Kubernetes学习(当使用kubectl apply -f 多个资源时,资源创建的顺序是怎么样的)</title>
-    <url>/2020/12/27/Kubernetes-Apply-Directory-Order/</url>
-    <content><![CDATA[<p>前几天一个开发同学跑过来跟我说，在自动发布一个应用到k8s集群中时，会出现发布成功，但是容器中的配置文件还是旧配置文件的情况，让我看看原因.第一时间我觉得不可能，但是一细想，好像是有可能发生, 立马在我脑海中出现一个疑问:</p>
-<p><strong>使用了这么多年的k8s, <code>kubectl apply -f &lt;directory&gt;</code>时，目录下多个资源文件的apply顺序到底是什么?</strong></p>
-<a id="more"></a>
-<h3 id="kubectl"><a href="#kubectl" class="headerlink" title="kubectl"></a>kubectl</h3><p>等到下一秒的我，又可以很清晰且自信地回答上面的问题, 在之前的使用<code>apply -f &lt;directory&gt;</code>时，出现过几次提示没有<code>namespace</code>的情况，类似如下:</p>
-<figure class="highlight bash"><table><tr><td class="code"><pre><span class="line"><span class="comment"># ls test</span></span><br><span class="line">config.yml</span><br><span class="line">deploy.yml</span><br><span class="line">ns.yml</span><br><span class="line">service.yml</span><br></pre></td></tr></table></figure>
-<p>如上所示，如果直接使用<code>kubectl apply -f .</code>则会出现在创建<code>deploy.yml</code>时提示找不到<code>namespace</code></p>
-<p>从输出的结果可以得到结论: <strong>在创建多个资源文件时，创建的顺序是以文件名排序的顺序,这样的话就可能存在依赖失败</strong></p>
-<p>按道理这个依赖关系对kubernetes来说不是很复杂，为何不支持呢? 个人感觉如果是原生的资源对象，那确实不复杂，但后面引入的<code>CRD</code>机制，这个依赖关系就不好处理了，所以就是现在这个局面，说不定新版本已经支持.</p>
-<p>从官方文档上也有这么<a href="https://kubernetes.io/docs/concepts/cluster-administration/manage-deployment/" target="_blank" rel="noopener">一段话</a>:</p>
-<p><img src="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20201227151502.png" alt></p>
-<p>翻译: apply 也支持指定目录，会在目录下查找<code>yaml、yml、json</code>为后缀的文件名进行apply</p>
-<p>同时，也建议将同一个服务的所有的资源放在一个文件中，这也就是为什么现在很多的服务安装时提示的url都是在一个文件中放置所有的资源.</p>
-<p>本人也查找了<code>kubernetes/kubectl</code> 的github，也未发现具体的原因，有如下讨论的issue:</p>
-<blockquote>
-<ul>
-<li><a href="https://github.com/kubernetes/kubernetes/issues/24649" target="_blank" rel="noopener">https://github.com/kubernetes/kubernetes/issues/24649</a></li>
-<li><a href="https://github.com/kubernetes/kubernetes/issues/64203" target="_blank" rel="noopener">https://github.com/kubernetes/kubernetes/issues/64203</a></li>
-<li><a href="https://github.com/kubernetes/kubernetes/issues/44511" target="_blank" rel="noopener">https://github.com/kubernetes/kubernetes/issues/44511</a></li>
-</ul>
-</blockquote>
-<p>回到开发同学的问题，如果是按照上面的逻辑确实可能存在那个问题, 即</p>
-<p>如果apply的资源在集群中已经存在，apply 又是使用的是文件名排序进行patch的，如果deploy中引用的secret，则就有可能在创建deploy时使用了集群中已存在的secret，因为此时新的secret还没有apply</p>
-<p>解决的办法也很简单:</p>
-<ol>
-<li>要么，按照依赖的顺序将所有资源放到同一个文件中</li>
-<li>要么，修改资源文件的名，依赖项靠前即可</li>
-<li>使用<code>kubectl replace --force -f</code>在创建前先删除</li>
-</ol>
-<h4 id="源码分析"><a href="#源码分析" class="headerlink" title="源码分析"></a>源码分析</h4><p>从kubectl的源码来看，确实没有看到处理资源依赖相关的代码</p>
-<p>这里使用的是v1.15.5版本的kubectl，新版本不太清楚是否已支持依赖资源的创建</p>
-<h3 id="kustomize"><a href="#kustomize" class="headerlink" title="kustomize"></a>kustomize</h3><p>但是，当前环境使用的是<code>argocd + kustomize</code>做的CI/CD pipeline，没有直接使用kubectl,发布的时候使用的是kustomize，<code>难道kustomize也不能保证顺序</code>?</p>
-<p>kustomize的版本是v1.15.9</p>
-<p>目前使用的kustomizition.yaml文件是统一的，格式如下:</p>
-<figure class="highlight yaml"><table><tr><td class="code"><pre><span class="line"><span class="attr">apiVersion:</span> <span class="string">kustomize.config.k8s.io/v1beta1</span></span><br><span class="line"><span class="attr">kind:</span> <span class="string">Kustomization</span></span><br><span class="line"></span><br><span class="line"><span class="attr">resources:</span></span><br><span class="line"><span class="bullet">-</span> <span class="string">service.yml.j2</span></span><br><span class="line"><span class="bullet">-</span> <span class="string">configmap.yml.j2</span></span><br><span class="line"><span class="bullet">-</span> <span class="string">deployment.yml.j2</span></span><br><span class="line"></span><br><span class="line"><span class="attr">namespace:</span> <span class="string">prod</span></span><br></pre></td></tr></table></figure>
-<p>为了验证kustomize生成yaml文件的顺序，可以使用<code>kustomize build .</code>来查看<code>resources</code>下的资源的顺序是怎样的，build有额外的参数可以控制输出结果，这里没有使用，因为生成的结果太长， 就不贴上来了，直接说结论:</p>
-<p>通过测试可以知道, <code>resources下的资源文件不管怎么放，都是一样的顺序且不存在资源依赖问题</code></p>
-<p>也就是说，如果deployment依赖于configmap，则一定是configmap先apply.</p>
-<p>那为何kubectl没有解决而kustomize解决了呢? 也是从官方文档看到这么一句话</p>
-<figure class="highlight bash"><table><tr><td class="code"><pre><span class="line">Resource Creation Ordering</span><br><span class="line">Certain Resource Types may be dependent on other Resource Types being created first. e.g. Namespaced</span><br><span class="line">Resources on the Namespaces, RoleBindings on Roles, CustomResources on the CRDs, etc.</span><br><span class="line"></span><br><span class="line">When used with a kustomization.yaml, Apply sorts the Resources by Resource <span class="built_in">type</span> to ensure Resources</span><br><span class="line">with these dependencies are created <span class="keyword">in</span> the correct order.</span><br></pre></td></tr></table></figure>
-<p>翻译: 简单来说，就是kustomize会解决资源之间的依赖关系.</p>
-<p>只能从kustomize build的源码来看实现了</p>
-<h4 id="源码分析-1"><a href="#源码分析-1" class="headerlink" title="源码分析"></a>源码分析</h4><p>这里不展开所有的代码了，从build子命令一步一步按调用顺序，</p>
-<p>最终在<a href="https://github.com/kubernetes-sigs/kustomize/blob/master/api/resid/gvk.go" target="_blank" rel="noopener">gvk.go</a>中发现有如下的order</p>
-<figure class="highlight bash"><table><tr><td class="code"><pre><span class="line">var orderFirst = []string&#123;</span><br><span class="line">	<span class="string">"Namespace"</span>,</span><br><span class="line">	<span class="string">"ResourceQuota"</span>,</span><br><span class="line">	<span class="string">"StorageClass"</span>,</span><br><span class="line">	<span class="string">"CustomResourceDefinition"</span>,</span><br><span class="line">	<span class="string">"ServiceAccount"</span>,</span><br><span class="line">	<span class="string">"PodSecurityPolicy"</span>,</span><br><span class="line">	<span class="string">"Role"</span>,</span><br><span class="line">	<span class="string">"ClusterRole"</span>,</span><br><span class="line">	<span class="string">"RoleBinding"</span>,</span><br><span class="line">	<span class="string">"ClusterRoleBinding"</span>,</span><br><span class="line">	<span class="string">"ConfigMap"</span>,</span><br><span class="line">	<span class="string">"Secret"</span>,</span><br><span class="line">	<span class="string">"Endpoints"</span>,</span><br><span class="line">	<span class="string">"Service"</span>,</span><br><span class="line">	<span class="string">"LimitRange"</span>,</span><br><span class="line">	<span class="string">"PriorityClass"</span>,</span><br><span class="line">	<span class="string">"PersistentVolume"</span>,</span><br><span class="line">	<span class="string">"PersistentVolumeClaim"</span>,</span><br><span class="line">	<span class="string">"Deployment"</span>,</span><br><span class="line">	<span class="string">"StatefulSet"</span>,</span><br><span class="line">	<span class="string">"CronJob"</span>,</span><br><span class="line">	<span class="string">"PodDisruptionBudget"</span>,</span><br><span class="line">&#125;</span><br><span class="line">var orderLast = []string&#123;</span><br><span class="line">	<span class="string">"MutatingWebhookConfiguration"</span>,</span><br><span class="line">	<span class="string">"ValidatingWebhookConfiguration"</span>,</span><br><span class="line">&#125;</span><br><span class="line">var typeOrders = func() map[string]int &#123;</span><br><span class="line">	m := map[string]int&#123;&#125;</span><br><span class="line">	<span class="keyword">for</span> i, n := range orderFirst &#123;</span><br><span class="line">		m[n] = -len(orderFirst) + i</span><br><span class="line">	&#125;</span><br><span class="line">	<span class="keyword">for</span> i, n := range orderLast &#123;</span><br><span class="line">		m[n] = 1 + i</span><br><span class="line">	&#125;</span><br><span class="line">	<span class="built_in">return</span> m</span><br><span class="line">&#125;()</span><br></pre></td></tr></table></figure>
-<p>这里引用了一个名词，<code>gvk</code>， 可参考这篇<a href="https://liqiang.io/post/kubernetes-all-about-crd-part02-api-server-and-gvkr-dc53e1f1" target="_blank" rel="noopener">文章</a></p>
-<p>简单来说<code>gvk</code>其实就是<code>group、kind、version</code>,是定位一种类型的方式,k8s中使用的资源都会使用到</p>
-<figure class="highlight bash"><table><tr><td class="code"><pre><span class="line">apiVersion: apps/v1  <span class="comment"># group version</span></span><br><span class="line">kind: DaemonSet  <span class="comment"># kind</span></span><br><span class="line">metadata:</span><br><span class="line">  name: node-exporter</span><br></pre></td></tr></table></figure>
-<p>回到上面的代码底下那部分代码，是给资源对象计算资源id的，这个id就是在执行<code>kustomize build .</code>命令时用于控制输出的，相关代码在<a href="https://github.com/kubernetes-sigs/kustomize/blob/master/api/builtins/LegacyOrderTransformer.go" target="_blank" rel="noopener">这里</a></p>
-<figure class="highlight go"><table><tr><td class="code"><pre><span class="line"><span class="function"><span class="keyword">func</span> <span class="params">(p *LegacyOrderTransformerPlugin)</span> <span class="title">Transform</span><span class="params">(m resmap.ResMap)</span> <span class="params">(err error)</span></span> &#123;</span><br><span class="line">	resources := <span class="built_in">make</span>([]*resource.Resource, m.Size())</span><br><span class="line">	ids := m.AllIds()</span><br><span class="line">	sort.Sort(resmap.IdSlice(ids))</span><br><span class="line">	<span class="keyword">for</span> i, id := <span class="keyword">range</span> ids &#123;</span><br><span class="line">		resources[i], err = m.GetByCurrentId(id)</span><br><span class="line">		<span class="keyword">if</span> err != <span class="literal">nil</span> &#123;</span><br><span class="line">			<span class="keyword">return</span> errors.Wrap(err, <span class="string">"expected match for sorting"</span>)</span><br><span class="line">		&#125;</span><br><span class="line">	&#125;</span><br><span class="line">	m.Clear()</span><br><span class="line">	<span class="keyword">for</span> _, r := <span class="keyword">range</span> resources &#123;</span><br><span class="line">		m.Append(r)</span><br><span class="line">	&#125;</span><br><span class="line">	<span class="keyword">return</span> <span class="literal">nil</span></span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
-<p><code>m.AllIds()</code>先解析<code>kustomization.yaml</code>中resource字段中的资源文件, 获取到所有的资源ids</p>
-<p><code>sort.Sort(resmap.IdSlice(ids))</code>对所有ids进行排序</p>
-<p>最后将排序后的资源文件内容写回到文件中，这个文件就是最终build的结果</p>
-<p>分析到了这里，基本可以排除开发同学反馈的问题.</p>
-<h3 id="helm"><a href="#helm" class="headerlink" title="helm"></a>helm</h3><p>另一个使用最多的资源生成工具, helm又是什么情况呢?</p>
-<p>从helm的源码来看，很直接，直接维护了个资源的优先级，v2版本是集成在tiller中，参考<a href="https://github.com/helm/helm/blob/release-2.10/pkg/tiller/kind_sorter.go#L29" target="_blank" rel="noopener">这里</a></p>
-<p>v3版本因为废弃了tiller，代码移到了<a href="https://github.com/helm/helm/blob/master/pkg/releaseutil/kind_sorter.go" target="_blank" rel="noopener">这里</a></p>
-<figure class="highlight go"><table><tr><td class="code"><pre><span class="line"><span class="keyword">var</span> InstallOrder KindSortOrder = []<span class="keyword">string</span>&#123;</span><br><span class="line">	<span class="string">"Namespace"</span>,</span><br><span class="line">	<span class="string">"NetworkPolicy"</span>,</span><br><span class="line">	<span class="string">"ResourceQuota"</span>,</span><br><span class="line">	<span class="string">"LimitRange"</span>,</span><br><span class="line">	<span class="string">"PodSecurityPolicy"</span>,</span><br><span class="line">	<span class="string">"PodDisruptionBudget"</span>,</span><br><span class="line">	<span class="string">"ServiceAccount"</span>,</span><br><span class="line">	<span class="string">"Secret"</span>,</span><br><span class="line">	<span class="string">"SecretList"</span>,</span><br><span class="line">	<span class="string">"ConfigMap"</span>,</span><br><span class="line">	<span class="string">"StorageClass"</span>,</span><br><span class="line">	<span class="string">"PersistentVolume"</span>,</span><br><span class="line">	<span class="string">"PersistentVolumeClaim"</span>,</span><br><span class="line">	<span class="string">"CustomResourceDefinition"</span>,</span><br><span class="line">	<span class="string">"ClusterRole"</span>,</span><br><span class="line">	<span class="string">"ClusterRoleList"</span>,</span><br><span class="line">	<span class="string">"ClusterRoleBinding"</span>,</span><br><span class="line">	<span class="string">"ClusterRoleBindingList"</span>,</span><br><span class="line">	<span class="string">"Role"</span>,</span><br><span class="line">	<span class="string">"RoleList"</span>,</span><br><span class="line">	<span class="string">"RoleBinding"</span>,</span><br><span class="line">	<span class="string">"RoleBindingList"</span>,</span><br><span class="line">	<span class="string">"Service"</span>,</span><br><span class="line">	<span class="string">"DaemonSet"</span>,</span><br><span class="line">	<span class="string">"Pod"</span>,</span><br><span class="line">	<span class="string">"ReplicationController"</span>,</span><br><span class="line">	<span class="string">"ReplicaSet"</span>,</span><br><span class="line">	<span class="string">"Deployment"</span>,</span><br><span class="line">	<span class="string">"HorizontalPodAutoscaler"</span>,</span><br><span class="line">	<span class="string">"StatefulSet"</span>,</span><br><span class="line">	<span class="string">"Job"</span>,</span><br><span class="line">	<span class="string">"CronJob"</span>,</span><br><span class="line">	<span class="string">"Ingress"</span>,</span><br><span class="line">	<span class="string">"APIService"</span>,</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
-<p>在使用Helm部署时，是以这个列表的顺序进行发布的，这们就不存在资源依赖的问题, 卸载时则使用相反的顺序.</p>
-<p>有点意思</p>
-<h3 id="参考文章"><a href="#参考文章" class="headerlink" title="参考文章:"></a><strong>参考文章:</strong></h3><blockquote>
-<ul>
-<li><a href="https://kubernetes.io/docs/concepts/cluster-administration/manage-deployment/" target="_blank" rel="noopener">https://kubernetes.io/docs/concepts/cluster-administration/manage-deployment/</a></li>
-<li><a href="https://github.com/kubernetes/kubernetes/issues/24649" target="_blank" rel="noopener">https://github.com/kubernetes/kubernetes/issues/24649</a></li>
-<li><a href="https://github.com/kubernetes/kubernetes/issues/64203" target="_blank" rel="noopener">https://github.com/kubernetes/kubernetes/issues/64203</a></li>
-<li><a href="https://github.com/kubernetes/kubernetes/issues/44511" target="_blank" rel="noopener">https://github.com/kubernetes/kubernetes/issues/44511</a></li>
-<li><a href="https://github.com/helm/helm/blob/release-2.10/pkg/tiller/kind_sorter.go#L29" target="_blank" rel="noopener">https://github.com/helm/helm/blob/release-2.10/pkg/tiller/kind_sorter.go#L29</a></li>
-<li><a href="https://github.com/helm/helm/blob/master/pkg/releaseutil/kind_sorter.go" target="_blank" rel="noopener">https://github.com/helm/helm/blob/master/pkg/releaseutil/kind_sorter.go</a></li>
-<li><a href="https://liqiang.io/post/kubernetes-all-about-crd-part02-api-server-and-gvkr-dc53e1f1" target="_blank" rel="noopener">https://liqiang.io/post/kubernetes-all-about-crd-part02-api-server-and-gvkr-dc53e1f1</a></li>
-<li><a href="https://github.com/kubernetes-sigs/kustomize/blob/master/api/builtins/LegacyOrderTransformer.go" target="_blank" rel="noopener">https://github.com/kubernetes-sigs/kustomize/blob/master/api/builtins/LegacyOrderTransformer.go</a></li>
-</ul>
-</blockquote>
-<h3 id="转载请注明出处https-izsk-me"><a href="#转载请注明出处https-izsk-me" class="headerlink" title="转载请注明出处https://izsk.me"></a><strong>转载请注明出处<a href="https://izsk.me" target="_blank" rel="noopener">https://izsk.me</a></strong></h3>]]></content>
-      <categories>
-        <category>Kubernetes</category>
-      </categories>
-      <tags>
-        <tag>Kubernetes</tag>
-      </tags>
-  </entry>
-  <entry>
-    <title>Kubernetes学习(k8s的资源模板生成工具-boilr)</title>
-    <url>/2020/12/26/Kubernetes-Resource-Templates-Boilr/</url>
-    <content><![CDATA[<p>相信在使用k8s的过程中，对于各种资源的操作一定是最多的，社区包括kubernetes本身出了多种模板生成工具，比如helm, kustomize这两种是最常用的，本人也一直在用，但有的场景依然会觉得这两个工具相对较重，helm使用的是gotemplate，而kustomize则又依赖于kubectl，两者都有一定的学习成本且没有交互能力，最近在做的一个小需求是: 如何快速地让开发同学以最简单的方式根据提供的模板生成部署文件，github上发现了个<code>boilr</code>的工具，虽然工具老了点，但是足够地小，功能足够简单，重要的是有交互功能，比较贴合需求</p>
-<a id="more"></a>
-<p>boilr已经很久很久没更新了，很功能上看，boilr也引用了仓库的概念，本人相信boilr的作者是想把这个工具做的很NB</p>
-<p>当然,从Readme看，也非常简洁，用法也相对简单</p>
-<h3 id="安装"><a href="#安装" class="headerlink" title="安装"></a>安装</h3><p>根据readme直接下载二进制文件即可使用</p>
-<h3 id="使用"><a href="#使用" class="headerlink" title="使用"></a>使用</h3><p>几乎所有的模板系统的生成思路都一样的，<strong>根据给定的k-v去替换相应的占位符</strong>，boilr也不例外</p>
-<p>在使用前，先下载个模板文件，这里就使用官方的例子:</p>
-<p>使用之前需要先初始化boilr的相关目录, 默认情况下，会生成/root/.config/boilr/templates目录，这个可以从源代码看到(configuration.go)[<a href="https://github.com/zhoushuke/boilr/blob/master/pkg/boilr/configuration.go]" target="_blank" rel="noopener">https://github.com/zhoushuke/boilr/blob/master/pkg/boilr/configuration.go]</a></p>
-<figure class="highlight bash"><table><tr><td class="code"><pre><span class="line">boilr init .</span><br></pre></td></tr></table></figure>
-<p>然后就可以下载模板目录了</p>
-<figure class="highlight bash"><table><tr><td class="code"><pre><span class="line">boilr template download littlemanco/boilr-k8sservice k8sservice</span><br></pre></td></tr></table></figure>
-<p>注意: 因为boilr很久都没有维护了，在download时可能会遇到<code>pkt-line 3: invalid capabilities</code>,这是由于boilr代码里使用的<code>go-git</code>相对于现在来说，版本太旧了，所以可以直接通过git clone 把模板下下来，是一样的效果</p>
-<p>通过git clone下载下来后需要把<code>boilr-k8sservice</code>放到<code>/root/.config/boilr/templates</code>目录下</p>
-<p>这里最主要的是有个<code>project.json</code>文件</p>
-<figure class="highlight json"><table><tr><td class="code"><pre><span class="line">&#123;</span><br><span class="line">  <span class="attr">"Namespace"</span>: <span class="string">"product"</span>,</span><br><span class="line">  <span class="attr">"Service"</span>: <span class="string">"product"</span>,</span><br><span class="line">  <span class="attr">"Application"</span>: <span class="string">"nginx"</span>,</span><br><span class="line">  <span class="attr">"Role"</span>: <span class="string">"webserver"</span>,</span><br><span class="line">  <span class="attr">"ApplicationPortProtocol"</span>: [</span><br><span class="line">    <span class="string">"TCP"</span>,</span><br><span class="line">    <span class="string">"UDP"</span></span><br><span class="line">  ],</span><br><span class="line">  <span class="attr">"ApplicationPortName"</span>: <span class="string">"http"</span>,</span><br><span class="line">  <span class="attr">"ApplicationPort"</span>: <span class="number">80</span>,</span><br><span class="line">  <span class="attr">"Type"</span>: [</span><br><span class="line">    <span class="string">"ClusterIP"</span>,</span><br><span class="line">    <span class="string">"NodePort"</span>,</span><br><span class="line">    <span class="string">"LoadBalancer"</span></span><br><span class="line">  ],</span><br><span class="line">  <span class="attr">"UsePrometheus"</span>: [</span><br><span class="line">    <span class="string">"true"</span>,</span><br><span class="line">    <span class="string">"false"</span></span><br><span class="line">  ]</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
-<p>通过解析这个文件里的字段进行模板文件的替换，文件中的value都是默认值，如果是列表的话，在交互时可提供选择,还是很方便的</p>
-<p>使用以下命令指定使用该模板</p>
-<figure class="highlight bash"><table><tr><td class="code"><pre><span class="line">boilr template use k8sservice /tmp/deploy</span><br></pre></td></tr></table></figure>
-<p>后面的<code>/tmp/deploy</code>是最终生成的模板文件保存的目录，我这里修改了点东西</p>
-<p>详细的交互输出如下:</p>
-<figure class="highlight bash"><table><tr><td class="code"><pre><span class="line">以下是详细输出内容:</span><br><span class="line">​```bash</span><br><span class="line">[?] Please choose a value <span class="keyword">for</span> <span class="string">"module_name"</span> [default: <span class="string">"test-frontend"</span>]: product</span><br><span class="line">[?] Please choose a value <span class="keyword">for</span> <span class="string">"config_name"</span> [default: <span class="string">"config.yml"</span>]: </span><br><span class="line">[✔] Created deploy/base/configmap.yml.j2</span><br><span class="line">[?] Please choose a value <span class="keyword">for</span> <span class="string">"registry_host"</span> [default: <span class="string">"&#123;&#123;registry_host&#125;&#125;"</span>]: </span><br><span class="line">[?] Please choose a value <span class="keyword">for</span> <span class="string">"registry_project"</span> [default: <span class="string">"&#123;&#123;registry_project&#125;&#125;"</span>]: </span><br><span class="line">[?] Please choose a value <span class="keyword">for</span> <span class="string">"registry_image"</span> [default: <span class="string">"&#123;&#123;registry_image&#125;&#125;"</span>]: </span><br><span class="line">[?] Please choose a value <span class="keyword">for</span> <span class="string">"registry_tag"</span> [default: <span class="string">"&#123;&#123;registry_tag&#125;&#125;"</span>]: </span><br><span class="line">[?] Please choose a value <span class="keyword">for</span> <span class="string">"port_number"</span> [default: 8080]: </span><br><span class="line">[?] Please choose a value <span class="keyword">for</span> <span class="string">"config_path"</span> [default: <span class="string">"/app/services"</span>]: </span><br><span class="line">[✔] Created deploy/base/deployment.yml.j2</span><br><span class="line">[?] Please choose an option <span class="keyword">for</span> <span class="string">"port_name"</span> </span><br><span class="line">    1 - <span class="string">"http"</span></span><br><span class="line">    2 - <span class="string">"grpc"</span></span><br><span class="line">    Choose from 1..2 [default: 1]: </span><br><span class="line">[?] Please choose a value <span class="keyword">for</span> <span class="string">"port_protocol"</span> [default: <span class="string">"TCP"</span>]: </span><br><span class="line">[?] Please choose a value <span class="keyword">for</span> <span class="string">"service_type"</span> [default: <span class="string">"ClusterIP"</span>]: </span><br><span class="line">[✔] Created deploy/base/service.yml.j2</span><br><span class="line">[?] Please choose a value <span class="keyword">for</span> <span class="string">"namespace_name"</span> [default: <span class="string">"prod"</span>]: </span><br><span class="line">[✔] Created deploy/vars/main.yml</span><br><span class="line">[✔] Successfully executed the project template sensespring <span class="keyword">in</span> /tmp/xpath</span><br></pre></td></tr></table></figure>
-<h3 id="dockerfile"><a href="#dockerfile" class="headerlink" title="dockerfile"></a>dockerfile</h3><p>通过上面的使用，为了减少对环境的依赖，可以将模板文件打包到镜像中，这样开发同学就可以直接使用镜像进行生成，还是很方便的</p>
-<figure class="highlight bash"><table><tr><td class="code"><pre><span class="line">FROM alpine:latest</span><br><span class="line"></span><br><span class="line">RUN apk add --no-cache tzdata bash ca-certificates</span><br><span class="line"></span><br><span class="line">ADD boilr /usr/<span class="built_in">local</span>/bin/boilr</span><br><span class="line"></span><br><span class="line">RUN mkdir -p /root/.config/boilr &amp;&amp; \</span><br><span class="line">    chmod +x /usr/<span class="built_in">local</span>/bin/boilr</span><br><span class="line"></span><br><span class="line">ADD templates /root/.config/boilr/templates</span><br><span class="line"></span><br><span class="line">WORKDIR /tmp</span><br><span class="line"></span><br><span class="line">ENTRYPOINT [ <span class="string">"boilr"</span>, <span class="string">"template"</span>, <span class="string">"use"</span>, <span class="string">"your-template"</span>, <span class="string">"/tmp/xpath"</span> ]</span><br><span class="line"></span><br><span class="line"><span class="comment"># docker build</span></span><br><span class="line"><span class="comment">#   docker build --no-cache -t xgenerator:v0.1 .</span></span><br><span class="line"></span><br><span class="line"><span class="comment"># docker run</span></span><br><span class="line"><span class="comment">#   docker run -it -v /tmp/xpath:/tmp/xpath --rm 1f6d7ed63c0a</span></span><br></pre></td></tr></table></figure>
-<p>通过这种方式，如果模板后续有变动，也可以通过调整镜像的方式推送到开发同学手中，很容易维护，在CI/CD中又打通了一环</p>
-<h3 id="源码分析"><a href="#源码分析" class="headerlink" title="源码分析"></a>源码分析</h3><p>boilr的源码还是非常清楚的，可能是因为逻辑相对比较简单，本人不是专业开发，理解起来也不是很难.</p>
-<h3 id="参考文章"><a href="#参考文章" class="headerlink" title="参考文章:"></a><strong>参考文章:</strong></h3><blockquote>
-<ul>
-<li><a href="https://github.com/tmrts/boilr" target="_blank" rel="noopener">https://github.com/tmrts/boilr</a></li>
-<li><a href="https://github.com/littlemanco/boilr-k8sdeployment/blob/master/README.rst" target="_blank" rel="noopener">https://github.com/littlemanco/boilr-k8sdeployment/blob/master/README.rst</a></li>
-<li><a href="https://github.com/littlemanco/boilr-k8sservice/blob/master/README.rst" target="_blank" rel="noopener">https://github.com/littlemanco/boilr-k8sservice/blob/master/README.rst</a></li>
-</ul>
-</blockquote>
-<h3 id="转载请注明出处https-izsk-me"><a href="#转载请注明出处https-izsk-me" class="headerlink" title="转载请注明出处https://izsk.me"></a><strong>转载请注明出处<a href="https://izsk.me" target="_blank" rel="noopener">https://izsk.me</a></strong></h3>]]></content>
-      <categories>
-        <category>Kubernetes</category>
-      </categories>
-      <tags>
-        <tag>Kubernetes</tag>
-      </tags>
-  </entry>
-  <entry>
     <title>Kubernetes学习(Kubernetes踩坑记)</title>
-    <url>/2020/12/23/Kubernetes-prombles/</url>
+    <url>/2021/01/06/Kubernetes-prombles/</url>
     <content><![CDATA[<p>记录在使用Kubernetes中遇到的各种问题及解决方案, 好记性不如烂笔头</p>
 <p><strong>不定期更新</strong></p>
 <a id="more"></a>
+<h3 id="kubectl查看日志时提示-Error-from-server-Get-https-xxx-10250-containerLogs-spring-prod-xxx-0-xxx-dial-tcp-xxx-10250-i-o-timeout"><a href="#kubectl查看日志时提示-Error-from-server-Get-https-xxx-10250-containerLogs-spring-prod-xxx-0-xxx-dial-tcp-xxx-10250-i-o-timeout" class="headerlink" title="kubectl查看日志时提示: Error from server: Get https://xxx:10250/containerLogs/spring-prod/xxx-0/xxx: dial tcp xxx:10250: i/o timeout"></a>kubectl查看日志时提示: Error from server: Get <a href="https://xxx:10250/containerLogs/spring-prod/xxx-0/xxx" target="_blank" rel="noopener">https://xxx:10250/containerLogs/spring-prod/xxx-0/xxx</a>: dial tcp xxx:10250: i/o timeout</h3><p>原因: 目地机器的iptables对10250这个端口进行了drop，如下图</p>
+<figure class="highlight bash"><table><tr><td class="code"><pre><span class="line">iptables-save -L –-line-numbers</span><br></pre></td></tr></table></figure>
+<p><img src="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20210106185555.png" alt></p>
+<p>解决: 删除对应的规则 </p>
+<figure class="highlight bash"><table><tr><td class="code"><pre><span class="line">iptables -D INPUT 10</span><br></pre></td></tr></table></figure>
 <p>###Service解析提示 Temporary failure in name resolution </p>
 <p><img src="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20201223232538.png" alt></p>
 <p>原因: 出现这种情况很奇怪，现象很显示，就是域名无法解析，全格式的域名能够解析是因为在Pod的/etc/hosts中有全域名的记录,那么问题就出在于Corddns解析上，会发现coredns从日志来看，没有任何报错，但是从pod的状态来看，虽然处于Running状态，但是0/1可以看出coredns并未处于ready状态.</p>
@@ -325,6 +166,170 @@
 <li><a href="https://www.magalix.com/blog/kubernetes-patterns-the-reflection-pattern" target="_blank" rel="noopener">https://www.magalix.com/blog/kubernetes-patterns-the-reflection-pattern</a></li>
 <li><a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.19/#deploymentspec-v1-apps" target="_blank" rel="noopener">https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.19/#deploymentspec-v1-apps</a></li>
 <li><a href="https://github.com/kubernetes/kubernetes/pull/62167/files" target="_blank" rel="noopener">https://github.com/kubernetes/kubernetes/pull/62167/files</a></li>
+</ul>
+</blockquote>
+<h3 id="转载请注明出处https-izsk-me"><a href="#转载请注明出处https-izsk-me" class="headerlink" title="转载请注明出处https://izsk.me"></a><strong>转载请注明出处<a href="https://izsk.me" target="_blank" rel="noopener">https://izsk.me</a></strong></h3>]]></content>
+      <categories>
+        <category>Kubernetes</category>
+      </categories>
+      <tags>
+        <tag>Kubernetes</tag>
+      </tags>
+  </entry>
+  <entry>
+    <title>2021-努力奋斗</title>
+    <url>/2020/12/27/2021/</url>
+    <content><![CDATA[<h3 id="2021"><a href="#2021" class="headerlink" title="2021"></a><strong>2021</strong></h3><h1 id="不喝鸡汤，负重前行"><a href="#不喝鸡汤，负重前行" class="headerlink" title="不喝鸡汤，负重前行"></a><strong>不喝鸡汤，负重前行</strong></h1><a id="more"></a>
+<h3 id="生活"><a href="#生活" class="headerlink" title="生活"></a>生活</h3><p>生活如旧，没有跌宕起伏，时间不够用, 对人有辜负</p>
+<p>可能是因为疫情的关系，大家都不好过，朋友聚在一直的时间也很少</p>
+<h3 id="工作"><a href="#工作" class="headerlink" title="工作"></a>工作</h3><p>2020的工作前半年比较W/F balance，后面相对就比较忙了，</p>
+<p>好在工作规划基本都实现了，在个人Role上也开始向Manager转变</p>
+<p>在这个过程中，让我感触最深的事是:</p>
+<p><strong>面了那么多的候选人，会发现中年危机在互联网这个行业更加地严重</strong></p>
+<p>以前自己做为被面试者，体会没那么深</p>
+<p>反而是做了面试官之后，这种体会越发明显，也可能是年纪大了，比较惆怅</p>
+<p>再过几年，我会成为那个他，<strong>如果改变不了这种现状，那就只能改变自己</strong></p>
+<ol>
+<li>不管大环境如何，自身的硬素质一定要有</li>
+<li>工作重要，但也需要尽量维持人际关系</li>
+<li>保持核心竞争力，尽可能成为团队核心</li>
+<li>凡事表明态度、照顾队员情绪</li>
+</ol>
+<p>说到面试，我想说的是，面试了那么多了，其实就只有两种人:</p>
+<ol>
+<li>虚</li>
+</ol>
+<p>有些候选人为了更加自己的竞争力，简历上做了修饰，我觉得这个可以理解，竞争这么激烈，为了混口饭吃都不容易，但是也别一问细节什么都不知道，这就有点减分的效果了，写在简历上的东西，还是搞深一点比较好</p>
+<p><strong>并不是所有的厂面试，都是上来直接二道算法hard，没有意义而且带坏风气</strong></p>
+<ol start="2">
+<li>到底谁面谁</li>
+</ol>
+<p>面试官并非各方面都懂，大部分情况下他只会问他知道的，所以如果抓到机会，可以互相讨论，除非碰到面试官一根筋，大部分情况下可以加分.</p>
+<p><strong>2020，就这样</strong></p>
+<h3 id="2021-1"><a href="#2021-1" class="headerlink" title="2021"></a>2021</h3><p><strong>努力，奋斗</strong></p>
+<h3 id="参考文章"><a href="#参考文章" class="headerlink" title="参考文章:"></a><strong>参考文章:</strong></h3><h3 id="转载请注明出处https-izsk-me"><a href="#转载请注明出处https-izsk-me" class="headerlink" title="转载请注明出处https://izsk.me"></a><strong>转载请注明出处<a href="https://izsk.me" target="_blank" rel="noopener">https://izsk.me</a></strong></h3>]]></content>
+      <categories>
+        <category>随淑笔记</category>
+      </categories>
+      <tags>
+        <tag>随淑笔记</tag>
+      </tags>
+  </entry>
+  <entry>
+    <title>Kubernetes学习(当使用kubectl apply -f 多个资源时,资源创建的顺序是怎么样的)</title>
+    <url>/2020/12/27/Kubernetes-Apply-Directory-Order/</url>
+    <content><![CDATA[<p>前几天一个开发同学跑过来跟我说，在自动发布一个应用到k8s集群中时，会出现发布成功，但是容器中的配置文件还是旧配置文件的情况，让我看看原因.第一时间我觉得不可能，但是一细想，好像是有可能发生, 立马在我脑海中出现一个疑问:</p>
+<p><strong>使用了这么多年的k8s, <code>kubectl apply -f &lt;directory&gt;</code>时，目录下多个资源文件的apply顺序到底是什么?</strong></p>
+<a id="more"></a>
+<h3 id="kubectl"><a href="#kubectl" class="headerlink" title="kubectl"></a>kubectl</h3><p>等到下一秒的我，又可以很清晰且自信地回答上面的问题, 在之前的使用<code>apply -f &lt;directory&gt;</code>时，出现过几次提示没有<code>namespace</code>的情况，类似如下:</p>
+<figure class="highlight bash"><table><tr><td class="code"><pre><span class="line"><span class="comment"># ls test</span></span><br><span class="line">config.yml</span><br><span class="line">deploy.yml</span><br><span class="line">ns.yml</span><br><span class="line">service.yml</span><br></pre></td></tr></table></figure>
+<p>如上所示，如果直接使用<code>kubectl apply -f .</code>则会出现在创建<code>deploy.yml</code>时提示找不到<code>namespace</code></p>
+<p>从输出的结果可以得到结论: <strong>在创建多个资源文件时，创建的顺序是以文件名排序的顺序,这样的话就可能存在依赖失败</strong></p>
+<p>按道理这个依赖关系对kubernetes来说不是很复杂，为何不支持呢? 个人感觉如果是原生的资源对象，那确实不复杂，但后面引入的<code>CRD</code>机制，这个依赖关系就不好处理了，所以就是现在这个局面，说不定新版本已经支持.</p>
+<p>从官方文档上也有这么<a href="https://kubernetes.io/docs/concepts/cluster-administration/manage-deployment/" target="_blank" rel="noopener">一段话</a>:</p>
+<p><img src="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20201227151502.png" alt></p>
+<p>翻译: apply 也支持指定目录，会在目录下查找<code>yaml、yml、json</code>为后缀的文件名进行apply</p>
+<p>同时，也建议将同一个服务的所有的资源放在一个文件中，这也就是为什么现在很多的服务安装时提示的url都是在一个文件中放置所有的资源.</p>
+<p>本人也查找了<code>kubernetes/kubectl</code> 的github，也未发现具体的原因，有如下讨论的issue:</p>
+<blockquote>
+<ul>
+<li><a href="https://github.com/kubernetes/kubernetes/issues/24649" target="_blank" rel="noopener">https://github.com/kubernetes/kubernetes/issues/24649</a></li>
+<li><a href="https://github.com/kubernetes/kubernetes/issues/64203" target="_blank" rel="noopener">https://github.com/kubernetes/kubernetes/issues/64203</a></li>
+<li><a href="https://github.com/kubernetes/kubernetes/issues/44511" target="_blank" rel="noopener">https://github.com/kubernetes/kubernetes/issues/44511</a></li>
+</ul>
+</blockquote>
+<p>回到开发同学的问题，如果是按照上面的逻辑确实可能存在那个问题, 即</p>
+<p>如果apply的资源在集群中已经存在，apply 又是使用的是文件名排序进行patch的，如果deploy中引用的secret，则就有可能在创建deploy时使用了集群中已存在的secret，因为此时新的secret还没有apply</p>
+<p>解决的办法也很简单:</p>
+<ol>
+<li>要么，按照依赖的顺序将所有资源放到同一个文件中</li>
+<li>要么，修改资源文件的名，依赖项靠前即可</li>
+<li>使用<code>kubectl replace --force -f</code>在创建前先删除</li>
+</ol>
+<h4 id="源码分析"><a href="#源码分析" class="headerlink" title="源码分析"></a>源码分析</h4><p>从kubectl的源码来看，确实没有看到处理资源依赖相关的代码</p>
+<p>这里使用的是v1.15.5版本的kubectl，新版本不太清楚是否已支持依赖资源的创建</p>
+<h3 id="kustomize"><a href="#kustomize" class="headerlink" title="kustomize"></a>kustomize</h3><p>但是，当前环境使用的是<code>argocd + kustomize</code>做的CI/CD pipeline，没有直接使用kubectl,发布的时候使用的是kustomize，<code>难道kustomize也不能保证顺序</code>?</p>
+<p>kustomize的版本是v1.15.9</p>
+<p>目前使用的kustomizition.yaml文件是统一的，格式如下:</p>
+<figure class="highlight yaml"><table><tr><td class="code"><pre><span class="line"><span class="attr">apiVersion:</span> <span class="string">kustomize.config.k8s.io/v1beta1</span></span><br><span class="line"><span class="attr">kind:</span> <span class="string">Kustomization</span></span><br><span class="line"></span><br><span class="line"><span class="attr">resources:</span></span><br><span class="line"><span class="bullet">-</span> <span class="string">service.yml.j2</span></span><br><span class="line"><span class="bullet">-</span> <span class="string">configmap.yml.j2</span></span><br><span class="line"><span class="bullet">-</span> <span class="string">deployment.yml.j2</span></span><br><span class="line"></span><br><span class="line"><span class="attr">namespace:</span> <span class="string">prod</span></span><br></pre></td></tr></table></figure>
+<p>为了验证kustomize生成yaml文件的顺序，可以使用<code>kustomize build .</code>来查看<code>resources</code>下的资源的顺序是怎样的，build有额外的参数可以控制输出结果，这里没有使用，因为生成的结果太长， 就不贴上来了，直接说结论:</p>
+<p>通过测试可以知道, <code>resources下的资源文件不管怎么放，都是一样的顺序且不存在资源依赖问题</code></p>
+<p>也就是说，如果deployment依赖于configmap，则一定是configmap先apply.</p>
+<p>那为何kubectl没有解决而kustomize解决了呢? 也是从官方文档看到这么一句话</p>
+<figure class="highlight bash"><table><tr><td class="code"><pre><span class="line">Resource Creation Ordering</span><br><span class="line">Certain Resource Types may be dependent on other Resource Types being created first. e.g. Namespaced</span><br><span class="line">Resources on the Namespaces, RoleBindings on Roles, CustomResources on the CRDs, etc.</span><br><span class="line"></span><br><span class="line">When used with a kustomization.yaml, Apply sorts the Resources by Resource <span class="built_in">type</span> to ensure Resources</span><br><span class="line">with these dependencies are created <span class="keyword">in</span> the correct order.</span><br></pre></td></tr></table></figure>
+<p>翻译: 简单来说，就是kustomize会解决资源之间的依赖关系.</p>
+<p>只能从kustomize build的源码来看实现了</p>
+<h4 id="源码分析-1"><a href="#源码分析-1" class="headerlink" title="源码分析"></a>源码分析</h4><p>这里不展开所有的代码了，从build子命令一步一步按调用顺序，</p>
+<p>最终在<a href="https://github.com/kubernetes-sigs/kustomize/blob/master/api/resid/gvk.go" target="_blank" rel="noopener">gvk.go</a>中发现有如下的order</p>
+<figure class="highlight bash"><table><tr><td class="code"><pre><span class="line">var orderFirst = []string&#123;</span><br><span class="line">	<span class="string">"Namespace"</span>,</span><br><span class="line">	<span class="string">"ResourceQuota"</span>,</span><br><span class="line">	<span class="string">"StorageClass"</span>,</span><br><span class="line">	<span class="string">"CustomResourceDefinition"</span>,</span><br><span class="line">	<span class="string">"ServiceAccount"</span>,</span><br><span class="line">	<span class="string">"PodSecurityPolicy"</span>,</span><br><span class="line">	<span class="string">"Role"</span>,</span><br><span class="line">	<span class="string">"ClusterRole"</span>,</span><br><span class="line">	<span class="string">"RoleBinding"</span>,</span><br><span class="line">	<span class="string">"ClusterRoleBinding"</span>,</span><br><span class="line">	<span class="string">"ConfigMap"</span>,</span><br><span class="line">	<span class="string">"Secret"</span>,</span><br><span class="line">	<span class="string">"Endpoints"</span>,</span><br><span class="line">	<span class="string">"Service"</span>,</span><br><span class="line">	<span class="string">"LimitRange"</span>,</span><br><span class="line">	<span class="string">"PriorityClass"</span>,</span><br><span class="line">	<span class="string">"PersistentVolume"</span>,</span><br><span class="line">	<span class="string">"PersistentVolumeClaim"</span>,</span><br><span class="line">	<span class="string">"Deployment"</span>,</span><br><span class="line">	<span class="string">"StatefulSet"</span>,</span><br><span class="line">	<span class="string">"CronJob"</span>,</span><br><span class="line">	<span class="string">"PodDisruptionBudget"</span>,</span><br><span class="line">&#125;</span><br><span class="line">var orderLast = []string&#123;</span><br><span class="line">	<span class="string">"MutatingWebhookConfiguration"</span>,</span><br><span class="line">	<span class="string">"ValidatingWebhookConfiguration"</span>,</span><br><span class="line">&#125;</span><br><span class="line">var typeOrders = func() map[string]int &#123;</span><br><span class="line">	m := map[string]int&#123;&#125;</span><br><span class="line">	<span class="keyword">for</span> i, n := range orderFirst &#123;</span><br><span class="line">		m[n] = -len(orderFirst) + i</span><br><span class="line">	&#125;</span><br><span class="line">	<span class="keyword">for</span> i, n := range orderLast &#123;</span><br><span class="line">		m[n] = 1 + i</span><br><span class="line">	&#125;</span><br><span class="line">	<span class="built_in">return</span> m</span><br><span class="line">&#125;()</span><br></pre></td></tr></table></figure>
+<p>这里引用了一个名词，<code>gvk</code>， 可参考这篇<a href="https://liqiang.io/post/kubernetes-all-about-crd-part02-api-server-and-gvkr-dc53e1f1" target="_blank" rel="noopener">文章</a></p>
+<p>简单来说<code>gvk</code>其实就是<code>group、kind、version</code>,是定位一种类型的方式,k8s中使用的资源都会使用到</p>
+<figure class="highlight bash"><table><tr><td class="code"><pre><span class="line">apiVersion: apps/v1  <span class="comment"># group version</span></span><br><span class="line">kind: DaemonSet  <span class="comment"># kind</span></span><br><span class="line">metadata:</span><br><span class="line">  name: node-exporter</span><br></pre></td></tr></table></figure>
+<p>回到上面的代码底下那部分代码，是给资源对象计算资源id的，这个id就是在执行<code>kustomize build .</code>命令时用于控制输出的，相关代码在<a href="https://github.com/kubernetes-sigs/kustomize/blob/master/api/builtins/LegacyOrderTransformer.go" target="_blank" rel="noopener">这里</a></p>
+<figure class="highlight go"><table><tr><td class="code"><pre><span class="line"><span class="function"><span class="keyword">func</span> <span class="params">(p *LegacyOrderTransformerPlugin)</span> <span class="title">Transform</span><span class="params">(m resmap.ResMap)</span> <span class="params">(err error)</span></span> &#123;</span><br><span class="line">	resources := <span class="built_in">make</span>([]*resource.Resource, m.Size())</span><br><span class="line">	ids := m.AllIds()</span><br><span class="line">	sort.Sort(resmap.IdSlice(ids))</span><br><span class="line">	<span class="keyword">for</span> i, id := <span class="keyword">range</span> ids &#123;</span><br><span class="line">		resources[i], err = m.GetByCurrentId(id)</span><br><span class="line">		<span class="keyword">if</span> err != <span class="literal">nil</span> &#123;</span><br><span class="line">			<span class="keyword">return</span> errors.Wrap(err, <span class="string">"expected match for sorting"</span>)</span><br><span class="line">		&#125;</span><br><span class="line">	&#125;</span><br><span class="line">	m.Clear()</span><br><span class="line">	<span class="keyword">for</span> _, r := <span class="keyword">range</span> resources &#123;</span><br><span class="line">		m.Append(r)</span><br><span class="line">	&#125;</span><br><span class="line">	<span class="keyword">return</span> <span class="literal">nil</span></span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p><code>m.AllIds()</code>先解析<code>kustomization.yaml</code>中resource字段中的资源文件, 获取到所有的资源ids</p>
+<p><code>sort.Sort(resmap.IdSlice(ids))</code>对所有ids进行排序</p>
+<p>最后将排序后的资源文件内容写回到文件中，这个文件就是最终build的结果</p>
+<p>分析到了这里，基本可以排除开发同学反馈的问题.</p>
+<h3 id="helm"><a href="#helm" class="headerlink" title="helm"></a>helm</h3><p>另一个使用最多的资源生成工具, helm又是什么情况呢?</p>
+<p>从helm的源码来看，很直接，直接维护了个资源的优先级，v2版本是集成在tiller中，参考<a href="https://github.com/helm/helm/blob/release-2.10/pkg/tiller/kind_sorter.go#L29" target="_blank" rel="noopener">这里</a></p>
+<p>v3版本因为废弃了tiller，代码移到了<a href="https://github.com/helm/helm/blob/master/pkg/releaseutil/kind_sorter.go" target="_blank" rel="noopener">这里</a></p>
+<figure class="highlight go"><table><tr><td class="code"><pre><span class="line"><span class="keyword">var</span> InstallOrder KindSortOrder = []<span class="keyword">string</span>&#123;</span><br><span class="line">	<span class="string">"Namespace"</span>,</span><br><span class="line">	<span class="string">"NetworkPolicy"</span>,</span><br><span class="line">	<span class="string">"ResourceQuota"</span>,</span><br><span class="line">	<span class="string">"LimitRange"</span>,</span><br><span class="line">	<span class="string">"PodSecurityPolicy"</span>,</span><br><span class="line">	<span class="string">"PodDisruptionBudget"</span>,</span><br><span class="line">	<span class="string">"ServiceAccount"</span>,</span><br><span class="line">	<span class="string">"Secret"</span>,</span><br><span class="line">	<span class="string">"SecretList"</span>,</span><br><span class="line">	<span class="string">"ConfigMap"</span>,</span><br><span class="line">	<span class="string">"StorageClass"</span>,</span><br><span class="line">	<span class="string">"PersistentVolume"</span>,</span><br><span class="line">	<span class="string">"PersistentVolumeClaim"</span>,</span><br><span class="line">	<span class="string">"CustomResourceDefinition"</span>,</span><br><span class="line">	<span class="string">"ClusterRole"</span>,</span><br><span class="line">	<span class="string">"ClusterRoleList"</span>,</span><br><span class="line">	<span class="string">"ClusterRoleBinding"</span>,</span><br><span class="line">	<span class="string">"ClusterRoleBindingList"</span>,</span><br><span class="line">	<span class="string">"Role"</span>,</span><br><span class="line">	<span class="string">"RoleList"</span>,</span><br><span class="line">	<span class="string">"RoleBinding"</span>,</span><br><span class="line">	<span class="string">"RoleBindingList"</span>,</span><br><span class="line">	<span class="string">"Service"</span>,</span><br><span class="line">	<span class="string">"DaemonSet"</span>,</span><br><span class="line">	<span class="string">"Pod"</span>,</span><br><span class="line">	<span class="string">"ReplicationController"</span>,</span><br><span class="line">	<span class="string">"ReplicaSet"</span>,</span><br><span class="line">	<span class="string">"Deployment"</span>,</span><br><span class="line">	<span class="string">"HorizontalPodAutoscaler"</span>,</span><br><span class="line">	<span class="string">"StatefulSet"</span>,</span><br><span class="line">	<span class="string">"Job"</span>,</span><br><span class="line">	<span class="string">"CronJob"</span>,</span><br><span class="line">	<span class="string">"Ingress"</span>,</span><br><span class="line">	<span class="string">"APIService"</span>,</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>在使用Helm部署时，是以这个列表的顺序进行发布的，这们就不存在资源依赖的问题, 卸载时则使用相反的顺序.</p>
+<p>有点意思</p>
+<h3 id="参考文章"><a href="#参考文章" class="headerlink" title="参考文章:"></a><strong>参考文章:</strong></h3><blockquote>
+<ul>
+<li><a href="https://kubernetes.io/docs/concepts/cluster-administration/manage-deployment/" target="_blank" rel="noopener">https://kubernetes.io/docs/concepts/cluster-administration/manage-deployment/</a></li>
+<li><a href="https://github.com/kubernetes/kubernetes/issues/24649" target="_blank" rel="noopener">https://github.com/kubernetes/kubernetes/issues/24649</a></li>
+<li><a href="https://github.com/kubernetes/kubernetes/issues/64203" target="_blank" rel="noopener">https://github.com/kubernetes/kubernetes/issues/64203</a></li>
+<li><a href="https://github.com/kubernetes/kubernetes/issues/44511" target="_blank" rel="noopener">https://github.com/kubernetes/kubernetes/issues/44511</a></li>
+<li><a href="https://github.com/helm/helm/blob/release-2.10/pkg/tiller/kind_sorter.go#L29" target="_blank" rel="noopener">https://github.com/helm/helm/blob/release-2.10/pkg/tiller/kind_sorter.go#L29</a></li>
+<li><a href="https://github.com/helm/helm/blob/master/pkg/releaseutil/kind_sorter.go" target="_blank" rel="noopener">https://github.com/helm/helm/blob/master/pkg/releaseutil/kind_sorter.go</a></li>
+<li><a href="https://liqiang.io/post/kubernetes-all-about-crd-part02-api-server-and-gvkr-dc53e1f1" target="_blank" rel="noopener">https://liqiang.io/post/kubernetes-all-about-crd-part02-api-server-and-gvkr-dc53e1f1</a></li>
+<li><a href="https://github.com/kubernetes-sigs/kustomize/blob/master/api/builtins/LegacyOrderTransformer.go" target="_blank" rel="noopener">https://github.com/kubernetes-sigs/kustomize/blob/master/api/builtins/LegacyOrderTransformer.go</a></li>
+</ul>
+</blockquote>
+<h3 id="转载请注明出处https-izsk-me"><a href="#转载请注明出处https-izsk-me" class="headerlink" title="转载请注明出处https://izsk.me"></a><strong>转载请注明出处<a href="https://izsk.me" target="_blank" rel="noopener">https://izsk.me</a></strong></h3>]]></content>
+      <categories>
+        <category>Kubernetes</category>
+      </categories>
+      <tags>
+        <tag>Kubernetes</tag>
+      </tags>
+  </entry>
+  <entry>
+    <title>Kubernetes学习(k8s的资源模板生成工具-boilr)</title>
+    <url>/2020/12/26/Kubernetes-Resource-Templates-Boilr/</url>
+    <content><![CDATA[<p>相信在使用k8s的过程中，对于各种资源的操作一定是最多的，社区包括kubernetes本身出了多种模板生成工具，比如helm, kustomize这两种是最常用的，本人也一直在用，但有的场景依然会觉得这两个工具相对较重，helm使用的是gotemplate，而kustomize则又依赖于kubectl，两者都有一定的学习成本且没有交互能力，最近在做的一个小需求是: 如何快速地让开发同学以最简单的方式根据提供的模板生成部署文件，github上发现了个<code>boilr</code>的工具，虽然工具老了点，但是足够地小，功能足够简单，重要的是有交互功能，比较贴合需求</p>
+<a id="more"></a>
+<p>boilr已经很久很久没更新了，很功能上看，boilr也引用了仓库的概念，本人相信boilr的作者是想把这个工具做的很NB</p>
+<p>当然,从Readme看，也非常简洁，用法也相对简单</p>
+<h3 id="安装"><a href="#安装" class="headerlink" title="安装"></a>安装</h3><p>根据readme直接下载二进制文件即可使用</p>
+<h3 id="使用"><a href="#使用" class="headerlink" title="使用"></a>使用</h3><p>几乎所有的模板系统的生成思路都一样的，<strong>根据给定的k-v去替换相应的占位符</strong>，boilr也不例外</p>
+<p>在使用前，先下载个模板文件，这里就使用官方的例子:</p>
+<p>使用之前需要先初始化boilr的相关目录, 默认情况下，会生成/root/.config/boilr/templates目录，这个可以从源代码看到(configuration.go)[<a href="https://github.com/zhoushuke/boilr/blob/master/pkg/boilr/configuration.go]" target="_blank" rel="noopener">https://github.com/zhoushuke/boilr/blob/master/pkg/boilr/configuration.go]</a></p>
+<figure class="highlight bash"><table><tr><td class="code"><pre><span class="line">boilr init .</span><br></pre></td></tr></table></figure>
+<p>然后就可以下载模板目录了</p>
+<figure class="highlight bash"><table><tr><td class="code"><pre><span class="line">boilr template download littlemanco/boilr-k8sservice k8sservice</span><br></pre></td></tr></table></figure>
+<p>注意: 因为boilr很久都没有维护了，在download时可能会遇到<code>pkt-line 3: invalid capabilities</code>,这是由于boilr代码里使用的<code>go-git</code>相对于现在来说，版本太旧了，所以可以直接通过git clone 把模板下下来，是一样的效果</p>
+<p>通过git clone下载下来后需要把<code>boilr-k8sservice</code>放到<code>/root/.config/boilr/templates</code>目录下</p>
+<p>这里最主要的是有个<code>project.json</code>文件</p>
+<figure class="highlight json"><table><tr><td class="code"><pre><span class="line">&#123;</span><br><span class="line">  <span class="attr">"Namespace"</span>: <span class="string">"product"</span>,</span><br><span class="line">  <span class="attr">"Service"</span>: <span class="string">"product"</span>,</span><br><span class="line">  <span class="attr">"Application"</span>: <span class="string">"nginx"</span>,</span><br><span class="line">  <span class="attr">"Role"</span>: <span class="string">"webserver"</span>,</span><br><span class="line">  <span class="attr">"ApplicationPortProtocol"</span>: [</span><br><span class="line">    <span class="string">"TCP"</span>,</span><br><span class="line">    <span class="string">"UDP"</span></span><br><span class="line">  ],</span><br><span class="line">  <span class="attr">"ApplicationPortName"</span>: <span class="string">"http"</span>,</span><br><span class="line">  <span class="attr">"ApplicationPort"</span>: <span class="number">80</span>,</span><br><span class="line">  <span class="attr">"Type"</span>: [</span><br><span class="line">    <span class="string">"ClusterIP"</span>,</span><br><span class="line">    <span class="string">"NodePort"</span>,</span><br><span class="line">    <span class="string">"LoadBalancer"</span></span><br><span class="line">  ],</span><br><span class="line">  <span class="attr">"UsePrometheus"</span>: [</span><br><span class="line">    <span class="string">"true"</span>,</span><br><span class="line">    <span class="string">"false"</span></span><br><span class="line">  ]</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>通过解析这个文件里的字段进行模板文件的替换，文件中的value都是默认值，如果是列表的话，在交互时可提供选择,还是很方便的</p>
+<p>使用以下命令指定使用该模板</p>
+<figure class="highlight bash"><table><tr><td class="code"><pre><span class="line">boilr template use k8sservice /tmp/deploy</span><br></pre></td></tr></table></figure>
+<p>后面的<code>/tmp/deploy</code>是最终生成的模板文件保存的目录，我这里修改了点东西</p>
+<p>详细的交互输出如下:</p>
+<figure class="highlight bash"><table><tr><td class="code"><pre><span class="line">以下是详细输出内容:</span><br><span class="line">​```bash</span><br><span class="line">[?] Please choose a value <span class="keyword">for</span> <span class="string">"module_name"</span> [default: <span class="string">"test-frontend"</span>]: product</span><br><span class="line">[?] Please choose a value <span class="keyword">for</span> <span class="string">"config_name"</span> [default: <span class="string">"config.yml"</span>]: </span><br><span class="line">[✔] Created deploy/base/configmap.yml.j2</span><br><span class="line">[?] Please choose a value <span class="keyword">for</span> <span class="string">"registry_host"</span> [default: <span class="string">"&#123;&#123;registry_host&#125;&#125;"</span>]: </span><br><span class="line">[?] Please choose a value <span class="keyword">for</span> <span class="string">"registry_project"</span> [default: <span class="string">"&#123;&#123;registry_project&#125;&#125;"</span>]: </span><br><span class="line">[?] Please choose a value <span class="keyword">for</span> <span class="string">"registry_image"</span> [default: <span class="string">"&#123;&#123;registry_image&#125;&#125;"</span>]: </span><br><span class="line">[?] Please choose a value <span class="keyword">for</span> <span class="string">"registry_tag"</span> [default: <span class="string">"&#123;&#123;registry_tag&#125;&#125;"</span>]: </span><br><span class="line">[?] Please choose a value <span class="keyword">for</span> <span class="string">"port_number"</span> [default: 8080]: </span><br><span class="line">[?] Please choose a value <span class="keyword">for</span> <span class="string">"config_path"</span> [default: <span class="string">"/app/services"</span>]: </span><br><span class="line">[✔] Created deploy/base/deployment.yml.j2</span><br><span class="line">[?] Please choose an option <span class="keyword">for</span> <span class="string">"port_name"</span> </span><br><span class="line">    1 - <span class="string">"http"</span></span><br><span class="line">    2 - <span class="string">"grpc"</span></span><br><span class="line">    Choose from 1..2 [default: 1]: </span><br><span class="line">[?] Please choose a value <span class="keyword">for</span> <span class="string">"port_protocol"</span> [default: <span class="string">"TCP"</span>]: </span><br><span class="line">[?] Please choose a value <span class="keyword">for</span> <span class="string">"service_type"</span> [default: <span class="string">"ClusterIP"</span>]: </span><br><span class="line">[✔] Created deploy/base/service.yml.j2</span><br><span class="line">[?] Please choose a value <span class="keyword">for</span> <span class="string">"namespace_name"</span> [default: <span class="string">"prod"</span>]: </span><br><span class="line">[✔] Created deploy/vars/main.yml</span><br><span class="line">[✔] Successfully executed the project template sensespring <span class="keyword">in</span> /tmp/xpath</span><br></pre></td></tr></table></figure>
+<h3 id="dockerfile"><a href="#dockerfile" class="headerlink" title="dockerfile"></a>dockerfile</h3><p>通过上面的使用，为了减少对环境的依赖，可以将模板文件打包到镜像中，这样开发同学就可以直接使用镜像进行生成，还是很方便的</p>
+<figure class="highlight bash"><table><tr><td class="code"><pre><span class="line">FROM alpine:latest</span><br><span class="line"></span><br><span class="line">RUN apk add --no-cache tzdata bash ca-certificates</span><br><span class="line"></span><br><span class="line">ADD boilr /usr/<span class="built_in">local</span>/bin/boilr</span><br><span class="line"></span><br><span class="line">RUN mkdir -p /root/.config/boilr &amp;&amp; \</span><br><span class="line">    chmod +x /usr/<span class="built_in">local</span>/bin/boilr</span><br><span class="line"></span><br><span class="line">ADD templates /root/.config/boilr/templates</span><br><span class="line"></span><br><span class="line">WORKDIR /tmp</span><br><span class="line"></span><br><span class="line">ENTRYPOINT [ <span class="string">"boilr"</span>, <span class="string">"template"</span>, <span class="string">"use"</span>, <span class="string">"your-template"</span>, <span class="string">"/tmp/xpath"</span> ]</span><br><span class="line"></span><br><span class="line"><span class="comment"># docker build</span></span><br><span class="line"><span class="comment">#   docker build --no-cache -t xgenerator:v0.1 .</span></span><br><span class="line"></span><br><span class="line"><span class="comment"># docker run</span></span><br><span class="line"><span class="comment">#   docker run -it -v /tmp/xpath:/tmp/xpath --rm 1f6d7ed63c0a</span></span><br></pre></td></tr></table></figure>
+<p>通过这种方式，如果模板后续有变动，也可以通过调整镜像的方式推送到开发同学手中，很容易维护，在CI/CD中又打通了一环</p>
+<h3 id="源码分析"><a href="#源码分析" class="headerlink" title="源码分析"></a>源码分析</h3><p>boilr的源码还是非常清楚的，可能是因为逻辑相对比较简单，本人不是专业开发，理解起来也不是很难.</p>
+<h3 id="参考文章"><a href="#参考文章" class="headerlink" title="参考文章:"></a><strong>参考文章:</strong></h3><blockquote>
+<ul>
+<li><a href="https://github.com/tmrts/boilr" target="_blank" rel="noopener">https://github.com/tmrts/boilr</a></li>
+<li><a href="https://github.com/littlemanco/boilr-k8sdeployment/blob/master/README.rst" target="_blank" rel="noopener">https://github.com/littlemanco/boilr-k8sdeployment/blob/master/README.rst</a></li>
+<li><a href="https://github.com/littlemanco/boilr-k8sservice/blob/master/README.rst" target="_blank" rel="noopener">https://github.com/littlemanco/boilr-k8sservice/blob/master/README.rst</a></li>
 </ul>
 </blockquote>
 <h3 id="转载请注明出处https-izsk-me"><a href="#转载请注明出处https-izsk-me" class="headerlink" title="转载请注明出处https://izsk.me"></a><strong>转载请注明出处<a href="https://izsk.me" target="_blank" rel="noopener">https://izsk.me</a></strong></h3>]]></content>
@@ -686,48 +691,6 @@
   </entry>
   <entry>
     <title>使用crash查看Linux系统异常重启原因</title>
-    <url>/2020/09/27/System-kernel-panic-debug/</url>
-    <content><![CDATA[<p>最近有一台物理机间歇性的发生重启, 本以为是偶发事件就没多在意，今天又给重启了, 因此决定探探究竟</p>
-<a id="more"></a>
-<p>首先看一下kdump服务是否开启, kdump主要用于内核发生crash时记录相关上下文的. 用来转储运行内存的一个工具</p>
-<p>简言之: 系统一旦崩溃，内核就没法正常工作了，这个时候将由kdump提供一个用于捕获当前运行信息的内核，</p>
-<p>该内核会将此时内存中的所有运行状态和数据信息收集到一个dump core文件中以便之后分析崩溃原因</p>
-<p>之后系统便会重启.</p>
-<p>关于kdump在内核已经崩溃的前提下还能够捕获到异常信息, 原理可<a href="https://blog.csdn.net/zhangskd/article/details/38084337" target="_blank" rel="noopener">参考</a></p>
-<p><img src="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20200927180148.png" alt></p>
-<p>这里引用<a href="https://blog.csdn.net/zhangskd/article/details/38084337" target="_blank" rel="noopener">一张图</a></p>
-<p><img src="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20200927185450.png" alt></p>
-<p>要分析core文件，可以使用crash工具，首先是安装:</p>
-<p>注意, 要安装与当前内核对应的版本, 要不然crash无法使用.</p>
-<figure class="highlight bash"><table><tr><td class="code"><pre><span class="line">wget http://debuginfo.centos.org/7/x86_64/kernel-debuginfo-common-x86_64-3.10.0-693.el7.x86_64.rpm</span><br><span class="line">wget http://debuginfo.centos.org/7/x86_64/kernel-debuginfo-3.10.0-693.el7.x86_64.rpm</span><br><span class="line"></span><br><span class="line">rpm -ivh kernel-debuginfo-common-x86_64-3.10.0-693.el7.x86_64.rpm</span><br><span class="line">rpm -ivh kernel-debuginfo-3.10.0-693.el7.x86_64.rpm</span><br><span class="line"></span><br><span class="line">yum install crash</span><br></pre></td></tr></table></figure>
-<p>通常, 内核crash后保存的core文件保存在<code>/var/crash</code>目录下，在该目录下找到最近一次crash的时间，使用以下命令启动crash分析dump.</p>
-<figure class="highlight bash"><table><tr><td class="code"><pre><span class="line">crash vmcore /usr/lib/debug/lib/modules/3.10.0-693.el7.x86_64/vmlinux</span><br></pre></td></tr></table></figure>
-<p>启动之后就进入到了crash命令行，很明显地显示出crash的原因,如下图红框所示:</p>
-<p><img src="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20200927175237.png" alt></p>
-<p>这里简要地反应出内核crash时的一些内存信息快照，包含一些物理信息, tasks数量，最重要的就是导致crash的command与panic的原因</p>
-<p>这里可直接使用ps查看进程的相关信息,跟linux 命令行下的ps功能相似</p>
-<p><img src="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20200927175207.png" alt></p>
-<p>还可以使用bt命令来查看trace信息, 当然都是一些汇编层的内容，需要有一定的专业知识，理解起来比较困难.</p>
-<p>从上面已经知道了panic的原因后就可对症下药.</p>
-<p>另外crash支持很多的子命令,大家可使用man crash查看，比较常用的为</p>
-<figure class="highlight bash"><table><tr><td class="code"><pre><span class="line">crash ps <span class="comment"># 查看进程</span></span><br><span class="line">crash sys <span class="comment"># 查看系统信息</span></span><br><span class="line">crash bt <span class="comment"># 查看堆栈信息</span></span><br><span class="line">crash files <span class="comment"># 查看异常时进程打开的文件</span></span><br><span class="line">crash task <span class="comment"># 查看指定task的信息</span></span><br></pre></td></tr></table></figure>
-<h3 id="参考文章"><a href="#参考文章" class="headerlink" title="参考文章:"></a><strong>参考文章:</strong></h3><blockquote>
-<ul>
-<li><a href="https://www.linuxtechi.com/how-to-enable-kdump-on-rhel-7-and-centos-7/" target="_blank" rel="noopener">https://www.linuxtechi.com/how-to-enable-kdump-on-rhel-7-and-centos-7/</a></li>
-<li><a href="https://www.cnblogs.com/doctormo/p/12619485.html" target="_blank" rel="noopener">https://www.cnblogs.com/doctormo/p/12619485.html</a></li>
-<li><a href="https://blog.csdn.net/zhangskd/article/details/38084337" target="_blank" rel="noopener">https://blog.csdn.net/zhangskd/article/details/38084337</a></li>
-</ul>
-</blockquote>
-<h3 id="转载请注明出处https-izsk-me"><a href="#转载请注明出处https-izsk-me" class="headerlink" title="转载请注明出处https://izsk.me"></a><strong>转载请注明出处<a href="https://izsk.me" target="_blank" rel="noopener">https://izsk.me</a></strong></h3>]]></content>
-      <categories>
-        <category>System</category>
-      </categories>
-      <tags>
-        <tag>System</tag>
-      </tags>
-  </entry>
-  <entry>
-    <title>使用crash查看Linux系统异常重启原因</title>
     <url>/2020/09/27/kernel-panic-debug/</url>
     <content><![CDATA[<p>最近有一台物理机间歇性的发生重启, 本以为是偶发事件就没多在意，今天又给重启了, 因此决定探探究竟</p>
 <a id="more"></a>
@@ -766,6 +729,48 @@
       </categories>
       <tags>
         <tag>Shell</tag>
+      </tags>
+  </entry>
+  <entry>
+    <title>使用crash查看Linux系统异常重启原因</title>
+    <url>/2020/09/27/System-kernel-panic-debug/</url>
+    <content><![CDATA[<p>最近有一台物理机间歇性的发生重启, 本以为是偶发事件就没多在意，今天又给重启了, 因此决定探探究竟</p>
+<a id="more"></a>
+<p>首先看一下kdump服务是否开启, kdump主要用于内核发生crash时记录相关上下文的. 用来转储运行内存的一个工具</p>
+<p>简言之: 系统一旦崩溃，内核就没法正常工作了，这个时候将由kdump提供一个用于捕获当前运行信息的内核，</p>
+<p>该内核会将此时内存中的所有运行状态和数据信息收集到一个dump core文件中以便之后分析崩溃原因</p>
+<p>之后系统便会重启.</p>
+<p>关于kdump在内核已经崩溃的前提下还能够捕获到异常信息, 原理可<a href="https://blog.csdn.net/zhangskd/article/details/38084337" target="_blank" rel="noopener">参考</a></p>
+<p><img src="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20200927180148.png" alt></p>
+<p>这里引用<a href="https://blog.csdn.net/zhangskd/article/details/38084337" target="_blank" rel="noopener">一张图</a></p>
+<p><img src="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20200927185450.png" alt></p>
+<p>要分析core文件，可以使用crash工具，首先是安装:</p>
+<p>注意, 要安装与当前内核对应的版本, 要不然crash无法使用.</p>
+<figure class="highlight bash"><table><tr><td class="code"><pre><span class="line">wget http://debuginfo.centos.org/7/x86_64/kernel-debuginfo-common-x86_64-3.10.0-693.el7.x86_64.rpm</span><br><span class="line">wget http://debuginfo.centos.org/7/x86_64/kernel-debuginfo-3.10.0-693.el7.x86_64.rpm</span><br><span class="line"></span><br><span class="line">rpm -ivh kernel-debuginfo-common-x86_64-3.10.0-693.el7.x86_64.rpm</span><br><span class="line">rpm -ivh kernel-debuginfo-3.10.0-693.el7.x86_64.rpm</span><br><span class="line"></span><br><span class="line">yum install crash</span><br></pre></td></tr></table></figure>
+<p>通常, 内核crash后保存的core文件保存在<code>/var/crash</code>目录下，在该目录下找到最近一次crash的时间，使用以下命令启动crash分析dump.</p>
+<figure class="highlight bash"><table><tr><td class="code"><pre><span class="line">crash vmcore /usr/lib/debug/lib/modules/3.10.0-693.el7.x86_64/vmlinux</span><br></pre></td></tr></table></figure>
+<p>启动之后就进入到了crash命令行，很明显地显示出crash的原因,如下图红框所示:</p>
+<p><img src="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20200927175237.png" alt></p>
+<p>这里简要地反应出内核crash时的一些内存信息快照，包含一些物理信息, tasks数量，最重要的就是导致crash的command与panic的原因</p>
+<p>这里可直接使用ps查看进程的相关信息,跟linux 命令行下的ps功能相似</p>
+<p><img src="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20200927175207.png" alt></p>
+<p>还可以使用bt命令来查看trace信息, 当然都是一些汇编层的内容，需要有一定的专业知识，理解起来比较困难.</p>
+<p>从上面已经知道了panic的原因后就可对症下药.</p>
+<p>另外crash支持很多的子命令,大家可使用man crash查看，比较常用的为</p>
+<figure class="highlight bash"><table><tr><td class="code"><pre><span class="line">crash ps <span class="comment"># 查看进程</span></span><br><span class="line">crash sys <span class="comment"># 查看系统信息</span></span><br><span class="line">crash bt <span class="comment"># 查看堆栈信息</span></span><br><span class="line">crash files <span class="comment"># 查看异常时进程打开的文件</span></span><br><span class="line">crash task <span class="comment"># 查看指定task的信息</span></span><br></pre></td></tr></table></figure>
+<h3 id="参考文章"><a href="#参考文章" class="headerlink" title="参考文章:"></a><strong>参考文章:</strong></h3><blockquote>
+<ul>
+<li><a href="https://www.linuxtechi.com/how-to-enable-kdump-on-rhel-7-and-centos-7/" target="_blank" rel="noopener">https://www.linuxtechi.com/how-to-enable-kdump-on-rhel-7-and-centos-7/</a></li>
+<li><a href="https://www.cnblogs.com/doctormo/p/12619485.html" target="_blank" rel="noopener">https://www.cnblogs.com/doctormo/p/12619485.html</a></li>
+<li><a href="https://blog.csdn.net/zhangskd/article/details/38084337" target="_blank" rel="noopener">https://blog.csdn.net/zhangskd/article/details/38084337</a></li>
+</ul>
+</blockquote>
+<h3 id="转载请注明出处https-izsk-me"><a href="#转载请注明出处https-izsk-me" class="headerlink" title="转载请注明出处https://izsk.me"></a><strong>转载请注明出处<a href="https://izsk.me" target="_blank" rel="noopener">https://izsk.me</a></strong></h3>]]></content>
+      <categories>
+        <category>System</category>
+      </categories>
+      <tags>
+        <tag>System</tag>
       </tags>
   </entry>
   <entry>
@@ -5488,6 +5493,130 @@
       </tags>
   </entry>
   <entry>
+    <title>Kubernetes学习(Bootstrap Token机制)</title>
+    <url>/2020/01/05/Kubernetes-Bootstrap-Node/</url>
+    <content><![CDATA[<p>CKA考试时可能会遇到一个大题: 大致题意是: 在已经存在的一个Kubernetes Cluster中新增一个Node, 使其加入集群及相关证书可自动续签.</p>
+<a id="more"></a>
+<p>我们一般搭建k8s集群，都使用了一些开源工具来做，这类工具都自动帮我们做了很多事情，因此我们只需要简单执行一条命令后，一个集群就完成搭建了, 非常方便，同时也隐藏了一些k8s的知识点, 比如Bootstarp Token就是上面这道题的考察内容.</p>
+<p>要了解Bootstrap Token前，我们要知道Kubernetes集群的<strong>认证(Kubernetes)及鉴权(Kubernetes)机制</strong>.</p>
+<p>Kubernetes中的存在非常多的证书, 原于Kubernetes的有些组件同时充当服务端及客户端, 比如apiserver, 其它组件访问它时，它是服务端, 同时，它也会访问etcd或者kubelet，这时它是客户端. 这种访问是需要通过认证的,kubernetes的认证也支持多种方式, 证书为其中最常用的, Kubernetes的证书可以存在多套,每套的证书可以由不同的<strong>根证书(CA)</strong>签发, apiserver访问kubelet跟访问etcd可以通过使用由不同根证书签发的证书来访问, 但是一般情况下，一个Kuberntes集群中我们习惯使用一个CA来签署所有的证书, 这也是几乎所有的部署工具采用的方式.</p>
+<p><strong>Bootstrap Token主要涉及认证阶段(TLS)</strong>，至于鉴权机制(RBAC)，不是本文重点.</p>
+<p><strong>集群启用RBAC后各组件之间的通信是基于TLS加密的，client和server需要通过证书中的CN，O来确定用户的user和group，因此client和server都需要持有有效证书, Bootstrap Token只用于kubelet tls 到apiserver的认证, 如果k8s集群本身都未开启tls,那自然就不需要了</strong></p>
+<p><strong>Node在Kubelet的启动参数中指定事先在集群中配置好的Bootstrap Token，这个Bootstrap Token只具有引导Node加入集群的权限限定，除此之外，没有其它权限, 这样通过限定权限可以保障集群安全</strong></p>
+<h3 id="Kubelet申请证书大致流程"><a href="#Kubelet申请证书大致流程" class="headerlink" title="Kubelet申请证书大致流程"></a>Kubelet申请证书大致流程</h3><blockquote>
+<ul>
+<li>集群产生一个低权账号用户组，通过TOKEN进行认证创建ClusterRole使其具有创建证书申请CSR的权限</li>
+<li>给这个组添加ClusterRoleBinding，使得具有这个组的账号的kubelet具有上述权限</li>
+<li>给添加ClusterRoleBinding，使得controller-manager自动同意上述两个证书的下发</li>
+<li>调整 Controller Manager确保启动tokencleaner和bootstrapsigner（4中自动证书下发的功能）</li>
+<li>基于上述TOKEN生成bootstrap.kubeconfig文件，并下发给node节点</li>
+<li>node节点的kubelet拿着这个bootstrap.kubeconfig向master的apiserver发起CSR(certificate signing request)</li>
+<li>master自动同意并下发第一个证书</li>
+<li>node节点的kubelet自动拿着第一个证书与master的apiserver通信申请第二个证书</li>
+<li>master自动同意并下发第二个证书</li>
+<li>node节点加入集群</li>
+</ul>
+</blockquote>
+<p><strong>上述过程要求，kubelet跟apiserver具有相同的CA证书</strong></p>
+<p>假设现阶段已经存在一个k8s集群, 然后存在一台需要加入改集群的node.</p>
+<p>先对Node做一些准备工作:</p>
+<h3 id="Node系统初始化"><a href="#Node系统初始化" class="headerlink" title="Node系统初始化"></a><strong>Node系统初始化</strong></h3><figure class="highlight bash"><table><tr><td class="code"><pre><span class="line">swapoff -a</span><br><span class="line"></span><br><span class="line">modprobe ip_vs_rr</span><br><span class="line"></span><br><span class="line">modprobe br_netfilter</span><br><span class="line"></span><br><span class="line">cat &gt;&gt; /etc/sysctl.conf &lt;&lt;EOF</span><br><span class="line">net.bridge.bridge-nf-call-iptables=1</span><br><span class="line">net.bridge.bridge-nf-call-ip6tables=1</span><br><span class="line">  EOF</span><br><span class="line">sysctl -p /etc/sysctl.conf</span><br></pre></td></tr></table></figure>
+<h3 id="Node安装docker-kubelet"><a href="#Node安装docker-kubelet" class="headerlink" title="Node安装docker/kubelet"></a>Node安装docker/kubelet</h3><figure class="highlight shell"><table><tr><td class="code"><pre><span class="line">apt-get update</span><br><span class="line">apt-get install -y docker kubelet</span><br></pre></td></tr></table></figure>
+<p>此时我们查看kubelet会发现它启动失败,因为目前还未配置bootstrap相关配置，它无法连接上apiserver</p>
+<h3 id="调整kube-apiserver"><a href="#调整kube-apiserver" class="headerlink" title="调整kube-apiserver"></a>调整kube-apiserver</h3><p>要使用bootstrap token引导Node加入集群, kube-apiserver 需要开启参数    <code>--enable-bootstrap-token-auth=true</code></p>
+<h3 id="Bootstrap"><a href="#Bootstrap" class="headerlink" title="Bootstrap"></a>Bootstrap</h3><h4 id="生成一个token"><a href="#生成一个token" class="headerlink" title="生成一个token"></a>生成一个token</h4><figure class="highlight shell"><table><tr><td class="code"><pre><span class="line">echo "$(head -c 6 /dev/urandom | md5sum | head -c 6)"."$(head -c 16 /dev/urandom | md5sum | head -c 16)"</span><br><span class="line">4b0928.8d7687fdb10e3707</span><br></pre></td></tr></table></figure>
+<p>Kubernetes的官方有详细说明, 点击查看<a href="https://kubernetes.io/docs/reference/command-line-tools-reference/kubelet-tls-bootstrapping/#bootstrap-tokens" target="_blank" rel="noopener">Bootstrap Token</a></p>
+<p>既然token只需要符合格式就行，CKA考试的时候可以直接使用页面上的Token来做，毕竟上面这一大串的命令不是谁都能记得住.</p>
+<h4 id="创建-Bootstrap-Token-Secret"><a href="#创建-Bootstrap-Token-Secret" class="headerlink" title="创建 Bootstrap Token Secret"></a>创建 Bootstrap Token Secret</h4><figure class="highlight yaml"><table><tr><td class="code"><pre><span class="line"><span class="attr">apiVersion:</span> <span class="string">v1</span></span><br><span class="line"><span class="attr">kind:</span> <span class="string">Secret</span></span><br><span class="line"><span class="attr">metadata:</span></span><br><span class="line">  <span class="comment"># Name MUST be of form "bootstrap-token-&lt;token id&gt;"</span></span><br><span class="line">  <span class="attr">name:</span> <span class="string">bootstrap-token-4b0928</span></span><br><span class="line">  <span class="attr">namespace:</span> <span class="string">kube-system</span></span><br><span class="line"></span><br><span class="line"><span class="comment"># Type MUST be 'bootstrap.kubernetes.io/token'</span></span><br><span class="line"><span class="attr">type:</span> <span class="string">bootstrap.kubernetes.io/token</span></span><br><span class="line"><span class="attr">stringData:</span></span><br><span class="line">  <span class="comment"># Human readable description. Optional.</span></span><br><span class="line">  <span class="attr">description:</span> <span class="string">"The default bootstrap token generated by 'kubeadm init'."</span></span><br><span class="line"></span><br><span class="line">  <span class="comment"># Token ID and secret. Required.</span></span><br><span class="line">  <span class="attr">token-id:</span> <span class="string">4b0928</span></span><br><span class="line">  <span class="attr">token-secret:</span> <span class="string">8d7687fdb10e3707</span></span><br><span class="line"></span><br><span class="line">  <span class="comment"># Expiration. Optional. 要注意这个过期时间, 如果相对于现在的时间已经过期, 则会被自动删除</span></span><br><span class="line">  <span class="attr">expiration:</span> <span class="number">2021</span><span class="number">-03</span><span class="string">-10T03:22:11Z</span></span><br><span class="line"></span><br><span class="line">  <span class="comment"># Allowed usages.</span></span><br><span class="line">  <span class="attr">usage-bootstrap-authentication:</span> <span class="string">"true"</span></span><br><span class="line">  <span class="attr">usage-bootstrap-signing:</span> <span class="string">"true"</span></span><br><span class="line"></span><br><span class="line">  <span class="comment"># Extra groups to authenticate the token as. Must start with "system:bootstrappers:"</span></span><br><span class="line">  <span class="attr">auth-extra-groups:</span> <span class="string">system:bootstrappers:worker,system:bootstrappers:ingress</span></span><br></pre></td></tr></table></figure>
+<p>secret的格式有要求,如下:</p>
+<blockquote>
+<ul>
+<li>namespace必须是kube-system</li>
+<li>name的后半部分token-id必须是token的前部分</li>
+<li>Expiration必须是未来的某个时刻, 不然的话一新建就会被删除</li>
+<li>token必须属于system:bootstrappers开头的组.</li>
+</ul>
+</blockquote>
+<p>更多信息可看这里<a href="https://kubernetes.io/docs/reference/command-line-tools-reference/kubelet-tls-bootstrapping/" target="_blank" rel="noopener">kubelet-tls-bootstrapping</a></p>
+<p>上述操作只是创建出了这个token, 下面需要给这个token绑定合适的权限, 用于引导Node.</p>
+<h4 id="创建-ClusterRole-和-ClusterRoleBinding"><a href="#创建-ClusterRole-和-ClusterRoleBinding" class="headerlink" title="创建 ClusterRole 和 ClusterRoleBinding"></a>创建 ClusterRole 和 ClusterRoleBinding</h4><p>查看集群必须存在3个clusterrole及3个clusterrolebinding,如下:</p>
+<p>3个clusterrole:</p>
+<blockquote>
+<ul>
+<li>system:certificates.k8s.io:certificatesigningrequests:nodeclient 用于第一次证书认证</li>
+<li>system:certificates.k8s.io:certificatesigningrequests:selfnodeclient 用于证书续签</li>
+<li>system:certificates.k8s.io:certificatesigningrequests:selfnodeserver </li>
+</ul>
+</blockquote>
+<p><strong>nodeclient 类型的 CSR 仅在第一次启动时会产生，selfnodeclient 类型的 CSR 请求实际上就是 kubelet renew 自己作为 client 跟 apiserver 通讯时使用的证书产生的，selfnodeserver 类型的 CSR 请求则是 kubelet 首次申请或后续 renew 自己的 10250 api 端口证书时产生的</strong></p>
+<p>重点关注前两个，后面那个k8s新版本下会自动新建</p>
+<figure class="highlight yaml"><table><tr><td class="code"><pre><span class="line"><span class="comment"># A ClusterRole which instructs the CSR approver to approve a user requesting</span></span><br><span class="line"><span class="comment"># node client credentials.</span></span><br><span class="line"><span class="attr">apiVersion:</span> <span class="string">rbac.authorization.k8s.io/v1</span></span><br><span class="line"><span class="attr">kind:</span> <span class="string">ClusterRole</span></span><br><span class="line"><span class="attr">metadata:</span></span><br><span class="line">  <span class="attr">name:</span> <span class="string">system:certificates.k8s.io:certificatesigningrequests:nodeclient</span></span><br><span class="line"><span class="attr">rules:</span></span><br><span class="line"><span class="bullet">-</span> <span class="attr">apiGroups:</span> <span class="string">["certificates.k8s.io"]</span></span><br><span class="line">  <span class="attr">resources:</span> <span class="string">["certificatesigningrequests/nodeclient"]</span></span><br><span class="line">  <span class="attr">verbs:</span> <span class="string">["create"]</span></span><br><span class="line"><span class="meta">---</span></span><br><span class="line"><span class="comment"># A ClusterRole which instructs the CSR approver to approve a node renewing its</span></span><br><span class="line"><span class="comment"># own client credentials.</span></span><br><span class="line"><span class="attr">apiVersion:</span> <span class="string">rbac.authorization.k8s.io/v1</span></span><br><span class="line"><span class="attr">kind:</span> <span class="string">ClusterRole</span></span><br><span class="line"><span class="attr">metadata:</span></span><br><span class="line">  <span class="attr">name:</span> <span class="string">system:certificates.k8s.io:certificatesigningrequests:selfnodeclient</span></span><br><span class="line"><span class="attr">rules:</span></span><br><span class="line"><span class="bullet">-</span> <span class="attr">apiGroups:</span> <span class="string">["certificates.k8s.io"]</span></span><br><span class="line">  <span class="attr">resources:</span> <span class="string">["certificatesigningrequests/selfnodeclient"]</span></span><br><span class="line">  <span class="attr">verbs:</span> <span class="string">["create"]</span></span><br><span class="line"><span class="meta">---</span></span><br><span class="line"><span class="comment"># A ClusterRole which instructs the CSR approver to approve a node requesting a</span></span><br><span class="line"><span class="comment"># serving cert matching its client cert.</span></span><br><span class="line"><span class="attr">kind:</span> <span class="string">ClusterRole</span></span><br><span class="line"><span class="attr">apiVersion:</span> <span class="string">rbac.authorization.k8s.io/v1</span></span><br><span class="line"><span class="attr">metadata:</span></span><br><span class="line">  <span class="attr">name:</span> <span class="string">system:certificates.k8s.io:certificatesigningrequests:selfnodeserver</span></span><br><span class="line"><span class="attr">rules:</span></span><br><span class="line"><span class="bullet">-</span> <span class="attr">apiGroups:</span> <span class="string">["certificates.k8s.io"]</span></span><br><span class="line">  <span class="attr">resources:</span> <span class="string">["certificatesigningrequests/selfnodeserver"]</span></span><br><span class="line">  <span class="attr">verbs:</span> <span class="string">["create"]</span></span><br></pre></td></tr></table></figure>
+<p>同时，需要有以下3个clusterrolebinding 到 clusterrole</p>
+<blockquote>
+<ul>
+<li>system:node-bootstrapper</li>
+<li>system:certificates.k8s.io:certificatesigningrequests:nodeclient</li>
+<li>system:certificates.k8s.io:certificatesigningrequests:selfnodeclient</li>
+</ul>
+</blockquote>
+<figure class="highlight yaml"><table><tr><td class="code"><pre><span class="line"><span class="comment"># enable bootstrapping nodes to create CSR</span></span><br><span class="line"><span class="attr">apiVersion:</span> <span class="string">rbac.authorization.k8s.io/v1</span></span><br><span class="line"><span class="attr">kind:</span> <span class="string">ClusterRoleBinding</span></span><br><span class="line"><span class="attr">metadata:</span></span><br><span class="line">  <span class="attr">name:</span> <span class="string">create-csrs-for-bootstrapping</span></span><br><span class="line"><span class="attr">subjects:</span></span><br><span class="line"><span class="bullet">-</span> <span class="attr">kind:</span> <span class="string">Group</span></span><br><span class="line">  <span class="attr">name:</span> <span class="string">system:bootstrappers</span></span><br><span class="line">  <span class="attr">apiGroup:</span> <span class="string">rbac.authorization.k8s.io</span></span><br><span class="line"><span class="attr">roleRef:</span></span><br><span class="line">  <span class="attr">kind:</span> <span class="string">ClusterRole</span></span><br><span class="line">  <span class="attr">name:</span> <span class="string">system:node-bootstrapper</span></span><br><span class="line">  <span class="attr">apiGroup:</span> <span class="string">rbac.authorization.k8s.io</span></span><br></pre></td></tr></table></figure>
+<figure class="highlight yaml"><table><tr><td class="code"><pre><span class="line"><span class="comment"># Approve all CSRs for the group "system:bootstrappers"</span></span><br><span class="line"><span class="attr">apiVersion:</span> <span class="string">rbac.authorization.k8s.io/v1</span></span><br><span class="line"><span class="attr">kind:</span> <span class="string">ClusterRoleBinding</span></span><br><span class="line"><span class="attr">metadata:</span></span><br><span class="line">  <span class="attr">name:</span> <span class="string">auto-approve-csrs-for-group</span></span><br><span class="line"><span class="attr">subjects:</span></span><br><span class="line"><span class="bullet">-</span> <span class="attr">kind:</span> <span class="string">Group</span></span><br><span class="line">  <span class="attr">name:</span> <span class="string">system:bootstrappers</span></span><br><span class="line">  <span class="attr">apiGroup:</span> <span class="string">rbac.authorization.k8s.io</span></span><br><span class="line"><span class="attr">roleRef:</span></span><br><span class="line">  <span class="attr">kind:</span> <span class="string">ClusterRole</span></span><br><span class="line">  <span class="attr">name:</span> <span class="string">system:certificates.k8s.io:certificatesigningrequests:nodeclient</span></span><br><span class="line">  <span class="attr">apiGroup:</span> <span class="string">rbac.authorization.k8s.io</span></span><br></pre></td></tr></table></figure>
+<figure class="highlight yaml"><table><tr><td class="code"><pre><span class="line"><span class="comment"># Approve renewal CSRs for the group "system:nodes"</span></span><br><span class="line"><span class="attr">apiVersion:</span> <span class="string">rbac.authorization.k8s.io/v1</span></span><br><span class="line"><span class="attr">kind:</span> <span class="string">ClusterRoleBinding</span></span><br><span class="line"><span class="attr">metadata:</span></span><br><span class="line">  <span class="attr">name:</span> <span class="string">auto-approve-renewals-for-nodes</span></span><br><span class="line"><span class="attr">subjects:</span></span><br><span class="line"><span class="bullet">-</span> <span class="attr">kind:</span> <span class="string">Group</span></span><br><span class="line">  <span class="attr">name:</span> <span class="string">system:nodes</span></span><br><span class="line">  <span class="attr">apiGroup:</span> <span class="string">rbac.authorization.k8s.io</span></span><br><span class="line"><span class="attr">roleRef:</span></span><br><span class="line">  <span class="attr">kind:</span> <span class="string">ClusterRole</span></span><br><span class="line">  <span class="attr">name:</span> <span class="string">system:certificates.k8s.io:certificatesigningrequests:selfnodeclient</span></span><br><span class="line">  <span class="attr">apiGroup:</span> <span class="string">rbac.authorization.k8s.io</span></span><br></pre></td></tr></table></figure>
+<p>自动批准组<code>system:bootstrappers</code>所有CSR 请求(nodeclient)</p>
+<p>自动批准组<code>system:nodes</code>的证书重签CSR请求.</p>
+<p>所以这就是为何token需要属于<code>system:bootstrappers</code>组</p>
+<p>更多信息可看这里<a href="https://kubernetes.io/docs/reference/command-line-tools-reference/kubelet-tls-bootstrapping/#bootstrap-tokens" target="_blank" rel="noopener">bootstrap-tokens</a></p>
+<h3 id="调整kube-controllermanager启动参数"><a href="#调整kube-controllermanager启动参数" class="headerlink" title="调整kube-controllermanager启动参数"></a>调整kube-controllermanager启动参数</h3><p>kube-controllermanager需要开启支持自动签署证书的参数<code>--controllers=*,bootstrapsigner,tokencleaner</code></p>
+<p>这样，每当有Node通过Bootstrap token来请求CSR(certificate signing request)</p>
+<p>对于 controller manager 来说，TLS bootstrapping 下 kubelet 发起的 CSR 请求大致分为以下三种</p>
+<blockquote>
+<ul>
+<li>nodeclient: kubelet 以 <code>O=system:nodes</code> 和 <code>CN=system:node:(node name)</code> 形式发起的 CSR 请求</li>
+<li>selfnodeclient: kubelet client renew 自己的证书发起的 CSR 请求(与上一个证书就有相同的 O 和 CN)</li>
+<li>selfnodeserver: kubelet server renew 自己的证书发起的 CSR 请求</li>
+</ul>
+</blockquote>
+<p>对应上面的3个clusterrole</p>
+<h3 id="生成kubeconfig文件"><a href="#生成kubeconfig文件" class="headerlink" title="生成kubeconfig文件"></a>生成kubeconfig文件</h3><figure class="highlight shell"><table><tr><td class="code"><pre><span class="line"><span class="meta">#</span><span class="bash"> 设置集群参数</span></span><br><span class="line">kubectl config --kubeconfig=/var/lib/kubelet/bootstrap-kubeconfig set-cluster kubernetes --server='https://10.170.0.2:6443' --certificate-authority=/etc/kubernetes/pki/ca.crt</span><br><span class="line"><span class="meta">#</span><span class="bash"> 设置客户端认证参数</span></span><br><span class="line">kubectl config --kubeconfig=/var/lib/kubelet/bootstrap-kubeconfig set-credentials system:bootstrap:4b0928 --token=4b0928.8d7687fdb10e3707</span><br><span class="line"><span class="meta">#</span><span class="bash">设置上下文参数</span></span><br><span class="line">kubectl config --kubeconfig=/var/lib/kubelet/bootstrap-kubeconfig set-context kubernetes --user=system:bootstrap:4b0928 --cluster=kubernetes</span><br><span class="line"><span class="meta">#</span><span class="bash"> 设置默认上下文</span></span><br><span class="line">kubectl config --kubeconfig=/var/lib/kubelet/bootstrap-kubeconfig use-context kubernetes</span><br></pre></td></tr></table></figure>
+<p>通过上面的命令最终会在/var/lib/kubelet目录下生bootstrap-kubeconfig文件, 将该文件放到node节点上, <strong>kubelet指定改文件路径,启动时从改文件中获取apiserver及Bootstrap Token</strong></p>
+<figure class="highlight yaml"><table><tr><td class="code"><pre><span class="line"><span class="attr">apiVersion:</span> <span class="string">v1</span></span><br><span class="line"><span class="attr">clusters:</span></span><br><span class="line"><span class="bullet">-</span> <span class="attr">cluster:</span></span><br><span class="line">    <span class="attr">certificate-authority:</span> <span class="string">/etc/kubernetes/pki/ca.crt</span></span><br><span class="line">    <span class="attr">server:</span> <span class="string">https://10.170.0.2:6443</span></span><br><span class="line">  <span class="attr">name:</span> <span class="string">kubernetes</span></span><br><span class="line"><span class="attr">contexts:</span></span><br><span class="line"><span class="bullet">-</span> <span class="attr">context:</span></span><br><span class="line">    <span class="attr">cluster:</span> <span class="string">kubernetes</span></span><br><span class="line">    <span class="attr">user:</span> <span class="string">system:bootstrap:4b0928</span></span><br><span class="line">  <span class="attr">name:</span> <span class="string">kubernetes</span></span><br><span class="line"><span class="attr">current-context:</span> <span class="string">kubernetes</span></span><br><span class="line"><span class="attr">kind:</span> <span class="string">Config</span></span><br><span class="line"><span class="attr">preferences:</span> <span class="string">&#123;&#125;</span></span><br><span class="line"><span class="attr">users:</span></span><br><span class="line"><span class="bullet">-</span> <span class="attr">name:</span> <span class="string">system:bootstrap:4b0928</span></span><br><span class="line">  <span class="attr">user:</span></span><br><span class="line">    <span class="attr">token:</span> <span class="string">4b0928.8d7687fdb10e3707</span> <span class="comment">#正是上面生成的token.</span></span><br></pre></td></tr></table></figure>
+<h3 id="调整Node上kubelet启动参数"><a href="#调整Node上kubelet启动参数" class="headerlink" title="调整Node上kubelet启动参数"></a>调整Node上kubelet启动参数</h3><p>node上需要有ca.crt(或者ca.pem)</p>
+<p><code>vim /lib/systemd/system/kubelet.service</code></p>
+<figure class="highlight yaml"><table><tr><td class="code"><pre><span class="line"><span class="string">[Unit]</span></span><br><span class="line"><span class="string">Description=kubelet:</span> <span class="string">The</span> <span class="string">Kubernetes</span> <span class="string">Node</span> <span class="string">Agent</span></span><br><span class="line"><span class="string">Documentation=https://kubernetes.io/docs/home/</span></span><br><span class="line"></span><br><span class="line"><span class="string">[Service]</span></span><br><span class="line"><span class="string">ExecStart=/usr/bin/kubelet</span> <span class="string">\</span></span><br><span class="line">  <span class="string">--bootstrap-kubeconfig=/var/lib/kubelet/bootstrap-kubeconfig</span> <span class="string">\</span></span><br><span class="line">  <span class="string">--kubeconfig=/var/lib/kubelet/kubeconfig</span> <span class="string">\</span></span><br><span class="line">  <span class="string">--config=/var/lib/kubelet/config.yaml</span> <span class="string">\</span></span><br><span class="line">  <span class="string">--network-plugin=cni</span> <span class="string">\</span></span><br><span class="line">  <span class="string">--rotate-certificates=true</span> <span class="string">\</span></span><br><span class="line">  <span class="string">--log-dir=/var/lib/kubelet/kubelet.log</span> <span class="string">\</span></span><br><span class="line">  <span class="string">--register-node=true</span> <span class="string">\</span></span><br><span class="line">  <span class="string">--v=2</span></span><br><span class="line"><span class="string">Restart=always</span></span><br><span class="line"><span class="string">StartLimitInterval=0</span></span><br><span class="line"><span class="string">RestartSec=10</span></span><br><span class="line"></span><br><span class="line"><span class="string">[Install]</span></span><br><span class="line"><span class="string">WantedBy=multi-user.target</span></span><br></pre></td></tr></table></figure>
+<p><strong>其中, 在启动时，如果在–kubeconfig指定的路径下存在kubeconfig文件,则使用该文件做认证,如果不存在，则认证为第一次认证，则使用参数bootstrap-kubeconfig指定的文件, 正是包含bootstrap token的引导文件</strong></p>
+<p><strong>通过kube-controller自动签署之后会把最终的kubeconfig写到–kubeconfig参数指定的路径，后续–bootstrap-kubeconfig则没有作用了. </strong></p>
+<p>config.yaml是kubelet的其它参数配置文件</p>
+<figure class="highlight yaml"><table><tr><td class="code"><pre><span class="line"><span class="comment">#cat /var/lib/kubelet/config.yaml</span></span><br><span class="line"><span class="attr">kind:</span> <span class="string">KubeletConfiguration</span></span><br><span class="line"><span class="attr">apiVersion:</span> <span class="string">kubelet.config.k8s.io/v1beta1</span></span><br><span class="line"><span class="attr">address:</span> <span class="number">10.170</span><span class="number">.0</span><span class="number">.3</span></span><br><span class="line"><span class="attr">port:</span> <span class="number">10250</span></span><br><span class="line"><span class="attr">readOnlyPort:</span> <span class="number">10255</span></span><br><span class="line"><span class="attr">cgroupDriver:</span> <span class="string">systemd</span></span><br><span class="line"><span class="attr">clusterDNS:</span> <span class="string">["10.96.0.10"]</span></span><br><span class="line"><span class="attr">clusterDomain:</span> <span class="string">cluster.local</span></span><br><span class="line"><span class="attr">failSwapOn:</span> <span class="literal">false</span></span><br></pre></td></tr></table></figure>
+<h3 id="流程总结"><a href="#流程总结" class="headerlink" title="流程总结"></a>流程总结</h3><blockquote>
+<ul>
+<li>kubelet 读取 bootstrap.kubeconfig，使用其 CA 与 Token 向 apiserver 发起第一次 CSR 请求(nodeclient),使用组<code>system:bootstrappers</code></li>
+<li>apiserver 根据 RBAC 规则自动批准首次 CSR 请求(approve-node-client-csr)，并下发证书(kubelet-client.crt)</li>
+<li>kubelet <strong>使用刚刚签发的证书(O=system:nodes, CN=system:node:NODE_NAME)</strong>与 apiserver 通讯，并发起申请 10250 server 所使用证书的 CSR 请求</li>
+<li>apiserver 根据 RBAC 规则自动批准 kubelet 为其 10250 端口申请的证书(kubelet-server-current.crt)</li>
+<li>证书即将到期时，kubelet 自动向 apiserver 发起用于与 apiserver 通讯所用证书的 renew CSR 请求和 renew 本身 10250 端口所用证书的 CSR 请求</li>
+<li>apiserver 根据 RBAC 规则自动批准两个证书</li>
+<li>kubelet 拿到新证书后关闭所有连接，reload 新证书，以后便一直如此</li>
+</ul>
+</blockquote>
+<p>建议大家都全手动搭建一次kubernetes,这样对Bootstrap Token机制会了解更深入.</p>
+<h3 id="参考文章"><a href="#参考文章" class="headerlink" title="参考文章:"></a><strong>参考文章:</strong></h3><blockquote>
+<ul>
+<li><a href="https://mritd.me/2018/01/07/kubernetes-tls-bootstrapping-note/" target="_blank" rel="noopener">Kubernetes TLS bootstrapping 那点事</a></li>
+<li><a href="https://mritd.me/2018/08/28/kubernetes-tls-bootstrapping-with-bootstrap-token/" target="_blank" rel="noopener">使用 Bootstrap Token 完成 TLS Bootstrapping</a></li>
+<li><a href="https://kubernetes.io/docs/reference/command-line-tools-reference/kubelet-tls-bootstrapping/" target="_blank" rel="noopener">kubelet-tls-bootstrapping</a></li>
+<li><a href="https://kubernetes.io/docs/reference/command-line-tools-reference/kubelet-tls-bootstrapping/#bootstrap-tokens" target="_blank" rel="noopener">Bootstrap Token</a></li>
+<li><a href="https://github.com/kelseyhightower/kubernetes-the-hard-way" target="_blank" rel="noopener">kubernetes-the-hard-way</a></li>
+</ul>
+</blockquote>
+<h3 id="转载请注明出处https-izsk-me"><a href="#转载请注明出处https-izsk-me" class="headerlink" title="转载请注明出处https://izsk.me"></a><strong>转载请注明出处<a href="https://izsk.me" target="_blank" rel="noopener">https://izsk.me</a></strong></h3>]]></content>
+      <categories>
+        <category>Kubernetes</category>
+      </categories>
+      <tags>
+        <tag>Kubernetes</tag>
+      </tags>
+  </entry>
+  <entry>
     <title>Kubernetes学习(flannel深入学习)</title>
     <url>/2020/01/05/Kubernetes-flannel-details/</url>
     <content><![CDATA[<p>得益于社区的繁荣, 包括部署工具的完善, 现在几乎没人会从0去搭建kubernetes集群, 随便拿起一个开源工具, 几乎都是一条命令, 喝个咖啡, 然后整个集群就能用了, 非常快捷, 但是方便的时候, 也容易遗漏掉其中的一些知识点, 有些对整个kubernetes的了解及生态还是非常有必要的.</p>
@@ -5625,130 +5754,6 @@
 <li><a href="https://www.cnblogs.com/YaoDD/p/7681811.html" target="_blank" rel="noopener">https://www.cnblogs.com/YaoDD/p/7681811.html</a></li>
 <li><a href="https://blog.51cto.com/14143894/2462379" target="_blank" rel="noopener">https://blog.51cto.com/14143894/2462379</a></li>
 <li><a href="https://itnext.io/kubernetes-journey-up-and-running-out-of-the-cloud-flannel-c01283308f0e" target="_blank" rel="noopener">https://itnext.io/kubernetes-journey-up-and-running-out-of-the-cloud-flannel-c01283308f0e</a></li>
-</ul>
-</blockquote>
-<h3 id="转载请注明出处https-izsk-me"><a href="#转载请注明出处https-izsk-me" class="headerlink" title="转载请注明出处https://izsk.me"></a><strong>转载请注明出处<a href="https://izsk.me" target="_blank" rel="noopener">https://izsk.me</a></strong></h3>]]></content>
-      <categories>
-        <category>Kubernetes</category>
-      </categories>
-      <tags>
-        <tag>Kubernetes</tag>
-      </tags>
-  </entry>
-  <entry>
-    <title>Kubernetes学习(Bootstrap Token机制)</title>
-    <url>/2020/01/05/Kubernetes-Bootstrap-Node/</url>
-    <content><![CDATA[<p>CKA考试时可能会遇到一个大题: 大致题意是: 在已经存在的一个Kubernetes Cluster中新增一个Node, 使其加入集群及相关证书可自动续签.</p>
-<a id="more"></a>
-<p>我们一般搭建k8s集群，都使用了一些开源工具来做，这类工具都自动帮我们做了很多事情，因此我们只需要简单执行一条命令后，一个集群就完成搭建了, 非常方便，同时也隐藏了一些k8s的知识点, 比如Bootstarp Token就是上面这道题的考察内容.</p>
-<p>要了解Bootstrap Token前，我们要知道Kubernetes集群的<strong>认证(Kubernetes)及鉴权(Kubernetes)机制</strong>.</p>
-<p>Kubernetes中的存在非常多的证书, 原于Kubernetes的有些组件同时充当服务端及客户端, 比如apiserver, 其它组件访问它时，它是服务端, 同时，它也会访问etcd或者kubelet，这时它是客户端. 这种访问是需要通过认证的,kubernetes的认证也支持多种方式, 证书为其中最常用的, Kubernetes的证书可以存在多套,每套的证书可以由不同的<strong>根证书(CA)</strong>签发, apiserver访问kubelet跟访问etcd可以通过使用由不同根证书签发的证书来访问, 但是一般情况下，一个Kuberntes集群中我们习惯使用一个CA来签署所有的证书, 这也是几乎所有的部署工具采用的方式.</p>
-<p><strong>Bootstrap Token主要涉及认证阶段(TLS)</strong>，至于鉴权机制(RBAC)，不是本文重点.</p>
-<p><strong>集群启用RBAC后各组件之间的通信是基于TLS加密的，client和server需要通过证书中的CN，O来确定用户的user和group，因此client和server都需要持有有效证书, Bootstrap Token只用于kubelet tls 到apiserver的认证, 如果k8s集群本身都未开启tls,那自然就不需要了</strong></p>
-<p><strong>Node在Kubelet的启动参数中指定事先在集群中配置好的Bootstrap Token，这个Bootstrap Token只具有引导Node加入集群的权限限定，除此之外，没有其它权限, 这样通过限定权限可以保障集群安全</strong></p>
-<h3 id="Kubelet申请证书大致流程"><a href="#Kubelet申请证书大致流程" class="headerlink" title="Kubelet申请证书大致流程"></a>Kubelet申请证书大致流程</h3><blockquote>
-<ul>
-<li>集群产生一个低权账号用户组，通过TOKEN进行认证创建ClusterRole使其具有创建证书申请CSR的权限</li>
-<li>给这个组添加ClusterRoleBinding，使得具有这个组的账号的kubelet具有上述权限</li>
-<li>给添加ClusterRoleBinding，使得controller-manager自动同意上述两个证书的下发</li>
-<li>调整 Controller Manager确保启动tokencleaner和bootstrapsigner（4中自动证书下发的功能）</li>
-<li>基于上述TOKEN生成bootstrap.kubeconfig文件，并下发给node节点</li>
-<li>node节点的kubelet拿着这个bootstrap.kubeconfig向master的apiserver发起CSR(certificate signing request)</li>
-<li>master自动同意并下发第一个证书</li>
-<li>node节点的kubelet自动拿着第一个证书与master的apiserver通信申请第二个证书</li>
-<li>master自动同意并下发第二个证书</li>
-<li>node节点加入集群</li>
-</ul>
-</blockquote>
-<p><strong>上述过程要求，kubelet跟apiserver具有相同的CA证书</strong></p>
-<p>假设现阶段已经存在一个k8s集群, 然后存在一台需要加入改集群的node.</p>
-<p>先对Node做一些准备工作:</p>
-<h3 id="Node系统初始化"><a href="#Node系统初始化" class="headerlink" title="Node系统初始化"></a><strong>Node系统初始化</strong></h3><figure class="highlight bash"><table><tr><td class="code"><pre><span class="line">swapoff -a</span><br><span class="line"></span><br><span class="line">modprobe ip_vs_rr</span><br><span class="line"></span><br><span class="line">modprobe br_netfilter</span><br><span class="line"></span><br><span class="line">cat &gt;&gt; /etc/sysctl.conf &lt;&lt;EOF</span><br><span class="line">net.bridge.bridge-nf-call-iptables=1</span><br><span class="line">net.bridge.bridge-nf-call-ip6tables=1</span><br><span class="line">  EOF</span><br><span class="line">sysctl -p /etc/sysctl.conf</span><br></pre></td></tr></table></figure>
-<h3 id="Node安装docker-kubelet"><a href="#Node安装docker-kubelet" class="headerlink" title="Node安装docker/kubelet"></a>Node安装docker/kubelet</h3><figure class="highlight shell"><table><tr><td class="code"><pre><span class="line">apt-get update</span><br><span class="line">apt-get install -y docker kubelet</span><br></pre></td></tr></table></figure>
-<p>此时我们查看kubelet会发现它启动失败,因为目前还未配置bootstrap相关配置，它无法连接上apiserver</p>
-<h3 id="调整kube-apiserver"><a href="#调整kube-apiserver" class="headerlink" title="调整kube-apiserver"></a>调整kube-apiserver</h3><p>要使用bootstrap token引导Node加入集群, kube-apiserver 需要开启参数    <code>--enable-bootstrap-token-auth=true</code></p>
-<h3 id="Bootstrap"><a href="#Bootstrap" class="headerlink" title="Bootstrap"></a>Bootstrap</h3><h4 id="生成一个token"><a href="#生成一个token" class="headerlink" title="生成一个token"></a>生成一个token</h4><figure class="highlight shell"><table><tr><td class="code"><pre><span class="line">echo "$(head -c 6 /dev/urandom | md5sum | head -c 6)"."$(head -c 16 /dev/urandom | md5sum | head -c 16)"</span><br><span class="line">4b0928.8d7687fdb10e3707</span><br></pre></td></tr></table></figure>
-<p>Kubernetes的官方有详细说明, 点击查看<a href="https://kubernetes.io/docs/reference/command-line-tools-reference/kubelet-tls-bootstrapping/#bootstrap-tokens" target="_blank" rel="noopener">Bootstrap Token</a></p>
-<p>既然token只需要符合格式就行，CKA考试的时候可以直接使用页面上的Token来做，毕竟上面这一大串的命令不是谁都能记得住.</p>
-<h4 id="创建-Bootstrap-Token-Secret"><a href="#创建-Bootstrap-Token-Secret" class="headerlink" title="创建 Bootstrap Token Secret"></a>创建 Bootstrap Token Secret</h4><figure class="highlight yaml"><table><tr><td class="code"><pre><span class="line"><span class="attr">apiVersion:</span> <span class="string">v1</span></span><br><span class="line"><span class="attr">kind:</span> <span class="string">Secret</span></span><br><span class="line"><span class="attr">metadata:</span></span><br><span class="line">  <span class="comment"># Name MUST be of form "bootstrap-token-&lt;token id&gt;"</span></span><br><span class="line">  <span class="attr">name:</span> <span class="string">bootstrap-token-4b0928</span></span><br><span class="line">  <span class="attr">namespace:</span> <span class="string">kube-system</span></span><br><span class="line"></span><br><span class="line"><span class="comment"># Type MUST be 'bootstrap.kubernetes.io/token'</span></span><br><span class="line"><span class="attr">type:</span> <span class="string">bootstrap.kubernetes.io/token</span></span><br><span class="line"><span class="attr">stringData:</span></span><br><span class="line">  <span class="comment"># Human readable description. Optional.</span></span><br><span class="line">  <span class="attr">description:</span> <span class="string">"The default bootstrap token generated by 'kubeadm init'."</span></span><br><span class="line"></span><br><span class="line">  <span class="comment"># Token ID and secret. Required.</span></span><br><span class="line">  <span class="attr">token-id:</span> <span class="string">4b0928</span></span><br><span class="line">  <span class="attr">token-secret:</span> <span class="string">8d7687fdb10e3707</span></span><br><span class="line"></span><br><span class="line">  <span class="comment"># Expiration. Optional. 要注意这个过期时间, 如果相对于现在的时间已经过期, 则会被自动删除</span></span><br><span class="line">  <span class="attr">expiration:</span> <span class="number">2021</span><span class="number">-03</span><span class="string">-10T03:22:11Z</span></span><br><span class="line"></span><br><span class="line">  <span class="comment"># Allowed usages.</span></span><br><span class="line">  <span class="attr">usage-bootstrap-authentication:</span> <span class="string">"true"</span></span><br><span class="line">  <span class="attr">usage-bootstrap-signing:</span> <span class="string">"true"</span></span><br><span class="line"></span><br><span class="line">  <span class="comment"># Extra groups to authenticate the token as. Must start with "system:bootstrappers:"</span></span><br><span class="line">  <span class="attr">auth-extra-groups:</span> <span class="string">system:bootstrappers:worker,system:bootstrappers:ingress</span></span><br></pre></td></tr></table></figure>
-<p>secret的格式有要求,如下:</p>
-<blockquote>
-<ul>
-<li>namespace必须是kube-system</li>
-<li>name的后半部分token-id必须是token的前部分</li>
-<li>Expiration必须是未来的某个时刻, 不然的话一新建就会被删除</li>
-<li>token必须属于system:bootstrappers开头的组.</li>
-</ul>
-</blockquote>
-<p>更多信息可看这里<a href="https://kubernetes.io/docs/reference/command-line-tools-reference/kubelet-tls-bootstrapping/" target="_blank" rel="noopener">kubelet-tls-bootstrapping</a></p>
-<p>上述操作只是创建出了这个token, 下面需要给这个token绑定合适的权限, 用于引导Node.</p>
-<h4 id="创建-ClusterRole-和-ClusterRoleBinding"><a href="#创建-ClusterRole-和-ClusterRoleBinding" class="headerlink" title="创建 ClusterRole 和 ClusterRoleBinding"></a>创建 ClusterRole 和 ClusterRoleBinding</h4><p>查看集群必须存在3个clusterrole及3个clusterrolebinding,如下:</p>
-<p>3个clusterrole:</p>
-<blockquote>
-<ul>
-<li>system:certificates.k8s.io:certificatesigningrequests:nodeclient 用于第一次证书认证</li>
-<li>system:certificates.k8s.io:certificatesigningrequests:selfnodeclient 用于证书续签</li>
-<li>system:certificates.k8s.io:certificatesigningrequests:selfnodeserver </li>
-</ul>
-</blockquote>
-<p><strong>nodeclient 类型的 CSR 仅在第一次启动时会产生，selfnodeclient 类型的 CSR 请求实际上就是 kubelet renew 自己作为 client 跟 apiserver 通讯时使用的证书产生的，selfnodeserver 类型的 CSR 请求则是 kubelet 首次申请或后续 renew 自己的 10250 api 端口证书时产生的</strong></p>
-<p>重点关注前两个，后面那个k8s新版本下会自动新建</p>
-<figure class="highlight yaml"><table><tr><td class="code"><pre><span class="line"><span class="comment"># A ClusterRole which instructs the CSR approver to approve a user requesting</span></span><br><span class="line"><span class="comment"># node client credentials.</span></span><br><span class="line"><span class="attr">apiVersion:</span> <span class="string">rbac.authorization.k8s.io/v1</span></span><br><span class="line"><span class="attr">kind:</span> <span class="string">ClusterRole</span></span><br><span class="line"><span class="attr">metadata:</span></span><br><span class="line">  <span class="attr">name:</span> <span class="string">system:certificates.k8s.io:certificatesigningrequests:nodeclient</span></span><br><span class="line"><span class="attr">rules:</span></span><br><span class="line"><span class="bullet">-</span> <span class="attr">apiGroups:</span> <span class="string">["certificates.k8s.io"]</span></span><br><span class="line">  <span class="attr">resources:</span> <span class="string">["certificatesigningrequests/nodeclient"]</span></span><br><span class="line">  <span class="attr">verbs:</span> <span class="string">["create"]</span></span><br><span class="line"><span class="meta">---</span></span><br><span class="line"><span class="comment"># A ClusterRole which instructs the CSR approver to approve a node renewing its</span></span><br><span class="line"><span class="comment"># own client credentials.</span></span><br><span class="line"><span class="attr">apiVersion:</span> <span class="string">rbac.authorization.k8s.io/v1</span></span><br><span class="line"><span class="attr">kind:</span> <span class="string">ClusterRole</span></span><br><span class="line"><span class="attr">metadata:</span></span><br><span class="line">  <span class="attr">name:</span> <span class="string">system:certificates.k8s.io:certificatesigningrequests:selfnodeclient</span></span><br><span class="line"><span class="attr">rules:</span></span><br><span class="line"><span class="bullet">-</span> <span class="attr">apiGroups:</span> <span class="string">["certificates.k8s.io"]</span></span><br><span class="line">  <span class="attr">resources:</span> <span class="string">["certificatesigningrequests/selfnodeclient"]</span></span><br><span class="line">  <span class="attr">verbs:</span> <span class="string">["create"]</span></span><br><span class="line"><span class="meta">---</span></span><br><span class="line"><span class="comment"># A ClusterRole which instructs the CSR approver to approve a node requesting a</span></span><br><span class="line"><span class="comment"># serving cert matching its client cert.</span></span><br><span class="line"><span class="attr">kind:</span> <span class="string">ClusterRole</span></span><br><span class="line"><span class="attr">apiVersion:</span> <span class="string">rbac.authorization.k8s.io/v1</span></span><br><span class="line"><span class="attr">metadata:</span></span><br><span class="line">  <span class="attr">name:</span> <span class="string">system:certificates.k8s.io:certificatesigningrequests:selfnodeserver</span></span><br><span class="line"><span class="attr">rules:</span></span><br><span class="line"><span class="bullet">-</span> <span class="attr">apiGroups:</span> <span class="string">["certificates.k8s.io"]</span></span><br><span class="line">  <span class="attr">resources:</span> <span class="string">["certificatesigningrequests/selfnodeserver"]</span></span><br><span class="line">  <span class="attr">verbs:</span> <span class="string">["create"]</span></span><br></pre></td></tr></table></figure>
-<p>同时，需要有以下3个clusterrolebinding 到 clusterrole</p>
-<blockquote>
-<ul>
-<li>system:node-bootstrapper</li>
-<li>system:certificates.k8s.io:certificatesigningrequests:nodeclient</li>
-<li>system:certificates.k8s.io:certificatesigningrequests:selfnodeclient</li>
-</ul>
-</blockquote>
-<figure class="highlight yaml"><table><tr><td class="code"><pre><span class="line"><span class="comment"># enable bootstrapping nodes to create CSR</span></span><br><span class="line"><span class="attr">apiVersion:</span> <span class="string">rbac.authorization.k8s.io/v1</span></span><br><span class="line"><span class="attr">kind:</span> <span class="string">ClusterRoleBinding</span></span><br><span class="line"><span class="attr">metadata:</span></span><br><span class="line">  <span class="attr">name:</span> <span class="string">create-csrs-for-bootstrapping</span></span><br><span class="line"><span class="attr">subjects:</span></span><br><span class="line"><span class="bullet">-</span> <span class="attr">kind:</span> <span class="string">Group</span></span><br><span class="line">  <span class="attr">name:</span> <span class="string">system:bootstrappers</span></span><br><span class="line">  <span class="attr">apiGroup:</span> <span class="string">rbac.authorization.k8s.io</span></span><br><span class="line"><span class="attr">roleRef:</span></span><br><span class="line">  <span class="attr">kind:</span> <span class="string">ClusterRole</span></span><br><span class="line">  <span class="attr">name:</span> <span class="string">system:node-bootstrapper</span></span><br><span class="line">  <span class="attr">apiGroup:</span> <span class="string">rbac.authorization.k8s.io</span></span><br></pre></td></tr></table></figure>
-<figure class="highlight yaml"><table><tr><td class="code"><pre><span class="line"><span class="comment"># Approve all CSRs for the group "system:bootstrappers"</span></span><br><span class="line"><span class="attr">apiVersion:</span> <span class="string">rbac.authorization.k8s.io/v1</span></span><br><span class="line"><span class="attr">kind:</span> <span class="string">ClusterRoleBinding</span></span><br><span class="line"><span class="attr">metadata:</span></span><br><span class="line">  <span class="attr">name:</span> <span class="string">auto-approve-csrs-for-group</span></span><br><span class="line"><span class="attr">subjects:</span></span><br><span class="line"><span class="bullet">-</span> <span class="attr">kind:</span> <span class="string">Group</span></span><br><span class="line">  <span class="attr">name:</span> <span class="string">system:bootstrappers</span></span><br><span class="line">  <span class="attr">apiGroup:</span> <span class="string">rbac.authorization.k8s.io</span></span><br><span class="line"><span class="attr">roleRef:</span></span><br><span class="line">  <span class="attr">kind:</span> <span class="string">ClusterRole</span></span><br><span class="line">  <span class="attr">name:</span> <span class="string">system:certificates.k8s.io:certificatesigningrequests:nodeclient</span></span><br><span class="line">  <span class="attr">apiGroup:</span> <span class="string">rbac.authorization.k8s.io</span></span><br></pre></td></tr></table></figure>
-<figure class="highlight yaml"><table><tr><td class="code"><pre><span class="line"><span class="comment"># Approve renewal CSRs for the group "system:nodes"</span></span><br><span class="line"><span class="attr">apiVersion:</span> <span class="string">rbac.authorization.k8s.io/v1</span></span><br><span class="line"><span class="attr">kind:</span> <span class="string">ClusterRoleBinding</span></span><br><span class="line"><span class="attr">metadata:</span></span><br><span class="line">  <span class="attr">name:</span> <span class="string">auto-approve-renewals-for-nodes</span></span><br><span class="line"><span class="attr">subjects:</span></span><br><span class="line"><span class="bullet">-</span> <span class="attr">kind:</span> <span class="string">Group</span></span><br><span class="line">  <span class="attr">name:</span> <span class="string">system:nodes</span></span><br><span class="line">  <span class="attr">apiGroup:</span> <span class="string">rbac.authorization.k8s.io</span></span><br><span class="line"><span class="attr">roleRef:</span></span><br><span class="line">  <span class="attr">kind:</span> <span class="string">ClusterRole</span></span><br><span class="line">  <span class="attr">name:</span> <span class="string">system:certificates.k8s.io:certificatesigningrequests:selfnodeclient</span></span><br><span class="line">  <span class="attr">apiGroup:</span> <span class="string">rbac.authorization.k8s.io</span></span><br></pre></td></tr></table></figure>
-<p>自动批准组<code>system:bootstrappers</code>所有CSR 请求(nodeclient)</p>
-<p>自动批准组<code>system:nodes</code>的证书重签CSR请求.</p>
-<p>所以这就是为何token需要属于<code>system:bootstrappers</code>组</p>
-<p>更多信息可看这里<a href="https://kubernetes.io/docs/reference/command-line-tools-reference/kubelet-tls-bootstrapping/#bootstrap-tokens" target="_blank" rel="noopener">bootstrap-tokens</a></p>
-<h3 id="调整kube-controllermanager启动参数"><a href="#调整kube-controllermanager启动参数" class="headerlink" title="调整kube-controllermanager启动参数"></a>调整kube-controllermanager启动参数</h3><p>kube-controllermanager需要开启支持自动签署证书的参数<code>--controllers=*,bootstrapsigner,tokencleaner</code></p>
-<p>这样，每当有Node通过Bootstrap token来请求CSR(certificate signing request)</p>
-<p>对于 controller manager 来说，TLS bootstrapping 下 kubelet 发起的 CSR 请求大致分为以下三种</p>
-<blockquote>
-<ul>
-<li>nodeclient: kubelet 以 <code>O=system:nodes</code> 和 <code>CN=system:node:(node name)</code> 形式发起的 CSR 请求</li>
-<li>selfnodeclient: kubelet client renew 自己的证书发起的 CSR 请求(与上一个证书就有相同的 O 和 CN)</li>
-<li>selfnodeserver: kubelet server renew 自己的证书发起的 CSR 请求</li>
-</ul>
-</blockquote>
-<p>对应上面的3个clusterrole</p>
-<h3 id="生成kubeconfig文件"><a href="#生成kubeconfig文件" class="headerlink" title="生成kubeconfig文件"></a>生成kubeconfig文件</h3><figure class="highlight shell"><table><tr><td class="code"><pre><span class="line"><span class="meta">#</span><span class="bash"> 设置集群参数</span></span><br><span class="line">kubectl config --kubeconfig=/var/lib/kubelet/bootstrap-kubeconfig set-cluster kubernetes --server='https://10.170.0.2:6443' --certificate-authority=/etc/kubernetes/pki/ca.crt</span><br><span class="line"><span class="meta">#</span><span class="bash"> 设置客户端认证参数</span></span><br><span class="line">kubectl config --kubeconfig=/var/lib/kubelet/bootstrap-kubeconfig set-credentials system:bootstrap:4b0928 --token=4b0928.8d7687fdb10e3707</span><br><span class="line"><span class="meta">#</span><span class="bash">设置上下文参数</span></span><br><span class="line">kubectl config --kubeconfig=/var/lib/kubelet/bootstrap-kubeconfig set-context kubernetes --user=system:bootstrap:4b0928 --cluster=kubernetes</span><br><span class="line"><span class="meta">#</span><span class="bash"> 设置默认上下文</span></span><br><span class="line">kubectl config --kubeconfig=/var/lib/kubelet/bootstrap-kubeconfig use-context kubernetes</span><br></pre></td></tr></table></figure>
-<p>通过上面的命令最终会在/var/lib/kubelet目录下生bootstrap-kubeconfig文件, 将该文件放到node节点上, <strong>kubelet指定改文件路径,启动时从改文件中获取apiserver及Bootstrap Token</strong></p>
-<figure class="highlight yaml"><table><tr><td class="code"><pre><span class="line"><span class="attr">apiVersion:</span> <span class="string">v1</span></span><br><span class="line"><span class="attr">clusters:</span></span><br><span class="line"><span class="bullet">-</span> <span class="attr">cluster:</span></span><br><span class="line">    <span class="attr">certificate-authority:</span> <span class="string">/etc/kubernetes/pki/ca.crt</span></span><br><span class="line">    <span class="attr">server:</span> <span class="string">https://10.170.0.2:6443</span></span><br><span class="line">  <span class="attr">name:</span> <span class="string">kubernetes</span></span><br><span class="line"><span class="attr">contexts:</span></span><br><span class="line"><span class="bullet">-</span> <span class="attr">context:</span></span><br><span class="line">    <span class="attr">cluster:</span> <span class="string">kubernetes</span></span><br><span class="line">    <span class="attr">user:</span> <span class="string">system:bootstrap:4b0928</span></span><br><span class="line">  <span class="attr">name:</span> <span class="string">kubernetes</span></span><br><span class="line"><span class="attr">current-context:</span> <span class="string">kubernetes</span></span><br><span class="line"><span class="attr">kind:</span> <span class="string">Config</span></span><br><span class="line"><span class="attr">preferences:</span> <span class="string">&#123;&#125;</span></span><br><span class="line"><span class="attr">users:</span></span><br><span class="line"><span class="bullet">-</span> <span class="attr">name:</span> <span class="string">system:bootstrap:4b0928</span></span><br><span class="line">  <span class="attr">user:</span></span><br><span class="line">    <span class="attr">token:</span> <span class="string">4b0928.8d7687fdb10e3707</span> <span class="comment">#正是上面生成的token.</span></span><br></pre></td></tr></table></figure>
-<h3 id="调整Node上kubelet启动参数"><a href="#调整Node上kubelet启动参数" class="headerlink" title="调整Node上kubelet启动参数"></a>调整Node上kubelet启动参数</h3><p>node上需要有ca.crt(或者ca.pem)</p>
-<p><code>vim /lib/systemd/system/kubelet.service</code></p>
-<figure class="highlight yaml"><table><tr><td class="code"><pre><span class="line"><span class="string">[Unit]</span></span><br><span class="line"><span class="string">Description=kubelet:</span> <span class="string">The</span> <span class="string">Kubernetes</span> <span class="string">Node</span> <span class="string">Agent</span></span><br><span class="line"><span class="string">Documentation=https://kubernetes.io/docs/home/</span></span><br><span class="line"></span><br><span class="line"><span class="string">[Service]</span></span><br><span class="line"><span class="string">ExecStart=/usr/bin/kubelet</span> <span class="string">\</span></span><br><span class="line">  <span class="string">--bootstrap-kubeconfig=/var/lib/kubelet/bootstrap-kubeconfig</span> <span class="string">\</span></span><br><span class="line">  <span class="string">--kubeconfig=/var/lib/kubelet/kubeconfig</span> <span class="string">\</span></span><br><span class="line">  <span class="string">--config=/var/lib/kubelet/config.yaml</span> <span class="string">\</span></span><br><span class="line">  <span class="string">--network-plugin=cni</span> <span class="string">\</span></span><br><span class="line">  <span class="string">--rotate-certificates=true</span> <span class="string">\</span></span><br><span class="line">  <span class="string">--log-dir=/var/lib/kubelet/kubelet.log</span> <span class="string">\</span></span><br><span class="line">  <span class="string">--register-node=true</span> <span class="string">\</span></span><br><span class="line">  <span class="string">--v=2</span></span><br><span class="line"><span class="string">Restart=always</span></span><br><span class="line"><span class="string">StartLimitInterval=0</span></span><br><span class="line"><span class="string">RestartSec=10</span></span><br><span class="line"></span><br><span class="line"><span class="string">[Install]</span></span><br><span class="line"><span class="string">WantedBy=multi-user.target</span></span><br></pre></td></tr></table></figure>
-<p><strong>其中, 在启动时，如果在–kubeconfig指定的路径下存在kubeconfig文件,则使用该文件做认证,如果不存在，则认证为第一次认证，则使用参数bootstrap-kubeconfig指定的文件, 正是包含bootstrap token的引导文件</strong></p>
-<p><strong>通过kube-controller自动签署之后会把最终的kubeconfig写到–kubeconfig参数指定的路径，后续–bootstrap-kubeconfig则没有作用了. </strong></p>
-<p>config.yaml是kubelet的其它参数配置文件</p>
-<figure class="highlight yaml"><table><tr><td class="code"><pre><span class="line"><span class="comment">#cat /var/lib/kubelet/config.yaml</span></span><br><span class="line"><span class="attr">kind:</span> <span class="string">KubeletConfiguration</span></span><br><span class="line"><span class="attr">apiVersion:</span> <span class="string">kubelet.config.k8s.io/v1beta1</span></span><br><span class="line"><span class="attr">address:</span> <span class="number">10.170</span><span class="number">.0</span><span class="number">.3</span></span><br><span class="line"><span class="attr">port:</span> <span class="number">10250</span></span><br><span class="line"><span class="attr">readOnlyPort:</span> <span class="number">10255</span></span><br><span class="line"><span class="attr">cgroupDriver:</span> <span class="string">systemd</span></span><br><span class="line"><span class="attr">clusterDNS:</span> <span class="string">["10.96.0.10"]</span></span><br><span class="line"><span class="attr">clusterDomain:</span> <span class="string">cluster.local</span></span><br><span class="line"><span class="attr">failSwapOn:</span> <span class="literal">false</span></span><br></pre></td></tr></table></figure>
-<h3 id="流程总结"><a href="#流程总结" class="headerlink" title="流程总结"></a>流程总结</h3><blockquote>
-<ul>
-<li>kubelet 读取 bootstrap.kubeconfig，使用其 CA 与 Token 向 apiserver 发起第一次 CSR 请求(nodeclient),使用组<code>system:bootstrappers</code></li>
-<li>apiserver 根据 RBAC 规则自动批准首次 CSR 请求(approve-node-client-csr)，并下发证书(kubelet-client.crt)</li>
-<li>kubelet <strong>使用刚刚签发的证书(O=system:nodes, CN=system:node:NODE_NAME)</strong>与 apiserver 通讯，并发起申请 10250 server 所使用证书的 CSR 请求</li>
-<li>apiserver 根据 RBAC 规则自动批准 kubelet 为其 10250 端口申请的证书(kubelet-server-current.crt)</li>
-<li>证书即将到期时，kubelet 自动向 apiserver 发起用于与 apiserver 通讯所用证书的 renew CSR 请求和 renew 本身 10250 端口所用证书的 CSR 请求</li>
-<li>apiserver 根据 RBAC 规则自动批准两个证书</li>
-<li>kubelet 拿到新证书后关闭所有连接，reload 新证书，以后便一直如此</li>
-</ul>
-</blockquote>
-<p>建议大家都全手动搭建一次kubernetes,这样对Bootstrap Token机制会了解更深入.</p>
-<h3 id="参考文章"><a href="#参考文章" class="headerlink" title="参考文章:"></a><strong>参考文章:</strong></h3><blockquote>
-<ul>
-<li><a href="https://mritd.me/2018/01/07/kubernetes-tls-bootstrapping-note/" target="_blank" rel="noopener">Kubernetes TLS bootstrapping 那点事</a></li>
-<li><a href="https://mritd.me/2018/08/28/kubernetes-tls-bootstrapping-with-bootstrap-token/" target="_blank" rel="noopener">使用 Bootstrap Token 完成 TLS Bootstrapping</a></li>
-<li><a href="https://kubernetes.io/docs/reference/command-line-tools-reference/kubelet-tls-bootstrapping/" target="_blank" rel="noopener">kubelet-tls-bootstrapping</a></li>
-<li><a href="https://kubernetes.io/docs/reference/command-line-tools-reference/kubelet-tls-bootstrapping/#bootstrap-tokens" target="_blank" rel="noopener">Bootstrap Token</a></li>
-<li><a href="https://github.com/kelseyhightower/kubernetes-the-hard-way" target="_blank" rel="noopener">kubernetes-the-hard-way</a></li>
 </ul>
 </blockquote>
 <h3 id="转载请注明出处https-izsk-me"><a href="#转载请注明出处https-izsk-me" class="headerlink" title="转载请注明出处https://izsk.me"></a><strong>转载请注明出处<a href="https://izsk.me" target="_blank" rel="noopener">https://izsk.me</a></strong></h3>]]></content>
@@ -6960,6 +6965,74 @@
       </tags>
   </entry>
   <entry>
+    <title>记一次排查ES FGC导致的集群宕机异常</title>
+    <url>/2019/10/06/ES-FGC-Fix/</url>
+    <content><![CDATA[<p>有一个私有云环境的运维同事反应项目中的ES集群无法查询, 由于是私有云环境, 没有直接运维权限, 所以没有接收到一线报警, 远程登录上去后发现ES集群已经宕机了, 这次的排查过程也发现了几个比较容易忽视的细节, 在此记录一下,比较有意思.</p>
+<a id="more"></a>
+<h3 id="集群状态"><a href="#集群状态" class="headerlink" title="集群状态"></a>集群状态</h3><p>ES集群为3节点.</p>
+<p>首先肯定是查看集群状态</p>
+<figure class="highlight bash"><table><tr><td class="code"><pre><span class="line">curl <span class="string">'http://localhost:9200/_cluster/health?pretty'</span> -u xxx:yyy</span><br><span class="line"><span class="comment">#发现状态为Red</span></span><br></pre></td></tr></table></figure>
+<p>查看节点状态</p>
+<figure class="highlight bash"><table><tr><td class="code"><pre><span class="line">curl <span class="string">'http://localhost:9200/_cat/node?v'</span> -u xxx:yyy</span><br><span class="line"><span class="comment">#节点数正常</span></span><br></pre></td></tr></table></figure>
+<p>查看各节点使用的磁盘情况</p>
+<figure class="highlight bash"><table><tr><td class="code"><pre><span class="line">curl -XGET <span class="string">'localhost:9200/_cat/allocation?v&amp;pretty'</span> -u xxx:yyy</span><br><span class="line"><span class="comment">#未发现异常</span></span><br></pre></td></tr></table></figure>
+<h3 id="集群日志"><a href="#集群日志" class="headerlink" title="集群日志"></a>集群日志</h3><p>登录一个ES节点查看日志，发现以下报错，查看其它2个节点，情况相同</p>
+<p><img src="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20200204134510.png" alt></p>
+<p>从日志来看, 可以发现几个问题:</p>
+<blockquote>
+<ul>
+<li>Full GC很频繁, 而且时间也非常的长 </li>
+<li>每次GC完之后所能释放的内存非常有限</li>
+</ul>
+</blockquote>
+<p>到这，其它原因已经很明朗, <strong>内存不够导致的full gc 频繁，但是又不能释放太多的空间，又导致full gc的恶意循环</strong></p>
+<p>如果大家对gc的日志不很了解的话, 这里解释下上面日志的各个字段含义, 假如有以下一条gc日志</p>
+<figure class="highlight bash"><table><tr><td class="code"><pre><span class="line">[2018-06-30T17:57:29,020][INFO ][o.e.m.j.JvmGcMonitorService] [qoo--ES] [gc][old][228385][160772] duration [5s], collections [1]/[5.1s], total [5s]/[4.4d], memory [945.4mb]-&gt;[958.5mb]/[1007.3mb], all_pools &#123;[young] [87.8mb]-&gt;[100.9mb]/[133.1mb]&#125;&#123;[survivor] [0b]-&gt;[0b]/[16.6mb]&#125;&#123;[old] [857.6mb]-&gt;[857.6mb]/[857.6mb]&#125;</span><br></pre></td></tr></table></figure>
+<ul>
+<li><strong>gc old</strong> 本次是 old GC 这是第228385次 GC 检查][从 JVM 启动至今发生的第 160772次 G]</li>
+<li><strong>duration</strong> [本次检查到的 GC 总耗时 <strong>5</strong> 秒，可能是多次的加和</li>
+<li><strong>collections</strong> [从上次检查至今总共发生<strong>1</strong>次GC]/[从上次检查至今已过去 <strong>5.1</strong> 秒],</li>
+<li><strong>total</strong> [本次检查到的 GC 总耗时为 <strong>5</strong> 秒]/[从 JVM 启动至今发生的 GC 总耗时为 <strong>4.4</strong> 天]，</li>
+<li><strong>memory</strong> [ GC 前 Heap memory 空间]-&gt;[GC 后 Heap memory 空间]/[Heap memory 总空间],</li>
+<li><strong>all_pools</strong>(分代部分的详情) {young 区][GC 前 Memory ]-&gt;[GC后 Memory]/[young区 Memory 总大小] }</li>
+<li><strong>survivor</strong> [GC 前 Memory ]-&gt;[GC后 Memory]/[Memory 总大小] }{old 区[GC 前 Memory ]-&gt;[GC后 Memory]/[old区 Memory 总大小] }</li>
+</ul>
+<p>那为何会内存不足呢, 想起前几天服务拓展，添加收集了几个服务的日志, 日志量不算小, 而且这3个ES节点所在的机器内存只分配了8个G, 显然, 加完这几个日志之后内存不够用了.</p>
+<h3 id="Index-Mapping"><a href="#Index-Mapping" class="headerlink" title="Index Mapping"></a>Index Mapping</h3><p>而且，从日志中， 还发现几处很诡异的日志</p>
+<p><img src="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20200204141415.png" alt></p>
+<p>红框中的错误: <strong>object mapping for [msg] tried to pasrse field [msg] as object, but found a concrete</strong></p>
+<p>翻译过来就是说, 日志中的msg这个字段的类型匹配不上, ES尽力把它解析为object类型，但是它却是个确切的值.</p>
+<p>就好比你在python中定义了一个字典, 但是你给它赋值一个整形, 这确定要报错.</p>
+<p>但是这个mapping是从何而来的呢.</p>
+<p>经过网上搜索一翻, 终于明白:</p>
+<p>ES中为了加强性能，对于索引中的<strong>第一条数据, ES会默认(可设置)按照这条数据建立index mapping, 相当于是一个索引模板, 好比是mysql中表的定义一个概念, 后续这个索引中的所有日志都按照该模板进行解析</strong></p>
+<p>后来经过查看源码, 我们发现，出现上图中的问题是因为代码中的日志打印不规范, 有一个地方如果抛出异常时，打印的是一个单一字符串, 而正常情况下打印的是一个json, 所以当第一条正常的日志传递给ES时，ES建立的索引 模板记录这个字段为object类型(可以类比为python中的字典, 本身是可以新增元素的), 当应用抛出异常时，日志中又传递了一个单一字符串, 但是索引模板已经记录为object类型，所以无法匹配, 这就是问题所在</p>
+<h3 id="Fix-Bug"><a href="#Fix-Bug" class="headerlink" title="Fix Bug"></a>Fix Bug</h3><p>从3个方面解决上面的问题</p>
+<p>首先是修复代码中日志不规范问题, 这个充暴露了code view不严谨.</p>
+<p>第2个是加大ES的内存,毕竟日志量确实是上来了, 从8G添加到12G</p>
+<p>第3个是优化ES的gc问题, ES中有个逻辑是：<strong>默认情况下，主节点每30秒会去检查其他节点的状态，如果任何节点的垃圾回收时间超过30秒（Garbage collection duration）且在重复次数内都超时，则会导致主节点任务该节点脱离集群, 节点脱离集群后会引起分片的rebalance</strong></p>
+<p>这个机制让ES节点频繁的脱离集群，而又引起整个集群的rebalance，ES本身的内存就不够，rebalance更是雪上加霜, 如此往复就导致整个ES集群宕机.</p>
+<p>可修改主节点的检查时间及重复次数,让其它节点有充分的时间进行full gc.</p>
+<p>在ES的配置文件中添加以下配置:</p>
+<figure class="highlight yml"><table><tr><td class="code"><pre><span class="line"><span class="attr">discovery.zen.fd.ping_timeout:</span> <span class="string">300s</span></span><br><span class="line"><span class="attr">discovery.zen.fd.ping_retriES:</span> <span class="number">10</span></span><br></pre></td></tr></table></figure>
+<p>这样, 达到这两个条件时才能触发节点脱离集群</p>
+<p>至此, 依次重启ES节点, 问题圆满解决.</p>
+<h3 id="参考文章"><a href="#参考文章" class="headerlink" title="参考文章:"></a><strong>参考文章:</strong></h3><blockquote>
+<ul>
+<li><a href="https://www.elastic.co/guide/en/elasticsearch/reference/current/mapping.html" target="_blank" rel="noopener">elasticsearch index mapping</a></li>
+<li><a href="https://blog.csdn.net/sinat_35930259/article/details/80354732" target="_blank" rel="noopener">elasticsearch篇之mapping</a></li>
+<li><a href="https://segmentfault.com/a/1190000016494488" target="_blank" rel="noopener">你看懂 Elasticsearch Log 中的 GC 日志了吗？</a></li>
+</ul>
+</blockquote>
+<h3 id="转载请注明出处https-izsk-me"><a href="#转载请注明出处https-izsk-me" class="headerlink" title="转载请注明出处https://izsk.me"></a><strong>转载请注明出处<a href="https://izsk.me" target="_blank" rel="noopener">https://izsk.me</a></strong></h3>]]></content>
+      <categories>
+        <category>FELK</category>
+      </categories>
+      <tags>
+        <tag>FELK</tag>
+      </tags>
+  </entry>
+  <entry>
     <title>CockRoachDB学习(架构)</title>
     <url>/2019/10/06/CockroachDB-Struct/</url>
     <content><![CDATA[<p>项目中需要一个分布式数据库用于存储业务的KV数据, 在前期项目调研结合业务比对了业界常用的KV数据库模型后, 最后选择了CockRoachDB(CRDB).</p>
@@ -7094,74 +7167,6 @@
       </categories>
       <tags>
         <tag>分布式架构</tag>
-      </tags>
-  </entry>
-  <entry>
-    <title>记一次排查ES FGC导致的集群宕机异常</title>
-    <url>/2019/10/06/ES-FGC-Fix/</url>
-    <content><![CDATA[<p>有一个私有云环境的运维同事反应项目中的ES集群无法查询, 由于是私有云环境, 没有直接运维权限, 所以没有接收到一线报警, 远程登录上去后发现ES集群已经宕机了, 这次的排查过程也发现了几个比较容易忽视的细节, 在此记录一下,比较有意思.</p>
-<a id="more"></a>
-<h3 id="集群状态"><a href="#集群状态" class="headerlink" title="集群状态"></a>集群状态</h3><p>ES集群为3节点.</p>
-<p>首先肯定是查看集群状态</p>
-<figure class="highlight bash"><table><tr><td class="code"><pre><span class="line">curl <span class="string">'http://localhost:9200/_cluster/health?pretty'</span> -u xxx:yyy</span><br><span class="line"><span class="comment">#发现状态为Red</span></span><br></pre></td></tr></table></figure>
-<p>查看节点状态</p>
-<figure class="highlight bash"><table><tr><td class="code"><pre><span class="line">curl <span class="string">'http://localhost:9200/_cat/node?v'</span> -u xxx:yyy</span><br><span class="line"><span class="comment">#节点数正常</span></span><br></pre></td></tr></table></figure>
-<p>查看各节点使用的磁盘情况</p>
-<figure class="highlight bash"><table><tr><td class="code"><pre><span class="line">curl -XGET <span class="string">'localhost:9200/_cat/allocation?v&amp;pretty'</span> -u xxx:yyy</span><br><span class="line"><span class="comment">#未发现异常</span></span><br></pre></td></tr></table></figure>
-<h3 id="集群日志"><a href="#集群日志" class="headerlink" title="集群日志"></a>集群日志</h3><p>登录一个ES节点查看日志，发现以下报错，查看其它2个节点，情况相同</p>
-<p><img src="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20200204134510.png" alt></p>
-<p>从日志来看, 可以发现几个问题:</p>
-<blockquote>
-<ul>
-<li>Full GC很频繁, 而且时间也非常的长 </li>
-<li>每次GC完之后所能释放的内存非常有限</li>
-</ul>
-</blockquote>
-<p>到这，其它原因已经很明朗, <strong>内存不够导致的full gc 频繁，但是又不能释放太多的空间，又导致full gc的恶意循环</strong></p>
-<p>如果大家对gc的日志不很了解的话, 这里解释下上面日志的各个字段含义, 假如有以下一条gc日志</p>
-<figure class="highlight bash"><table><tr><td class="code"><pre><span class="line">[2018-06-30T17:57:29,020][INFO ][o.e.m.j.JvmGcMonitorService] [qoo--ES] [gc][old][228385][160772] duration [5s], collections [1]/[5.1s], total [5s]/[4.4d], memory [945.4mb]-&gt;[958.5mb]/[1007.3mb], all_pools &#123;[young] [87.8mb]-&gt;[100.9mb]/[133.1mb]&#125;&#123;[survivor] [0b]-&gt;[0b]/[16.6mb]&#125;&#123;[old] [857.6mb]-&gt;[857.6mb]/[857.6mb]&#125;</span><br></pre></td></tr></table></figure>
-<ul>
-<li><strong>gc old</strong> 本次是 old GC 这是第228385次 GC 检查][从 JVM 启动至今发生的第 160772次 G]</li>
-<li><strong>duration</strong> [本次检查到的 GC 总耗时 <strong>5</strong> 秒，可能是多次的加和</li>
-<li><strong>collections</strong> [从上次检查至今总共发生<strong>1</strong>次GC]/[从上次检查至今已过去 <strong>5.1</strong> 秒],</li>
-<li><strong>total</strong> [本次检查到的 GC 总耗时为 <strong>5</strong> 秒]/[从 JVM 启动至今发生的 GC 总耗时为 <strong>4.4</strong> 天]，</li>
-<li><strong>memory</strong> [ GC 前 Heap memory 空间]-&gt;[GC 后 Heap memory 空间]/[Heap memory 总空间],</li>
-<li><strong>all_pools</strong>(分代部分的详情) {young 区][GC 前 Memory ]-&gt;[GC后 Memory]/[young区 Memory 总大小] }</li>
-<li><strong>survivor</strong> [GC 前 Memory ]-&gt;[GC后 Memory]/[Memory 总大小] }{old 区[GC 前 Memory ]-&gt;[GC后 Memory]/[old区 Memory 总大小] }</li>
-</ul>
-<p>那为何会内存不足呢, 想起前几天服务拓展，添加收集了几个服务的日志, 日志量不算小, 而且这3个ES节点所在的机器内存只分配了8个G, 显然, 加完这几个日志之后内存不够用了.</p>
-<h3 id="Index-Mapping"><a href="#Index-Mapping" class="headerlink" title="Index Mapping"></a>Index Mapping</h3><p>而且，从日志中， 还发现几处很诡异的日志</p>
-<p><img src="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20200204141415.png" alt></p>
-<p>红框中的错误: <strong>object mapping for [msg] tried to pasrse field [msg] as object, but found a concrete</strong></p>
-<p>翻译过来就是说, 日志中的msg这个字段的类型匹配不上, ES尽力把它解析为object类型，但是它却是个确切的值.</p>
-<p>就好比你在python中定义了一个字典, 但是你给它赋值一个整形, 这确定要报错.</p>
-<p>但是这个mapping是从何而来的呢.</p>
-<p>经过网上搜索一翻, 终于明白:</p>
-<p>ES中为了加强性能，对于索引中的<strong>第一条数据, ES会默认(可设置)按照这条数据建立index mapping, 相当于是一个索引模板, 好比是mysql中表的定义一个概念, 后续这个索引中的所有日志都按照该模板进行解析</strong></p>
-<p>后来经过查看源码, 我们发现，出现上图中的问题是因为代码中的日志打印不规范, 有一个地方如果抛出异常时，打印的是一个单一字符串, 而正常情况下打印的是一个json, 所以当第一条正常的日志传递给ES时，ES建立的索引 模板记录这个字段为object类型(可以类比为python中的字典, 本身是可以新增元素的), 当应用抛出异常时，日志中又传递了一个单一字符串, 但是索引模板已经记录为object类型，所以无法匹配, 这就是问题所在</p>
-<h3 id="Fix-Bug"><a href="#Fix-Bug" class="headerlink" title="Fix Bug"></a>Fix Bug</h3><p>从3个方面解决上面的问题</p>
-<p>首先是修复代码中日志不规范问题, 这个充暴露了code view不严谨.</p>
-<p>第2个是加大ES的内存,毕竟日志量确实是上来了, 从8G添加到12G</p>
-<p>第3个是优化ES的gc问题, ES中有个逻辑是：<strong>默认情况下，主节点每30秒会去检查其他节点的状态，如果任何节点的垃圾回收时间超过30秒（Garbage collection duration）且在重复次数内都超时，则会导致主节点任务该节点脱离集群, 节点脱离集群后会引起分片的rebalance</strong></p>
-<p>这个机制让ES节点频繁的脱离集群，而又引起整个集群的rebalance，ES本身的内存就不够，rebalance更是雪上加霜, 如此往复就导致整个ES集群宕机.</p>
-<p>可修改主节点的检查时间及重复次数,让其它节点有充分的时间进行full gc.</p>
-<p>在ES的配置文件中添加以下配置:</p>
-<figure class="highlight yml"><table><tr><td class="code"><pre><span class="line"><span class="attr">discovery.zen.fd.ping_timeout:</span> <span class="string">300s</span></span><br><span class="line"><span class="attr">discovery.zen.fd.ping_retriES:</span> <span class="number">10</span></span><br></pre></td></tr></table></figure>
-<p>这样, 达到这两个条件时才能触发节点脱离集群</p>
-<p>至此, 依次重启ES节点, 问题圆满解决.</p>
-<h3 id="参考文章"><a href="#参考文章" class="headerlink" title="参考文章:"></a><strong>参考文章:</strong></h3><blockquote>
-<ul>
-<li><a href="https://www.elastic.co/guide/en/elasticsearch/reference/current/mapping.html" target="_blank" rel="noopener">elasticsearch index mapping</a></li>
-<li><a href="https://blog.csdn.net/sinat_35930259/article/details/80354732" target="_blank" rel="noopener">elasticsearch篇之mapping</a></li>
-<li><a href="https://segmentfault.com/a/1190000016494488" target="_blank" rel="noopener">你看懂 Elasticsearch Log 中的 GC 日志了吗？</a></li>
-</ul>
-</blockquote>
-<h3 id="转载请注明出处https-izsk-me"><a href="#转载请注明出处https-izsk-me" class="headerlink" title="转载请注明出处https://izsk.me"></a><strong>转载请注明出处<a href="https://izsk.me" target="_blank" rel="noopener">https://izsk.me</a></strong></h3>]]></content>
-      <categories>
-        <category>FELK</category>
-      </categories>
-      <tags>
-        <tag>FELK</tag>
       </tags>
   </entry>
   <entry>
@@ -9776,6 +9781,62 @@
       </tags>
   </entry>
   <entry>
+    <title>HTTP之长连接及短连接</title>
+    <url>/2017/08/12/HTTP%E4%B9%8B%E9%95%BF%E8%BF%9E%E6%8E%A5%E5%8F%8A%E7%9F%AD%E8%BF%9E%E6%8E%A5/</url>
+    <content><![CDATA[<p>我们都说HTTP协议是无状态的,我们又都说HTTP分长连接及短连接,’无状态’到底是个什么意思？</p>
+<a id="more"></a>
+<h3 id="无状态"><a href="#无状态" class="headerlink" title="无状态"></a><strong>无状态</strong></h3><p>HTTP无状态其实指的是协议对于事务处理没有记忆能力,服务器不知道客户端是什么状态.也就是说,打开一个服务器上的网页和你之前打开这个服务器上的网页之间没有任何联系.HTTP是一个无状态的面向连接的协议,无状态不代表HTTP不能保持TCP连接,更不能代表HTTP使用的是UDP协议(无连接).</p>
+<p>那http又是如何保持长连接的呢?</p>
+<p>在<code>HTTP/1.0</code>中,默认使用的是短连接.也就是说,浏览器和服务器每进行一次HTTP操作,就建立一次连接,但任务结束就中断连接.如果客户端浏览器访问的某个HTML或其他类型的 Web页中包含有其他的Web资源,如JavaScript文件、图像文件、CSS文件等；当浏览器每遇到这样一个Web资源,就会建立一个HTTP会话.<br>但从<code>HTTP/1.1</code>起,默认使用长连接,用以保持连接特性.使用长连接的HTTP协议,会在响应头有加入这行代码:</p>
+<p><code>Connection:keep-alive</code></p>
+<p>　　在使用长连接的情况下,当一个网页打开完成后,客户端和服务器之间用于传输HTTP数据的 TCP连接不会关闭,如果客户端再次访问这个服务器上的网页,会继续使用这一条已经建立的连接.<code>Keep-Alive</code>不会永久保持连接,它有一个保持时间,可以在不同的服务器软件（如Apache）中设定这个时间.实现长连接要客户端和服务端都支持长连接.</p>
+<p>当然,在很多web服务器中可以设置这个keep-Alive的保持时间,比如nginx的配置文件nginx.conf中可直接使用:</p>
+<p><code>keepalive_timeout  60;</code></p>
+<p><strong>HTTP协议的长连接和短连接,实质上是TCP协议的长连接和短连接.</strong></p>
+<p>那长短连接各自对应的场景有哪些呢(各自的优缺点)?</p>
+<h3 id="短连接"><a href="#短连接" class="headerlink" title="短连接"></a><strong>短连接</strong></h3><p>场景: client向server发起连接请求,server接到请求,然后双方建立连接.client向server 发送消息,server回应client,然后一次读写就完成了,这时候双方任何一个都可以发起close操作,不过一般都是client先发起 close操作.为什么呢,一般的server不会回复完client后立即关闭连接的,当然不排除有特殊的情况.从上面的描述看,短连接一般只会在 client/server间传递一次读写操作</p>
+<p><strong>短连接管理起来比较简单,存在的连接都是有用的连接,不需要额外的控制手段,但是频繁的创建大量的连接也很耗资源</strong></p>
+<h3 id="长连接"><a href="#长连接" class="headerlink" title="长连接"></a><strong>长连接</strong></h3><p>流程是:client向server发起连接,server接受client连接,双方建立连接.Client与server完成一次读写之后,它们之间的连接并不会主动关闭,后续的读写操作会继续使用这个连接.</p>
+<p>首先说一下TCP/IP详解上讲到的TCP保活功能,保活功能主要为服务器应用提供,服务器应用希望知道客户主机是否崩溃,从而可以代表客户使用资源.如果客户已经消失,使得服务器上保留一个半开放的连接,而服务器又在等待来自客户端的数据,则服务器将应远等待客户端的数据,保活功能就是试图在服务 器端检测到这种半开放的连接.</p>
+<p>如果一个给定的连接在两小时内没有任何的动作,服务器就向客户发一个探测报文段,客户主机必须处于以下4个状态之一:</p>
+<blockquote>
+<ul>
+<li>客户主机依然正常运行,并从服务器可达.客户的TCP响应正常,而服务器也知道对方是正常的,服务器在两小时后将保活定时器复位.</li>
+<li>客户主机已经崩溃,并且关闭或者正在重新启动.在任何一种情况下,客户的TCP都没有响应.服务端将不能收到对探测的响应,并在75秒后超时.服务器总共发送10个这样的探测 ,每个间隔75秒.如果服务器没有收到一个响应,它就认为客户主机已经关闭并终止连接.</li>
+<li>客户主机崩溃并已经重新启动.服务器将收到一个对其保活探测的响应,这个响应是一个复位,使得服务器终止这个连接.</li>
+</ul>
+</blockquote>
+<p>客户机正常运行,但是服务器不可达,这种情况与2类似,TCP能发现的就是没有收到探查的响应.</p>
+<p><strong>从上可以看出http要保持长连接需要做很多次的向客户端试探是否存活,这对性能是个很大的损耗,但是从另一方面来说长连接减少了很多的创关闭连接带来的开销,节约时间.</strong></p>
+<h3 id="场景"><a href="#场景" class="headerlink" title="场景"></a><strong>场景</strong></h3><p><code>长连接</code>多用于操作频繁,点对点的通讯,而且连接数不能太多情况,.每个TCP连接都需要三步握手,这需要时间,如果每个操作都是先连接,再操作的话那么处理速度会降低很多,所以每个操作完后都不断开,次处理时直接发送数据包就OK了,不用建立TCP连接.例如：数据库的连接用长连接, 如果用短连接频繁的通信会造成socket错误,而且频繁的socket 创建也是对资源的浪费. </p>
+<p>而像WEB网站的http服务一般都用<code>短链接</code>,因为长连接对于服务端来说会耗费一定的资源,而像WEB网站这么频繁的成千上万甚至上亿客户端的连接用短连接会更省一些资源,如果用长连接,而且同时有成千上万的用户,如果每个用户都占用一个连接的话,那可想而知吧.所以并发量大,但每个用户无需频繁操作情况下需用短连好.</p>
+<p><strong>没有哪一个更好,只有哪一个最适合,一切跟着场景走,总有一款适合你!</strong></p>
+<h3 id="转载请注明出处https-izsk-me"><a href="#转载请注明出处https-izsk-me" class="headerlink" title="转载请注明出处https://izsk.me"></a><strong>转载请注明出处<a href="https://izsk.me" target="_blank" rel="noopener">https://izsk.me</a></strong></h3><hr>
+]]></content>
+      <categories>
+        <category>Http-Tcp-Ip</category>
+      </categories>
+      <tags>
+        <tag>Http-Tcp-Ip</tag>
+      </tags>
+  </entry>
+  <entry>
+    <title>python中调用sqlplus生成多实例oracle-awr-html报告</title>
+    <url>/2017/08/12/python%E4%B8%AD%E8%B0%83%E7%94%A8sqlplus%E7%94%9F%E6%88%90%E5%A4%9A%E5%AE%9E%E4%BE%8Boracle-awr-html%E6%8A%A5%E5%91%8A/</url>
+    <content><![CDATA[<p>这里不多说,说是稍微改了下官方的脚本,这里使用了subprocess调用sqlplus,关于subprocess,可以参考<a href="https://izsk.me/2017/04/08/python%E4%B8%AD%E8%B0%83%E7%94%A8sqlplus/" target="_blank" rel="noopener">这里</a></p>
+<a id="more"></a>
+<p>其中,包含了两个业务相关的参数,这里就不过多说明…</p>
+<figure class="highlight python"><table><tr><td class="code"><pre><span class="line"><span class="function"><span class="keyword">def</span> <span class="title">gen_sqlfile</span><span class="params">(_file)</span>:</span></span><br><span class="line">    <span class="keyword">with</span> open(_file,<span class="string">"w"</span>) <span class="keyword">as</span> f:</span><br><span class="line">        f.write(</span><br><span class="line"><span class="string">"""set define off</span></span><br><span class="line"><span class="string">set feedback off</span></span><br><span class="line"><span class="string">set termout off</span></span><br><span class="line"><span class="string">set pages 0</span></span><br><span class="line"><span class="string">set lines 120</span></span><br><span class="line"><span class="string">set serveroutput on </span></span><br><span class="line"><span class="string">spool oracle_awr_html.sql</span></span><br><span class="line"><span class="string">declare</span></span><br><span class="line"><span class="string">   v_str varchar2(180);</span></span><br><span class="line"><span class="string">   procedure p (l_str  varchar2)</span></span><br><span class="line"><span class="string">   is</span></span><br><span class="line"><span class="string">   begin</span></span><br><span class="line"><span class="string">     dbms_output.put_line(l_str);</span></span><br><span class="line"><span class="string">   end;</span></span><br><span class="line"><span class="string">begin</span></span><br><span class="line"><span class="string">	p('set pages 0');</span></span><br><span class="line"><span class="string">	p('variable dbid number');</span></span><br><span class="line"><span class="string">	p('variable inst_num number');</span></span><br><span class="line"><span class="string">	p('variable inst_name varchar2(20)');</span></span><br><span class="line"><span class="string">	p('variable bid number');</span></span><br><span class="line"><span class="string">	p('variable eid number');</span></span><br><span class="line"><span class="string">	p('variable rpt_options number');</span></span><br><span class="line"><span class="string">	p('variable ENABLE_ADDM number');</span></span><br><span class="line"><span class="string">	p('variable cur_date varchar2(20)');</span></span><br><span class="line"><span class="string">	p('variable city varchar2(20)');</span></span><br><span class="line"><span class="string">	p('');</span></span><br><span class="line"><span class="string">	p('declare');</span></span><br><span class="line"><span class="string">	p('begin');</span></span><br><span class="line"><span class="string">  	p('select distinct first_value (snap_id) over( ');</span></span><br><span class="line"><span class="string">	p('		order by snap_id desc rows between unbounded preceding and unbounded following) max_snap_id ');</span></span><br><span class="line"><span class="string">	p('into :eid ');</span></span><br><span class="line"><span class="string">  	p('	    from  dba_hist_snapshot;');</span></span><br><span class="line"><span class="string">	p('select dbid into :dbid from dba_hist_database_instance where rownum=1;');</span></span><br><span class="line"><span class="string">p('end;');</span></span><br><span class="line"><span class="string">p('/');</span></span><br><span class="line"><span class="string"></span></span><br><span class="line"><span class="string">p('exec :rpt_options :=0;');</span></span><br><span class="line"><span class="string">p('exec :ENABLE_ADDM :=8;');</span></span><br><span class="line"><span class="string">p('exec :cur_date :=to_char(sysdate,''yyyymmdd'');');</span></span><br><span class="line"><span class="string">p('exec :city :=''&amp;1'';');</span></span><br><span class="line"><span class="string">p('exec :bid :=:eid-to_number(''&amp;2'');');</span></span><br><span class="line"><span class="string">p('column rpt_name new_value rpt_name noprint;');</span></span><br><span class="line"><span class="string"></span></span><br><span class="line"><span class="string">for c1 in  (select instance_number,instance_name from gv$instance order by instance_number) </span></span><br><span class="line"><span class="string">loop   </span></span><br><span class="line"><span class="string">   p('exec :inst_num :='||c1.instance_number||';');</span></span><br><span class="line"><span class="string">   p('exec :inst_name :='''||c1.instance_name||''';');</span></span><br><span class="line"><span class="string">   v_str:= q'[select :cur_date||'_'||:city||'_'||:inst_name||'_'||:inst_num||'_'||:bid||'_'||:eid||'.html' rpt_name from dual;]';</span></span><br><span class="line"><span class="string">   p(v_str);</span></span><br><span class="line"><span class="string">   p('set lines 8000');</span></span><br><span class="line"><span class="string">   p('spool &amp;rpt_name');</span></span><br><span class="line"><span class="string">   p(' select output from table(sys.dbms_workload_repository.awr_report_html( :dbid,');</span></span><br><span class="line"><span class="string">   p('                                                         :inst_num,');</span></span><br><span class="line"><span class="string">   p('                                                         :bid, :eid,');</span></span><br><span class="line"><span class="string">   p('                                                         :rpt_options ));');</span></span><br><span class="line"><span class="string">   p('spool off');</span></span><br><span class="line"><span class="string">   v_str := q'[select :cur_date||'_'||:city||'_'||:inst_name||'_'||:inst_num||'_'||:bid||'_'||:eid||'.html' file_name from dual;]';</span></span><br><span class="line"><span class="string">   p(v_str);</span></span><br><span class="line"><span class="string">   p('set termout off');</span></span><br><span class="line"><span class="string">end loop;</span></span><br><span class="line"><span class="string">p('exit');</span></span><br><span class="line"><span class="string">end;</span></span><br><span class="line"><span class="string">/</span></span><br><span class="line"><span class="string">spool off</span></span><br><span class="line"><span class="string">set define on</span></span><br><span class="line"><span class="string">set feedback off</span></span><br><span class="line"><span class="string">set termout on</span></span><br><span class="line"><span class="string">set termout off</span></span><br><span class="line"><span class="string">@oracle_awr_html.sql &amp;1 &amp;2</span></span><br><span class="line"><span class="string">set termout on</span></span><br><span class="line"><span class="string">set pagesize 24</span></span><br><span class="line"><span class="string">"""</span>)</span><br><span class="line"></span><br><span class="line"><span class="class"><span class="keyword">class</span> <span class="title">callsqluldr</span><span class="params">()</span>:</span></span><br><span class="line">    <span class="function"><span class="keyword">def</span> <span class="title">__init__</span><span class="params">(self,username,password,databaseName,city,beforethis)</span>:</span></span><br><span class="line">        self.username = username</span><br><span class="line">        self.password = password</span><br><span class="line">        self.databaseName = databaseName</span><br><span class="line">        self.city = city</span><br><span class="line">        self.beforethis = beforethis</span><br><span class="line">    <span class="function"><span class="keyword">def</span> <span class="title">run</span><span class="params">(self)</span>:</span></span><br><span class="line">        <span class="keyword">try</span>:</span><br><span class="line">            command = <span class="string">"sqlplus "</span> + self.username + <span class="string">"/"</span> + self.password + <span class="string">"@"</span> + self.databaseName + <span class="string">" @gen_oracle_awr_html.sql "</span> + self.city + <span class="string">" "</span> + self.beforethis</span><br><span class="line">            child = subprocess.Popen(command,shell=<span class="literal">True</span>)</span><br><span class="line">            child.wait()</span><br><span class="line">            <span class="comment">#print("&lt;&lt;%s done.&gt;&gt;" %self.city)</span></span><br><span class="line">        <span class="keyword">except</span> Exception <span class="keyword">as</span> e:</span><br><span class="line">            err_txt = <span class="string">"ERROR: CALL ORACLE SQLPLUS ERROR!"</span></span><br><span class="line">            print(err_txt)</span><br><span class="line">            write_errtxt(err_txt)</span><br><span class="line">            </span><br><span class="line"><span class="function"><span class="keyword">def</span> <span class="title">write_errtxt</span><span class="params">(err_txt)</span>:</span></span><br><span class="line">    <span class="keyword">pass</span></span><br></pre></td></tr></table></figure>
+<h3 id="参考文章"><a href="#参考文章" class="headerlink" title="参考文章:"></a><strong>参考文章:</strong></h3><h3 id="转载请注明出处https-izsk-me"><a href="#转载请注明出处https-izsk-me" class="headerlink" title="转载请注明出处https://izsk.me"></a><strong>转载请注明出处<a href="https://izsk.me" target="_blank" rel="noopener">https://izsk.me</a></strong></h3><hr>
+]]></content>
+      <categories>
+        <category>Python</category>
+      </categories>
+      <tags>
+        <tag>Python</tag>
+      </tags>
+  </entry>
+  <entry>
     <title>Flask学习(flask应用)</title>
     <url>/2017/08/12/flask%E5%AD%A6%E4%B9%A0%E4%BA%8C(flask%E5%BA%94%E7%94%A8)/</url>
     <content><![CDATA[<p>距离<a href="https://izsk.me/2017/08/12/falsk%E5%AD%A6%E4%B9%A0(-" target="_blank" rel="noopener">上一篇</a>)有一段时间了,上次扯了点跟flask相关的内容,这次抽空记录下flask的机制.flask之所于上手容易,是因为我们对python语言稍微了解的话,简单几步就可以把一个小应用跑起来,不需要搭建额外的东西,所以对于并发量没有要求的话flask可以轻松应对.</p>
@@ -9834,62 +9895,6 @@
 </ul>
 </blockquote>
 <h3 id="转载请注明出处https-izsk-me"><a href="#转载请注明出处https-izsk-me" class="headerlink" title="转载请注明出处https://izsk.me"></a><strong>转载请注明出处<a href="https://izsk.me" target="_blank" rel="noopener">https://izsk.me</a></strong></h3><hr>
-]]></content>
-      <categories>
-        <category>Python</category>
-      </categories>
-      <tags>
-        <tag>Python</tag>
-      </tags>
-  </entry>
-  <entry>
-    <title>HTTP之长连接及短连接</title>
-    <url>/2017/08/12/HTTP%E4%B9%8B%E9%95%BF%E8%BF%9E%E6%8E%A5%E5%8F%8A%E7%9F%AD%E8%BF%9E%E6%8E%A5/</url>
-    <content><![CDATA[<p>我们都说HTTP协议是无状态的,我们又都说HTTP分长连接及短连接,’无状态’到底是个什么意思？</p>
-<a id="more"></a>
-<h3 id="无状态"><a href="#无状态" class="headerlink" title="无状态"></a><strong>无状态</strong></h3><p>HTTP无状态其实指的是协议对于事务处理没有记忆能力,服务器不知道客户端是什么状态.也就是说,打开一个服务器上的网页和你之前打开这个服务器上的网页之间没有任何联系.HTTP是一个无状态的面向连接的协议,无状态不代表HTTP不能保持TCP连接,更不能代表HTTP使用的是UDP协议(无连接).</p>
-<p>那http又是如何保持长连接的呢?</p>
-<p>在<code>HTTP/1.0</code>中,默认使用的是短连接.也就是说,浏览器和服务器每进行一次HTTP操作,就建立一次连接,但任务结束就中断连接.如果客户端浏览器访问的某个HTML或其他类型的 Web页中包含有其他的Web资源,如JavaScript文件、图像文件、CSS文件等；当浏览器每遇到这样一个Web资源,就会建立一个HTTP会话.<br>但从<code>HTTP/1.1</code>起,默认使用长连接,用以保持连接特性.使用长连接的HTTP协议,会在响应头有加入这行代码:</p>
-<p><code>Connection:keep-alive</code></p>
-<p>　　在使用长连接的情况下,当一个网页打开完成后,客户端和服务器之间用于传输HTTP数据的 TCP连接不会关闭,如果客户端再次访问这个服务器上的网页,会继续使用这一条已经建立的连接.<code>Keep-Alive</code>不会永久保持连接,它有一个保持时间,可以在不同的服务器软件（如Apache）中设定这个时间.实现长连接要客户端和服务端都支持长连接.</p>
-<p>当然,在很多web服务器中可以设置这个keep-Alive的保持时间,比如nginx的配置文件nginx.conf中可直接使用:</p>
-<p><code>keepalive_timeout  60;</code></p>
-<p><strong>HTTP协议的长连接和短连接,实质上是TCP协议的长连接和短连接.</strong></p>
-<p>那长短连接各自对应的场景有哪些呢(各自的优缺点)?</p>
-<h3 id="短连接"><a href="#短连接" class="headerlink" title="短连接"></a><strong>短连接</strong></h3><p>场景: client向server发起连接请求,server接到请求,然后双方建立连接.client向server 发送消息,server回应client,然后一次读写就完成了,这时候双方任何一个都可以发起close操作,不过一般都是client先发起 close操作.为什么呢,一般的server不会回复完client后立即关闭连接的,当然不排除有特殊的情况.从上面的描述看,短连接一般只会在 client/server间传递一次读写操作</p>
-<p><strong>短连接管理起来比较简单,存在的连接都是有用的连接,不需要额外的控制手段,但是频繁的创建大量的连接也很耗资源</strong></p>
-<h3 id="长连接"><a href="#长连接" class="headerlink" title="长连接"></a><strong>长连接</strong></h3><p>流程是:client向server发起连接,server接受client连接,双方建立连接.Client与server完成一次读写之后,它们之间的连接并不会主动关闭,后续的读写操作会继续使用这个连接.</p>
-<p>首先说一下TCP/IP详解上讲到的TCP保活功能,保活功能主要为服务器应用提供,服务器应用希望知道客户主机是否崩溃,从而可以代表客户使用资源.如果客户已经消失,使得服务器上保留一个半开放的连接,而服务器又在等待来自客户端的数据,则服务器将应远等待客户端的数据,保活功能就是试图在服务 器端检测到这种半开放的连接.</p>
-<p>如果一个给定的连接在两小时内没有任何的动作,服务器就向客户发一个探测报文段,客户主机必须处于以下4个状态之一:</p>
-<blockquote>
-<ul>
-<li>客户主机依然正常运行,并从服务器可达.客户的TCP响应正常,而服务器也知道对方是正常的,服务器在两小时后将保活定时器复位.</li>
-<li>客户主机已经崩溃,并且关闭或者正在重新启动.在任何一种情况下,客户的TCP都没有响应.服务端将不能收到对探测的响应,并在75秒后超时.服务器总共发送10个这样的探测 ,每个间隔75秒.如果服务器没有收到一个响应,它就认为客户主机已经关闭并终止连接.</li>
-<li>客户主机崩溃并已经重新启动.服务器将收到一个对其保活探测的响应,这个响应是一个复位,使得服务器终止这个连接.</li>
-</ul>
-</blockquote>
-<p>客户机正常运行,但是服务器不可达,这种情况与2类似,TCP能发现的就是没有收到探查的响应.</p>
-<p><strong>从上可以看出http要保持长连接需要做很多次的向客户端试探是否存活,这对性能是个很大的损耗,但是从另一方面来说长连接减少了很多的创关闭连接带来的开销,节约时间.</strong></p>
-<h3 id="场景"><a href="#场景" class="headerlink" title="场景"></a><strong>场景</strong></h3><p><code>长连接</code>多用于操作频繁,点对点的通讯,而且连接数不能太多情况,.每个TCP连接都需要三步握手,这需要时间,如果每个操作都是先连接,再操作的话那么处理速度会降低很多,所以每个操作完后都不断开,次处理时直接发送数据包就OK了,不用建立TCP连接.例如：数据库的连接用长连接, 如果用短连接频繁的通信会造成socket错误,而且频繁的socket 创建也是对资源的浪费. </p>
-<p>而像WEB网站的http服务一般都用<code>短链接</code>,因为长连接对于服务端来说会耗费一定的资源,而像WEB网站这么频繁的成千上万甚至上亿客户端的连接用短连接会更省一些资源,如果用长连接,而且同时有成千上万的用户,如果每个用户都占用一个连接的话,那可想而知吧.所以并发量大,但每个用户无需频繁操作情况下需用短连好.</p>
-<p><strong>没有哪一个更好,只有哪一个最适合,一切跟着场景走,总有一款适合你!</strong></p>
-<h3 id="转载请注明出处https-izsk-me"><a href="#转载请注明出处https-izsk-me" class="headerlink" title="转载请注明出处https://izsk.me"></a><strong>转载请注明出处<a href="https://izsk.me" target="_blank" rel="noopener">https://izsk.me</a></strong></h3><hr>
-]]></content>
-      <categories>
-        <category>Http-Tcp-Ip</category>
-      </categories>
-      <tags>
-        <tag>Http-Tcp-Ip</tag>
-      </tags>
-  </entry>
-  <entry>
-    <title>python中调用sqlplus生成多实例oracle-awr-html报告</title>
-    <url>/2017/08/12/python%E4%B8%AD%E8%B0%83%E7%94%A8sqlplus%E7%94%9F%E6%88%90%E5%A4%9A%E5%AE%9E%E4%BE%8Boracle-awr-html%E6%8A%A5%E5%91%8A/</url>
-    <content><![CDATA[<p>这里不多说,说是稍微改了下官方的脚本,这里使用了subprocess调用sqlplus,关于subprocess,可以参考<a href="https://izsk.me/2017/04/08/python%E4%B8%AD%E8%B0%83%E7%94%A8sqlplus/" target="_blank" rel="noopener">这里</a></p>
-<a id="more"></a>
-<p>其中,包含了两个业务相关的参数,这里就不过多说明…</p>
-<figure class="highlight python"><table><tr><td class="code"><pre><span class="line"><span class="function"><span class="keyword">def</span> <span class="title">gen_sqlfile</span><span class="params">(_file)</span>:</span></span><br><span class="line">    <span class="keyword">with</span> open(_file,<span class="string">"w"</span>) <span class="keyword">as</span> f:</span><br><span class="line">        f.write(</span><br><span class="line"><span class="string">"""set define off</span></span><br><span class="line"><span class="string">set feedback off</span></span><br><span class="line"><span class="string">set termout off</span></span><br><span class="line"><span class="string">set pages 0</span></span><br><span class="line"><span class="string">set lines 120</span></span><br><span class="line"><span class="string">set serveroutput on </span></span><br><span class="line"><span class="string">spool oracle_awr_html.sql</span></span><br><span class="line"><span class="string">declare</span></span><br><span class="line"><span class="string">   v_str varchar2(180);</span></span><br><span class="line"><span class="string">   procedure p (l_str  varchar2)</span></span><br><span class="line"><span class="string">   is</span></span><br><span class="line"><span class="string">   begin</span></span><br><span class="line"><span class="string">     dbms_output.put_line(l_str);</span></span><br><span class="line"><span class="string">   end;</span></span><br><span class="line"><span class="string">begin</span></span><br><span class="line"><span class="string">	p('set pages 0');</span></span><br><span class="line"><span class="string">	p('variable dbid number');</span></span><br><span class="line"><span class="string">	p('variable inst_num number');</span></span><br><span class="line"><span class="string">	p('variable inst_name varchar2(20)');</span></span><br><span class="line"><span class="string">	p('variable bid number');</span></span><br><span class="line"><span class="string">	p('variable eid number');</span></span><br><span class="line"><span class="string">	p('variable rpt_options number');</span></span><br><span class="line"><span class="string">	p('variable ENABLE_ADDM number');</span></span><br><span class="line"><span class="string">	p('variable cur_date varchar2(20)');</span></span><br><span class="line"><span class="string">	p('variable city varchar2(20)');</span></span><br><span class="line"><span class="string">	p('');</span></span><br><span class="line"><span class="string">	p('declare');</span></span><br><span class="line"><span class="string">	p('begin');</span></span><br><span class="line"><span class="string">  	p('select distinct first_value (snap_id) over( ');</span></span><br><span class="line"><span class="string">	p('		order by snap_id desc rows between unbounded preceding and unbounded following) max_snap_id ');</span></span><br><span class="line"><span class="string">	p('into :eid ');</span></span><br><span class="line"><span class="string">  	p('	    from  dba_hist_snapshot;');</span></span><br><span class="line"><span class="string">	p('select dbid into :dbid from dba_hist_database_instance where rownum=1;');</span></span><br><span class="line"><span class="string">p('end;');</span></span><br><span class="line"><span class="string">p('/');</span></span><br><span class="line"><span class="string"></span></span><br><span class="line"><span class="string">p('exec :rpt_options :=0;');</span></span><br><span class="line"><span class="string">p('exec :ENABLE_ADDM :=8;');</span></span><br><span class="line"><span class="string">p('exec :cur_date :=to_char(sysdate,''yyyymmdd'');');</span></span><br><span class="line"><span class="string">p('exec :city :=''&amp;1'';');</span></span><br><span class="line"><span class="string">p('exec :bid :=:eid-to_number(''&amp;2'');');</span></span><br><span class="line"><span class="string">p('column rpt_name new_value rpt_name noprint;');</span></span><br><span class="line"><span class="string"></span></span><br><span class="line"><span class="string">for c1 in  (select instance_number,instance_name from gv$instance order by instance_number) </span></span><br><span class="line"><span class="string">loop   </span></span><br><span class="line"><span class="string">   p('exec :inst_num :='||c1.instance_number||';');</span></span><br><span class="line"><span class="string">   p('exec :inst_name :='''||c1.instance_name||''';');</span></span><br><span class="line"><span class="string">   v_str:= q'[select :cur_date||'_'||:city||'_'||:inst_name||'_'||:inst_num||'_'||:bid||'_'||:eid||'.html' rpt_name from dual;]';</span></span><br><span class="line"><span class="string">   p(v_str);</span></span><br><span class="line"><span class="string">   p('set lines 8000');</span></span><br><span class="line"><span class="string">   p('spool &amp;rpt_name');</span></span><br><span class="line"><span class="string">   p(' select output from table(sys.dbms_workload_repository.awr_report_html( :dbid,');</span></span><br><span class="line"><span class="string">   p('                                                         :inst_num,');</span></span><br><span class="line"><span class="string">   p('                                                         :bid, :eid,');</span></span><br><span class="line"><span class="string">   p('                                                         :rpt_options ));');</span></span><br><span class="line"><span class="string">   p('spool off');</span></span><br><span class="line"><span class="string">   v_str := q'[select :cur_date||'_'||:city||'_'||:inst_name||'_'||:inst_num||'_'||:bid||'_'||:eid||'.html' file_name from dual;]';</span></span><br><span class="line"><span class="string">   p(v_str);</span></span><br><span class="line"><span class="string">   p('set termout off');</span></span><br><span class="line"><span class="string">end loop;</span></span><br><span class="line"><span class="string">p('exit');</span></span><br><span class="line"><span class="string">end;</span></span><br><span class="line"><span class="string">/</span></span><br><span class="line"><span class="string">spool off</span></span><br><span class="line"><span class="string">set define on</span></span><br><span class="line"><span class="string">set feedback off</span></span><br><span class="line"><span class="string">set termout on</span></span><br><span class="line"><span class="string">set termout off</span></span><br><span class="line"><span class="string">@oracle_awr_html.sql &amp;1 &amp;2</span></span><br><span class="line"><span class="string">set termout on</span></span><br><span class="line"><span class="string">set pagesize 24</span></span><br><span class="line"><span class="string">"""</span>)</span><br><span class="line"></span><br><span class="line"><span class="class"><span class="keyword">class</span> <span class="title">callsqluldr</span><span class="params">()</span>:</span></span><br><span class="line">    <span class="function"><span class="keyword">def</span> <span class="title">__init__</span><span class="params">(self,username,password,databaseName,city,beforethis)</span>:</span></span><br><span class="line">        self.username = username</span><br><span class="line">        self.password = password</span><br><span class="line">        self.databaseName = databaseName</span><br><span class="line">        self.city = city</span><br><span class="line">        self.beforethis = beforethis</span><br><span class="line">    <span class="function"><span class="keyword">def</span> <span class="title">run</span><span class="params">(self)</span>:</span></span><br><span class="line">        <span class="keyword">try</span>:</span><br><span class="line">            command = <span class="string">"sqlplus "</span> + self.username + <span class="string">"/"</span> + self.password + <span class="string">"@"</span> + self.databaseName + <span class="string">" @gen_oracle_awr_html.sql "</span> + self.city + <span class="string">" "</span> + self.beforethis</span><br><span class="line">            child = subprocess.Popen(command,shell=<span class="literal">True</span>)</span><br><span class="line">            child.wait()</span><br><span class="line">            <span class="comment">#print("&lt;&lt;%s done.&gt;&gt;" %self.city)</span></span><br><span class="line">        <span class="keyword">except</span> Exception <span class="keyword">as</span> e:</span><br><span class="line">            err_txt = <span class="string">"ERROR: CALL ORACLE SQLPLUS ERROR!"</span></span><br><span class="line">            print(err_txt)</span><br><span class="line">            write_errtxt(err_txt)</span><br><span class="line">            </span><br><span class="line"><span class="function"><span class="keyword">def</span> <span class="title">write_errtxt</span><span class="params">(err_txt)</span>:</span></span><br><span class="line">    <span class="keyword">pass</span></span><br></pre></td></tr></table></figure>
-<h3 id="参考文章"><a href="#参考文章" class="headerlink" title="参考文章:"></a><strong>参考文章:</strong></h3><h3 id="转载请注明出处https-izsk-me"><a href="#转载请注明出处https-izsk-me" class="headerlink" title="转载请注明出处https://izsk.me"></a><strong>转载请注明出处<a href="https://izsk.me" target="_blank" rel="noopener">https://izsk.me</a></strong></h3><hr>
 ]]></content>
       <categories>
         <category>Python</category>
