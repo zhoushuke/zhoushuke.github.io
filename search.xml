@@ -131,6 +131,67 @@
       </tags>
   </entry>
   <entry>
+    <title>ArgoCD学习(argoCD之ResourceCheck及Notifications机制)</title>
+    <url>/2021/01/09/argoCD-ResourceHook-Notifications/</url>
+    <content><![CDATA[<p>在之<a href="https://izsk.me/2020/12/04/argoCD-Usage/" target="_blank" rel="noopener">前一篇</a>体验一把使用argocd对多k8s集群进行gitops的实践，在团队使用过程中会发现，argocd的sync状态跟app health状态是两个步骤，经常出现资源同步成功了但是deployment在k8s一起起不来，在argocd app status 一直都是<code>Processing</code>,如何处理这种情况呢? argocd如何做 resource check,有没有必要引用notification机制</p>
+<a id="more"></a>
+<h3 id="Resource-Check"><a href="#Resource-Check" class="headerlink" title="Resource Check"></a>Resource Check</h3><p>argocd官网文档: <a href="https://argoproj.github.io/argo-cd/operator-manual/health/" target="_blank" rel="noopener">health</a></p>
+<p>首先解决一下比较常见的 app的状态一直是<code>Processing</code></p>
+<p>这里就要区别说一下argocd的两个命令:</p>
+<figure class="highlight bash"><table><tr><td class="code"><pre><span class="line"><span class="comment"># 1. argocd app sync </span></span><br><span class="line"><span class="comment"># app sync只是用于对资源进行同步，也就是说，将git上的资源同步到argocd -- k8s, 一般情况下只要跟集群的连接、权限没有问题，sync一般都会成功，但是这个命令并不会验证资源运行能不能work,因此无法根据这个状态来判断整个pipeline是否成功</span></span><br><span class="line"><span class="comment"># 可以指定超时 --timeout, 单位: 秒</span></span><br><span class="line"></span><br><span class="line"><span class="comment"># 2. argocd app wait --health --timeout</span></span><br><span class="line"><span class="comment"># app wait 则是等待资源达到某种状态, 这个是整个app的状态</span></span><br><span class="line"><span class="comment"># --health 表示等待整个app达到health的状态，health状态表示所有同步的资源都运行成功</span></span><br><span class="line"><span class="comment"># --timeout表示超时，如果超过这个时间，app还没有达到health状态，则表示失败</span></span><br><span class="line"><span class="comment"># 比如deployment一直重启，则过了timeout时间后，argocd会发现app未是health状态，则可以让整个pipeline会失败</span></span><br></pre></td></tr></table></figure>
+<p>作者最开始时，只使用<code>app sync</code>,这就忽略了对整个app的health状态的判断，因此会出现CI/CD所有stage都成功了，但是pod一直处于重启状态</p>
+<p>为解决这个问题，比较简单一点的做法就是在<code>app sync</code>后使用<code>app wait --health --timeout</code>来对<code>check app health</code>，如果不成功，则<code>pipeline exit 1</code>,这样可以在CI/CD阶段就暴露资源异常问题</p>
+<p>但这也有明显的缺点: 如果资源异常，则必须要等<code>timeout</code>时间之后才能发现，这个问题则可以结合k8s集群的监控发现，还能接受.</p>
+<p>从官网的文档来，argocd本身提供了对k8s中的常用资源对象的健康检查，比如对于deployment，argocd详细地说明了如何判断其达到health状态的.</p>
+<p>同时，也提供了自定义的检查机制，有2种形式，本人看了一下，第一种使用LUA语言写的，也就几行代码，倒也不难，作者没有采用，原因首先现在的业务大部分都是k8s常用资源对象，argocd本身支持度非常高，不需要</p>
+<p>第二种则需要以特殊的目录结构来组织，作者也没有采用，实在是在开发端维护这些跟业务无法的文件，会引起复杂性.</p>
+<p>取舍作者最后还是采用 <code>app wait</code>的方式，这还有一个好处是，不需要做额外的工作就可以将通知精准地发送给对应的enduser，比如gitlab本身的ci/cd,如果整个pipeline的失败会直接给发起pipeline的人发送邮件</p>
+<h3 id="notifications"><a href="#notifications" class="headerlink" title="notifications"></a>notifications</h3><p>这里还是需要分析一下argocd里的通知机制， argocd本身不提供notification，要依赖第三方提供的机制, 参考<a href="https://argoproj.github.io/argo-cd/operator-manual/notifications/" target="_blank" rel="noopener">notifications</a></p>
+<h4 id="resource-hook"><a href="#resource-hook" class="headerlink" title="resource hook"></a>resource hook</h4><p>resource hook是argocd本身提供的功能，简单来说，就是在资源同步前，中，后提供hoo脚本来执行相应的动作, 那么想在资源同步后获取app的状态，然后根据状态进行通知就非常简单了，通知可以是很简单的curl命令</p>
+<figure class="highlight yaml"><table><tr><td class="code"><pre><span class="line"><span class="attr">PreSync:</span> <span class="string">在同步之前执行相关操作，这个一般用于比如数据库操作等</span></span><br><span class="line"><span class="attr">Sync:</span> <span class="string">同步时执行相关操作，主要用于复杂应用的编排</span></span><br><span class="line"><span class="attr">PostSync:</span> <span class="string">同步之后且app状态为health执行相关操作</span></span><br><span class="line"><span class="attr">SyncFail:</span> <span class="string">同步失败后执行相关操作，同步失败一般不常见</span></span><br></pre></td></tr></table></figure>
+<p>用的最多的就是PostSync，用来获取app是否成功启动，hook一般是放在job中执行，比如</p>
+<figure class="highlight yaml"><table><tr><td class="code"><pre><span class="line"><span class="attr">apiVersion:</span> <span class="string">batch/v1</span></span><br><span class="line"><span class="attr">kind:</span> <span class="string">Job</span></span><br><span class="line"><span class="attr">metadata:</span></span><br><span class="line">  <span class="attr">generateName:</span> <span class="string">app-slack-notification-</span></span><br><span class="line">  <span class="attr">annotations:</span></span><br><span class="line">    <span class="attr">argocd.argoproj.io/hook:</span> <span class="string">PostSync</span></span><br><span class="line">    <span class="attr">argocd.argoproj.io/hook-delete-policy:</span> <span class="string">HookSucceeded</span></span><br><span class="line"><span class="attr">spec:</span></span><br><span class="line">  <span class="attr">template:</span></span><br><span class="line">    <span class="attr">spec:</span></span><br><span class="line">      <span class="attr">containers:</span></span><br><span class="line">      <span class="bullet">-</span> <span class="attr">name:</span> <span class="string">slack-notification</span></span><br><span class="line">        <span class="attr">image:</span> <span class="string">curlimages/curl</span></span><br><span class="line">        <span class="attr">command:</span></span><br><span class="line">          <span class="bullet">-</span> <span class="string">"curl"</span></span><br><span class="line">          <span class="bullet">-</span> <span class="string">"-X"</span></span><br><span class="line">          <span class="bullet">-</span> <span class="string">"POST"</span></span><br><span class="line">          <span class="bullet">-</span> <span class="string">"--data-urlencode"</span></span><br><span class="line">          <span class="bullet">-</span> <span class="string">"payload=&#123;\"channel\": \"#somechannel\", \"username\": \"hello\", \"text\": \"App Sync succeeded\", \"icon_emoji\": \":ghost:\"&#125;"</span></span><br><span class="line">          <span class="bullet">-</span> <span class="string">"https://hooks.slack.com/services/..."</span></span><br><span class="line">      <span class="attr">restartPolicy:</span> <span class="string">Never</span></span><br><span class="line">  <span class="attr">backoffLimit:</span> <span class="number">2</span></span><br></pre></td></tr></table></figure>
+<p>这个job比较容易理解，就是sync同步成功且app状态为health后发送一个slack消息</p>
+<p>结合业务来说， 作者并没有采用这种方法来发送通知，原因如下:</p>
+<ol>
+<li>对于PostSync可以发送成功的通知，但对于状态为Processing的无法判断</li>
+<li>存量的业务都需要将这个job加入到git中，最大的考量在于，通知还是没有办法做到<strong>谁执行的pipeline,谁接收通知的原则</strong>，比如上面的通知收件人，没有办法很好地更细粒度地指定，要么指定一个组，大家都收，要么指定一个人，但是模块都是多人开发，只发给一个人不合适</li>
+</ol>
+<h4 id="argocd-notifications"><a href="#argocd-notifications" class="headerlink" title="argocd-notifications"></a>argocd-notifications</h4><p>argocd-notification是argocd自家开发的通知系统,也是argocd推荐之一</p>
+<p>Argocd-notifications v1.0之前的版本与v1.0+版本有很大的不一样，建议大家认真阅读<a href="https://github.com/argoproj-labs/argocd-notifications/blob/d0da61d206/docs/upgrading/0.x-1.0.md" target="_blank" rel="noopener">update</a></p>
+<p>安装很简单，就一条命令</p>
+<figure class="highlight bash"><table><tr><td class="code"><pre><span class="line">kubectl apply -n argocd -f https://raw.githubusercontent.com/argoproj-labs/argocd-notifications/stable/manifests/install.yaml</span><br></pre></td></tr></table></figure>
+<p>起来之后就一个controller应用，这里以邮件为例</p>
+<p>首先，配置一下邮箱</p>
+<figure class="highlight bash"><table><tr><td class="code"><pre><span class="line">apiVersion: v1</span><br><span class="line">kind: Secret</span><br><span class="line">metadata:</span><br><span class="line">  name: argocd-notifications-secret</span><br><span class="line">  namespace: argocd</span><br><span class="line">stringData:</span><br><span class="line">  service.email: |</span><br><span class="line">    host: smtp.xxx.com</span><br><span class="line">    port: 587</span><br><span class="line">    from: xxx</span><br><span class="line">    username: xxx</span><br><span class="line">    password: xxx</span><br><span class="line"><span class="built_in">type</span>: Opaque</span><br></pre></td></tr></table></figure>
+<p>然后添加相应状态通知:</p>
+<figure class="highlight yaml"><table><tr><td class="code"><pre><span class="line"><span class="attr">apiVersion:</span> <span class="string">v1</span></span><br><span class="line"><span class="attr">kind:</span> <span class="string">ConfigMap</span></span><br><span class="line"><span class="attr">metadata:</span></span><br><span class="line">  <span class="attr">name:</span> <span class="string">argocd-notifications-cm</span></span><br><span class="line"><span class="attr">data:</span></span><br><span class="line">  <span class="comment"># email的参数可以来自上面的secret</span></span><br><span class="line">  <span class="attr">service.email:</span> <span class="string">|</span>    </span><br><span class="line">    <span class="attr">host:</span> <span class="string">smtp.gmail.com</span></span><br><span class="line">    <span class="attr">port:</span> <span class="number">587</span></span><br><span class="line">    <span class="attr">from:</span> <span class="string">&lt;myemail&gt;@gmail.com</span></span><br><span class="line">    <span class="attr">username:</span> <span class="string">$email-username</span></span><br><span class="line">    <span class="attr">password:</span> <span class="string">$email-password</span></span><br><span class="line">  </span><br><span class="line">  <span class="comment"># 触发条件</span></span><br><span class="line">  <span class="attr">trigger.on-sync-status-unknown:</span> <span class="string">|</span></span><br><span class="line">    <span class="bullet">-</span> <span class="attr">when:</span> <span class="string">app.status.sync.status</span> <span class="string">==</span> <span class="string">'Unknown'</span>  <span class="comment"># 指定条件</span></span><br><span class="line">      <span class="attr">send:</span> <span class="string">[my-custom-template]</span>								 <span class="comment"># 指定模板</span></span><br><span class="line">  </span><br><span class="line">  <span class="comment"># 发送模板</span></span><br><span class="line">  <span class="attr">template.my-custom-template:</span> <span class="string">|</span></span><br><span class="line">    <span class="attr">title:</span> <span class="string">&lt;argocd&gt;</span> <span class="string">Sync</span> <span class="string">Application</span> <span class="string">&#123;&#123;.app.metadata.name&#125;&#125;</span> <span class="string">Status</span> <span class="string">&#123;&#123;.app.status.health.status&#125;&#125;.</span></span><br><span class="line">    <span class="attr">body:</span> <span class="string">|</span></span><br><span class="line">      <span class="attr">App Name:</span> <span class="string">&#123;&#123;.app.metadata.name&#125;&#125;</span></span><br><span class="line">      <span class="attr">Cluster Name:</span> <span class="string">&#123;&#123;.context.clusterName&#125;&#125;</span></span><br><span class="line">      <span class="attr">Sync Status:</span> <span class="string">&#123;&#123;.app.status.health.status&#125;&#125;</span> </span><br><span class="line">      <span class="attr">Following Error:</span> <span class="string">&#123;&#123;.app.status.operationState.message&#125;&#125;</span></span><br><span class="line">      <span class="attr">Repo URL:</span> <span class="string">&#123;&#123;.repo.FullNameByRepoURL&#125;&#125;</span></span><br><span class="line">      <span class="attr">Commit Msg:</span> <span class="string">&#123;&#123;.repo.GetCommitMetadata&#125;&#125;</span></span><br><span class="line">  </span><br><span class="line">  <span class="comment"># 订阅者</span></span><br><span class="line">  <span class="attr">subscriptions:</span> <span class="string">|</span></span><br><span class="line">    <span class="bullet">-</span> <span class="attr">recipients:</span></span><br><span class="line">      <span class="bullet">-</span> <span class="string">email:test@gmail.com</span></span><br><span class="line">      <span class="attr">triggers:</span></span><br><span class="line">      <span class="bullet">-</span> <span class="string">on-sync-status-unknown</span></span><br></pre></td></tr></table></figure>
+<p>如上面的配置，用于监控argocd同步状态为 Unknown的情况，发送邮件告警</p>
+<p>当然， 在argocd部署应用的时候，也可以添加订阅者，直接在annotations中添加即可</p>
+<figure class="highlight bash"><table><tr><td class="code"><pre><span class="line">notifications.argoproj.io/subscribe.on-app-synched.eamil: xxx@xxx.com</span><br></pre></td></tr></table></figure>
+<p>argocd-notification每隔一分钟就会扫描所有argocd app，感觉还是比较频繁，如果应用一多的话，不知道是不是影响性能，这个时间目前不支持通过参数覆盖，如果需要调整只能修改源码后重新编译</p>
+<p>作者最后也没有采用这种形式，原因在于argocd-notification还是用于监控argocd 的sync状态，并不关心app 是否health</p>
+<h4 id="argo-kube-notifier"><a href="#argo-kube-notifier" class="headerlink" title="argo-kube-notifier"></a><a href="https://github.com/argoproj-labs/argo-kube-notifier" target="_blank" rel="noopener">argo-kube-notifier</a></h4><p>最后argocd也推荐使用<a href="https://github.com/argoproj-labs/argo-kube-notifier" target="_blank" rel="noopener">argo-kube-notifier</a>，但感觉这个跟argocd本身就没多大关系了，完且是发布后的health check,这个主要用于k8s集群应用状态的check，实现这个目的的组件很多，而且<a href="https://github.com/argoproj-labs/argo-kube-notifier" target="_blank" rel="noopener">argo-kube-notifier</a>还是没办法实现<strong>谁执行的pipeline,谁接收通知的原则</strong></p>
+<p>综上，还是直接使用<code>argo app wait</code>简单粗暴，加两行代码，贴合需求</p>
+<h3 id="参考文章"><a href="#参考文章" class="headerlink" title="参考文章:"></a><strong>参考文章:</strong></h3><blockquote>
+<ul>
+<li><a href="https://izsk.me/2020/12/04/argoCD-Usage/" target="_blank" rel="noopener">https://izsk.me/2020/12/04/argoCD-Usage/</a></li>
+<li><a href="https://github.com/argoproj/argo-cd/blob/master/docs/operator-manual/webhook.md" target="_blank" rel="noopener">https://github.com/argoproj/argo-cd/blob/master/docs/operator-manual/webhook.md</a></li>
+<li><a href="https://github.com/argoproj-labs/argocd-notifications/blob/d0da61d206/docs/upgrading/0.x-1.0.md" target="_blank" rel="noopener">https://github.com/argoproj-labs/argocd-notifications/blob/d0da61d206/docs/upgrading/0.x-1.0.md</a></li>
+<li><a href="https://www.jianshu.com/p/a0613951c4b4" target="_blank" rel="noopener">https://www.jianshu.com/p/a0613951c4b4</a></li>
+<li><a href="https://argoproj.github.io/argo-cd/operator-manual/health/" target="_blank" rel="noopener">https://argoproj.github.io/argo-cd/operator-manual/health/</a></li>
+<li><a href="https://argoproj.github.io/argo-cd/operator-manual/notifications/" target="_blank" rel="noopener">https://argoproj.github.io/argo-cd/operator-manual/notifications/</a></li>
+</ul>
+</blockquote>
+<h3 id="转载请注明出处https-izsk-me"><a href="#转载请注明出处https-izsk-me" class="headerlink" title="转载请注明出处https://izsk.me"></a><strong>转载请注明出处<a href="https://izsk.me" target="_blank" rel="noopener">https://izsk.me</a></strong></h3>]]></content>
+      <categories>
+        <category>ArgoCD</category>
+      </categories>
+      <tags>
+        <tag>ArgoCD</tag>
+      </tags>
+  </entry>
+  <entry>
     <title>Kubernetes学习(Kubernetes踩坑记)</title>
     <url>/2021/01/06/Kubernetes-prombles/</url>
     <content><![CDATA[<p>记录在使用Kubernetes中遇到的各种问题及解决方案, 好记性不如烂笔头</p>
@@ -525,7 +586,7 @@
       </tags>
   </entry>
   <entry>
-    <title>Kubernetes学习(使用argoCD实现多集群应用同步一)</title>
+    <title>argoCD学习(使用argoCD实现多集群应用同步)</title>
     <url>/2020/12/04/argoCD-Usage/</url>
     <content><![CDATA[<p>运维中经常会存在多套的环境，开发、测试、stagging、prod等，这么多的环境，对于开发同学，如何通过一次部署多环境上线，打通开发与测试间的gap，而对于运维同学来说，则关心如何保障环境之间应用版本一致，而argoCD就是这样一个工具，配合GitOps思路，可以实现对多集群的应用版本管理.</p>
 <a id="more"></a>
@@ -616,10 +677,10 @@
 </blockquote>
 <h3 id="转载请注明出处https-izsk-me"><a href="#转载请注明出处https-izsk-me" class="headerlink" title="转载请注明出处https://izsk.me"></a><strong>转载请注明出处<a href="https://izsk.me" target="_blank" rel="noopener">https://izsk.me</a></strong></h3>]]></content>
       <categories>
-        <category>Kubernetes</category>
+        <category>ArgoCD</category>
       </categories>
       <tags>
-        <tag>Kubernetes</tag>
+        <tag>ArgoCD</tag>
       </tags>
   </entry>
   <entry>
@@ -821,48 +882,6 @@
   </entry>
   <entry>
     <title>使用crash查看Linux系统异常重启原因</title>
-    <url>/2020/09/27/System-kernel-panic-debug/</url>
-    <content><![CDATA[<p>最近有一台物理机间歇性的发生重启, 本以为是偶发事件就没多在意，今天又给重启了, 因此决定探探究竟</p>
-<a id="more"></a>
-<p>首先看一下kdump服务是否开启, kdump主要用于内核发生crash时记录相关上下文的. 用来转储运行内存的一个工具</p>
-<p>简言之: 系统一旦崩溃，内核就没法正常工作了，这个时候将由kdump提供一个用于捕获当前运行信息的内核，</p>
-<p>该内核会将此时内存中的所有运行状态和数据信息收集到一个dump core文件中以便之后分析崩溃原因</p>
-<p>之后系统便会重启.</p>
-<p>关于kdump在内核已经崩溃的前提下还能够捕获到异常信息, 原理可<a href="https://blog.csdn.net/zhangskd/article/details/38084337" target="_blank" rel="noopener">参考</a></p>
-<p><img src="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20200927180148.png" alt></p>
-<p>这里引用<a href="https://blog.csdn.net/zhangskd/article/details/38084337" target="_blank" rel="noopener">一张图</a></p>
-<p><img src="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20200927185450.png" alt></p>
-<p>要分析core文件，可以使用crash工具，首先是安装:</p>
-<p>注意, 要安装与当前内核对应的版本, 要不然crash无法使用.</p>
-<figure class="highlight bash"><table><tr><td class="code"><pre><span class="line">wget http://debuginfo.centos.org/7/x86_64/kernel-debuginfo-common-x86_64-3.10.0-693.el7.x86_64.rpm</span><br><span class="line">wget http://debuginfo.centos.org/7/x86_64/kernel-debuginfo-3.10.0-693.el7.x86_64.rpm</span><br><span class="line"></span><br><span class="line">rpm -ivh kernel-debuginfo-common-x86_64-3.10.0-693.el7.x86_64.rpm</span><br><span class="line">rpm -ivh kernel-debuginfo-3.10.0-693.el7.x86_64.rpm</span><br><span class="line"></span><br><span class="line">yum install crash</span><br></pre></td></tr></table></figure>
-<p>通常, 内核crash后保存的core文件保存在<code>/var/crash</code>目录下，在该目录下找到最近一次crash的时间，使用以下命令启动crash分析dump.</p>
-<figure class="highlight bash"><table><tr><td class="code"><pre><span class="line">crash vmcore /usr/lib/debug/lib/modules/3.10.0-693.el7.x86_64/vmlinux</span><br></pre></td></tr></table></figure>
-<p>启动之后就进入到了crash命令行，很明显地显示出crash的原因,如下图红框所示:</p>
-<p><img src="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20200927175237.png" alt></p>
-<p>这里简要地反应出内核crash时的一些内存信息快照，包含一些物理信息, tasks数量，最重要的就是导致crash的command与panic的原因</p>
-<p>这里可直接使用ps查看进程的相关信息,跟linux 命令行下的ps功能相似</p>
-<p><img src="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20200927175207.png" alt></p>
-<p>还可以使用bt命令来查看trace信息, 当然都是一些汇编层的内容，需要有一定的专业知识，理解起来比较困难.</p>
-<p>从上面已经知道了panic的原因后就可对症下药.</p>
-<p>另外crash支持很多的子命令,大家可使用man crash查看，比较常用的为</p>
-<figure class="highlight bash"><table><tr><td class="code"><pre><span class="line">crash ps <span class="comment"># 查看进程</span></span><br><span class="line">crash sys <span class="comment"># 查看系统信息</span></span><br><span class="line">crash bt <span class="comment"># 查看堆栈信息</span></span><br><span class="line">crash files <span class="comment"># 查看异常时进程打开的文件</span></span><br><span class="line">crash task <span class="comment"># 查看指定task的信息</span></span><br></pre></td></tr></table></figure>
-<h3 id="参考文章"><a href="#参考文章" class="headerlink" title="参考文章:"></a><strong>参考文章:</strong></h3><blockquote>
-<ul>
-<li><a href="https://www.linuxtechi.com/how-to-enable-kdump-on-rhel-7-and-centos-7/" target="_blank" rel="noopener">https://www.linuxtechi.com/how-to-enable-kdump-on-rhel-7-and-centos-7/</a></li>
-<li><a href="https://www.cnblogs.com/doctormo/p/12619485.html" target="_blank" rel="noopener">https://www.cnblogs.com/doctormo/p/12619485.html</a></li>
-<li><a href="https://blog.csdn.net/zhangskd/article/details/38084337" target="_blank" rel="noopener">https://blog.csdn.net/zhangskd/article/details/38084337</a></li>
-</ul>
-</blockquote>
-<h3 id="转载请注明出处https-izsk-me"><a href="#转载请注明出处https-izsk-me" class="headerlink" title="转载请注明出处https://izsk.me"></a><strong>转载请注明出处<a href="https://izsk.me" target="_blank" rel="noopener">https://izsk.me</a></strong></h3>]]></content>
-      <categories>
-        <category>System</category>
-      </categories>
-      <tags>
-        <tag>System</tag>
-      </tags>
-  </entry>
-  <entry>
-    <title>使用crash查看Linux系统异常重启原因</title>
     <url>/2020/09/27/kernel-panic-debug/</url>
     <content><![CDATA[<p>最近有一台物理机间歇性的发生重启, 本以为是偶发事件就没多在意，今天又给重启了, 因此决定探探究竟</p>
 <a id="more"></a>
@@ -901,6 +920,48 @@
       </categories>
       <tags>
         <tag>Shell</tag>
+      </tags>
+  </entry>
+  <entry>
+    <title>使用crash查看Linux系统异常重启原因</title>
+    <url>/2020/09/27/System-kernel-panic-debug/</url>
+    <content><![CDATA[<p>最近有一台物理机间歇性的发生重启, 本以为是偶发事件就没多在意，今天又给重启了, 因此决定探探究竟</p>
+<a id="more"></a>
+<p>首先看一下kdump服务是否开启, kdump主要用于内核发生crash时记录相关上下文的. 用来转储运行内存的一个工具</p>
+<p>简言之: 系统一旦崩溃，内核就没法正常工作了，这个时候将由kdump提供一个用于捕获当前运行信息的内核，</p>
+<p>该内核会将此时内存中的所有运行状态和数据信息收集到一个dump core文件中以便之后分析崩溃原因</p>
+<p>之后系统便会重启.</p>
+<p>关于kdump在内核已经崩溃的前提下还能够捕获到异常信息, 原理可<a href="https://blog.csdn.net/zhangskd/article/details/38084337" target="_blank" rel="noopener">参考</a></p>
+<p><img src="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20200927180148.png" alt></p>
+<p>这里引用<a href="https://blog.csdn.net/zhangskd/article/details/38084337" target="_blank" rel="noopener">一张图</a></p>
+<p><img src="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20200927185450.png" alt></p>
+<p>要分析core文件，可以使用crash工具，首先是安装:</p>
+<p>注意, 要安装与当前内核对应的版本, 要不然crash无法使用.</p>
+<figure class="highlight bash"><table><tr><td class="code"><pre><span class="line">wget http://debuginfo.centos.org/7/x86_64/kernel-debuginfo-common-x86_64-3.10.0-693.el7.x86_64.rpm</span><br><span class="line">wget http://debuginfo.centos.org/7/x86_64/kernel-debuginfo-3.10.0-693.el7.x86_64.rpm</span><br><span class="line"></span><br><span class="line">rpm -ivh kernel-debuginfo-common-x86_64-3.10.0-693.el7.x86_64.rpm</span><br><span class="line">rpm -ivh kernel-debuginfo-3.10.0-693.el7.x86_64.rpm</span><br><span class="line"></span><br><span class="line">yum install crash</span><br></pre></td></tr></table></figure>
+<p>通常, 内核crash后保存的core文件保存在<code>/var/crash</code>目录下，在该目录下找到最近一次crash的时间，使用以下命令启动crash分析dump.</p>
+<figure class="highlight bash"><table><tr><td class="code"><pre><span class="line">crash vmcore /usr/lib/debug/lib/modules/3.10.0-693.el7.x86_64/vmlinux</span><br></pre></td></tr></table></figure>
+<p>启动之后就进入到了crash命令行，很明显地显示出crash的原因,如下图红框所示:</p>
+<p><img src="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20200927175237.png" alt></p>
+<p>这里简要地反应出内核crash时的一些内存信息快照，包含一些物理信息, tasks数量，最重要的就是导致crash的command与panic的原因</p>
+<p>这里可直接使用ps查看进程的相关信息,跟linux 命令行下的ps功能相似</p>
+<p><img src="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20200927175207.png" alt></p>
+<p>还可以使用bt命令来查看trace信息, 当然都是一些汇编层的内容，需要有一定的专业知识，理解起来比较困难.</p>
+<p>从上面已经知道了panic的原因后就可对症下药.</p>
+<p>另外crash支持很多的子命令,大家可使用man crash查看，比较常用的为</p>
+<figure class="highlight bash"><table><tr><td class="code"><pre><span class="line">crash ps <span class="comment"># 查看进程</span></span><br><span class="line">crash sys <span class="comment"># 查看系统信息</span></span><br><span class="line">crash bt <span class="comment"># 查看堆栈信息</span></span><br><span class="line">crash files <span class="comment"># 查看异常时进程打开的文件</span></span><br><span class="line">crash task <span class="comment"># 查看指定task的信息</span></span><br></pre></td></tr></table></figure>
+<h3 id="参考文章"><a href="#参考文章" class="headerlink" title="参考文章:"></a><strong>参考文章:</strong></h3><blockquote>
+<ul>
+<li><a href="https://www.linuxtechi.com/how-to-enable-kdump-on-rhel-7-and-centos-7/" target="_blank" rel="noopener">https://www.linuxtechi.com/how-to-enable-kdump-on-rhel-7-and-centos-7/</a></li>
+<li><a href="https://www.cnblogs.com/doctormo/p/12619485.html" target="_blank" rel="noopener">https://www.cnblogs.com/doctormo/p/12619485.html</a></li>
+<li><a href="https://blog.csdn.net/zhangskd/article/details/38084337" target="_blank" rel="noopener">https://blog.csdn.net/zhangskd/article/details/38084337</a></li>
+</ul>
+</blockquote>
+<h3 id="转载请注明出处https-izsk-me"><a href="#转载请注明出处https-izsk-me" class="headerlink" title="转载请注明出处https://izsk.me"></a><strong>转载请注明出处<a href="https://izsk.me" target="_blank" rel="noopener">https://izsk.me</a></strong></h3>]]></content>
+      <categories>
+        <category>System</category>
+      </categories>
+      <tags>
+        <tag>System</tag>
       </tags>
   </entry>
   <entry>
@@ -7095,6 +7156,74 @@
       </tags>
   </entry>
   <entry>
+    <title>记一次排查ES FGC导致的集群宕机异常</title>
+    <url>/2019/10/06/ES-FGC-Fix/</url>
+    <content><![CDATA[<p>有一个私有云环境的运维同事反应项目中的ES集群无法查询, 由于是私有云环境, 没有直接运维权限, 所以没有接收到一线报警, 远程登录上去后发现ES集群已经宕机了, 这次的排查过程也发现了几个比较容易忽视的细节, 在此记录一下,比较有意思.</p>
+<a id="more"></a>
+<h3 id="集群状态"><a href="#集群状态" class="headerlink" title="集群状态"></a>集群状态</h3><p>ES集群为3节点.</p>
+<p>首先肯定是查看集群状态</p>
+<figure class="highlight bash"><table><tr><td class="code"><pre><span class="line">curl <span class="string">'http://localhost:9200/_cluster/health?pretty'</span> -u xxx:yyy</span><br><span class="line"><span class="comment">#发现状态为Red</span></span><br></pre></td></tr></table></figure>
+<p>查看节点状态</p>
+<figure class="highlight bash"><table><tr><td class="code"><pre><span class="line">curl <span class="string">'http://localhost:9200/_cat/node?v'</span> -u xxx:yyy</span><br><span class="line"><span class="comment">#节点数正常</span></span><br></pre></td></tr></table></figure>
+<p>查看各节点使用的磁盘情况</p>
+<figure class="highlight bash"><table><tr><td class="code"><pre><span class="line">curl -XGET <span class="string">'localhost:9200/_cat/allocation?v&amp;pretty'</span> -u xxx:yyy</span><br><span class="line"><span class="comment">#未发现异常</span></span><br></pre></td></tr></table></figure>
+<h3 id="集群日志"><a href="#集群日志" class="headerlink" title="集群日志"></a>集群日志</h3><p>登录一个ES节点查看日志，发现以下报错，查看其它2个节点，情况相同</p>
+<p><img src="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20200204134510.png" alt></p>
+<p>从日志来看, 可以发现几个问题:</p>
+<blockquote>
+<ul>
+<li>Full GC很频繁, 而且时间也非常的长 </li>
+<li>每次GC完之后所能释放的内存非常有限</li>
+</ul>
+</blockquote>
+<p>到这，其它原因已经很明朗, <strong>内存不够导致的full gc 频繁，但是又不能释放太多的空间，又导致full gc的恶意循环</strong></p>
+<p>如果大家对gc的日志不很了解的话, 这里解释下上面日志的各个字段含义, 假如有以下一条gc日志</p>
+<figure class="highlight bash"><table><tr><td class="code"><pre><span class="line">[2018-06-30T17:57:29,020][INFO ][o.e.m.j.JvmGcMonitorService] [qoo--ES] [gc][old][228385][160772] duration [5s], collections [1]/[5.1s], total [5s]/[4.4d], memory [945.4mb]-&gt;[958.5mb]/[1007.3mb], all_pools &#123;[young] [87.8mb]-&gt;[100.9mb]/[133.1mb]&#125;&#123;[survivor] [0b]-&gt;[0b]/[16.6mb]&#125;&#123;[old] [857.6mb]-&gt;[857.6mb]/[857.6mb]&#125;</span><br></pre></td></tr></table></figure>
+<ul>
+<li><strong>gc old</strong> 本次是 old GC 这是第228385次 GC 检查][从 JVM 启动至今发生的第 160772次 G]</li>
+<li><strong>duration</strong> [本次检查到的 GC 总耗时 <strong>5</strong> 秒，可能是多次的加和</li>
+<li><strong>collections</strong> [从上次检查至今总共发生<strong>1</strong>次GC]/[从上次检查至今已过去 <strong>5.1</strong> 秒],</li>
+<li><strong>total</strong> [本次检查到的 GC 总耗时为 <strong>5</strong> 秒]/[从 JVM 启动至今发生的 GC 总耗时为 <strong>4.4</strong> 天]，</li>
+<li><strong>memory</strong> [ GC 前 Heap memory 空间]-&gt;[GC 后 Heap memory 空间]/[Heap memory 总空间],</li>
+<li><strong>all_pools</strong>(分代部分的详情) {young 区][GC 前 Memory ]-&gt;[GC后 Memory]/[young区 Memory 总大小] }</li>
+<li><strong>survivor</strong> [GC 前 Memory ]-&gt;[GC后 Memory]/[Memory 总大小] }{old 区[GC 前 Memory ]-&gt;[GC后 Memory]/[old区 Memory 总大小] }</li>
+</ul>
+<p>那为何会内存不足呢, 想起前几天服务拓展，添加收集了几个服务的日志, 日志量不算小, 而且这3个ES节点所在的机器内存只分配了8个G, 显然, 加完这几个日志之后内存不够用了.</p>
+<h3 id="Index-Mapping"><a href="#Index-Mapping" class="headerlink" title="Index Mapping"></a>Index Mapping</h3><p>而且，从日志中， 还发现几处很诡异的日志</p>
+<p><img src="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20200204141415.png" alt></p>
+<p>红框中的错误: <strong>object mapping for [msg] tried to pasrse field [msg] as object, but found a concrete</strong></p>
+<p>翻译过来就是说, 日志中的msg这个字段的类型匹配不上, ES尽力把它解析为object类型，但是它却是个确切的值.</p>
+<p>就好比你在python中定义了一个字典, 但是你给它赋值一个整形, 这确定要报错.</p>
+<p>但是这个mapping是从何而来的呢.</p>
+<p>经过网上搜索一翻, 终于明白:</p>
+<p>ES中为了加强性能，对于索引中的<strong>第一条数据, ES会默认(可设置)按照这条数据建立index mapping, 相当于是一个索引模板, 好比是mysql中表的定义一个概念, 后续这个索引中的所有日志都按照该模板进行解析</strong></p>
+<p>后来经过查看源码, 我们发现，出现上图中的问题是因为代码中的日志打印不规范, 有一个地方如果抛出异常时，打印的是一个单一字符串, 而正常情况下打印的是一个json, 所以当第一条正常的日志传递给ES时，ES建立的索引 模板记录这个字段为object类型(可以类比为python中的字典, 本身是可以新增元素的), 当应用抛出异常时，日志中又传递了一个单一字符串, 但是索引模板已经记录为object类型，所以无法匹配, 这就是问题所在</p>
+<h3 id="Fix-Bug"><a href="#Fix-Bug" class="headerlink" title="Fix Bug"></a>Fix Bug</h3><p>从3个方面解决上面的问题</p>
+<p>首先是修复代码中日志不规范问题, 这个充暴露了code view不严谨.</p>
+<p>第2个是加大ES的内存,毕竟日志量确实是上来了, 从8G添加到12G</p>
+<p>第3个是优化ES的gc问题, ES中有个逻辑是：<strong>默认情况下，主节点每30秒会去检查其他节点的状态，如果任何节点的垃圾回收时间超过30秒（Garbage collection duration）且在重复次数内都超时，则会导致主节点任务该节点脱离集群, 节点脱离集群后会引起分片的rebalance</strong></p>
+<p>这个机制让ES节点频繁的脱离集群，而又引起整个集群的rebalance，ES本身的内存就不够，rebalance更是雪上加霜, 如此往复就导致整个ES集群宕机.</p>
+<p>可修改主节点的检查时间及重复次数,让其它节点有充分的时间进行full gc.</p>
+<p>在ES的配置文件中添加以下配置:</p>
+<figure class="highlight yml"><table><tr><td class="code"><pre><span class="line"><span class="attr">discovery.zen.fd.ping_timeout:</span> <span class="string">300s</span></span><br><span class="line"><span class="attr">discovery.zen.fd.ping_retriES:</span> <span class="number">10</span></span><br></pre></td></tr></table></figure>
+<p>这样, 达到这两个条件时才能触发节点脱离集群</p>
+<p>至此, 依次重启ES节点, 问题圆满解决.</p>
+<h3 id="参考文章"><a href="#参考文章" class="headerlink" title="参考文章:"></a><strong>参考文章:</strong></h3><blockquote>
+<ul>
+<li><a href="https://www.elastic.co/guide/en/elasticsearch/reference/current/mapping.html" target="_blank" rel="noopener">elasticsearch index mapping</a></li>
+<li><a href="https://blog.csdn.net/sinat_35930259/article/details/80354732" target="_blank" rel="noopener">elasticsearch篇之mapping</a></li>
+<li><a href="https://segmentfault.com/a/1190000016494488" target="_blank" rel="noopener">你看懂 Elasticsearch Log 中的 GC 日志了吗？</a></li>
+</ul>
+</blockquote>
+<h3 id="转载请注明出处https-izsk-me"><a href="#转载请注明出处https-izsk-me" class="headerlink" title="转载请注明出处https://izsk.me"></a><strong>转载请注明出处<a href="https://izsk.me" target="_blank" rel="noopener">https://izsk.me</a></strong></h3>]]></content>
+      <categories>
+        <category>FELK</category>
+      </categories>
+      <tags>
+        <tag>FELK</tag>
+      </tags>
+  </entry>
+  <entry>
     <title>CockRoachDB学习(架构)</title>
     <url>/2019/10/06/CockroachDB-Struct/</url>
     <content><![CDATA[<p>项目中需要一个分布式数据库用于存储业务的KV数据, 在前期项目调研结合业务比对了业界常用的KV数据库模型后, 最后选择了CockRoachDB(CRDB).</p>
@@ -7229,74 +7358,6 @@
       </categories>
       <tags>
         <tag>分布式架构</tag>
-      </tags>
-  </entry>
-  <entry>
-    <title>记一次排查ES FGC导致的集群宕机异常</title>
-    <url>/2019/10/06/ES-FGC-Fix/</url>
-    <content><![CDATA[<p>有一个私有云环境的运维同事反应项目中的ES集群无法查询, 由于是私有云环境, 没有直接运维权限, 所以没有接收到一线报警, 远程登录上去后发现ES集群已经宕机了, 这次的排查过程也发现了几个比较容易忽视的细节, 在此记录一下,比较有意思.</p>
-<a id="more"></a>
-<h3 id="集群状态"><a href="#集群状态" class="headerlink" title="集群状态"></a>集群状态</h3><p>ES集群为3节点.</p>
-<p>首先肯定是查看集群状态</p>
-<figure class="highlight bash"><table><tr><td class="code"><pre><span class="line">curl <span class="string">'http://localhost:9200/_cluster/health?pretty'</span> -u xxx:yyy</span><br><span class="line"><span class="comment">#发现状态为Red</span></span><br></pre></td></tr></table></figure>
-<p>查看节点状态</p>
-<figure class="highlight bash"><table><tr><td class="code"><pre><span class="line">curl <span class="string">'http://localhost:9200/_cat/node?v'</span> -u xxx:yyy</span><br><span class="line"><span class="comment">#节点数正常</span></span><br></pre></td></tr></table></figure>
-<p>查看各节点使用的磁盘情况</p>
-<figure class="highlight bash"><table><tr><td class="code"><pre><span class="line">curl -XGET <span class="string">'localhost:9200/_cat/allocation?v&amp;pretty'</span> -u xxx:yyy</span><br><span class="line"><span class="comment">#未发现异常</span></span><br></pre></td></tr></table></figure>
-<h3 id="集群日志"><a href="#集群日志" class="headerlink" title="集群日志"></a>集群日志</h3><p>登录一个ES节点查看日志，发现以下报错，查看其它2个节点，情况相同</p>
-<p><img src="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20200204134510.png" alt></p>
-<p>从日志来看, 可以发现几个问题:</p>
-<blockquote>
-<ul>
-<li>Full GC很频繁, 而且时间也非常的长 </li>
-<li>每次GC完之后所能释放的内存非常有限</li>
-</ul>
-</blockquote>
-<p>到这，其它原因已经很明朗, <strong>内存不够导致的full gc 频繁，但是又不能释放太多的空间，又导致full gc的恶意循环</strong></p>
-<p>如果大家对gc的日志不很了解的话, 这里解释下上面日志的各个字段含义, 假如有以下一条gc日志</p>
-<figure class="highlight bash"><table><tr><td class="code"><pre><span class="line">[2018-06-30T17:57:29,020][INFO ][o.e.m.j.JvmGcMonitorService] [qoo--ES] [gc][old][228385][160772] duration [5s], collections [1]/[5.1s], total [5s]/[4.4d], memory [945.4mb]-&gt;[958.5mb]/[1007.3mb], all_pools &#123;[young] [87.8mb]-&gt;[100.9mb]/[133.1mb]&#125;&#123;[survivor] [0b]-&gt;[0b]/[16.6mb]&#125;&#123;[old] [857.6mb]-&gt;[857.6mb]/[857.6mb]&#125;</span><br></pre></td></tr></table></figure>
-<ul>
-<li><strong>gc old</strong> 本次是 old GC 这是第228385次 GC 检查][从 JVM 启动至今发生的第 160772次 G]</li>
-<li><strong>duration</strong> [本次检查到的 GC 总耗时 <strong>5</strong> 秒，可能是多次的加和</li>
-<li><strong>collections</strong> [从上次检查至今总共发生<strong>1</strong>次GC]/[从上次检查至今已过去 <strong>5.1</strong> 秒],</li>
-<li><strong>total</strong> [本次检查到的 GC 总耗时为 <strong>5</strong> 秒]/[从 JVM 启动至今发生的 GC 总耗时为 <strong>4.4</strong> 天]，</li>
-<li><strong>memory</strong> [ GC 前 Heap memory 空间]-&gt;[GC 后 Heap memory 空间]/[Heap memory 总空间],</li>
-<li><strong>all_pools</strong>(分代部分的详情) {young 区][GC 前 Memory ]-&gt;[GC后 Memory]/[young区 Memory 总大小] }</li>
-<li><strong>survivor</strong> [GC 前 Memory ]-&gt;[GC后 Memory]/[Memory 总大小] }{old 区[GC 前 Memory ]-&gt;[GC后 Memory]/[old区 Memory 总大小] }</li>
-</ul>
-<p>那为何会内存不足呢, 想起前几天服务拓展，添加收集了几个服务的日志, 日志量不算小, 而且这3个ES节点所在的机器内存只分配了8个G, 显然, 加完这几个日志之后内存不够用了.</p>
-<h3 id="Index-Mapping"><a href="#Index-Mapping" class="headerlink" title="Index Mapping"></a>Index Mapping</h3><p>而且，从日志中， 还发现几处很诡异的日志</p>
-<p><img src="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20200204141415.png" alt></p>
-<p>红框中的错误: <strong>object mapping for [msg] tried to pasrse field [msg] as object, but found a concrete</strong></p>
-<p>翻译过来就是说, 日志中的msg这个字段的类型匹配不上, ES尽力把它解析为object类型，但是它却是个确切的值.</p>
-<p>就好比你在python中定义了一个字典, 但是你给它赋值一个整形, 这确定要报错.</p>
-<p>但是这个mapping是从何而来的呢.</p>
-<p>经过网上搜索一翻, 终于明白:</p>
-<p>ES中为了加强性能，对于索引中的<strong>第一条数据, ES会默认(可设置)按照这条数据建立index mapping, 相当于是一个索引模板, 好比是mysql中表的定义一个概念, 后续这个索引中的所有日志都按照该模板进行解析</strong></p>
-<p>后来经过查看源码, 我们发现，出现上图中的问题是因为代码中的日志打印不规范, 有一个地方如果抛出异常时，打印的是一个单一字符串, 而正常情况下打印的是一个json, 所以当第一条正常的日志传递给ES时，ES建立的索引 模板记录这个字段为object类型(可以类比为python中的字典, 本身是可以新增元素的), 当应用抛出异常时，日志中又传递了一个单一字符串, 但是索引模板已经记录为object类型，所以无法匹配, 这就是问题所在</p>
-<h3 id="Fix-Bug"><a href="#Fix-Bug" class="headerlink" title="Fix Bug"></a>Fix Bug</h3><p>从3个方面解决上面的问题</p>
-<p>首先是修复代码中日志不规范问题, 这个充暴露了code view不严谨.</p>
-<p>第2个是加大ES的内存,毕竟日志量确实是上来了, 从8G添加到12G</p>
-<p>第3个是优化ES的gc问题, ES中有个逻辑是：<strong>默认情况下，主节点每30秒会去检查其他节点的状态，如果任何节点的垃圾回收时间超过30秒（Garbage collection duration）且在重复次数内都超时，则会导致主节点任务该节点脱离集群, 节点脱离集群后会引起分片的rebalance</strong></p>
-<p>这个机制让ES节点频繁的脱离集群，而又引起整个集群的rebalance，ES本身的内存就不够，rebalance更是雪上加霜, 如此往复就导致整个ES集群宕机.</p>
-<p>可修改主节点的检查时间及重复次数,让其它节点有充分的时间进行full gc.</p>
-<p>在ES的配置文件中添加以下配置:</p>
-<figure class="highlight yml"><table><tr><td class="code"><pre><span class="line"><span class="attr">discovery.zen.fd.ping_timeout:</span> <span class="string">300s</span></span><br><span class="line"><span class="attr">discovery.zen.fd.ping_retriES:</span> <span class="number">10</span></span><br></pre></td></tr></table></figure>
-<p>这样, 达到这两个条件时才能触发节点脱离集群</p>
-<p>至此, 依次重启ES节点, 问题圆满解决.</p>
-<h3 id="参考文章"><a href="#参考文章" class="headerlink" title="参考文章:"></a><strong>参考文章:</strong></h3><blockquote>
-<ul>
-<li><a href="https://www.elastic.co/guide/en/elasticsearch/reference/current/mapping.html" target="_blank" rel="noopener">elasticsearch index mapping</a></li>
-<li><a href="https://blog.csdn.net/sinat_35930259/article/details/80354732" target="_blank" rel="noopener">elasticsearch篇之mapping</a></li>
-<li><a href="https://segmentfault.com/a/1190000016494488" target="_blank" rel="noopener">你看懂 Elasticsearch Log 中的 GC 日志了吗？</a></li>
-</ul>
-</blockquote>
-<h3 id="转载请注明出处https-izsk-me"><a href="#转载请注明出处https-izsk-me" class="headerlink" title="转载请注明出处https://izsk.me"></a><strong>转载请注明出处<a href="https://izsk.me" target="_blank" rel="noopener">https://izsk.me</a></strong></h3>]]></content>
-      <categories>
-        <category>FELK</category>
-      </categories>
-      <tags>
-        <tag>FELK</tag>
       </tags>
   </entry>
   <entry>
