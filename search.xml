@@ -1,70 +1,16 @@
 <?xml version="1.0" encoding="utf-8"?>
 <search>
   <entry>
-    <title>Kubernetes学习(k3d实践)</title>
-    <url>/2021/03/02/Kubernetes-k3d/</url>
-    <content><![CDATA[<p>之前进行了<a href="https://izsk.me/2020/08/07/Kubernetes-Kind/" target="_blank" rel="noopener">kind实践</a>,可以很方便地快速组件在k8s中的验证，今天发现一款由rancher开源的相同工具, <a href="https://k3d.io" target="_blank" rel="noopener">k3d</a>，也是非常的牛逼，照样也实践一把</p>
-<a id="more"></a>
-<p>k3d的底层使用的是rancher开发的<a href="https://k3s.io" target="_blank" rel="noopener">k3s</a>, 一款轻量级的k8s发行版，普遍用于端边协同领域</p>
-<p>k3d在快速开发中,因此有时官方的文档更新的不太及时，就容易出现看文档无法得到想要的结果，好在，一切都是那么方便 </p>
-<p>docker做为先决条件，是需要提前安装好的</p>
-<p>同样，需要安装k3d 的client，这里不再详说，可参考<a href="https://github.com/rancher/k3d" target="_blank" rel="noopener">git k3d</a></p>
-<p>这里要注意的是，最好使用新版本的k3d, k3d版本之间的差异还是比较大的，以下都是以v3.3为例</p>
-<p>k3d同样能够实现以node做为虚拟node进行k8s的模拟</p>
-<p>想要创建一个集群, 最简单的1master+1node</p>
-<figure class="highlight bash"><table><tr><td class="code"><pre><span class="line">k3d cluster create demo</span><br></pre></td></tr></table></figure>
-<p>如果需要指定多节点的话，则</p>
-<figure class="highlight bash"><table><tr><td class="code"><pre><span class="line">k3d cluster create demo --servers 3 --agents 3</span><br></pre></td></tr></table></figure>
-<p>demo为集群名,因为k3d支持创建多个集群</p>
-<p>–servers 为控制面节点</p>
-<p>–agents为node节点</p>
-<p>这里一个3master + 3node的k8s集群就创建出来了，当然，k3d也跟Kind一样，除了cli方式之外也支持配置文件指定参数.</p>
-<p>可以使用以下命令进行list</p>
-<figure class="highlight bash"><table><tr><td class="code"><pre><span class="line">k3d cluster list</span><br></pre></td></tr></table></figure>
-<p>在创建完集群之后，会自动地生成config文件，这个跟正常使用k8s是一样的，因此可以使用kubectl命令</p>
-<p>查看一下pod情况</p>
-<figure class="highlight bash"><table><tr><td class="code"><pre><span class="line">kubectl get pod --all-namespaces</span><br></pre></td></tr></table></figure>
-<p><img src="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20210302232345.png" alt></p>
-<p>可以看到几个比较常用见的组件</p>
-<p>比如:</p>
-<blockquote>
-<ul>
-<li>local-path-provisioner: 这个提供本地存储pv动态创建</li>
-<li>metrics-server: 用于pod metrics的收集</li>
-<li>traefik: 这个用于请求转发</li>
-<li>coredns: 集群域名解析</li>
-</ul>
-</blockquote>
-<p>从上面的图可以看到，其它的如Kube-proxy, kube-scheduler是没有，这个可以理解，用k3d创建出来的集群不管多少个agent，本质上还是一台实体机</p>
-<p>经过一番实践后，体验还是比较不错的，但还是有点欠缺，比如，如果使用了hostpath时，因为是虚拟出来的node节点，是没有hostpath的，那要如何使用呢, 这个翻了很多的文档也没找到说明，最后还是在issue中找到答案，方法如下</p>
-<p>使用host path时:</p>
-<figure class="highlight bash"><table><tr><td class="code"><pre><span class="line">k3d cluster create deom -v /data/middleware-data:/data/middleware-data</span><br></pre></td></tr></table></figure>
-<p>需要在创建集群里将hostpath使用到的目录进行挂载即可</p>
-<p>另外如果要使用nodeport，同样也是如此，需要在创建集群时就进行操作</p>
-<p>k3d跟kind相比，感觉还是k3d体验好一些，kind之前用的时候出现过几次用kind创建出来的集群直接就不能用，kubectl config不起作用</p>
-<p>k3d倒没有出现这种情况, 但是就是文档写的不怎么样，比如要从私有仓库中拉取镜像，这个就麻烦一点，但官方文档写的也不是很好，需要自己琢磨</p>
-<p>不过，不得不承认，k3d确实是个很实用的效率工具，对于需要快速地创建k8s集群进行验证，用完即焚的你可能，本人也打算在团队中推广大家使用起来</p>
-<h3 id="参考文章"><a href="#参考文章" class="headerlink" title="参考文章:"></a><strong>参考文章:</strong></h3><blockquote>
-<ul>
-<li><a href="https://k3s.iohttps://k3d.io" target="_blank" rel="noopener">https://k3s.iohttps://k3d.io</a></li>
-<li><a href="https://github.com/rancher/k3d" target="_blank" rel="noopener">https://github.com/rancher/k3d</a></li>
-<li><a href="https://izsk.me/2020/08/07/Kubernetes-Kind/" target="_blank" rel="noopener">https://izsk.me/2020/08/07/Kubernetes-Kind/</a></li>
-</ul>
-</blockquote>
-<h3 id="转载请注明出处https-izsk-me"><a href="#转载请注明出处https-izsk-me" class="headerlink" title="转载请注明出处https://izsk.me"></a><strong>转载请注明出处<a href="https://izsk.me" target="_blank" rel="noopener">https://izsk.me</a></strong></h3>]]></content>
-      <categories>
-        <category>Kubernetes</category>
-      </categories>
-      <tags>
-        <tag>Kubernetes</tag>
-      </tags>
-  </entry>
-  <entry>
     <title>Kubernetes学习(Kubernetes踩坑记)</title>
-    <url>/2021/02/28/Kubernetes-prombles/</url>
+    <url>/2021/03/20/Kubernetes-prombles/</url>
     <content><![CDATA[<p>记录在使用Kubernetes中遇到的各种问题及解决方案, 好记性不如烂笔头</p>
 <p><strong>不定期更新</strong></p>
 <a id="more"></a>
+<h3 id="panic-runtime-error-slice-bounds-out-of-range"><a href="#panic-runtime-error-slice-bounds-out-of-range" class="headerlink" title="panic: runtime error: slice bounds out of range"></a>panic: runtime error: slice bounds out of range</h3><p>原因: 这类问题的原因都在于数据已经出现问题</p>
+<p>解决: 因为有另一个pod在运行，删除掉出问题的数据后重启即可.</p>
+<h3 id="docker-启动时提示no-sockets-found-via-socket-activation"><a href="#docker-启动时提示no-sockets-found-via-socket-activation" class="headerlink" title="docker 启动时提示no sockets found via socket activation"></a>docker 启动时提示no sockets found via socket activation</h3><p><img src="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20210307212429.png" alt></p>
+<p>解决: 在start docker前先执行<code>systemctl unmask docker.socket</code>即可</p>
+<p><img src="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20210303122222.png" alt></p>
 <h3 id="Prometheus-opening-storage-failed-invalid-block-sequence"><a href="#Prometheus-opening-storage-failed-invalid-block-sequence" class="headerlink" title="Prometheus opening storage failed: invalid block sequence"></a>Prometheus opening storage failed: invalid block sequence</h3><p><img src="/Users/zhoushuke/Library/Application Support/typora-user-images/image-20210302200255132.png" alt="image-20210302200255132"></p>
 <p>原因: 这个需要排查prometheus持久化目录中是否存在时间超出设置阈值的时间段的文件，删掉后重启即可</p>
 <h3 id="The-node-was-low-on-resource-ephemeral-storage"><a href="#The-node-was-low-on-resource-ephemeral-storage" class="headerlink" title="The node was low on resource: ephemeral-storage"></a>The node was low on resource: ephemeral-storage</h3><p>原因: 节点上kubelet占用的路径超过了阈值，则会触发驱逐，默认情况下是85%</p>
@@ -229,6 +175,65 @@
 <li><a href="https://www.magalix.com/blog/kubernetes-patterns-the-reflection-pattern" target="_blank" rel="noopener">https://www.magalix.com/blog/kubernetes-patterns-the-reflection-pattern</a></li>
 <li><a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.19/#deploymentspec-v1-apps" target="_blank" rel="noopener">https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.19/#deploymentspec-v1-apps</a></li>
 <li><a href="https://github.com/kubernetes/kubernetes/pull/62167/files" target="_blank" rel="noopener">https://github.com/kubernetes/kubernetes/pull/62167/files</a></li>
+</ul>
+</blockquote>
+<h3 id="转载请注明出处https-izsk-me"><a href="#转载请注明出处https-izsk-me" class="headerlink" title="转载请注明出处https://izsk.me"></a><strong>转载请注明出处<a href="https://izsk.me" target="_blank" rel="noopener">https://izsk.me</a></strong></h3>]]></content>
+      <categories>
+        <category>Kubernetes</category>
+      </categories>
+      <tags>
+        <tag>Kubernetes</tag>
+      </tags>
+  </entry>
+  <entry>
+    <title>Kubernetes学习(k3d实践)</title>
+    <url>/2021/03/02/Kubernetes-k3d/</url>
+    <content><![CDATA[<p>之前进行了<a href="https://izsk.me/2020/08/07/Kubernetes-Kind/" target="_blank" rel="noopener">kind实践</a>,可以很方便地快速组件在k8s中的验证，今天发现一款由rancher开源的相同工具, <a href="https://k3d.io" target="_blank" rel="noopener">k3d</a>，也是非常的牛逼，照样也实践一把</p>
+<a id="more"></a>
+<p>k3d的底层使用的是rancher开发的<a href="https://k3s.io" target="_blank" rel="noopener">k3s</a>, 一款轻量级的k8s发行版，普遍用于端边协同领域</p>
+<p>k3d在快速开发中,因此有时官方的文档更新的不太及时，就容易出现看文档无法得到想要的结果，好在，一切都是那么方便 </p>
+<p>docker做为先决条件，是需要提前安装好的</p>
+<p>同样，需要安装k3d 的client，这里不再详说，可参考<a href="https://github.com/rancher/k3d" target="_blank" rel="noopener">git k3d</a></p>
+<p>这里要注意的是，最好使用新版本的k3d, k3d版本之间的差异还是比较大的，以下都是以v3.3为例</p>
+<p>k3d同样能够实现以node做为虚拟node进行k8s的模拟</p>
+<p>想要创建一个集群, 最简单的1master+1node</p>
+<figure class="highlight bash"><table><tr><td class="code"><pre><span class="line">k3d cluster create demo</span><br></pre></td></tr></table></figure>
+<p>如果需要指定多节点的话，则</p>
+<figure class="highlight bash"><table><tr><td class="code"><pre><span class="line">k3d cluster create demo --servers 3 --agents 3</span><br></pre></td></tr></table></figure>
+<p>demo为集群名,因为k3d支持创建多个集群</p>
+<p>–servers 为控制面节点</p>
+<p>–agents为node节点</p>
+<p>这里一个3master + 3node的k8s集群就创建出来了，当然，k3d也跟Kind一样，除了cli方式之外也支持配置文件指定参数.</p>
+<p>可以使用以下命令进行list</p>
+<figure class="highlight bash"><table><tr><td class="code"><pre><span class="line">k3d cluster list</span><br></pre></td></tr></table></figure>
+<p>在创建完集群之后，会自动地生成config文件，这个跟正常使用k8s是一样的，因此可以使用kubectl命令</p>
+<p>查看一下pod情况</p>
+<figure class="highlight bash"><table><tr><td class="code"><pre><span class="line">kubectl get pod --all-namespaces</span><br></pre></td></tr></table></figure>
+<p><img src="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20210302232345.png" alt></p>
+<p>可以看到几个比较常用见的组件</p>
+<p>比如:</p>
+<blockquote>
+<ul>
+<li>local-path-provisioner: 这个提供本地存储pv动态创建</li>
+<li>metrics-server: 用于pod metrics的收集</li>
+<li>traefik: 这个用于请求转发</li>
+<li>coredns: 集群域名解析</li>
+</ul>
+</blockquote>
+<p>从上面的图可以看到，其它的如Kube-proxy, kube-scheduler是没有，这个可以理解，用k3d创建出来的集群不管多少个agent，本质上还是一台实体机</p>
+<p>经过一番实践后，体验还是比较不错的，但还是有点欠缺，比如，如果使用了hostpath时，因为是虚拟出来的node节点，是没有hostpath的，那要如何使用呢, 这个翻了很多的文档也没找到说明，最后还是在issue中找到答案，方法如下</p>
+<p>使用host path时:</p>
+<figure class="highlight bash"><table><tr><td class="code"><pre><span class="line">k3d cluster create deom -v /data/middleware-data:/data/middleware-data</span><br></pre></td></tr></table></figure>
+<p>需要在创建集群里将hostpath使用到的目录进行挂载即可</p>
+<p>另外如果要使用nodeport，同样也是如此，需要在创建集群时就进行操作</p>
+<p>k3d跟kind相比，感觉还是k3d体验好一些，kind之前用的时候出现过几次用kind创建出来的集群直接就不能用，kubectl config不起作用</p>
+<p>k3d倒没有出现这种情况, 但是就是文档写的不怎么样，比如要从私有仓库中拉取镜像，这个就麻烦一点，但官方文档写的也不是很好，需要自己琢磨</p>
+<p>不过，不得不承认，k3d确实是个很实用的效率工具，对于需要快速地创建k8s集群进行验证，用完即焚的你可能，本人也打算在团队中推广大家使用起来</p>
+<h3 id="参考文章"><a href="#参考文章" class="headerlink" title="参考文章:"></a><strong>参考文章:</strong></h3><blockquote>
+<ul>
+<li><a href="https://k3s.iohttps://k3d.io" target="_blank" rel="noopener">https://k3s.iohttps://k3d.io</a></li>
+<li><a href="https://github.com/rancher/k3d" target="_blank" rel="noopener">https://github.com/rancher/k3d</a></li>
+<li><a href="https://izsk.me/2020/08/07/Kubernetes-Kind/" target="_blank" rel="noopener">https://izsk.me/2020/08/07/Kubernetes-Kind/</a></li>
 </ul>
 </blockquote>
 <h3 id="转载请注明出处https-izsk-me"><a href="#转载请注明出处https-izsk-me" class="headerlink" title="转载请注明出处https://izsk.me"></a><strong>转载请注明出处<a href="https://izsk.me" target="_blank" rel="noopener">https://izsk.me</a></strong></h3>]]></content>
@@ -10125,6 +10130,46 @@
       </tags>
   </entry>
   <entry>
+    <title>HTTP之长连接及短连接</title>
+    <url>/2017/08/12/HTTP%E4%B9%8B%E9%95%BF%E8%BF%9E%E6%8E%A5%E5%8F%8A%E7%9F%AD%E8%BF%9E%E6%8E%A5/</url>
+    <content><![CDATA[<p>我们都说HTTP协议是无状态的,我们又都说HTTP分长连接及短连接,’无状态’到底是个什么意思？</p>
+<a id="more"></a>
+<h3 id="无状态"><a href="#无状态" class="headerlink" title="无状态"></a><strong>无状态</strong></h3><p>HTTP无状态其实指的是协议对于事务处理没有记忆能力,服务器不知道客户端是什么状态.也就是说,打开一个服务器上的网页和你之前打开这个服务器上的网页之间没有任何联系.HTTP是一个无状态的面向连接的协议,无状态不代表HTTP不能保持TCP连接,更不能代表HTTP使用的是UDP协议(无连接).</p>
+<p>那http又是如何保持长连接的呢?</p>
+<p>在<code>HTTP/1.0</code>中,默认使用的是短连接.也就是说,浏览器和服务器每进行一次HTTP操作,就建立一次连接,但任务结束就中断连接.如果客户端浏览器访问的某个HTML或其他类型的 Web页中包含有其他的Web资源,如JavaScript文件、图像文件、CSS文件等；当浏览器每遇到这样一个Web资源,就会建立一个HTTP会话.<br>但从<code>HTTP/1.1</code>起,默认使用长连接,用以保持连接特性.使用长连接的HTTP协议,会在响应头有加入这行代码:</p>
+<p><code>Connection:keep-alive</code></p>
+<p>　　在使用长连接的情况下,当一个网页打开完成后,客户端和服务器之间用于传输HTTP数据的 TCP连接不会关闭,如果客户端再次访问这个服务器上的网页,会继续使用这一条已经建立的连接.<code>Keep-Alive</code>不会永久保持连接,它有一个保持时间,可以在不同的服务器软件（如Apache）中设定这个时间.实现长连接要客户端和服务端都支持长连接.</p>
+<p>当然,在很多web服务器中可以设置这个keep-Alive的保持时间,比如nginx的配置文件nginx.conf中可直接使用:</p>
+<p><code>keepalive_timeout  60;</code></p>
+<p><strong>HTTP协议的长连接和短连接,实质上是TCP协议的长连接和短连接.</strong></p>
+<p>那长短连接各自对应的场景有哪些呢(各自的优缺点)?</p>
+<h3 id="短连接"><a href="#短连接" class="headerlink" title="短连接"></a><strong>短连接</strong></h3><p>场景: client向server发起连接请求,server接到请求,然后双方建立连接.client向server 发送消息,server回应client,然后一次读写就完成了,这时候双方任何一个都可以发起close操作,不过一般都是client先发起 close操作.为什么呢,一般的server不会回复完client后立即关闭连接的,当然不排除有特殊的情况.从上面的描述看,短连接一般只会在 client/server间传递一次读写操作</p>
+<p><strong>短连接管理起来比较简单,存在的连接都是有用的连接,不需要额外的控制手段,但是频繁的创建大量的连接也很耗资源</strong></p>
+<h3 id="长连接"><a href="#长连接" class="headerlink" title="长连接"></a><strong>长连接</strong></h3><p>流程是:client向server发起连接,server接受client连接,双方建立连接.Client与server完成一次读写之后,它们之间的连接并不会主动关闭,后续的读写操作会继续使用这个连接.</p>
+<p>首先说一下TCP/IP详解上讲到的TCP保活功能,保活功能主要为服务器应用提供,服务器应用希望知道客户主机是否崩溃,从而可以代表客户使用资源.如果客户已经消失,使得服务器上保留一个半开放的连接,而服务器又在等待来自客户端的数据,则服务器将应远等待客户端的数据,保活功能就是试图在服务 器端检测到这种半开放的连接.</p>
+<p>如果一个给定的连接在两小时内没有任何的动作,服务器就向客户发一个探测报文段,客户主机必须处于以下4个状态之一:</p>
+<blockquote>
+<ul>
+<li>客户主机依然正常运行,并从服务器可达.客户的TCP响应正常,而服务器也知道对方是正常的,服务器在两小时后将保活定时器复位.</li>
+<li>客户主机已经崩溃,并且关闭或者正在重新启动.在任何一种情况下,客户的TCP都没有响应.服务端将不能收到对探测的响应,并在75秒后超时.服务器总共发送10个这样的探测 ,每个间隔75秒.如果服务器没有收到一个响应,它就认为客户主机已经关闭并终止连接.</li>
+<li>客户主机崩溃并已经重新启动.服务器将收到一个对其保活探测的响应,这个响应是一个复位,使得服务器终止这个连接.</li>
+</ul>
+</blockquote>
+<p>客户机正常运行,但是服务器不可达,这种情况与2类似,TCP能发现的就是没有收到探查的响应.</p>
+<p><strong>从上可以看出http要保持长连接需要做很多次的向客户端试探是否存活,这对性能是个很大的损耗,但是从另一方面来说长连接减少了很多的创关闭连接带来的开销,节约时间.</strong></p>
+<h3 id="场景"><a href="#场景" class="headerlink" title="场景"></a><strong>场景</strong></h3><p><code>长连接</code>多用于操作频繁,点对点的通讯,而且连接数不能太多情况,.每个TCP连接都需要三步握手,这需要时间,如果每个操作都是先连接,再操作的话那么处理速度会降低很多,所以每个操作完后都不断开,次处理时直接发送数据包就OK了,不用建立TCP连接.例如：数据库的连接用长连接, 如果用短连接频繁的通信会造成socket错误,而且频繁的socket 创建也是对资源的浪费. </p>
+<p>而像WEB网站的http服务一般都用<code>短链接</code>,因为长连接对于服务端来说会耗费一定的资源,而像WEB网站这么频繁的成千上万甚至上亿客户端的连接用短连接会更省一些资源,如果用长连接,而且同时有成千上万的用户,如果每个用户都占用一个连接的话,那可想而知吧.所以并发量大,但每个用户无需频繁操作情况下需用短连好.</p>
+<p><strong>没有哪一个更好,只有哪一个最适合,一切跟着场景走,总有一款适合你!</strong></p>
+<h3 id="转载请注明出处https-izsk-me"><a href="#转载请注明出处https-izsk-me" class="headerlink" title="转载请注明出处https://izsk.me"></a><strong>转载请注明出处<a href="https://izsk.me" target="_blank" rel="noopener">https://izsk.me</a></strong></h3><hr>
+]]></content>
+      <categories>
+        <category>Http-Tcp-Ip</category>
+      </categories>
+      <tags>
+        <tag>Http-Tcp-Ip</tag>
+      </tags>
+  </entry>
+  <entry>
     <title>Flask学习(flask应用)</title>
     <url>/2017/08/12/flask%E5%AD%A6%E4%B9%A0%E4%BA%8C(flask%E5%BA%94%E7%94%A8)/</url>
     <content><![CDATA[<p>距离<a href="https://izsk.me/2017/08/12/falsk%E5%AD%A6%E4%B9%A0(-" target="_blank" rel="noopener">上一篇</a>)有一段时间了,上次扯了点跟flask相关的内容,这次抽空记录下flask的机制.flask之所于上手容易,是因为我们对python语言稍微了解的话,简单几步就可以把一个小应用跑起来,不需要搭建额外的东西,所以对于并发量没有要求的话flask可以轻松应对.</p>
@@ -10189,46 +10234,6 @@
       </categories>
       <tags>
         <tag>Python</tag>
-      </tags>
-  </entry>
-  <entry>
-    <title>HTTP之长连接及短连接</title>
-    <url>/2017/08/12/HTTP%E4%B9%8B%E9%95%BF%E8%BF%9E%E6%8E%A5%E5%8F%8A%E7%9F%AD%E8%BF%9E%E6%8E%A5/</url>
-    <content><![CDATA[<p>我们都说HTTP协议是无状态的,我们又都说HTTP分长连接及短连接,’无状态’到底是个什么意思？</p>
-<a id="more"></a>
-<h3 id="无状态"><a href="#无状态" class="headerlink" title="无状态"></a><strong>无状态</strong></h3><p>HTTP无状态其实指的是协议对于事务处理没有记忆能力,服务器不知道客户端是什么状态.也就是说,打开一个服务器上的网页和你之前打开这个服务器上的网页之间没有任何联系.HTTP是一个无状态的面向连接的协议,无状态不代表HTTP不能保持TCP连接,更不能代表HTTP使用的是UDP协议(无连接).</p>
-<p>那http又是如何保持长连接的呢?</p>
-<p>在<code>HTTP/1.0</code>中,默认使用的是短连接.也就是说,浏览器和服务器每进行一次HTTP操作,就建立一次连接,但任务结束就中断连接.如果客户端浏览器访问的某个HTML或其他类型的 Web页中包含有其他的Web资源,如JavaScript文件、图像文件、CSS文件等；当浏览器每遇到这样一个Web资源,就会建立一个HTTP会话.<br>但从<code>HTTP/1.1</code>起,默认使用长连接,用以保持连接特性.使用长连接的HTTP协议,会在响应头有加入这行代码:</p>
-<p><code>Connection:keep-alive</code></p>
-<p>　　在使用长连接的情况下,当一个网页打开完成后,客户端和服务器之间用于传输HTTP数据的 TCP连接不会关闭,如果客户端再次访问这个服务器上的网页,会继续使用这一条已经建立的连接.<code>Keep-Alive</code>不会永久保持连接,它有一个保持时间,可以在不同的服务器软件（如Apache）中设定这个时间.实现长连接要客户端和服务端都支持长连接.</p>
-<p>当然,在很多web服务器中可以设置这个keep-Alive的保持时间,比如nginx的配置文件nginx.conf中可直接使用:</p>
-<p><code>keepalive_timeout  60;</code></p>
-<p><strong>HTTP协议的长连接和短连接,实质上是TCP协议的长连接和短连接.</strong></p>
-<p>那长短连接各自对应的场景有哪些呢(各自的优缺点)?</p>
-<h3 id="短连接"><a href="#短连接" class="headerlink" title="短连接"></a><strong>短连接</strong></h3><p>场景: client向server发起连接请求,server接到请求,然后双方建立连接.client向server 发送消息,server回应client,然后一次读写就完成了,这时候双方任何一个都可以发起close操作,不过一般都是client先发起 close操作.为什么呢,一般的server不会回复完client后立即关闭连接的,当然不排除有特殊的情况.从上面的描述看,短连接一般只会在 client/server间传递一次读写操作</p>
-<p><strong>短连接管理起来比较简单,存在的连接都是有用的连接,不需要额外的控制手段,但是频繁的创建大量的连接也很耗资源</strong></p>
-<h3 id="长连接"><a href="#长连接" class="headerlink" title="长连接"></a><strong>长连接</strong></h3><p>流程是:client向server发起连接,server接受client连接,双方建立连接.Client与server完成一次读写之后,它们之间的连接并不会主动关闭,后续的读写操作会继续使用这个连接.</p>
-<p>首先说一下TCP/IP详解上讲到的TCP保活功能,保活功能主要为服务器应用提供,服务器应用希望知道客户主机是否崩溃,从而可以代表客户使用资源.如果客户已经消失,使得服务器上保留一个半开放的连接,而服务器又在等待来自客户端的数据,则服务器将应远等待客户端的数据,保活功能就是试图在服务 器端检测到这种半开放的连接.</p>
-<p>如果一个给定的连接在两小时内没有任何的动作,服务器就向客户发一个探测报文段,客户主机必须处于以下4个状态之一:</p>
-<blockquote>
-<ul>
-<li>客户主机依然正常运行,并从服务器可达.客户的TCP响应正常,而服务器也知道对方是正常的,服务器在两小时后将保活定时器复位.</li>
-<li>客户主机已经崩溃,并且关闭或者正在重新启动.在任何一种情况下,客户的TCP都没有响应.服务端将不能收到对探测的响应,并在75秒后超时.服务器总共发送10个这样的探测 ,每个间隔75秒.如果服务器没有收到一个响应,它就认为客户主机已经关闭并终止连接.</li>
-<li>客户主机崩溃并已经重新启动.服务器将收到一个对其保活探测的响应,这个响应是一个复位,使得服务器终止这个连接.</li>
-</ul>
-</blockquote>
-<p>客户机正常运行,但是服务器不可达,这种情况与2类似,TCP能发现的就是没有收到探查的响应.</p>
-<p><strong>从上可以看出http要保持长连接需要做很多次的向客户端试探是否存活,这对性能是个很大的损耗,但是从另一方面来说长连接减少了很多的创关闭连接带来的开销,节约时间.</strong></p>
-<h3 id="场景"><a href="#场景" class="headerlink" title="场景"></a><strong>场景</strong></h3><p><code>长连接</code>多用于操作频繁,点对点的通讯,而且连接数不能太多情况,.每个TCP连接都需要三步握手,这需要时间,如果每个操作都是先连接,再操作的话那么处理速度会降低很多,所以每个操作完后都不断开,次处理时直接发送数据包就OK了,不用建立TCP连接.例如：数据库的连接用长连接, 如果用短连接频繁的通信会造成socket错误,而且频繁的socket 创建也是对资源的浪费. </p>
-<p>而像WEB网站的http服务一般都用<code>短链接</code>,因为长连接对于服务端来说会耗费一定的资源,而像WEB网站这么频繁的成千上万甚至上亿客户端的连接用短连接会更省一些资源,如果用长连接,而且同时有成千上万的用户,如果每个用户都占用一个连接的话,那可想而知吧.所以并发量大,但每个用户无需频繁操作情况下需用短连好.</p>
-<p><strong>没有哪一个更好,只有哪一个最适合,一切跟着场景走,总有一款适合你!</strong></p>
-<h3 id="转载请注明出处https-izsk-me"><a href="#转载请注明出处https-izsk-me" class="headerlink" title="转载请注明出处https://izsk.me"></a><strong>转载请注明出处<a href="https://izsk.me" target="_blank" rel="noopener">https://izsk.me</a></strong></h3><hr>
-]]></content>
-      <categories>
-        <category>Http-Tcp-Ip</category>
-      </categories>
-      <tags>
-        <tag>Http-Tcp-Ip</tag>
       </tags>
   </entry>
   <entry>
