@@ -41,6 +41,30 @@
   </entry>
   
   <entry>
+    <title>argoCD学习(argocd踩坑记)</title>
+    <link href="https://zhoushuke.github.io/2021/03/19/argoCD-prombles/"/>
+    <id>https://zhoushuke.github.io/2021/03/19/argoCD-prombles/</id>
+    <published>2021-03-19T09:30:53.000Z</published>
+    <updated>2021-03-20T09:22:50.055Z</updated>
+    
+    <content type="html"><![CDATA[<p>argocd配合GitOps，可以实现对kubernetes多集群的应用版本管理，目前已用于我负责的业务环境中实现统一发布平台.</p><p><strong>在这里记录下使用argocd踩过的坑, 不定期更新</strong></p><a id="more"></a><h3 id="使用用户密码登录时提示"><a href="#使用用户密码登录时提示" class="headerlink" title="使用用户密码登录时提示"></a>使用用户密码登录时提示</h3><figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">HTTP response body: &#123;<span class="string">"error"</span>:<span class="string">"no session information"</span>,<span class="string">"code"</span>:16,<span class="string">"message"</span>:<span class="string">"no session information"</span>&#125;</span><br></pre></td></tr></table></figure><p>原因: argocd使用密码认证时会使用密码信息调用/api/session接口生成token信息，然后使用token转换成session， 出现这个错误是由client端没有做这个转换，因此在服务端找不到对应的session信息</p><h3 id="添加集群时提示Unauthenticated-desc-the-server-has-asked-for-the-client-to-provide-credentials"><a href="#添加集群时提示Unauthenticated-desc-the-server-has-asked-for-the-client-to-provide-credentials" class="headerlink" title="添加集群时提示Unauthenticated desc =  the server has asked for the client to provide credentials"></a>添加集群时提示Unauthenticated desc =  the server has asked for the client to provide credentials</h3><p><img src="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20210222114258.png" alt></p><p>原因及解决方案: <a href="https://gist.github.com/janeczku/b16154194f7f03f772645303af8e9f80" target="_blank" rel="noopener">https://gist.github.com/janeczku/b16154194f7f03f772645303af8e9f80</a></p><h3 id="kustomize-build-out-of-index"><a href="#kustomize-build-out-of-index" class="headerlink" title="kustomize build out of index"></a>kustomize build out of index</h3><p><img src="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20210219204446.png" alt></p><p>原因: 这个是新版kustomize(v4.0.1)时使用了kyaml的版本的bug, 原因在于kustomizationl.yml中存在非法字符</p><p>解决: 回退kustomize为v3.6.1</p><h3 id="forbidden-User-“system-anonymouns”-cantnot-get-path"><a href="#forbidden-User-“system-anonymouns”-cantnot-get-path" class="headerlink" title="forbidden: User “system:anonymouns” cantnot get path"></a>forbidden: User “system:anonymouns” cantnot get path</h3><p><img src="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20210119193206.png" alt></p><p>解决: 重新使用命令加一下集群解决</p><figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">rgocd cluster add my-cluster --server <span class="string">'xxxx'</span> --upsert</span><br></pre></td></tr></table></figure><h3 id="login时提示received-the-unexpected-content-type"><a href="#login时提示received-the-unexpected-content-type" class="headerlink" title="login时提示received the unexpected content-type"></a>login时提示received the unexpected content-type</h3><p>执行login 登录命令时提示:</p><figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">argocd login argocd.local:4433</span><br></pre></td></tr></table></figure><p>出现以下错误</p><p><img src="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20201106184926.png" alt></p><p>原因: </p><p>参考: <a href="https://github.com/argoproj/argo-cd/issues/1415" target="_blank" rel="noopener">https://github.com/argoproj/argo-cd/issues/1415</a></p><p>解决:</p><figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">argocd login argocd.local:4433 --grpc-web</span><br></pre></td></tr></table></figure><p>如果添加集群的时候提示以下错误，则需要先使用上面的命令进行登录，登录成功后再进行集群的添加操作.</p><p><img src="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20201106185339.png" alt></p><h3 id="创建token时提示以下错误-not-have-apikey-capability"><a href="#创建token时提示以下错误-not-have-apikey-capability" class="headerlink" title="创建token时提示以下错误 not have apikey capability"></a>创建token时提示以下错误 not have apikey capability</h3><figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">Unable to generate new token: account <span class="string">'admin'</span> does not have apiKey capability</span><br></pre></td></tr></table></figure><p>原因: argocd的用户也是通过角色来进行划分的，创建token的用户需要具有 apiKey的权限，这个可以从argocd部署的configmap中查看使用的用户是否具有什么权限.</p><h3 id="回滚时提示以下错误revision-must-be-resolved"><a href="#回滚时提示以下错误revision-must-be-resolved" class="headerlink" title="回滚时提示以下错误revision must be resolved"></a>回滚时提示以下错误revision must be resolved</h3><figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">Unable to load data: revision HEAD must be resolved</span><br></pre></td></tr></table></figure><p><img src="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20201122185428.png" alt></p><p>原因: 如果使用argocd命令行的方式同步应用，会导致revision没有commit值，如上图，而回滚时需要revision，因此造成上面的报错.</p><h3 id="未完待续"><a href="#未完待续" class="headerlink" title="未完待续"></a>未完待续</h3><h3 id="参考文章"><a href="#参考文章" class="headerlink" title="参考文章:"></a><strong>参考文章:</strong></h3><blockquote><ul><li><a href="https://github.com/argoproj/argo-cd/issues/2802" target="_blank" rel="noopener">https://github.com/argoproj/argo-cd/issues/2802</a></li><li><a href="https://gist.github.com/janeczku/b16154194f7f03f772645303af8e9f80" target="_blank" rel="noopener">https://gist.github.com/janeczku/b16154194f7f03f772645303af8e9f80</a></li></ul></blockquote><h3 id="转载请注明出处https-izsk-me"><a href="#转载请注明出处https-izsk-me" class="headerlink" title="转载请注明出处https://izsk.me"></a><strong>转载请注明出处<a href="https://izsk.me" target="_blank" rel="noopener">https://izsk.me</a></strong></h3>]]></content>
+    
+    <summary type="html">
+    
+      &lt;p&gt;argocd配合GitOps，可以实现对kubernetes多集群的应用版本管理，目前已用于我负责的业务环境中实现统一发布平台.&lt;/p&gt;
+&lt;p&gt;&lt;strong&gt;在这里记录下使用argocd踩过的坑, 不定期更新&lt;/strong&gt;&lt;/p&gt;
+    
+    </summary>
+    
+    
+      <category term="CloudNavi" scheme="https://zhoushuke.github.io/categories/CloudNavi/"/>
+    
+    
+      <category term="CloudNavi" scheme="https://zhoushuke.github.io/tags/CloudNavi/"/>
+    
+  </entry>
+  
+  <entry>
     <title>Grafana学习(Loki踩坑记)</title>
     <link href="https://zhoushuke.github.io/2021/03/18/Loki-Prombles/"/>
     <id>https://zhoushuke.github.io/2021/03/18/Loki-Prombles/</id>
@@ -84,30 +108,6 @@
     
     
       <category term="Kubernetes" scheme="https://zhoushuke.github.io/tags/Kubernetes/"/>
-    
-  </entry>
-  
-  <entry>
-    <title>argoCD学习(argocd踩坑记)</title>
-    <link href="https://zhoushuke.github.io/2021/02/19/argoCD-prombles/"/>
-    <id>https://zhoushuke.github.io/2021/02/19/argoCD-prombles/</id>
-    <published>2021-02-19T09:30:53.000Z</published>
-    <updated>2021-02-19T15:06:12.217Z</updated>
-    
-    <content type="html"><![CDATA[<p>argocd配合GitOps，可以实现对kubernetes多集群的应用版本管理，目前已用于我负责的业务环境中实现统一发布平台.</p><p><strong>在这里记录下使用argocd踩过的坑, 不定期更新</strong></p><a id="more"></a><h3 id="kustomize-build-out-of-index"><a href="#kustomize-build-out-of-index" class="headerlink" title="kustomize build out of index"></a>kustomize build out of index</h3><p><img src="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20210219204446.png" alt></p><p>原因: 这个是新版kustomize(v4.0.1)时使用了kyaml的版本的bug, 原因在于kustomizationl.yml中存在非法字符</p><p>解决: 回退kustomize为v3.6.1</p><h3 id="forbidden-User-“system-anonymouns”-cantnot-get-path"><a href="#forbidden-User-“system-anonymouns”-cantnot-get-path" class="headerlink" title="forbidden: User “system:anonymouns” cantnot get path"></a>forbidden: User “system:anonymouns” cantnot get path</h3><p><img src="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20210119193206.png" alt></p><p>解决: 重新使用命令加一下集群解决</p><figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">rgocd cluster add my-cluster --server <span class="string">'xxxx'</span> --upsert</span><br></pre></td></tr></table></figure><h3 id="login时提示received-the-unexpected-content-type"><a href="#login时提示received-the-unexpected-content-type" class="headerlink" title="login时提示received the unexpected content-type"></a>login时提示received the unexpected content-type</h3><p>执行login 登录命令时提示:</p><figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">argocd login argocd.local:4433</span><br></pre></td></tr></table></figure><p>出现以下错误</p><p><img src="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20201106184926.png" alt></p><p>原因: </p><p>参考: <a href="https://github.com/argoproj/argo-cd/issues/1415" target="_blank" rel="noopener">https://github.com/argoproj/argo-cd/issues/1415</a></p><p>解决:</p><figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">argocd login argocd.local:4433 --grpc-web</span><br></pre></td></tr></table></figure><p>如果添加集群的时候提示以下错误，则需要先使用上面的命令进行登录，登录成功后再进行集群的添加操作.</p><p><img src="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20201106185339.png" alt></p><h3 id="创建token时提示以下错误-not-have-apikey-capability"><a href="#创建token时提示以下错误-not-have-apikey-capability" class="headerlink" title="创建token时提示以下错误 not have apikey capability"></a>创建token时提示以下错误 not have apikey capability</h3><figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">Unable to generate new token: account <span class="string">'admin'</span> does not have apiKey capability</span><br></pre></td></tr></table></figure><p>原因: argocd的用户也是通过角色来进行划分的，创建token的用户需要具有 apiKey的权限，这个可以从argocd部署的configmap中查看使用的用户是否具有什么权限.</p><h3 id="回滚时提示以下错误revision-must-be-resolved"><a href="#回滚时提示以下错误revision-must-be-resolved" class="headerlink" title="回滚时提示以下错误revision must be resolved"></a>回滚时提示以下错误revision must be resolved</h3><figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">Unable to load data: revision HEAD must be resolved</span><br></pre></td></tr></table></figure><p><img src="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20201122185428.png" alt></p><p>原因: 如果使用argocd命令行的方式同步应用，会导致revision没有commit值，如上图，而回滚时需要revision，因此造成上面的报错.</p><h3 id="未完待续"><a href="#未完待续" class="headerlink" title="未完待续"></a>未完待续</h3><h3 id="参考文章"><a href="#参考文章" class="headerlink" title="参考文章:"></a><strong>参考文章:</strong></h3><blockquote><ul><li><a href="https://github.com/argoproj/argo-cd/issues/2802" target="_blank" rel="noopener">https://github.com/argoproj/argo-cd/issues/2802</a></li></ul></blockquote><h3 id="转载请注明出处https-izsk-me"><a href="#转载请注明出处https-izsk-me" class="headerlink" title="转载请注明出处https://izsk.me"></a><strong>转载请注明出处<a href="https://izsk.me" target="_blank" rel="noopener">https://izsk.me</a></strong></h3>]]></content>
-    
-    <summary type="html">
-    
-      &lt;p&gt;argocd配合GitOps，可以实现对kubernetes多集群的应用版本管理，目前已用于我负责的业务环境中实现统一发布平台.&lt;/p&gt;
-&lt;p&gt;&lt;strong&gt;在这里记录下使用argocd踩过的坑, 不定期更新&lt;/strong&gt;&lt;/p&gt;
-    
-    </summary>
-    
-    
-      <category term="CloudNavi" scheme="https://zhoushuke.github.io/categories/CloudNavi/"/>
-    
-    
-      <category term="CloudNavi" scheme="https://zhoushuke.github.io/tags/CloudNavi/"/>
     
   </entry>
   
