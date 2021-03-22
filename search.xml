@@ -1,6 +1,65 @@
 <?xml version="1.0" encoding="utf-8"?>
 <search>
   <entry>
+    <title>Kube-batch学习(queue及podgroup)</title>
+    <url>/2021/03/21/Kubernetes-kubebatch-theory/</url>
+    <content><![CDATA[<p>上篇简单说了下在集群中安装kube-batch且成功运行起来之后， 现在开始对kube-batch中的一些概念进行阐明, 先从podgroup及queue说起</p>
+<a id="more"></a>
+<h3 id="Queue"><a href="#Queue" class="headerlink" title="Queue"></a>Queue</h3><p>queue在kube-batch中属于集群级别的资源，配置如下:</p>
+<figure class="highlight yaml"><table><tr><td class="code"><pre><span class="line"><span class="attr">apiVersion:</span> <span class="string">scheduling.incubator.k8s.io/v1alpha1</span></span><br><span class="line"><span class="attr">kind:</span> <span class="string">Queue</span></span><br><span class="line"><span class="attr">metadata:</span></span><br><span class="line">  <span class="attr">name:</span> <span class="string">default</span></span><br><span class="line"><span class="attr">spec:</span></span><br><span class="line">  <span class="attr">weight:</span> <span class="number">1</span></span><br></pre></td></tr></table></figure>
+<p>默认，如果集群中不存在queue,kube-batch会默认创建一个如上的queue，这个默认的queue主要用来存放没有绑定queue的job(这个job不是kubernetes中job资源，而是特指使用了kube-batch的对象，有可能是kubernetes job，也可能是pod等)</p>
+<p>前面提到过，<strong>kube-batch对多租户的支持、多租户间的资源分配就是通过queue来实现的</strong></p>
+<p>queue本身就是一种排除机制，kube-batch也是如此，对于资源的消耗，如果资源得不到满足，同样会进行排除处理.</p>
+<p>这里举个最简单的例子:</p>
+<p>假如一个k8s集群中存在的资源有，<code>cpu: 12c, mem: 120Gi, GPU: 4c</code></p>
+<p>假如现在创建了2个queue</p>
+<figure class="highlight yaml"><table><tr><td class="code"><pre><span class="line"><span class="attr">apiVersion:</span> <span class="string">scheduling.incubator.k8s.io/v1alpha1</span></span><br><span class="line"><span class="attr">kind:</span> <span class="string">Queue</span></span><br><span class="line"><span class="attr">metadata:</span></span><br><span class="line">  <span class="attr">name:</span> <span class="string">default-1</span></span><br><span class="line"><span class="attr">spec:</span></span><br><span class="line">  <span class="attr">weight:</span> <span class="number">1</span></span><br><span class="line"><span class="meta">---</span></span><br><span class="line"><span class="attr">apiVersion:</span> <span class="string">scheduling.incubator.k8s.io/v1alpha1</span></span><br><span class="line"><span class="attr">kind:</span> <span class="string">Queue</span></span><br><span class="line"><span class="attr">metadata:</span></span><br><span class="line">  <span class="attr">name:</span> <span class="string">default-2</span></span><br><span class="line"><span class="attr">spec:</span></span><br><span class="line">  <span class="attr">weight:</span> <span class="number">2</span></span><br></pre></td></tr></table></figure>
+<p>其中，weight表示权重，那么集群中的所有资源会被分成3等份，所属default-1的queue占1/3, 即<code>cpu:4c,mem:40ci,gpu:4c</code>,而所属default-2的queue占2/3, 即<code>cpu:8c,mem:80ci,gpu:8c</code></p>
+<p>当然，前面也提过，这个不是绝对的，因为kube-batch存在插件机制，租户之间可以指定优先级等插件对其它租户的资源进行抢占，使资源的资源更加偏向重要的任务</p>
+<p>如果集群中没有多租户的概念，则可以不进行资源的划分，所有的任务都属于一个queue.</p>
+<h3 id="PodGroup"><a href="#PodGroup" class="headerlink" title="PodGroup"></a>PodGroup</h3><p>podgroup在kube-batch是个很重要的资源对象，kube-batch会监听集群中所有podgroup，然后计算(由插件决定)所属这个group中的pod所需要的资源，如果集群中没有这些资源，则所有的pod会处理pendding状态，在queue中进行排队，如果存在，则进行调度</p>
+<p>使用方法来看官方一个简单的例子:</p>
+<figure class="highlight yaml"><table><tr><td class="code"><pre><span class="line"><span class="meta">---</span></span><br><span class="line"><span class="attr">apiVersion:</span> <span class="string">scheduling.incubator.k8s.io/v1alpha1</span></span><br><span class="line"><span class="attr">kind:</span> <span class="string">PodGroup</span></span><br><span class="line"><span class="attr">metadata:</span></span><br><span class="line">  <span class="attr">name:</span> <span class="string">qj-1</span></span><br><span class="line"><span class="attr">spec:</span></span><br><span class="line">  <span class="attr">minMember:</span> <span class="number">6</span></span><br><span class="line"><span class="meta">---</span></span><br><span class="line"><span class="attr">apiVersion:</span> <span class="string">batch/v1</span></span><br><span class="line"><span class="attr">kind:</span> <span class="string">Job</span></span><br><span class="line"><span class="attr">metadata:</span></span><br><span class="line">  <span class="attr">name:</span> <span class="string">qj-1</span></span><br><span class="line"><span class="attr">spec:</span></span><br><span class="line">  <span class="attr">backoffLimit:</span> <span class="number">6</span></span><br><span class="line">  <span class="attr">completions:</span> <span class="number">6</span></span><br><span class="line">  <span class="attr">parallelism:</span> <span class="number">6</span></span><br><span class="line">  <span class="attr">template:</span></span><br><span class="line">    <span class="attr">metadata:</span></span><br><span class="line">      <span class="attr">annotations:</span></span><br><span class="line">        <span class="attr">scheduling.k8s.io/group-name:</span> <span class="string">qj-1</span>  <span class="comment"># 指定所属podgroup</span></span><br><span class="line">    <span class="attr">spec:</span></span><br><span class="line">      <span class="attr">containers:</span></span><br><span class="line">      <span class="bullet">-</span> <span class="attr">image:</span> <span class="string">busybox</span></span><br><span class="line">        <span class="attr">imagePullPolicy:</span> <span class="string">IfNotPresent</span></span><br><span class="line">        <span class="attr">name:</span> <span class="string">busybox</span></span><br><span class="line">        <span class="attr">resources:</span></span><br><span class="line">          <span class="attr">requests:</span></span><br><span class="line">            <span class="attr">cpu:</span> <span class="string">"1"</span>  <span class="comment"># 指明需要的资源</span></span><br><span class="line">      <span class="attr">restartPolicy:</span> <span class="string">Never</span></span><br><span class="line">      <span class="attr">schedulerName:</span> <span class="string">kube-batch</span>   <span class="comment"># 指定使用kube-batch做为调度器</span></span><br></pre></td></tr></table></figure>
+<p>The yaml file means a Job named <code>qj-01</code> to create 6 pods(it is specified by <code>parallelism</code>), these pods will be scheduled by scheduler <code>kube-batch</code> (it is specified by <code>schedulerName</code>). <code>kube-batch</code> will watch <code>PodGroup</code>, and the annotation <code>scheduling.k8s.io/group-name</code> identify which group the pod belongs to. <code>kube-batch</code> will start <code>.spec.minMember</code> pods for a Job at the same time; otherwise, such as resources are not sufficient, <code>kube-batch</code> will not start any pods for the Job.</p>
+<p>上面的yaml文件生成了个podgroup对象及一个kubernetes中的job对象</p>
+<p>其中:</p>
+<blockquote>
+<ul>
+<li>podgroup中的minMember表明至少需要满足6个pods的资源时才会进行调度，pods则是通过annotations进行绑定</li>
+<li>在job中存在有annotations，通过scheduling.k8s.io/group-name绑定的podgroup.</li>
+<li>在job中指定了schedulerName为Kube-batch</li>
+</ul>
+</blockquote>
+<p>通过这样的绑定关系就将podgroup与pod进行了关联，当然，podgroup中的minMember只是最小的pod数，如果满足这个条件也只是表明这个podgroup可以调度，但是并不一定调度成功，但是如果不满足最小pod数，则一定不会调度</p>
+<p>还是以上面的例子来说明:</p>
+<p>假如集群中只有4个CPU, 这时minMember设置为1，那么这个podgroup会进行调度，但是由于CPU只有4个，而job中需要同时启动6个(job的<code>parallelism</code>参数指定 )pod，也就是需要6个cpu，显然有2个无法获取到cpu，也即会有2外pod处于pendding状态，其它4个运行正常</p>
+<p>而如果将minMember指定为6，则一个pod都不会调度，整个job会处理pendding状态.</p>
+<p>上面这种最简单的场景在训练任务中非常常见, 往往一个训练任务由N多个pod一起进行，且每个pod都负责其中的一部分，如果不考虑增量训练的话，其中其中任一个pod的资源不能满足的话，则就不应该对其它pod进行调度,这样可以合理地利用资源</p>
+<h3 id="shadowPodGroup"><a href="#shadowPodGroup" class="headerlink" title="shadowPodGroup"></a>shadowPodGroup</h3><p>从上面的例子可以看到，每一个任务都需要创建一个podgroup，对于懒人来说，有没有办法直接关联podgroup呢?</p>
+<p>答案是肯定的，这就是shadowpodgroup，顾名思义就是podgroup的影子，作用就是不再需要手工地创建podgroup对象</p>
+<p>只需要在annotation中指定minMemeber，kube-batch即会自动创建shadowPodgroup对象</p>
+<p>因此，上面的例子则直接变成</p>
+<figure class="highlight yaml"><table><tr><td class="code"><pre><span class="line"><span class="attr">apiVersion:</span> <span class="string">batch/v1</span></span><br><span class="line"><span class="attr">kind:</span> <span class="string">Job</span></span><br><span class="line"><span class="attr">metadata:</span></span><br><span class="line">  <span class="attr">name:</span> <span class="string">qj-1</span></span><br><span class="line"><span class="attr">spec:</span></span><br><span class="line">  <span class="attr">backoffLimit:</span> <span class="number">6</span></span><br><span class="line">  <span class="attr">completions:</span> <span class="number">6</span></span><br><span class="line">  <span class="attr">parallelism:</span> <span class="number">6</span></span><br><span class="line">  <span class="attr">template:</span></span><br><span class="line">    <span class="attr">metadata:</span></span><br><span class="line">      <span class="attr">annotations:</span></span><br><span class="line">        <span class="attr">scheduling.k8s.io/group-min-member:</span> <span class="number">6</span>  <span class="comment"># 指定所属podgroup</span></span><br><span class="line">    <span class="attr">spec:</span></span><br><span class="line">      <span class="attr">containers:</span></span><br><span class="line">      <span class="bullet">-</span> <span class="attr">image:</span> <span class="string">busybox</span></span><br><span class="line">        <span class="attr">imagePullPolicy:</span> <span class="string">IfNotPresent</span></span><br><span class="line">        <span class="attr">name:</span> <span class="string">busybox</span></span><br><span class="line">        <span class="attr">resources:</span></span><br><span class="line">          <span class="attr">requests:</span></span><br><span class="line">            <span class="attr">cpu:</span> <span class="string">"1"</span>  <span class="comment"># 指明需要的资源</span></span><br><span class="line">      <span class="attr">restartPolicy:</span> <span class="string">Never</span></span><br><span class="line">      <span class="attr">schedulerName:</span> <span class="string">kube-batch</span>   <span class="comment"># 指定使用kube-batch做为调度器</span></span><br></pre></td></tr></table></figure>
+<p>通过在annotation中指定<code>scheduling.k8s.io/group-min-member</code>,则会由kube-batch自动生成逻辑的podgroup，是不是很方便.</p>
+<p>这里要注意的是，podgroup在kubernetes中是属于crd对象，是可以通过kubectl get 命令查询的，而shadowpodgroup则是kube-batch逻辑对象，通过kubectl get 命令无法查询 </p>
+<p>以下是shawpodgroup的源码</p>
+<figure class="highlight go"><table><tr><td class="code"><pre><span class="line"><span class="function"><span class="keyword">func</span> <span class="title">createShadowPodGroup</span><span class="params">(pod *v1.Pod)</span> *<span class="title">api</span>.<span class="title">PodGroup</span></span> &#123;</span><br><span class="line">	jobID := api.JobID(utils.GetController(pod))</span><br><span class="line">	<span class="keyword">if</span> <span class="built_in">len</span>(jobID) == <span class="number">0</span> &#123;</span><br><span class="line">		jobID = api.JobID(pod.UID)</span><br><span class="line">	&#125;</span><br><span class="line">  <span class="comment">// Deriving min member for the shadow pod group from pod annotations.</span></span><br><span class="line">	<span class="comment">//</span></span><br><span class="line">	<span class="comment">// Annotation from the newer API has priority over annotation from the old API.</span></span><br><span class="line">	<span class="comment">//</span></span><br><span class="line">	<span class="comment">// By default, if no annotation is provided, min member is 1.</span></span><br><span class="line">	minMember := <span class="number">1</span></span><br><span class="line">	<span class="keyword">if</span> annotationValue, found := pod.Annotations[v1alpha1.GroupMinMemberAnnotationKey]; found &#123;</span><br><span class="line">		<span class="keyword">if</span> integerValue, err := strconv.Atoi(annotationValue); err == <span class="literal">nil</span> &#123;</span><br><span class="line">			minMember = integerValue</span><br><span class="line">		&#125; <span class="keyword">else</span> &#123;</span><br><span class="line">			glog.Errorf(<span class="string">"Pod %s/%s has illegal value %q for annotation %q"</span>,</span><br><span class="line">				pod.Namespace, pod.Name, annotationValue, v1alpha1.GroupMinMemberAnnotationKey)</span><br><span class="line">		&#125;</span><br><span class="line">	&#125;</span><br><span class="line">	<span class="keyword">if</span> annotationValue, found := pod.Annotations[v1alpha2.GroupMinMemberAnnotationKey]; found &#123;</span><br><span class="line">		<span class="keyword">if</span> integerValue, err := strconv.Atoi(annotationValue); err == <span class="literal">nil</span> &#123;</span><br><span class="line">			minMember = integerValue</span><br><span class="line">		&#125; <span class="keyword">else</span> &#123;</span><br><span class="line">			glog.Errorf(<span class="string">"Pod %s/%s has illegal value %q for annotation %q"</span>,</span><br><span class="line">				pod.Namespace, pod.Name, annotationValue, v1alpha2.GroupMinMemberAnnotationKey)</span><br><span class="line">		&#125;</span><br><span class="line">	&#125;</span><br><span class="line">	<span class="keyword">return</span> &amp;api.PodGroup&#123;</span><br><span class="line">		ObjectMeta: metav1.ObjectMeta&#123;</span><br><span class="line">			Namespace: pod.Namespace,</span><br><span class="line">			Name:      <span class="keyword">string</span>(jobID),</span><br><span class="line">			Annotations: <span class="keyword">map</span>[<span class="keyword">string</span>]<span class="keyword">string</span>&#123;</span><br><span class="line">				shadowPodGroupKey: <span class="keyword">string</span>(jobID),</span><br><span class="line">			&#125;,</span><br><span class="line">		&#125;,</span><br><span class="line">		Spec: api.PodGroupSpec&#123;</span><br><span class="line">			MinMember: <span class="keyword">int32</span>(minMember),</span><br><span class="line">		&#125;,</span><br><span class="line">	&#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>从这段代码也可以看出，最后其实还是生成的podgroup对象.</p>
+<p>这篇文章中介绍了queue及podgroup的使用方法，相信大家有一定的了解，但是还没有一些重要的东西未涉及，比如podgroup中的资源是如何计算的，插件又是如何工作的，这些都会在后续进行更新.</p>
+<h3 id="参考文章"><a href="#参考文章" class="headerlink" title="参考文章:"></a><strong>参考文章:</strong></h3><blockquote>
+<ul>
+<li><a href="https://github.com/kubernetes-sigs/kube-batch" target="_blank" rel="noopener">https://github.com/kubernetes-sigs/kube-batch</a></li>
+</ul>
+</blockquote>
+<h3 id="转载请注明出处https-izsk-me"><a href="#转载请注明出处https-izsk-me" class="headerlink" title="转载请注明出处https://izsk.me"></a><strong>转载请注明出处<a href="https://izsk.me" target="_blank" rel="noopener">https://izsk.me</a></strong></h3>]]></content>
+      <categories>
+        <category>Kubernetes</category>
+      </categories>
+      <tags>
+        <tag>Kubernetes</tag>
+      </tags>
+  </entry>
+  <entry>
     <title>有趣的Shell Snippet</title>
     <url>/2021/03/21/shell-funny-snippet/</url>
     <content><![CDATA[<p>记录下遇到的有趣的shell代码, 可能是一些常用的snippet, 也可能是使用的时候不经意踩到的坑</p>
@@ -329,6 +388,77 @@
       </categories>
       <tags>
         <tag>CloudNavi</tag>
+      </tags>
+  </entry>
+  <entry>
+    <title>Kube-batch学习(批调度器)</title>
+    <url>/2021/03/17/Kubernetes-kubebatch-install/</url>
+    <content><![CDATA[<p>上一篇中简单介绍了下kube-batch，这篇来简单说一下kube-batch的安装及配置，虽然官方github写的非常清楚，一来做个汇总，二来有些地方需要特别说明一下</p>
+<a id="more"></a>
+<p>因为kubernetes很早就已支持在一个集群中存在多个调度器，因此可以直接将新调度器安装在集群中</p>
+<p>这里以kube-batch的release-0.5版本为准，这也是官方目前为止最新的release tag.</p>
+<figure class="highlight bash"><table><tr><td class="code"><pre><span class="line">git <span class="built_in">clone</span> -b release-0.5 https://github.com/kubernetes-sigs/kube-batch</span><br></pre></td></tr></table></figure>
+<p>官网的文档中使用的是helm的安装方法，不过helm由于verion2跟version3有一些差别，因此不一定对所有场景都可成功，作者最开始的时候就遇到了安装不成功的情况，因为helm的安装文件中，使用了<code>&quot;helm.sh/hook&quot;: &quot;crd-install&quot;</code>,这个annotations对helm的版本有要求，所以如果安装不成功，可以直接使用yaml文件进行安装，步骤如下:</p>
+<figure class="highlight bash"><table><tr><td class="code"><pre><span class="line"><span class="comment"># 先安装crds</span></span><br><span class="line"><span class="built_in">cd</span> config/crds</span><br><span class="line">kubectl apply -f . -n kube-system</span><br><span class="line"><span class="comment"># 安装默认的quue</span></span><br><span class="line"><span class="built_in">cd</span> config/queue</span><br><span class="line">kubectl apply -f . -n kube-system</span><br></pre></td></tr></table></figure>
+<p>这里要注意的,由于是调度器，会监听很多资源的创建情况，权限自然也需要大一点，官方也给了个权限文件，不过很简单粗暴，直接是集群admin的权限，如果怕有安全问题的话，这里就需要对权限进行收敛, 这个就因人而异，这里还是以官方的权限来说明</p>
+<figure class="highlight yaml"><table><tr><td class="code"><pre><span class="line"><span class="attr">apiVersion:</span> <span class="string">rbac.authorization.k8s.io/v1beta1</span></span><br><span class="line"><span class="attr">kind:</span> <span class="string">ClusterRoleBinding</span></span><br><span class="line"><span class="attr">metadata:</span></span><br><span class="line">  <span class="attr">name:</span> <span class="string">default-sa-admin</span></span><br><span class="line"><span class="attr">subjects:</span></span><br><span class="line">  <span class="bullet">-</span> <span class="attr">kind:</span> <span class="string">ServiceAccount</span></span><br><span class="line">    <span class="attr">name:</span> <span class="string">default</span></span><br><span class="line">    <span class="attr">namespace:</span> <span class="string">kube-system</span></span><br><span class="line"><span class="attr">roleRef:</span></span><br><span class="line">  <span class="attr">kind:</span> <span class="string">ClusterRole</span></span><br><span class="line">  <span class="attr">name:</span> <span class="string">cluster-admin</span></span><br><span class="line">  <span class="attr">apiGroup:</span> <span class="string">rbac.authorization.k8s.io</span></span><br></pre></td></tr></table></figure>
+<p>这里是直接将kube-system ns中的default sa直接给了cluster-admin的权限，这样，所有在kube-system ns下的pod，如果没有额外指定sa的话，则都是集群管理员权限</p>
+<p><code>kubectl apply -f . -n kube-system</code></p>
+<p>然后是配置文件，官方也给了默认的配置文件，对于插件的使用，这个要看实际的情况，这里还是以官方的默认配置来说明</p>
+<figure class="highlight yaml"><table><tr><td class="code"><pre><span class="line"><span class="attr">actions:</span> <span class="string">"allocate, backfill"</span></span><br><span class="line"><span class="attr">tiers:</span></span><br><span class="line"><span class="bullet">-</span> <span class="attr">plugins:</span></span><br><span class="line">  <span class="bullet">-</span> <span class="attr">name:</span> <span class="string">priority</span></span><br><span class="line">  <span class="bullet">-</span> <span class="attr">name:</span> <span class="string">gang</span></span><br><span class="line"><span class="bullet">-</span> <span class="attr">plugins:</span></span><br><span class="line">  <span class="bullet">-</span> <span class="attr">name:</span> <span class="string">drf</span></span><br><span class="line">  <span class="bullet">-</span> <span class="attr">name:</span> <span class="string">predicates</span></span><br><span class="line">  <span class="bullet">-</span> <span class="attr">name:</span> <span class="string">proportion</span></span><br><span class="line">  <span class="bullet">-</span> <span class="attr">name:</span> <span class="string">nodeorder</span></span><br></pre></td></tr></table></figure>
+<p>这个配置文件的信息量有点大，具体含义就不在这里展开，后篇再详说，</p>
+<p>上面的配置是默认配置，如果没有指定配置文件的话，则默认使用上面的配置，当然kube-batch也支持指定配置文件</p>
+<p>只需要在启动参数中指定配置文件的yaml即可,如下</p>
+<figure class="highlight yaml"><table><tr><td class="code"><pre><span class="line"><span class="attr">apiVersion:</span> <span class="string">v1</span></span><br><span class="line"><span class="attr">data:</span></span><br><span class="line">  <span class="attr">kube-batch-conf.yaml:</span> <span class="string">|-</span></span><br><span class="line">    <span class="attr">actions:</span> <span class="string">"allocate, backfill"</span></span><br><span class="line">    <span class="attr">tiers:</span></span><br><span class="line">    <span class="bullet">-</span> <span class="attr">plugins:</span></span><br><span class="line">      <span class="bullet">-</span> <span class="attr">name:</span> <span class="string">gang</span></span><br><span class="line">      <span class="bullet">-</span> <span class="attr">name:</span> <span class="string">priority</span></span><br><span class="line">    <span class="bullet">-</span> <span class="attr">plugins:</span></span><br><span class="line">      <span class="bullet">-</span> <span class="attr">name:</span> <span class="string">drf</span></span><br><span class="line">      <span class="bullet">-</span> <span class="attr">name:</span> <span class="string">predicates</span></span><br><span class="line">      <span class="bullet">-</span> <span class="attr">name:</span> <span class="string">proportion</span></span><br><span class="line">      <span class="bullet">-</span> <span class="attr">name:</span> <span class="string">nodeorder</span></span><br><span class="line"><span class="attr">kind:</span> <span class="string">ConfigMap</span></span><br><span class="line"><span class="attr">metadata:</span></span><br><span class="line">  <span class="attr">name:</span> <span class="string">kube-batch-config</span></span><br><span class="line">  <span class="attr">namespace:</span> <span class="string">kube-system</span></span><br></pre></td></tr></table></figure>
+<p>最后启动deployment即可</p>
+<figure class="highlight yaml"><table><tr><td class="code"><pre><span class="line"><span class="attr">apiVersion:</span> <span class="string">extensions/v1beta1</span></span><br><span class="line"><span class="attr">kind:</span> <span class="string">Deployment</span></span><br><span class="line"><span class="attr">metadata:</span></span><br><span class="line">  <span class="attr">labels:</span></span><br><span class="line">    <span class="attr">app:</span> <span class="string">kube-batch</span></span><br><span class="line">  <span class="attr">name:</span> <span class="string">kube-batch</span></span><br><span class="line">  <span class="attr">namespace:</span> <span class="string">kube-system</span></span><br><span class="line"><span class="attr">spec:</span></span><br><span class="line">  <span class="attr">progressDeadlineSeconds:</span> <span class="number">600</span></span><br><span class="line">  <span class="attr">replicas:</span> <span class="number">1</span></span><br><span class="line">  <span class="attr">revisionHistoryLimit:</span> <span class="number">10</span></span><br><span class="line">  <span class="attr">selector:</span></span><br><span class="line">    <span class="attr">matchLabels:</span></span><br><span class="line">      <span class="attr">app:</span> <span class="string">kube-batch</span></span><br><span class="line">  <span class="attr">strategy:</span></span><br><span class="line">    <span class="attr">rollingUpdate:</span></span><br><span class="line">      <span class="attr">maxSurge:</span> <span class="number">25</span><span class="string">%</span></span><br><span class="line">      <span class="attr">maxUnavailable:</span> <span class="number">25</span><span class="string">%</span></span><br><span class="line">    <span class="attr">type:</span> <span class="string">RollingUpdate</span></span><br><span class="line">  <span class="attr">template:</span></span><br><span class="line">    <span class="attr">metadata:</span></span><br><span class="line">      <span class="attr">labels:</span></span><br><span class="line">        <span class="attr">app:</span> <span class="string">kube-batch</span></span><br><span class="line">    <span class="attr">spec:</span></span><br><span class="line">      <span class="attr">containers:</span></span><br><span class="line">      <span class="bullet">-</span> <span class="attr">args:</span></span><br><span class="line">        <span class="bullet">-</span> <span class="string">--logtostderr</span></span><br><span class="line">        <span class="bullet">-</span> <span class="string">--v</span></span><br><span class="line">        <span class="bullet">-</span> <span class="string">"3"</span></span><br><span class="line">        <span class="bullet">-</span> <span class="string">--scheduler-conf=/etc/kube-batch/kube-batch-conf.yaml</span></span><br><span class="line">        <span class="attr">image:</span> <span class="string">kube-batch/kube-batch:v0.5</span></span><br><span class="line">        <span class="attr">imagePullPolicy:</span> <span class="string">IfNotPresent</span></span><br><span class="line">        <span class="attr">name:</span> <span class="string">kube-batch</span></span><br><span class="line">        <span class="attr">ports:</span></span><br><span class="line">        <span class="bullet">-</span> <span class="attr">containerPort:</span> <span class="number">8080</span></span><br><span class="line">          <span class="attr">name:</span> <span class="string">http</span></span><br><span class="line">          <span class="attr">protocol:</span> <span class="string">TCP</span></span><br><span class="line">        <span class="attr">resources:</span></span><br><span class="line">          <span class="attr">limits:</span></span><br><span class="line">            <span class="attr">cpu:</span> <span class="string">"2"</span></span><br><span class="line">            <span class="attr">memory:</span> <span class="string">2Gi</span></span><br><span class="line">          <span class="attr">requests:</span></span><br><span class="line">            <span class="attr">cpu:</span> <span class="string">"2"</span></span><br><span class="line">            <span class="attr">memory:</span> <span class="string">2Gi</span></span><br><span class="line">        <span class="attr">securityContext:</span></span><br><span class="line">          <span class="attr">capabilities:</span> <span class="string">&#123;&#125;</span></span><br><span class="line">        <span class="attr">terminationMessagePath:</span> <span class="string">/dev/termination-log</span></span><br><span class="line">        <span class="attr">terminationMessagePolicy:</span> <span class="string">File</span></span><br><span class="line">        <span class="attr">volumeMounts:</span></span><br><span class="line">        <span class="bullet">-</span> <span class="attr">mountPath:</span> <span class="string">/etc/kube-batch/kube-batch-conf.yaml</span></span><br><span class="line">          <span class="attr">name:</span> <span class="string">config</span></span><br><span class="line">          <span class="attr">subPath:</span> <span class="string">kube-batch-conf.yaml</span></span><br><span class="line">      <span class="attr">dnsPolicy:</span> <span class="string">ClusterFirst</span></span><br><span class="line">      <span class="attr">restartPolicy:</span> <span class="string">Always</span></span><br><span class="line">      <span class="attr">schedulerName:</span> <span class="string">default-scheduler</span></span><br><span class="line">      <span class="attr">securityContext:</span> <span class="string">&#123;&#125;</span></span><br><span class="line">      <span class="attr">terminationGracePeriodSeconds:</span> <span class="number">30</span></span><br><span class="line">      <span class="attr">volumes:</span></span><br><span class="line">      <span class="bullet">-</span> <span class="attr">configMap:</span></span><br><span class="line">          <span class="attr">defaultMode:</span> <span class="number">256</span></span><br><span class="line">          <span class="attr">name:</span> <span class="string">kube-batch-config</span></span><br><span class="line">          <span class="attr">optional:</span> <span class="literal">false</span></span><br><span class="line">        <span class="attr">name:</span> <span class="string">config</span></span><br><span class="line"><span class="meta">---</span></span><br><span class="line"><span class="attr">apiVersion:</span> <span class="string">v1</span></span><br><span class="line"><span class="attr">kind:</span> <span class="string">Service</span></span><br><span class="line"><span class="attr">metadata:</span></span><br><span class="line">  <span class="attr">labels:</span></span><br><span class="line">    <span class="attr">app:</span> <span class="string">kube-batch</span></span><br><span class="line">  <span class="attr">name:</span> <span class="string">kube-batch</span></span><br><span class="line">  <span class="attr">namespace:</span> <span class="string">kube-system</span></span><br><span class="line"><span class="attr">spec:</span></span><br><span class="line">  <span class="attr">clusterIP:</span> <span class="string">None</span></span><br><span class="line">  <span class="attr">ports:</span></span><br><span class="line">  <span class="bullet">-</span> <span class="attr">name:</span> <span class="string">http</span></span><br><span class="line">    <span class="attr">port:</span> <span class="number">8080</span></span><br><span class="line">    <span class="attr">protocol:</span> <span class="string">TCP</span></span><br><span class="line">    <span class="attr">targetPort:</span> <span class="number">8080</span></span><br><span class="line">  <span class="attr">selector:</span></span><br><span class="line">    <span class="attr">app:</span> <span class="string">kube-batch</span></span><br><span class="line">  <span class="attr">sessionAffinity:</span> <span class="string">None</span></span><br><span class="line">  <span class="attr">type:</span> <span class="string">ClusterIP</span></span><br></pre></td></tr></table></figure>
+<p>Kube-batch自带有一些prometheus的监控metrics，主要是调度时延，调度成功、调度失败数等</p>
+<p><code>servicemonitor</code>如下:</p>
+<figure class="highlight yaml"><table><tr><td class="code"><pre><span class="line"><span class="attr">apiVersion:</span> <span class="string">monitoring.coreos.com/v1</span></span><br><span class="line"><span class="attr">kind:</span> <span class="string">ServiceMonitor</span></span><br><span class="line"><span class="attr">metadata:</span></span><br><span class="line">  <span class="attr">labels:</span></span><br><span class="line">    <span class="attr">app:</span> <span class="string">kube-batch</span></span><br><span class="line">  <span class="attr">name:</span> <span class="string">kube-batch</span></span><br><span class="line">  <span class="attr">namespace:</span> <span class="string">monitoring</span></span><br><span class="line"><span class="attr">spec:</span></span><br><span class="line">  <span class="attr">endpoints:</span></span><br><span class="line">  <span class="bullet">-</span> <span class="attr">honorLabels:</span> <span class="literal">true</span></span><br><span class="line">    <span class="attr">interval:</span> <span class="string">30s</span></span><br><span class="line">    <span class="attr">port:</span> <span class="string">http</span></span><br><span class="line">  <span class="attr">jobLabel:</span> <span class="string">app</span></span><br><span class="line">  <span class="attr">namespaceSelector:</span></span><br><span class="line">    <span class="attr">matchNames:</span></span><br><span class="line">    <span class="bullet">-</span> <span class="string">kube-system</span></span><br><span class="line">  <span class="attr">selector:</span></span><br><span class="line">    <span class="attr">matchLabels:</span></span><br><span class="line">      <span class="attr">app:</span> <span class="string">kube-batch</span></span><br></pre></td></tr></table></figure>
+<p>最后在kube-system ns下看到kube-batch成功运行，安装OK.</p>
+<p>流行的tf也原生支持kube-batch.</p>
+<h3 id="参考文章"><a href="#参考文章" class="headerlink" title="参考文章:"></a><strong>参考文章:</strong></h3><blockquote>
+<ul>
+<li><a href="https://github.com/kubernetes-sigs/kube-batch" target="_blank" rel="noopener">https://github.com/kubernetes-sigs/kube-batch</a></li>
+</ul>
+</blockquote>
+<h3 id="转载请注明出处https-izsk-me"><a href="#转载请注明出处https-izsk-me" class="headerlink" title="转载请注明出处https://izsk.me"></a><strong>转载请注明出处<a href="https://izsk.me" target="_blank" rel="noopener">https://izsk.me</a></strong></h3>]]></content>
+      <categories>
+        <category>Kubernetes</category>
+      </categories>
+      <tags>
+        <tag>Kubernetes</tag>
+      </tags>
+  </entry>
+  <entry>
+    <title>Kube-batch学习(批调度器初识一)</title>
+    <url>/2021/03/15/Kubernetes-kubebatch-knows/</url>
+    <content><![CDATA[<p>k8s默认的调度器无法更好地实现对pod的All or Nothing调度能力， 在HPC或者分布式训练场景中，批处理能力对资源的使用率尤为重要.</p>
+<a id="more"></a>
+<h3 id="All-or-Nothing"><a href="#All-or-Nothing" class="headerlink" title="All or Nothing"></a>All or Nothing</h3><p>考虑以下场景:</p>
+<p>有一个训练任务需要10个工作负载一起运行，每个工作负载负责其中一部分，假如有一个工作负载无法调度，则可遇见的结果是整个任务99%的概率会失败</p>
+<p>则其它的工作负载在条件允许的情况下也不应该运行，运行起来只会白白浪费资源，这里要说明的是，作者目前所在的项目是负责一个分布式训练平台，还未实现增量训练功能，因此不进行调度则会更加合理，因为可以把这部分资源让给其它训练任务，因此需要引进批处理调度器，要么都进行调度，要么一个都不调度，这就是All or Nothing</p>
+<p>目前对于基于kubernetes常用的开源批调度器有2个，一个是volcano，一个是kube-batch</p>
+<p>CNCF大家庭中第一个批处理调度器是volcano，是由华为基于kube-batch开发而来，而Kube-batch这个项目目前也基于停止维护, 其作者已成为volcano项目的maintainer，偶尔会有fix，不过就作者目前所在的分布式训练项目而言, 经过作者的调研，引进volcano会有相当大的改造成本，短时间无法完成，反而kube-batch的接入比较快，改造较小。</p>
+<h3 id="For-What"><a href="#For-What" class="headerlink" title="For What?"></a>For What?</h3><p>从kube-batch的readme.md来看，kube-batch主要聚焦在任务的<code>批调度</code>及对<code>多租户</code>的资源共享,而批调度使用的则是<code>PodGroup</code></p>
+<p>将一组关联的pod当成一个group,从而在pod的概念之上又封装了一层，实现了对整体group的调度，要么都成功，要么都失败.</p>
+<p>多租户则是使用的是queue,为每个租户都属于一个queue， 一个queue又与特定的资源绑定，这样可以实现同一个queue中使用的资源量，当然，kube-batch支持引入插件对queue间进行一引起操作，比如有优先级、资源抢占等功能</p>
+<p>podgroup及queue不在这里展开，后续用单独的篇幅说明</p>
+<h3 id="Can’t"><a href="#Can’t" class="headerlink" title="Can’t"></a>Can’t</h3><p>Kube-batch用于Kubernetes的批调度器，对于某些场景是不适合的，比如数据管理、多租户的隔离、运行时等能力。</p>
+<p>很多大厂都在训练场景中引入了kube-batch，像百度、华为、vivo等，当然都基于此进行了二次开发，从公开的网站信息来看，除了华为的volcano最受欢迎之外，vivo对kube-batch的宣讲最多，很多东西也可借鉴</p>
+<p>目前，作者所在的团队调度器一期项目主要是基于kube-batch，在调度器二期中将可能引入volcano，使功能更加完善</p>
+<p>接下来的几篇文章都是围绕kube-batch这个工具的概念、使用以及在项目中引入kube-batch后对资源的使用率有什么影响.</p>
+<h3 id="参考文章"><a href="#参考文章" class="headerlink" title="参考文章:"></a><strong>参考文章:</strong></h3><blockquote>
+<ul>
+<li><a href="https://github.com/kubernetes-sigs/kube-batch" target="_blank" rel="noopener">https://github.com/kubernetes-sigs/kube-batch</a></li>
+</ul>
+</blockquote>
+<h3 id="转载请注明出处https-izsk-me"><a href="#转载请注明出处https-izsk-me" class="headerlink" title="转载请注明出处https://izsk.me"></a><strong>转载请注明出处<a href="https://izsk.me" target="_blank" rel="noopener">https://izsk.me</a></strong></h3>]]></content>
+      <categories>
+        <category>Kubernetes</category>
+      </categories>
+      <tags>
+        <tag>Kubernetes</tag>
       </tags>
   </entry>
   <entry>
@@ -10169,46 +10299,6 @@
       </tags>
   </entry>
   <entry>
-    <title>HTTP之长连接及短连接</title>
-    <url>/2017/08/12/HTTP%E4%B9%8B%E9%95%BF%E8%BF%9E%E6%8E%A5%E5%8F%8A%E7%9F%AD%E8%BF%9E%E6%8E%A5/</url>
-    <content><![CDATA[<p>我们都说HTTP协议是无状态的,我们又都说HTTP分长连接及短连接,’无状态’到底是个什么意思？</p>
-<a id="more"></a>
-<h3 id="无状态"><a href="#无状态" class="headerlink" title="无状态"></a><strong>无状态</strong></h3><p>HTTP无状态其实指的是协议对于事务处理没有记忆能力,服务器不知道客户端是什么状态.也就是说,打开一个服务器上的网页和你之前打开这个服务器上的网页之间没有任何联系.HTTP是一个无状态的面向连接的协议,无状态不代表HTTP不能保持TCP连接,更不能代表HTTP使用的是UDP协议(无连接).</p>
-<p>那http又是如何保持长连接的呢?</p>
-<p>在<code>HTTP/1.0</code>中,默认使用的是短连接.也就是说,浏览器和服务器每进行一次HTTP操作,就建立一次连接,但任务结束就中断连接.如果客户端浏览器访问的某个HTML或其他类型的 Web页中包含有其他的Web资源,如JavaScript文件、图像文件、CSS文件等；当浏览器每遇到这样一个Web资源,就会建立一个HTTP会话.<br>但从<code>HTTP/1.1</code>起,默认使用长连接,用以保持连接特性.使用长连接的HTTP协议,会在响应头有加入这行代码:</p>
-<p><code>Connection:keep-alive</code></p>
-<p>　　在使用长连接的情况下,当一个网页打开完成后,客户端和服务器之间用于传输HTTP数据的 TCP连接不会关闭,如果客户端再次访问这个服务器上的网页,会继续使用这一条已经建立的连接.<code>Keep-Alive</code>不会永久保持连接,它有一个保持时间,可以在不同的服务器软件（如Apache）中设定这个时间.实现长连接要客户端和服务端都支持长连接.</p>
-<p>当然,在很多web服务器中可以设置这个keep-Alive的保持时间,比如nginx的配置文件nginx.conf中可直接使用:</p>
-<p><code>keepalive_timeout  60;</code></p>
-<p><strong>HTTP协议的长连接和短连接,实质上是TCP协议的长连接和短连接.</strong></p>
-<p>那长短连接各自对应的场景有哪些呢(各自的优缺点)?</p>
-<h3 id="短连接"><a href="#短连接" class="headerlink" title="短连接"></a><strong>短连接</strong></h3><p>场景: client向server发起连接请求,server接到请求,然后双方建立连接.client向server 发送消息,server回应client,然后一次读写就完成了,这时候双方任何一个都可以发起close操作,不过一般都是client先发起 close操作.为什么呢,一般的server不会回复完client后立即关闭连接的,当然不排除有特殊的情况.从上面的描述看,短连接一般只会在 client/server间传递一次读写操作</p>
-<p><strong>短连接管理起来比较简单,存在的连接都是有用的连接,不需要额外的控制手段,但是频繁的创建大量的连接也很耗资源</strong></p>
-<h3 id="长连接"><a href="#长连接" class="headerlink" title="长连接"></a><strong>长连接</strong></h3><p>流程是:client向server发起连接,server接受client连接,双方建立连接.Client与server完成一次读写之后,它们之间的连接并不会主动关闭,后续的读写操作会继续使用这个连接.</p>
-<p>首先说一下TCP/IP详解上讲到的TCP保活功能,保活功能主要为服务器应用提供,服务器应用希望知道客户主机是否崩溃,从而可以代表客户使用资源.如果客户已经消失,使得服务器上保留一个半开放的连接,而服务器又在等待来自客户端的数据,则服务器将应远等待客户端的数据,保活功能就是试图在服务 器端检测到这种半开放的连接.</p>
-<p>如果一个给定的连接在两小时内没有任何的动作,服务器就向客户发一个探测报文段,客户主机必须处于以下4个状态之一:</p>
-<blockquote>
-<ul>
-<li>客户主机依然正常运行,并从服务器可达.客户的TCP响应正常,而服务器也知道对方是正常的,服务器在两小时后将保活定时器复位.</li>
-<li>客户主机已经崩溃,并且关闭或者正在重新启动.在任何一种情况下,客户的TCP都没有响应.服务端将不能收到对探测的响应,并在75秒后超时.服务器总共发送10个这样的探测 ,每个间隔75秒.如果服务器没有收到一个响应,它就认为客户主机已经关闭并终止连接.</li>
-<li>客户主机崩溃并已经重新启动.服务器将收到一个对其保活探测的响应,这个响应是一个复位,使得服务器终止这个连接.</li>
-</ul>
-</blockquote>
-<p>客户机正常运行,但是服务器不可达,这种情况与2类似,TCP能发现的就是没有收到探查的响应.</p>
-<p><strong>从上可以看出http要保持长连接需要做很多次的向客户端试探是否存活,这对性能是个很大的损耗,但是从另一方面来说长连接减少了很多的创关闭连接带来的开销,节约时间.</strong></p>
-<h3 id="场景"><a href="#场景" class="headerlink" title="场景"></a><strong>场景</strong></h3><p><code>长连接</code>多用于操作频繁,点对点的通讯,而且连接数不能太多情况,.每个TCP连接都需要三步握手,这需要时间,如果每个操作都是先连接,再操作的话那么处理速度会降低很多,所以每个操作完后都不断开,次处理时直接发送数据包就OK了,不用建立TCP连接.例如：数据库的连接用长连接, 如果用短连接频繁的通信会造成socket错误,而且频繁的socket 创建也是对资源的浪费. </p>
-<p>而像WEB网站的http服务一般都用<code>短链接</code>,因为长连接对于服务端来说会耗费一定的资源,而像WEB网站这么频繁的成千上万甚至上亿客户端的连接用短连接会更省一些资源,如果用长连接,而且同时有成千上万的用户,如果每个用户都占用一个连接的话,那可想而知吧.所以并发量大,但每个用户无需频繁操作情况下需用短连好.</p>
-<p><strong>没有哪一个更好,只有哪一个最适合,一切跟着场景走,总有一款适合你!</strong></p>
-<h3 id="转载请注明出处https-izsk-me"><a href="#转载请注明出处https-izsk-me" class="headerlink" title="转载请注明出处https://izsk.me"></a><strong>转载请注明出处<a href="https://izsk.me" target="_blank" rel="noopener">https://izsk.me</a></strong></h3><hr>
-]]></content>
-      <categories>
-        <category>Http-Tcp-Ip</category>
-      </categories>
-      <tags>
-        <tag>Http-Tcp-Ip</tag>
-      </tags>
-  </entry>
-  <entry>
     <title>Flask学习(flask应用)</title>
     <url>/2017/08/12/flask%E5%AD%A6%E4%B9%A0%E4%BA%8C(flask%E5%BA%94%E7%94%A8)/</url>
     <content><![CDATA[<p>距离<a href="https://izsk.me/2017/08/12/falsk%E5%AD%A6%E4%B9%A0(-" target="_blank" rel="noopener">上一篇</a>)有一段时间了,上次扯了点跟flask相关的内容,这次抽空记录下flask的机制.flask之所于上手容易,是因为我们对python语言稍微了解的话,简单几步就可以把一个小应用跑起来,不需要搭建额外的东西,所以对于并发量没有要求的话flask可以轻松应对.</p>
@@ -10273,6 +10363,46 @@
       </categories>
       <tags>
         <tag>Python</tag>
+      </tags>
+  </entry>
+  <entry>
+    <title>HTTP之长连接及短连接</title>
+    <url>/2017/08/12/HTTP%E4%B9%8B%E9%95%BF%E8%BF%9E%E6%8E%A5%E5%8F%8A%E7%9F%AD%E8%BF%9E%E6%8E%A5/</url>
+    <content><![CDATA[<p>我们都说HTTP协议是无状态的,我们又都说HTTP分长连接及短连接,’无状态’到底是个什么意思？</p>
+<a id="more"></a>
+<h3 id="无状态"><a href="#无状态" class="headerlink" title="无状态"></a><strong>无状态</strong></h3><p>HTTP无状态其实指的是协议对于事务处理没有记忆能力,服务器不知道客户端是什么状态.也就是说,打开一个服务器上的网页和你之前打开这个服务器上的网页之间没有任何联系.HTTP是一个无状态的面向连接的协议,无状态不代表HTTP不能保持TCP连接,更不能代表HTTP使用的是UDP协议(无连接).</p>
+<p>那http又是如何保持长连接的呢?</p>
+<p>在<code>HTTP/1.0</code>中,默认使用的是短连接.也就是说,浏览器和服务器每进行一次HTTP操作,就建立一次连接,但任务结束就中断连接.如果客户端浏览器访问的某个HTML或其他类型的 Web页中包含有其他的Web资源,如JavaScript文件、图像文件、CSS文件等；当浏览器每遇到这样一个Web资源,就会建立一个HTTP会话.<br>但从<code>HTTP/1.1</code>起,默认使用长连接,用以保持连接特性.使用长连接的HTTP协议,会在响应头有加入这行代码:</p>
+<p><code>Connection:keep-alive</code></p>
+<p>　　在使用长连接的情况下,当一个网页打开完成后,客户端和服务器之间用于传输HTTP数据的 TCP连接不会关闭,如果客户端再次访问这个服务器上的网页,会继续使用这一条已经建立的连接.<code>Keep-Alive</code>不会永久保持连接,它有一个保持时间,可以在不同的服务器软件（如Apache）中设定这个时间.实现长连接要客户端和服务端都支持长连接.</p>
+<p>当然,在很多web服务器中可以设置这个keep-Alive的保持时间,比如nginx的配置文件nginx.conf中可直接使用:</p>
+<p><code>keepalive_timeout  60;</code></p>
+<p><strong>HTTP协议的长连接和短连接,实质上是TCP协议的长连接和短连接.</strong></p>
+<p>那长短连接各自对应的场景有哪些呢(各自的优缺点)?</p>
+<h3 id="短连接"><a href="#短连接" class="headerlink" title="短连接"></a><strong>短连接</strong></h3><p>场景: client向server发起连接请求,server接到请求,然后双方建立连接.client向server 发送消息,server回应client,然后一次读写就完成了,这时候双方任何一个都可以发起close操作,不过一般都是client先发起 close操作.为什么呢,一般的server不会回复完client后立即关闭连接的,当然不排除有特殊的情况.从上面的描述看,短连接一般只会在 client/server间传递一次读写操作</p>
+<p><strong>短连接管理起来比较简单,存在的连接都是有用的连接,不需要额外的控制手段,但是频繁的创建大量的连接也很耗资源</strong></p>
+<h3 id="长连接"><a href="#长连接" class="headerlink" title="长连接"></a><strong>长连接</strong></h3><p>流程是:client向server发起连接,server接受client连接,双方建立连接.Client与server完成一次读写之后,它们之间的连接并不会主动关闭,后续的读写操作会继续使用这个连接.</p>
+<p>首先说一下TCP/IP详解上讲到的TCP保活功能,保活功能主要为服务器应用提供,服务器应用希望知道客户主机是否崩溃,从而可以代表客户使用资源.如果客户已经消失,使得服务器上保留一个半开放的连接,而服务器又在等待来自客户端的数据,则服务器将应远等待客户端的数据,保活功能就是试图在服务 器端检测到这种半开放的连接.</p>
+<p>如果一个给定的连接在两小时内没有任何的动作,服务器就向客户发一个探测报文段,客户主机必须处于以下4个状态之一:</p>
+<blockquote>
+<ul>
+<li>客户主机依然正常运行,并从服务器可达.客户的TCP响应正常,而服务器也知道对方是正常的,服务器在两小时后将保活定时器复位.</li>
+<li>客户主机已经崩溃,并且关闭或者正在重新启动.在任何一种情况下,客户的TCP都没有响应.服务端将不能收到对探测的响应,并在75秒后超时.服务器总共发送10个这样的探测 ,每个间隔75秒.如果服务器没有收到一个响应,它就认为客户主机已经关闭并终止连接.</li>
+<li>客户主机崩溃并已经重新启动.服务器将收到一个对其保活探测的响应,这个响应是一个复位,使得服务器终止这个连接.</li>
+</ul>
+</blockquote>
+<p>客户机正常运行,但是服务器不可达,这种情况与2类似,TCP能发现的就是没有收到探查的响应.</p>
+<p><strong>从上可以看出http要保持长连接需要做很多次的向客户端试探是否存活,这对性能是个很大的损耗,但是从另一方面来说长连接减少了很多的创关闭连接带来的开销,节约时间.</strong></p>
+<h3 id="场景"><a href="#场景" class="headerlink" title="场景"></a><strong>场景</strong></h3><p><code>长连接</code>多用于操作频繁,点对点的通讯,而且连接数不能太多情况,.每个TCP连接都需要三步握手,这需要时间,如果每个操作都是先连接,再操作的话那么处理速度会降低很多,所以每个操作完后都不断开,次处理时直接发送数据包就OK了,不用建立TCP连接.例如：数据库的连接用长连接, 如果用短连接频繁的通信会造成socket错误,而且频繁的socket 创建也是对资源的浪费. </p>
+<p>而像WEB网站的http服务一般都用<code>短链接</code>,因为长连接对于服务端来说会耗费一定的资源,而像WEB网站这么频繁的成千上万甚至上亿客户端的连接用短连接会更省一些资源,如果用长连接,而且同时有成千上万的用户,如果每个用户都占用一个连接的话,那可想而知吧.所以并发量大,但每个用户无需频繁操作情况下需用短连好.</p>
+<p><strong>没有哪一个更好,只有哪一个最适合,一切跟着场景走,总有一款适合你!</strong></p>
+<h3 id="转载请注明出处https-izsk-me"><a href="#转载请注明出处https-izsk-me" class="headerlink" title="转载请注明出处https://izsk.me"></a><strong>转载请注明出处<a href="https://izsk.me" target="_blank" rel="noopener">https://izsk.me</a></strong></h3><hr>
+]]></content>
+      <categories>
+        <category>Http-Tcp-Ip</category>
+      </categories>
+      <tags>
+        <tag>Http-Tcp-Ip</tag>
       </tags>
   </entry>
   <entry>
