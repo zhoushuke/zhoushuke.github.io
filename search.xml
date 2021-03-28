@@ -1,6 +1,167 @@
 <?xml version="1.0" encoding="utf-8"?>
 <search>
   <entry>
+    <title>Kube-batch学习(核心模块)</title>
+    <url>/2021/03/27/Kubernetes-kubebatch-action-plugins/</url>
+    <content><![CDATA[<p>接上篇，主要介绍了kube-batch中两个重要的对象，queue及podgroup，这次主要讲讲kube-batch的核心的几个模块</p>
+<a id="more"></a>
+<h3 id="默认配置"><a href="#默认配置" class="headerlink" title="默认配置"></a>默认配置</h3><p>以下是kube-batch默认的配置，如下:</p>
+<figure class="highlight yaml"><table><tr><td class="code"><pre><span class="line"><span class="attr">actions:</span> <span class="string">"allocate, backfill"</span></span><br><span class="line"><span class="attr">tiers:</span></span><br><span class="line"><span class="bullet">-</span> <span class="attr">plugins:</span></span><br><span class="line">  <span class="bullet">-</span> <span class="attr">name:</span> <span class="string">priority</span></span><br><span class="line">  <span class="bullet">-</span> <span class="attr">name:</span> <span class="string">gang</span></span><br><span class="line"><span class="bullet">-</span> <span class="attr">plugins:</span></span><br><span class="line">  <span class="bullet">-</span> <span class="attr">name:</span> <span class="string">drf</span></span><br><span class="line">  <span class="bullet">-</span> <span class="attr">name:</span> <span class="string">predicates</span></span><br><span class="line">  <span class="bullet">-</span> <span class="attr">name:</span> <span class="string">proportion</span></span><br><span class="line">  <span class="bullet">-</span> <span class="attr">name:</span> <span class="string">nodeorder</span></span><br></pre></td></tr></table></figure>
+<p>可以看到分为actions及tiers，其中actions指定了kube-batch在调度时需要执行的操作，同时，这些操作会关联一些plugins(简单来说就是一些算法)来实现相关功能，比如说，actions是allocate，allocate意为分配资源，但是在分配资源时有时也会有一些要求，比如优先级高的先分配，或者把某个任务当成一个整体进行分配(gang)等等，同时，不同的actions可能关联同一个plugins，比如对于资源回收时，也可能存在先回收优先级低的pod的资源，这就是actions及plugins之间的关系</p>
+<p>kube-batch支持多种的actions及plugins,这个则需要根据实际的情况按需选择</p>
+<p>列表如下:</p>
+<ul>
+<li>actions<ul>
+<li>allocate</li>
+<li>backfill</li>
+<li>preempt</li>
+<li>reclaim</li>
+</ul>
+</li>
+<li>plugins<ul>
+<li>conformance</li>
+<li>drf</li>
+<li>gang</li>
+<li>nodeorder</li>
+<li>predicates</li>
+<li>priority</li>
+<li>proportion</li>
+</ul>
+</li>
+</ul>
+<p>要注意的是，配置文件中actions及plugins的指定顺序非常重要，<strong>kube-batch不会考虑action及plugins列表之间的顺序是不是合理，它只会按照指定的顺序依次执行</strong>，因此，要根据实际情况谨慎、实操地对配置进行优化，最后才能达到合理效果</p>
+<p>tiers下的plugins是列表结构，对于actions来说，如果遇到了优先级更高的plugins，则不会再进行应用低优先级的plugins，比如上面的配置中，如果一个优先级高的跟一个优先级低的任务同时到来，则优先级高的获取到它需要的所有资源，而不会再考虑其它的plugins，如果两者优先级一样且都是以podgroup存在，则就会按drf plugins进行处理.</p>
+<p>这张图很形象地说明kube-batch的工作原因</p>
+<p><img src="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20210324234022.png" alt></p>
+<p>它通过 list-watch 监听 Pod, Queue, PodGroup 和 Node 等资源，在本地维护一份集群资源的全局缓存，依次通过如下的策略（reclaim, allocate, preemption，predict） 完成资源的调度</p>
+<p><img src="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20210328221253.png" alt></p>
+<h3 id="cache"><a href="#cache" class="headerlink" title="cache"></a>cache</h3><p>Cache模块封装了对API Server的节点、容器等对象的数据同步逻辑。Kubernetes的数据保存在分布式存储etcd中，所有对数据的查询和操作都通过调用API Server的接口，而非直接操作etcd。在调度时，需要集群中的节点和容器的使用资源和状态等信息。Cache模块通过调用Kubernetes的SDK，通过watch机制监听集群中的节点、容器的状态变化，将信息同步到自己的数据结构中。</p>
+<p>Cache模块还封装了对API server的接口的调用。比如Cache.Bind这个接口，会去调用API Server的Bind接口，将容器绑定到指定的节点上。在kube-batch中只有cache模块需要和API Server交互，其他模块只需要调用Cache模块的接口,一方面减少api-server的压力，另一方面加快kube-batch本身的调度性能</p>
+<h3 id="session"><a href="#session" class="headerlink" title="session"></a>session</h3><p>Session模块是将其他三个模块串联起来的一个模块。Kube-batch在每个调度周期开始时，都会新建一个Session对象，这个Session的初始化时，会做以下操作：</p>
+<ul>
+<li>调用Cache.Snapshot接口，将Cache中节点、任务和队列的信息拷贝一份副本，之后在这个调度周期中使用这份副本进行调度。因为Cache的数据会不断变化，为了保持同个调度周期中的数据一致性，在一开始就拷贝了一份副本。</li>
+<li>将配置中的各个Plugin初始化，然后调用plugin的OnSessionOpen接口。Plugin在OnSessionOpen中，会初始化自己需要的数据，并将一些回调函数注册到session中。Plugin可以向Session中注册的函数是：<ol>
+<li>jobOrderFns： 决定哪个训练任务优先被处理（调度、回收、抢占）</li>
+<li>queueOrderFns：决定哪个训练队列优先被处理</li>
+<li>taskOrderFns：决定任务中哪个容器优先被处理</li>
+<li>predicateFns： 判断某个节点是否满足容器的基本调度要求。比如容器中指定的节点的标签</li>
+<li>nodeOrderFns： 当多个节点满足容器的调度要求时，优先选择哪个节点</li>
+<li>preemptableFns： 决定某个容器是否可以被抢占</li>
+<li>reclaimableFns ：决定某个容器是否可以被回收</li>
+<li>overusedFns： 决定某个队列使用的资源是否超过限额，是的话不再调度对队列中的任务</li>
+<li>jobReadyFns：判断某个任务是否已经准备好，可以调用API Server的接口将任务的容器调度到节点</li>
+<li>jobPipelinedFns ： 判断某个任务是否处于Pipelined状态</li>
+<li>jobValidFns： 判断某个任务是否有效</li>
+</ol>
+</li>
+</ul>
+<p>注意Plugin不需要注册上面所有的函数，而是可以根据自己的需要，注册某几个函数。比如Predict plugin就只注册了predicateFns这个函数到Session中。</p>
+<p>初始化成功后，Kube-batch会依次调用不同的Action的Execute方法，并将Session对象作为参数传入。在Execute中，会调用Session的各种方法。这些方法，有些最终会调用到Cache的方法， 有些是调用Plugin注册的方法。</p>
+<h3 id="actions"><a href="#actions" class="headerlink" title="actions"></a>actions</h3><p>因为业务中只使用到了默认的action，因此就简单说下allocate跟backfill这两个，其它的如reclaim跟preempt可参考<a href="http://dockone.io/article/9021" target="_blank" rel="noopener">这里</a></p>
+<h4 id="allocate"><a href="#allocate" class="headerlink" title="allocate"></a>allocate</h4><p>allocate用于将有明确资源需求的pod（task）分配到某个节点，在k8s对象中，pod或者container有没有指定request及limit，对应不同的Qos，Qos表示为服务质量，在这里不展开说明，感兴趣的可参考<a href="https://kubernetes.io/zh/docs/tasks/configure-pod-container/quality-service-pod/" target="_blank" rel="noopener">这里</a>,对于明确指定了requests跟limit且相等的这类pod，对应的Qos为guaranteed，同等情况下会被优先保障资源。</p>
+<p>如果不额外配置，allocate在kube-batch是默认的选项</p>
+<p>那如果有pod没有指定资源怎么办呢？</p>
+<h4 id="backfill"><a href="#backfill" class="headerlink" title="backfill"></a>backfill</h4><p>这个时候就需要靠backfill(回填)这个action来处理了,这个模块主要实现当podgroup中有pod没有被绑定成功时，其它的绑定的pod的资源会释放,在podgroup中非常关键.</p>
+<h3 id="Plugins"><a href="#Plugins" class="headerlink" title="Plugins"></a>Plugins</h3><h4 id="gang"><a href="#gang" class="headerlink" title="gang"></a>gang</h4><p>gang翻译成中文是帮派的意思，电影中的帮派大多都是共进退的，因为gang插件实现的就是帮派调度，gang-scheduler是podgroup中的核心，实现All or Nothing的效果</p>
+<p>那么Kube-batch如何Gang-Scheduler，逻辑如下:</p>
+<blockquote>
+<ul>
+<li>增加一个PodGruop的CRD。调度以PodGroup为单位。同时对应还有一个PodGroupController进行PodGroup的管理</li>
+<li>整个调度过程采用延迟创建Pod的过程。只有当PodGroup中的所有Pod都有合适的Node绑定时，才开始创建</li>
+<li>c. 定义了一种新的Action-BackFill.当PodGroup还有Pod没绑定时，之前绑定Pod的资源会释放</li>
+</ul>
+</blockquote>
+<p>gang注册3个function，分别是：</p>
+<blockquote>
+<ul>
+<li><code>preemptableFn</code> 为避免gang的策略被preempt和reclaiｍ干扰，定义了preemptableFn,排除那些还未准备就绪的job，避免其被抢占。（虽然实际上这些job未真正调度到node上去，但是确实从逻辑上把资源分配给它了）</li>
+<li><code>jobOrderFn</code> 为让已经就绪的job尽快被调度到节点，定义了jobOrderFn ,让已经就绪的job拥有更高的优先级</li>
+<li><code>jobReadyFn</code> 用来判断一个job是否已经就绪。<code>jobReady</code>会调用所有注册了的 plugin的Ready判定函数，只有都判定为ready ,才返回true </li>
+</ul>
+</blockquote>
+<h4 id="DRF"><a href="#DRF" class="headerlink" title="DRF"></a>DRF</h4><p>实现了Dominant Resouce Fairenss算法，这个算法能够有效对多种资源（CPU、Memory、GPU）进行调度</p>
+<p>Drf目的是尽量避免集群内某一类资源使用比例偏高，而其他类型资源使用比例却很低的不良状态。在调度时，让具有最低资源占用比例的任务具有高优先级,主要关注<code>onSessionOpen</code>函数：</p>
+<blockquote>
+<ul>
+<li>统计集群中所有node可分配资源总量</li>
+<li>统计Job资源申请，计算资源占比（资源申请/资源总量）</li>
+<li>注册Job排序函数，根据资源占比进行排序，主要资源占比越低job优先级越高</li>
+<li>注册事件处理函数，包括分配函数以及驱逐函数，函数实现比较简单，就是当task发生变化时，增加（分配）/减少（驱逐）Job资源申请总量，并且更新资源占比。</li>
+</ul>
+</blockquote>
+<p>　drf注册2个function，分别是:</p>
+<blockquote>
+<ul>
+<li><code>jobOrderFn</code> 是job的排序函数，会让share值越小的job排在最前面，即拥有最高的优先级，这个是实现drf的关键。</li>
+<li><code>preemptableFn</code>返回可抢占的job列表，job的筛选规则是：如果待选job的share值大于将被调度的job的share值，则选中该待选job</li>
+</ul>
+</blockquote>
+<p>kub-batch的session跟cache机制是固定的，主要通过action跟plugins机制来实现多样化调度算法.</p>
+<p>虽然目前业务上运行的很ok，但根据本人的实践情况来看，不太建议生产使用，原因如下:</p>
+<p>本人因为历史原因，接入kube-batch是目前最好的选择，由于kube-batch项目基本已不再维护，其中的有些bug已经有人提issue，但并没有在kube-batch这个项目中fix，而是直接在volcano的fix列表中了，所以如果需要fix,还需要从volcano中cherry-pick过来，但是虽说volcano是基于kube-batch而来，但volcano的版本迭代非常快，真的很难判断cherry-pick过来之后会不会有其它问题，如果有问题再来看volcano，如没有特殊原因还不如直接从一开始就使用上volcano，多快好省.</p>
+<h3 id="参考文章"><a href="#参考文章" class="headerlink" title="参考文章:"></a><strong>参考文章:</strong></h3><blockquote>
+<ul>
+<li><a href="https://github.com/kubernetes-sigs/kube-batch" target="_blank" rel="noopener">https://github.com/kubernetes-sigs/kube-batch</a></li>
+<li><a href="https://www.jianshu.com/p/042692685cf4" target="_blank" rel="noopener">https://www.jianshu.com/p/042692685cf4</a></li>
+<li><a href="http://dockone.io/article/9021" target="_blank" rel="noopener">http://dockone.io/article/9021</a></li>
+<li><a href="http://www.ririshihaori.com/posts/2020/1/kube-batch/" target="_blank" rel="noopener">http://www.ririshihaori.com/posts/2020/1/kube-batch/</a></li>
+<li><a href="https://kubernetes.io/zh/docs/tasks/configure-pod-container/quality-service-pod/" target="_blank" rel="noopener">https://kubernetes.io/zh/docs/tasks/configure-pod-container/quality-service-pod/</a></li>
+</ul>
+</blockquote>
+<h3 id="转载请注明出处https-izsk-me"><a href="#转载请注明出处https-izsk-me" class="headerlink" title="转载请注明出处https://izsk.me"></a><strong>转载请注明出处<a href="https://izsk.me" target="_blank" rel="noopener">https://izsk.me</a></strong></h3>]]></content>
+      <categories>
+        <category>Kubernetes</category>
+      </categories>
+      <tags>
+        <tag>Kubernetes</tag>
+      </tags>
+  </entry>
+  <entry>
+    <title>Kube-batch学习(kube-batch踩坑记)</title>
+    <url>/2021/03/27/Kubernetes-kubebatch-prombles/</url>
+    <content><![CDATA[<p>由于kube-batch经久未修，导致在引入kube-batch到环境中验证期间fix了很多问题，记录于此</p>
+<a id="more"></a>
+<p>Kube-batch版本为v1.5.0, kube-batch github上能看到的最后一个release版本.</p>
+<h3 id="解决集群中如果存在pdb时出现的空指针问题"><a href="#解决集群中如果存在pdb时出现的空指针问题" class="headerlink" title="解决集群中如果存在pdb时出现的空指针问题"></a>解决集群中如果存在pdb时出现的空指针问题</h3><p>在kube-batch的稳定版本中(目前是v1.5.0),如果集群中有pdb，pdb在k8s中是一种安全机制，可<a href="https://kubernetes.io/zh/docs/tasks/run-application/configure-pdb/" target="_blank" rel="noopener">参考</a></p>
+<p>如果podb的属性值有空值时，kube-batch在启动时会出现空指针异常，核心代码:</p>
+<figure class="highlight go"><table><tr><td class="code"><pre><span class="line"><span class="function"><span class="keyword">func</span> <span class="params">(ji *JobInfo)</span> <span class="title">SetPDB</span><span class="params">(pdb *policyv1.PodDisruptionBudget)</span></span> &#123;</span><br><span class="line">	ji.Name = pdb.Name</span><br><span class="line">	<span class="comment">//ji.MinAvailable = pdb.Spec.MinAvailable.IntVal  # fix之前的错误代码，以下是fix之后新增的代码</span></span><br><span class="line">  defaultMinAvailable := intstr.IntOrString&#123;Type: intstr.Int, IntVal: <span class="keyword">int32</span>(<span class="number">0</span>)&#125;</span><br><span class="line">	minAvailable := pdb.Spec.MinAvailable</span><br><span class="line">	ji.MinAvailable = <span class="keyword">int32</span>(intstr.ValueOrDefault(minAvailable, defaultMinAvailable).IntValue())</span><br><span class="line">	ji.Namespace = pdb.Namespace</span><br><span class="line"></span><br><span class="line">	ji.CreationTimestamp = pdb.GetCreationTimestamp()</span><br><span class="line">	ji.PDB = pdb</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>异常代码在于注释的那行，代码中直接获取min值，但是这个值可能为NaN值，没有做安全处理</p>
+<p>fix之后的代码如注释之后的代码</p>
+<p>经过本人的验证，这个<a href="https://github.com/volcano-sh/volcano/pull/523" target="_blank" rel="noopener">fix</a>依然会有问题，没有考虑到pdb的所有情况，所以在volcano项目中(基于kube-batch衍生而来)，作者直接去除了pdb的支持，将pdb相关的代码直接去掉了</p>
+<p><a href="https://github.com/volcano-sh/volcano/pull/523" target="_blank" rel="noopener">fix</a></p>
+<h3 id="failed-to-delete-pod"><a href="#failed-to-delete-pod" class="headerlink" title="failed to delete pod"></a>failed to delete pod</h3><p>在kube-batch的日志中会出现failed to delete pod之类的错误，这个错误的原因大部分是是由于cache模块在更新pod的调度状态时，首先针将pod删除，然后再添加pod， 但是在删pod时发现task此时已经不再它原来的node上，因此无法删除，也就无法再添加pod，所以fix是如果无法删除这种情况直接忽略，再添加就没问题</p>
+<p><a href="https://hub.fastgit.org/kubernetes-sigs/kube-batch/pull/936" target="_blank" rel="noopener">fix</a></p>
+<h3 id="资源计算错误问题"><a href="#资源计算错误问题" class="headerlink" title="资源计算错误问题"></a>资源计算错误问题</h3><p>Kube-batch中对每一次调度之后都会计划queue中所有的task所占用的资源是不是超过了queue能够使用的最大资源，如果超过，则会返回一个标志位overUsed，返回这个标志位，kube-batch则不会对属于该queue中的task进行调度</p>
+<p>但是kube-batch在进行资源比较时出现了计算错误,</p>
+<p>核心代码如下:</p>
+<figure class="highlight go"><table><tr><td class="code"><pre><span class="line">ssn.AddOverusedFn(pp.Name(), <span class="function"><span class="keyword">func</span><span class="params">(obj <span class="keyword">interface</span>&#123;&#125;)</span> <span class="title">bool</span></span> &#123;</span><br><span class="line">		queue := obj.(*api.QueueInfo)</span><br><span class="line">		attr := pp.queueOpts[queue.UID]</span><br><span class="line">  </span><br><span class="line">    <span class="comment">//overused := attr.deserved.Less(attr.allocated)</span></span><br><span class="line">		overused := attr.deserved.LessEqual(attr.allocated) </span><br><span class="line">		<span class="keyword">if</span> overused &#123;</span><br><span class="line">			glog.V(<span class="number">3</span>).Infof(<span class="string">"Queue &lt;%v&gt;: deserved &lt;%v&gt;, allocated &lt;%v&gt;, share &lt;%v&gt;"</span>,</span><br><span class="line">				queue.Name, attr.deserved, attr.allocated, attr.share)</span><br><span class="line">		&#125;</span><br><span class="line"></span><br><span class="line">		<span class="keyword">return</span> overused</span><br><span class="line">	&#125;)</span><br></pre></td></tr></table></figure>
+<p>该问题比较严重，<a href="https://hub.fastgit.org/volcano-sh/volcano/pull/1116" target="_blank" rel="noopener">fix</a></p>
+<h3 id="shadowpodgroup资源对象"><a href="#shadowpodgroup资源对象" class="headerlink" title="shadowpodgroup资源对象"></a>shadowpodgroup资源对象</h3><p>kube-batch支持直接在annotation中指定生成shadowpodgroup，这样就不需要每次都创建podgroup对象了</p>
+<p>注意，生成的shaowpodgroup并不能通过kubectl查询得到，除了这点不一样之外，其它的跟podgroup的性质是一样的</p>
+<p>使用方法:</p>
+<figure class="highlight yaml"><table><tr><td class="code"><pre><span class="line"><span class="comment"># ...</span></span><br><span class="line">  <span class="attr">templates:</span></span><br><span class="line">    <span class="bullet">-</span> <span class="attr">name:</span> <span class="string">seg</span></span><br><span class="line">      <span class="attr">schedulerName:</span> <span class="string">kube-batch</span>          <span class="comment">### 这里指定使用kube-batch调度器，没有指定则会使用k8s集群中默认的调度器 ###</span></span><br><span class="line">      <span class="attr">metadata:</span></span><br><span class="line">        <span class="attr">annotations:</span></span><br><span class="line">          <span class="attr">"scheduling.k8s.io/group-min-member":</span> <span class="string">"2"</span>  <span class="comment">### 这里指定podgroup中minMember</span></span><br><span class="line"><span class="comment"># ...</span></span><br></pre></td></tr></table></figure>
+<p><a href="https://hub.fastgit.org/kubernetes-sigs/kube-batch/pull/908" target="_blank" rel="noopener">merge</a></p>
+<h3 id="参考文章"><a href="#参考文章" class="headerlink" title="参考文章:"></a><strong>参考文章:</strong></h3><blockquote>
+<ul>
+<li><a href="https://github.com/kubernetes-sigs/kube-batch" target="_blank" rel="noopener">https://github.com/kubernetes-sigs/kube-batch</a></li>
+<li><a href="https://www.jianshu.com/p/042692685cf4" target="_blank" rel="noopener">https://www.jianshu.com/p/042692685cf4</a></li>
+<li><a href="https://argoproj.github.io/argo-workflows/fields/" target="_blank" rel="noopener">https://argoproj.github.io/argo-workflows/fields/</a></li>
+<li><a href="https://github.com/volcano-sh/volcano/pull/523" target="_blank" rel="noopener">https://github.com/volcano-sh/volcano/pull/523</a></li>
+<li><a href="https://github.com/kubernetes-sigs/kube-batch/issues/670" target="_blank" rel="noopener">https://github.com/kubernetes-sigs/kube-batch/issues/670</a></li>
+<li><a href="https://github.com/kubernetes-sigs/kube-batch/issues/904" target="_blank" rel="noopener">https://github.com/kubernetes-sigs/kube-batch/issues/904</a></li>
+<li><a href="https://kubernetes.io/zh/docs/tasks/run-application/configure-pdb/" target="_blank" rel="noopener">https://kubernetes.io/zh/docs/tasks/run-application/configure-pdb/</a></li>
+<li><a href="https://hub.fastgit.org/kubernetes-sigs/kube-batch/pull/908" target="_blank" rel="noopener">https://hub.fastgit.org/kubernetes-sigs/kube-batch/pull/908</a></li>
+</ul>
+</blockquote>
+<h3 id="转载请注明出处https-izsk-me"><a href="#转载请注明出处https-izsk-me" class="headerlink" title="转载请注明出处https://izsk.me"></a><strong>转载请注明出处<a href="https://izsk.me" target="_blank" rel="noopener">https://izsk.me</a></strong></h3>]]></content>
+      <categories>
+        <category>Kubernetes</category>
+      </categories>
+      <tags>
+        <tag>Kubernetes</tag>
+      </tags>
+  </entry>
+  <entry>
     <title>Kube-batch学习(queue及podgroup)</title>
     <url>/2021/03/21/Kubernetes-kubebatch-theory/</url>
     <content><![CDATA[<p>上篇简单说了下在集群中安装kube-batch且成功运行起来之后， 现在开始对kube-batch中的一些概念进行阐明, 先从podgroup及queue说起</p>
@@ -1223,48 +1384,6 @@
   </entry>
   <entry>
     <title>使用crash查看Linux系统异常重启原因</title>
-    <url>/2020/09/27/System-kernel-panic-debug/</url>
-    <content><![CDATA[<p>最近有一台物理机间歇性的发生重启, 本以为是偶发事件就没多在意，今天又给重启了, 因此决定探探究竟</p>
-<a id="more"></a>
-<p>首先看一下kdump服务是否开启, kdump主要用于内核发生crash时记录相关上下文的. 用来转储运行内存的一个工具</p>
-<p>简言之: 系统一旦崩溃，内核就没法正常工作了，这个时候将由kdump提供一个用于捕获当前运行信息的内核，</p>
-<p>该内核会将此时内存中的所有运行状态和数据信息收集到一个dump core文件中以便之后分析崩溃原因</p>
-<p>之后系统便会重启.</p>
-<p>关于kdump在内核已经崩溃的前提下还能够捕获到异常信息, 原理可<a href="https://blog.csdn.net/zhangskd/article/details/38084337" target="_blank" rel="noopener">参考</a></p>
-<p><img src="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20200927180148.png" alt></p>
-<p>这里引用<a href="https://blog.csdn.net/zhangskd/article/details/38084337" target="_blank" rel="noopener">一张图</a></p>
-<p><img src="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20200927185450.png" alt></p>
-<p>要分析core文件，可以使用crash工具，首先是安装:</p>
-<p>注意, 要安装与当前内核对应的版本, 要不然crash无法使用.</p>
-<figure class="highlight bash"><table><tr><td class="code"><pre><span class="line">wget http://debuginfo.centos.org/7/x86_64/kernel-debuginfo-common-x86_64-3.10.0-693.el7.x86_64.rpm</span><br><span class="line">wget http://debuginfo.centos.org/7/x86_64/kernel-debuginfo-3.10.0-693.el7.x86_64.rpm</span><br><span class="line"></span><br><span class="line">rpm -ivh kernel-debuginfo-common-x86_64-3.10.0-693.el7.x86_64.rpm</span><br><span class="line">rpm -ivh kernel-debuginfo-3.10.0-693.el7.x86_64.rpm</span><br><span class="line"></span><br><span class="line">yum install crash</span><br></pre></td></tr></table></figure>
-<p>通常, 内核crash后保存的core文件保存在<code>/var/crash</code>目录下，在该目录下找到最近一次crash的时间，使用以下命令启动crash分析dump.</p>
-<figure class="highlight bash"><table><tr><td class="code"><pre><span class="line">crash vmcore /usr/lib/debug/lib/modules/3.10.0-693.el7.x86_64/vmlinux</span><br></pre></td></tr></table></figure>
-<p>启动之后就进入到了crash命令行，很明显地显示出crash的原因,如下图红框所示:</p>
-<p><img src="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20200927175237.png" alt></p>
-<p>这里简要地反应出内核crash时的一些内存信息快照，包含一些物理信息, tasks数量，最重要的就是导致crash的command与panic的原因</p>
-<p>这里可直接使用ps查看进程的相关信息,跟linux 命令行下的ps功能相似</p>
-<p><img src="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20200927175207.png" alt></p>
-<p>还可以使用bt命令来查看trace信息, 当然都是一些汇编层的内容，需要有一定的专业知识，理解起来比较困难.</p>
-<p>从上面已经知道了panic的原因后就可对症下药.</p>
-<p>另外crash支持很多的子命令,大家可使用man crash查看，比较常用的为</p>
-<figure class="highlight bash"><table><tr><td class="code"><pre><span class="line">crash ps <span class="comment"># 查看进程</span></span><br><span class="line">crash sys <span class="comment"># 查看系统信息</span></span><br><span class="line">crash bt <span class="comment"># 查看堆栈信息</span></span><br><span class="line">crash files <span class="comment"># 查看异常时进程打开的文件</span></span><br><span class="line">crash task <span class="comment"># 查看指定task的信息</span></span><br></pre></td></tr></table></figure>
-<h3 id="参考文章"><a href="#参考文章" class="headerlink" title="参考文章:"></a><strong>参考文章:</strong></h3><blockquote>
-<ul>
-<li><a href="https://www.linuxtechi.com/how-to-enable-kdump-on-rhel-7-and-centos-7/" target="_blank" rel="noopener">https://www.linuxtechi.com/how-to-enable-kdump-on-rhel-7-and-centos-7/</a></li>
-<li><a href="https://www.cnblogs.com/doctormo/p/12619485.html" target="_blank" rel="noopener">https://www.cnblogs.com/doctormo/p/12619485.html</a></li>
-<li><a href="https://blog.csdn.net/zhangskd/article/details/38084337" target="_blank" rel="noopener">https://blog.csdn.net/zhangskd/article/details/38084337</a></li>
-</ul>
-</blockquote>
-<h3 id="转载请注明出处https-izsk-me"><a href="#转载请注明出处https-izsk-me" class="headerlink" title="转载请注明出处https://izsk.me"></a><strong>转载请注明出处<a href="https://izsk.me" target="_blank" rel="noopener">https://izsk.me</a></strong></h3>]]></content>
-      <categories>
-        <category>System</category>
-      </categories>
-      <tags>
-        <tag>System</tag>
-      </tags>
-  </entry>
-  <entry>
-    <title>使用crash查看Linux系统异常重启原因</title>
     <url>/2020/09/27/kernel-panic-debug/</url>
     <content><![CDATA[<p>最近有一台物理机间歇性的发生重启, 本以为是偶发事件就没多在意，今天又给重启了, 因此决定探探究竟</p>
 <a id="more"></a>
@@ -1303,6 +1422,48 @@
       </categories>
       <tags>
         <tag>Shell</tag>
+      </tags>
+  </entry>
+  <entry>
+    <title>使用crash查看Linux系统异常重启原因</title>
+    <url>/2020/09/27/System-kernel-panic-debug/</url>
+    <content><![CDATA[<p>最近有一台物理机间歇性的发生重启, 本以为是偶发事件就没多在意，今天又给重启了, 因此决定探探究竟</p>
+<a id="more"></a>
+<p>首先看一下kdump服务是否开启, kdump主要用于内核发生crash时记录相关上下文的. 用来转储运行内存的一个工具</p>
+<p>简言之: 系统一旦崩溃，内核就没法正常工作了，这个时候将由kdump提供一个用于捕获当前运行信息的内核，</p>
+<p>该内核会将此时内存中的所有运行状态和数据信息收集到一个dump core文件中以便之后分析崩溃原因</p>
+<p>之后系统便会重启.</p>
+<p>关于kdump在内核已经崩溃的前提下还能够捕获到异常信息, 原理可<a href="https://blog.csdn.net/zhangskd/article/details/38084337" target="_blank" rel="noopener">参考</a></p>
+<p><img src="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20200927180148.png" alt></p>
+<p>这里引用<a href="https://blog.csdn.net/zhangskd/article/details/38084337" target="_blank" rel="noopener">一张图</a></p>
+<p><img src="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20200927185450.png" alt></p>
+<p>要分析core文件，可以使用crash工具，首先是安装:</p>
+<p>注意, 要安装与当前内核对应的版本, 要不然crash无法使用.</p>
+<figure class="highlight bash"><table><tr><td class="code"><pre><span class="line">wget http://debuginfo.centos.org/7/x86_64/kernel-debuginfo-common-x86_64-3.10.0-693.el7.x86_64.rpm</span><br><span class="line">wget http://debuginfo.centos.org/7/x86_64/kernel-debuginfo-3.10.0-693.el7.x86_64.rpm</span><br><span class="line"></span><br><span class="line">rpm -ivh kernel-debuginfo-common-x86_64-3.10.0-693.el7.x86_64.rpm</span><br><span class="line">rpm -ivh kernel-debuginfo-3.10.0-693.el7.x86_64.rpm</span><br><span class="line"></span><br><span class="line">yum install crash</span><br></pre></td></tr></table></figure>
+<p>通常, 内核crash后保存的core文件保存在<code>/var/crash</code>目录下，在该目录下找到最近一次crash的时间，使用以下命令启动crash分析dump.</p>
+<figure class="highlight bash"><table><tr><td class="code"><pre><span class="line">crash vmcore /usr/lib/debug/lib/modules/3.10.0-693.el7.x86_64/vmlinux</span><br></pre></td></tr></table></figure>
+<p>启动之后就进入到了crash命令行，很明显地显示出crash的原因,如下图红框所示:</p>
+<p><img src="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20200927175237.png" alt></p>
+<p>这里简要地反应出内核crash时的一些内存信息快照，包含一些物理信息, tasks数量，最重要的就是导致crash的command与panic的原因</p>
+<p>这里可直接使用ps查看进程的相关信息,跟linux 命令行下的ps功能相似</p>
+<p><img src="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20200927175207.png" alt></p>
+<p>还可以使用bt命令来查看trace信息, 当然都是一些汇编层的内容，需要有一定的专业知识，理解起来比较困难.</p>
+<p>从上面已经知道了panic的原因后就可对症下药.</p>
+<p>另外crash支持很多的子命令,大家可使用man crash查看，比较常用的为</p>
+<figure class="highlight bash"><table><tr><td class="code"><pre><span class="line">crash ps <span class="comment"># 查看进程</span></span><br><span class="line">crash sys <span class="comment"># 查看系统信息</span></span><br><span class="line">crash bt <span class="comment"># 查看堆栈信息</span></span><br><span class="line">crash files <span class="comment"># 查看异常时进程打开的文件</span></span><br><span class="line">crash task <span class="comment"># 查看指定task的信息</span></span><br></pre></td></tr></table></figure>
+<h3 id="参考文章"><a href="#参考文章" class="headerlink" title="参考文章:"></a><strong>参考文章:</strong></h3><blockquote>
+<ul>
+<li><a href="https://www.linuxtechi.com/how-to-enable-kdump-on-rhel-7-and-centos-7/" target="_blank" rel="noopener">https://www.linuxtechi.com/how-to-enable-kdump-on-rhel-7-and-centos-7/</a></li>
+<li><a href="https://www.cnblogs.com/doctormo/p/12619485.html" target="_blank" rel="noopener">https://www.cnblogs.com/doctormo/p/12619485.html</a></li>
+<li><a href="https://blog.csdn.net/zhangskd/article/details/38084337" target="_blank" rel="noopener">https://blog.csdn.net/zhangskd/article/details/38084337</a></li>
+</ul>
+</blockquote>
+<h3 id="转载请注明出处https-izsk-me"><a href="#转载请注明出处https-izsk-me" class="headerlink" title="转载请注明出处https://izsk.me"></a><strong>转载请注明出处<a href="https://izsk.me" target="_blank" rel="noopener">https://izsk.me</a></strong></h3>]]></content>
+      <categories>
+        <category>System</category>
+      </categories>
+      <tags>
+        <tag>System</tag>
       </tags>
   </entry>
   <entry>
@@ -7467,6 +7628,74 @@
       </tags>
   </entry>
   <entry>
+    <title>记一次排查ES FGC导致的集群宕机异常</title>
+    <url>/2019/10/06/ES-FGC-Fix/</url>
+    <content><![CDATA[<p>有一个私有云环境的运维同事反应项目中的ES集群无法查询, 由于是私有云环境, 没有直接运维权限, 所以没有接收到一线报警, 远程登录上去后发现ES集群已经宕机了, 这次的排查过程也发现了几个比较容易忽视的细节, 在此记录一下,比较有意思.</p>
+<a id="more"></a>
+<h3 id="集群状态"><a href="#集群状态" class="headerlink" title="集群状态"></a>集群状态</h3><p>ES集群为3节点.</p>
+<p>首先肯定是查看集群状态</p>
+<figure class="highlight bash"><table><tr><td class="code"><pre><span class="line">curl <span class="string">'http://localhost:9200/_cluster/health?pretty'</span> -u xxx:yyy</span><br><span class="line"><span class="comment">#发现状态为Red</span></span><br></pre></td></tr></table></figure>
+<p>查看节点状态</p>
+<figure class="highlight bash"><table><tr><td class="code"><pre><span class="line">curl <span class="string">'http://localhost:9200/_cat/node?v'</span> -u xxx:yyy</span><br><span class="line"><span class="comment">#节点数正常</span></span><br></pre></td></tr></table></figure>
+<p>查看各节点使用的磁盘情况</p>
+<figure class="highlight bash"><table><tr><td class="code"><pre><span class="line">curl -XGET <span class="string">'localhost:9200/_cat/allocation?v&amp;pretty'</span> -u xxx:yyy</span><br><span class="line"><span class="comment">#未发现异常</span></span><br></pre></td></tr></table></figure>
+<h3 id="集群日志"><a href="#集群日志" class="headerlink" title="集群日志"></a>集群日志</h3><p>登录一个ES节点查看日志，发现以下报错，查看其它2个节点，情况相同</p>
+<p><img src="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20200204134510.png" alt></p>
+<p>从日志来看, 可以发现几个问题:</p>
+<blockquote>
+<ul>
+<li>Full GC很频繁, 而且时间也非常的长 </li>
+<li>每次GC完之后所能释放的内存非常有限</li>
+</ul>
+</blockquote>
+<p>到这，其它原因已经很明朗, <strong>内存不够导致的full gc 频繁，但是又不能释放太多的空间，又导致full gc的恶意循环</strong></p>
+<p>如果大家对gc的日志不很了解的话, 这里解释下上面日志的各个字段含义, 假如有以下一条gc日志</p>
+<figure class="highlight bash"><table><tr><td class="code"><pre><span class="line">[2018-06-30T17:57:29,020][INFO ][o.e.m.j.JvmGcMonitorService] [qoo--ES] [gc][old][228385][160772] duration [5s], collections [1]/[5.1s], total [5s]/[4.4d], memory [945.4mb]-&gt;[958.5mb]/[1007.3mb], all_pools &#123;[young] [87.8mb]-&gt;[100.9mb]/[133.1mb]&#125;&#123;[survivor] [0b]-&gt;[0b]/[16.6mb]&#125;&#123;[old] [857.6mb]-&gt;[857.6mb]/[857.6mb]&#125;</span><br></pre></td></tr></table></figure>
+<ul>
+<li><strong>gc old</strong> 本次是 old GC 这是第228385次 GC 检查][从 JVM 启动至今发生的第 160772次 G]</li>
+<li><strong>duration</strong> [本次检查到的 GC 总耗时 <strong>5</strong> 秒，可能是多次的加和</li>
+<li><strong>collections</strong> [从上次检查至今总共发生<strong>1</strong>次GC]/[从上次检查至今已过去 <strong>5.1</strong> 秒],</li>
+<li><strong>total</strong> [本次检查到的 GC 总耗时为 <strong>5</strong> 秒]/[从 JVM 启动至今发生的 GC 总耗时为 <strong>4.4</strong> 天]，</li>
+<li><strong>memory</strong> [ GC 前 Heap memory 空间]-&gt;[GC 后 Heap memory 空间]/[Heap memory 总空间],</li>
+<li><strong>all_pools</strong>(分代部分的详情) {young 区][GC 前 Memory ]-&gt;[GC后 Memory]/[young区 Memory 总大小] }</li>
+<li><strong>survivor</strong> [GC 前 Memory ]-&gt;[GC后 Memory]/[Memory 总大小] }{old 区[GC 前 Memory ]-&gt;[GC后 Memory]/[old区 Memory 总大小] }</li>
+</ul>
+<p>那为何会内存不足呢, 想起前几天服务拓展，添加收集了几个服务的日志, 日志量不算小, 而且这3个ES节点所在的机器内存只分配了8个G, 显然, 加完这几个日志之后内存不够用了.</p>
+<h3 id="Index-Mapping"><a href="#Index-Mapping" class="headerlink" title="Index Mapping"></a>Index Mapping</h3><p>而且，从日志中， 还发现几处很诡异的日志</p>
+<p><img src="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20200204141415.png" alt></p>
+<p>红框中的错误: <strong>object mapping for [msg] tried to pasrse field [msg] as object, but found a concrete</strong></p>
+<p>翻译过来就是说, 日志中的msg这个字段的类型匹配不上, ES尽力把它解析为object类型，但是它却是个确切的值.</p>
+<p>就好比你在python中定义了一个字典, 但是你给它赋值一个整形, 这确定要报错.</p>
+<p>但是这个mapping是从何而来的呢.</p>
+<p>经过网上搜索一翻, 终于明白:</p>
+<p>ES中为了加强性能，对于索引中的<strong>第一条数据, ES会默认(可设置)按照这条数据建立index mapping, 相当于是一个索引模板, 好比是mysql中表的定义一个概念, 后续这个索引中的所有日志都按照该模板进行解析</strong></p>
+<p>后来经过查看源码, 我们发现，出现上图中的问题是因为代码中的日志打印不规范, 有一个地方如果抛出异常时，打印的是一个单一字符串, 而正常情况下打印的是一个json, 所以当第一条正常的日志传递给ES时，ES建立的索引 模板记录这个字段为object类型(可以类比为python中的字典, 本身是可以新增元素的), 当应用抛出异常时，日志中又传递了一个单一字符串, 但是索引模板已经记录为object类型，所以无法匹配, 这就是问题所在</p>
+<h3 id="Fix-Bug"><a href="#Fix-Bug" class="headerlink" title="Fix Bug"></a>Fix Bug</h3><p>从3个方面解决上面的问题</p>
+<p>首先是修复代码中日志不规范问题, 这个充暴露了code view不严谨.</p>
+<p>第2个是加大ES的内存,毕竟日志量确实是上来了, 从8G添加到12G</p>
+<p>第3个是优化ES的gc问题, ES中有个逻辑是：<strong>默认情况下，主节点每30秒会去检查其他节点的状态，如果任何节点的垃圾回收时间超过30秒（Garbage collection duration）且在重复次数内都超时，则会导致主节点任务该节点脱离集群, 节点脱离集群后会引起分片的rebalance</strong></p>
+<p>这个机制让ES节点频繁的脱离集群，而又引起整个集群的rebalance，ES本身的内存就不够，rebalance更是雪上加霜, 如此往复就导致整个ES集群宕机.</p>
+<p>可修改主节点的检查时间及重复次数,让其它节点有充分的时间进行full gc.</p>
+<p>在ES的配置文件中添加以下配置:</p>
+<figure class="highlight yml"><table><tr><td class="code"><pre><span class="line"><span class="attr">discovery.zen.fd.ping_timeout:</span> <span class="string">300s</span></span><br><span class="line"><span class="attr">discovery.zen.fd.ping_retriES:</span> <span class="number">10</span></span><br></pre></td></tr></table></figure>
+<p>这样, 达到这两个条件时才能触发节点脱离集群</p>
+<p>至此, 依次重启ES节点, 问题圆满解决.</p>
+<h3 id="参考文章"><a href="#参考文章" class="headerlink" title="参考文章:"></a><strong>参考文章:</strong></h3><blockquote>
+<ul>
+<li><a href="https://www.elastic.co/guide/en/elasticsearch/reference/current/mapping.html" target="_blank" rel="noopener">elasticsearch index mapping</a></li>
+<li><a href="https://blog.csdn.net/sinat_35930259/article/details/80354732" target="_blank" rel="noopener">elasticsearch篇之mapping</a></li>
+<li><a href="https://segmentfault.com/a/1190000016494488" target="_blank" rel="noopener">你看懂 Elasticsearch Log 中的 GC 日志了吗？</a></li>
+</ul>
+</blockquote>
+<h3 id="转载请注明出处https-izsk-me"><a href="#转载请注明出处https-izsk-me" class="headerlink" title="转载请注明出处https://izsk.me"></a><strong>转载请注明出处<a href="https://izsk.me" target="_blank" rel="noopener">https://izsk.me</a></strong></h3>]]></content>
+      <categories>
+        <category>FELK</category>
+      </categories>
+      <tags>
+        <tag>FELK</tag>
+      </tags>
+  </entry>
+  <entry>
     <title>CockRoachDB学习(架构)</title>
     <url>/2019/10/06/CockroachDB-Struct/</url>
     <content><![CDATA[<p>项目中需要一个分布式数据库用于存储业务的KV数据, 在前期项目调研结合业务比对了业界常用的KV数据库模型后, 最后选择了CockRoachDB(CRDB).</p>
@@ -7601,74 +7830,6 @@
       </categories>
       <tags>
         <tag>分布式架构</tag>
-      </tags>
-  </entry>
-  <entry>
-    <title>记一次排查ES FGC导致的集群宕机异常</title>
-    <url>/2019/10/06/ES-FGC-Fix/</url>
-    <content><![CDATA[<p>有一个私有云环境的运维同事反应项目中的ES集群无法查询, 由于是私有云环境, 没有直接运维权限, 所以没有接收到一线报警, 远程登录上去后发现ES集群已经宕机了, 这次的排查过程也发现了几个比较容易忽视的细节, 在此记录一下,比较有意思.</p>
-<a id="more"></a>
-<h3 id="集群状态"><a href="#集群状态" class="headerlink" title="集群状态"></a>集群状态</h3><p>ES集群为3节点.</p>
-<p>首先肯定是查看集群状态</p>
-<figure class="highlight bash"><table><tr><td class="code"><pre><span class="line">curl <span class="string">'http://localhost:9200/_cluster/health?pretty'</span> -u xxx:yyy</span><br><span class="line"><span class="comment">#发现状态为Red</span></span><br></pre></td></tr></table></figure>
-<p>查看节点状态</p>
-<figure class="highlight bash"><table><tr><td class="code"><pre><span class="line">curl <span class="string">'http://localhost:9200/_cat/node?v'</span> -u xxx:yyy</span><br><span class="line"><span class="comment">#节点数正常</span></span><br></pre></td></tr></table></figure>
-<p>查看各节点使用的磁盘情况</p>
-<figure class="highlight bash"><table><tr><td class="code"><pre><span class="line">curl -XGET <span class="string">'localhost:9200/_cat/allocation?v&amp;pretty'</span> -u xxx:yyy</span><br><span class="line"><span class="comment">#未发现异常</span></span><br></pre></td></tr></table></figure>
-<h3 id="集群日志"><a href="#集群日志" class="headerlink" title="集群日志"></a>集群日志</h3><p>登录一个ES节点查看日志，发现以下报错，查看其它2个节点，情况相同</p>
-<p><img src="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20200204134510.png" alt></p>
-<p>从日志来看, 可以发现几个问题:</p>
-<blockquote>
-<ul>
-<li>Full GC很频繁, 而且时间也非常的长 </li>
-<li>每次GC完之后所能释放的内存非常有限</li>
-</ul>
-</blockquote>
-<p>到这，其它原因已经很明朗, <strong>内存不够导致的full gc 频繁，但是又不能释放太多的空间，又导致full gc的恶意循环</strong></p>
-<p>如果大家对gc的日志不很了解的话, 这里解释下上面日志的各个字段含义, 假如有以下一条gc日志</p>
-<figure class="highlight bash"><table><tr><td class="code"><pre><span class="line">[2018-06-30T17:57:29,020][INFO ][o.e.m.j.JvmGcMonitorService] [qoo--ES] [gc][old][228385][160772] duration [5s], collections [1]/[5.1s], total [5s]/[4.4d], memory [945.4mb]-&gt;[958.5mb]/[1007.3mb], all_pools &#123;[young] [87.8mb]-&gt;[100.9mb]/[133.1mb]&#125;&#123;[survivor] [0b]-&gt;[0b]/[16.6mb]&#125;&#123;[old] [857.6mb]-&gt;[857.6mb]/[857.6mb]&#125;</span><br></pre></td></tr></table></figure>
-<ul>
-<li><strong>gc old</strong> 本次是 old GC 这是第228385次 GC 检查][从 JVM 启动至今发生的第 160772次 G]</li>
-<li><strong>duration</strong> [本次检查到的 GC 总耗时 <strong>5</strong> 秒，可能是多次的加和</li>
-<li><strong>collections</strong> [从上次检查至今总共发生<strong>1</strong>次GC]/[从上次检查至今已过去 <strong>5.1</strong> 秒],</li>
-<li><strong>total</strong> [本次检查到的 GC 总耗时为 <strong>5</strong> 秒]/[从 JVM 启动至今发生的 GC 总耗时为 <strong>4.4</strong> 天]，</li>
-<li><strong>memory</strong> [ GC 前 Heap memory 空间]-&gt;[GC 后 Heap memory 空间]/[Heap memory 总空间],</li>
-<li><strong>all_pools</strong>(分代部分的详情) {young 区][GC 前 Memory ]-&gt;[GC后 Memory]/[young区 Memory 总大小] }</li>
-<li><strong>survivor</strong> [GC 前 Memory ]-&gt;[GC后 Memory]/[Memory 总大小] }{old 区[GC 前 Memory ]-&gt;[GC后 Memory]/[old区 Memory 总大小] }</li>
-</ul>
-<p>那为何会内存不足呢, 想起前几天服务拓展，添加收集了几个服务的日志, 日志量不算小, 而且这3个ES节点所在的机器内存只分配了8个G, 显然, 加完这几个日志之后内存不够用了.</p>
-<h3 id="Index-Mapping"><a href="#Index-Mapping" class="headerlink" title="Index Mapping"></a>Index Mapping</h3><p>而且，从日志中， 还发现几处很诡异的日志</p>
-<p><img src="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20200204141415.png" alt></p>
-<p>红框中的错误: <strong>object mapping for [msg] tried to pasrse field [msg] as object, but found a concrete</strong></p>
-<p>翻译过来就是说, 日志中的msg这个字段的类型匹配不上, ES尽力把它解析为object类型，但是它却是个确切的值.</p>
-<p>就好比你在python中定义了一个字典, 但是你给它赋值一个整形, 这确定要报错.</p>
-<p>但是这个mapping是从何而来的呢.</p>
-<p>经过网上搜索一翻, 终于明白:</p>
-<p>ES中为了加强性能，对于索引中的<strong>第一条数据, ES会默认(可设置)按照这条数据建立index mapping, 相当于是一个索引模板, 好比是mysql中表的定义一个概念, 后续这个索引中的所有日志都按照该模板进行解析</strong></p>
-<p>后来经过查看源码, 我们发现，出现上图中的问题是因为代码中的日志打印不规范, 有一个地方如果抛出异常时，打印的是一个单一字符串, 而正常情况下打印的是一个json, 所以当第一条正常的日志传递给ES时，ES建立的索引 模板记录这个字段为object类型(可以类比为python中的字典, 本身是可以新增元素的), 当应用抛出异常时，日志中又传递了一个单一字符串, 但是索引模板已经记录为object类型，所以无法匹配, 这就是问题所在</p>
-<h3 id="Fix-Bug"><a href="#Fix-Bug" class="headerlink" title="Fix Bug"></a>Fix Bug</h3><p>从3个方面解决上面的问题</p>
-<p>首先是修复代码中日志不规范问题, 这个充暴露了code view不严谨.</p>
-<p>第2个是加大ES的内存,毕竟日志量确实是上来了, 从8G添加到12G</p>
-<p>第3个是优化ES的gc问题, ES中有个逻辑是：<strong>默认情况下，主节点每30秒会去检查其他节点的状态，如果任何节点的垃圾回收时间超过30秒（Garbage collection duration）且在重复次数内都超时，则会导致主节点任务该节点脱离集群, 节点脱离集群后会引起分片的rebalance</strong></p>
-<p>这个机制让ES节点频繁的脱离集群，而又引起整个集群的rebalance，ES本身的内存就不够，rebalance更是雪上加霜, 如此往复就导致整个ES集群宕机.</p>
-<p>可修改主节点的检查时间及重复次数,让其它节点有充分的时间进行full gc.</p>
-<p>在ES的配置文件中添加以下配置:</p>
-<figure class="highlight yml"><table><tr><td class="code"><pre><span class="line"><span class="attr">discovery.zen.fd.ping_timeout:</span> <span class="string">300s</span></span><br><span class="line"><span class="attr">discovery.zen.fd.ping_retriES:</span> <span class="number">10</span></span><br></pre></td></tr></table></figure>
-<p>这样, 达到这两个条件时才能触发节点脱离集群</p>
-<p>至此, 依次重启ES节点, 问题圆满解决.</p>
-<h3 id="参考文章"><a href="#参考文章" class="headerlink" title="参考文章:"></a><strong>参考文章:</strong></h3><blockquote>
-<ul>
-<li><a href="https://www.elastic.co/guide/en/elasticsearch/reference/current/mapping.html" target="_blank" rel="noopener">elasticsearch index mapping</a></li>
-<li><a href="https://blog.csdn.net/sinat_35930259/article/details/80354732" target="_blank" rel="noopener">elasticsearch篇之mapping</a></li>
-<li><a href="https://segmentfault.com/a/1190000016494488" target="_blank" rel="noopener">你看懂 Elasticsearch Log 中的 GC 日志了吗？</a></li>
-</ul>
-</blockquote>
-<h3 id="转载请注明出处https-izsk-me"><a href="#转载请注明出处https-izsk-me" class="headerlink" title="转载请注明出处https://izsk.me"></a><strong>转载请注明出处<a href="https://izsk.me" target="_blank" rel="noopener">https://izsk.me</a></strong></h3>]]></content>
-      <categories>
-        <category>FELK</category>
-      </categories>
-      <tags>
-        <tag>FELK</tag>
       </tags>
   </entry>
   <entry>
@@ -10283,6 +10444,22 @@
       </tags>
   </entry>
   <entry>
+    <title>python中调用sqlplus生成多实例oracle-awr-html报告</title>
+    <url>/2017/08/12/python%E4%B8%AD%E8%B0%83%E7%94%A8sqlplus%E7%94%9F%E6%88%90%E5%A4%9A%E5%AE%9E%E4%BE%8Boracle-awr-html%E6%8A%A5%E5%91%8A/</url>
+    <content><![CDATA[<p>这里不多说,说是稍微改了下官方的脚本,这里使用了subprocess调用sqlplus,关于subprocess,可以参考<a href="https://izsk.me/2017/04/08/python%E4%B8%AD%E8%B0%83%E7%94%A8sqlplus/" target="_blank" rel="noopener">这里</a></p>
+<a id="more"></a>
+<p>其中,包含了两个业务相关的参数,这里就不过多说明…</p>
+<figure class="highlight python"><table><tr><td class="code"><pre><span class="line"><span class="function"><span class="keyword">def</span> <span class="title">gen_sqlfile</span><span class="params">(_file)</span>:</span></span><br><span class="line">    <span class="keyword">with</span> open(_file,<span class="string">"w"</span>) <span class="keyword">as</span> f:</span><br><span class="line">        f.write(</span><br><span class="line"><span class="string">"""set define off</span></span><br><span class="line"><span class="string">set feedback off</span></span><br><span class="line"><span class="string">set termout off</span></span><br><span class="line"><span class="string">set pages 0</span></span><br><span class="line"><span class="string">set lines 120</span></span><br><span class="line"><span class="string">set serveroutput on </span></span><br><span class="line"><span class="string">spool oracle_awr_html.sql</span></span><br><span class="line"><span class="string">declare</span></span><br><span class="line"><span class="string">   v_str varchar2(180);</span></span><br><span class="line"><span class="string">   procedure p (l_str  varchar2)</span></span><br><span class="line"><span class="string">   is</span></span><br><span class="line"><span class="string">   begin</span></span><br><span class="line"><span class="string">     dbms_output.put_line(l_str);</span></span><br><span class="line"><span class="string">   end;</span></span><br><span class="line"><span class="string">begin</span></span><br><span class="line"><span class="string">	p('set pages 0');</span></span><br><span class="line"><span class="string">	p('variable dbid number');</span></span><br><span class="line"><span class="string">	p('variable inst_num number');</span></span><br><span class="line"><span class="string">	p('variable inst_name varchar2(20)');</span></span><br><span class="line"><span class="string">	p('variable bid number');</span></span><br><span class="line"><span class="string">	p('variable eid number');</span></span><br><span class="line"><span class="string">	p('variable rpt_options number');</span></span><br><span class="line"><span class="string">	p('variable ENABLE_ADDM number');</span></span><br><span class="line"><span class="string">	p('variable cur_date varchar2(20)');</span></span><br><span class="line"><span class="string">	p('variable city varchar2(20)');</span></span><br><span class="line"><span class="string">	p('');</span></span><br><span class="line"><span class="string">	p('declare');</span></span><br><span class="line"><span class="string">	p('begin');</span></span><br><span class="line"><span class="string">  	p('select distinct first_value (snap_id) over( ');</span></span><br><span class="line"><span class="string">	p('		order by snap_id desc rows between unbounded preceding and unbounded following) max_snap_id ');</span></span><br><span class="line"><span class="string">	p('into :eid ');</span></span><br><span class="line"><span class="string">  	p('	    from  dba_hist_snapshot;');</span></span><br><span class="line"><span class="string">	p('select dbid into :dbid from dba_hist_database_instance where rownum=1;');</span></span><br><span class="line"><span class="string">p('end;');</span></span><br><span class="line"><span class="string">p('/');</span></span><br><span class="line"><span class="string"></span></span><br><span class="line"><span class="string">p('exec :rpt_options :=0;');</span></span><br><span class="line"><span class="string">p('exec :ENABLE_ADDM :=8;');</span></span><br><span class="line"><span class="string">p('exec :cur_date :=to_char(sysdate,''yyyymmdd'');');</span></span><br><span class="line"><span class="string">p('exec :city :=''&amp;1'';');</span></span><br><span class="line"><span class="string">p('exec :bid :=:eid-to_number(''&amp;2'');');</span></span><br><span class="line"><span class="string">p('column rpt_name new_value rpt_name noprint;');</span></span><br><span class="line"><span class="string"></span></span><br><span class="line"><span class="string">for c1 in  (select instance_number,instance_name from gv$instance order by instance_number) </span></span><br><span class="line"><span class="string">loop   </span></span><br><span class="line"><span class="string">   p('exec :inst_num :='||c1.instance_number||';');</span></span><br><span class="line"><span class="string">   p('exec :inst_name :='''||c1.instance_name||''';');</span></span><br><span class="line"><span class="string">   v_str:= q'[select :cur_date||'_'||:city||'_'||:inst_name||'_'||:inst_num||'_'||:bid||'_'||:eid||'.html' rpt_name from dual;]';</span></span><br><span class="line"><span class="string">   p(v_str);</span></span><br><span class="line"><span class="string">   p('set lines 8000');</span></span><br><span class="line"><span class="string">   p('spool &amp;rpt_name');</span></span><br><span class="line"><span class="string">   p(' select output from table(sys.dbms_workload_repository.awr_report_html( :dbid,');</span></span><br><span class="line"><span class="string">   p('                                                         :inst_num,');</span></span><br><span class="line"><span class="string">   p('                                                         :bid, :eid,');</span></span><br><span class="line"><span class="string">   p('                                                         :rpt_options ));');</span></span><br><span class="line"><span class="string">   p('spool off');</span></span><br><span class="line"><span class="string">   v_str := q'[select :cur_date||'_'||:city||'_'||:inst_name||'_'||:inst_num||'_'||:bid||'_'||:eid||'.html' file_name from dual;]';</span></span><br><span class="line"><span class="string">   p(v_str);</span></span><br><span class="line"><span class="string">   p('set termout off');</span></span><br><span class="line"><span class="string">end loop;</span></span><br><span class="line"><span class="string">p('exit');</span></span><br><span class="line"><span class="string">end;</span></span><br><span class="line"><span class="string">/</span></span><br><span class="line"><span class="string">spool off</span></span><br><span class="line"><span class="string">set define on</span></span><br><span class="line"><span class="string">set feedback off</span></span><br><span class="line"><span class="string">set termout on</span></span><br><span class="line"><span class="string">set termout off</span></span><br><span class="line"><span class="string">@oracle_awr_html.sql &amp;1 &amp;2</span></span><br><span class="line"><span class="string">set termout on</span></span><br><span class="line"><span class="string">set pagesize 24</span></span><br><span class="line"><span class="string">"""</span>)</span><br><span class="line"></span><br><span class="line"><span class="class"><span class="keyword">class</span> <span class="title">callsqluldr</span><span class="params">()</span>:</span></span><br><span class="line">    <span class="function"><span class="keyword">def</span> <span class="title">__init__</span><span class="params">(self,username,password,databaseName,city,beforethis)</span>:</span></span><br><span class="line">        self.username = username</span><br><span class="line">        self.password = password</span><br><span class="line">        self.databaseName = databaseName</span><br><span class="line">        self.city = city</span><br><span class="line">        self.beforethis = beforethis</span><br><span class="line">    <span class="function"><span class="keyword">def</span> <span class="title">run</span><span class="params">(self)</span>:</span></span><br><span class="line">        <span class="keyword">try</span>:</span><br><span class="line">            command = <span class="string">"sqlplus "</span> + self.username + <span class="string">"/"</span> + self.password + <span class="string">"@"</span> + self.databaseName + <span class="string">" @gen_oracle_awr_html.sql "</span> + self.city + <span class="string">" "</span> + self.beforethis</span><br><span class="line">            child = subprocess.Popen(command,shell=<span class="literal">True</span>)</span><br><span class="line">            child.wait()</span><br><span class="line">            <span class="comment">#print("&lt;&lt;%s done.&gt;&gt;" %self.city)</span></span><br><span class="line">        <span class="keyword">except</span> Exception <span class="keyword">as</span> e:</span><br><span class="line">            err_txt = <span class="string">"ERROR: CALL ORACLE SQLPLUS ERROR!"</span></span><br><span class="line">            print(err_txt)</span><br><span class="line">            write_errtxt(err_txt)</span><br><span class="line">            </span><br><span class="line"><span class="function"><span class="keyword">def</span> <span class="title">write_errtxt</span><span class="params">(err_txt)</span>:</span></span><br><span class="line">    <span class="keyword">pass</span></span><br></pre></td></tr></table></figure>
+<h3 id="参考文章"><a href="#参考文章" class="headerlink" title="参考文章:"></a><strong>参考文章:</strong></h3><h3 id="转载请注明出处https-izsk-me"><a href="#转载请注明出处https-izsk-me" class="headerlink" title="转载请注明出处https://izsk.me"></a><strong>转载请注明出处<a href="https://izsk.me" target="_blank" rel="noopener">https://izsk.me</a></strong></h3><hr>
+]]></content>
+      <categories>
+        <category>Python</category>
+      </categories>
+      <tags>
+        <tag>Python</tag>
+      </tags>
+  </entry>
+  <entry>
     <title>Flask学习(flask应用)</title>
     <url>/2017/08/12/flask%E5%AD%A6%E4%B9%A0%E4%BA%8C(flask%E5%BA%94%E7%94%A8)/</url>
     <content><![CDATA[<p>距离<a href="https://izsk.me/2017/08/12/falsk%E5%AD%A6%E4%B9%A0(-" target="_blank" rel="noopener">上一篇</a>)有一段时间了,上次扯了点跟flask相关的内容,这次抽空记录下flask的机制.flask之所于上手容易,是因为我们对python语言稍微了解的话,简单几步就可以把一个小应用跑起来,不需要搭建额外的东西,所以对于并发量没有要求的话flask可以轻松应对.</p>
@@ -10341,22 +10518,6 @@
 </ul>
 </blockquote>
 <h3 id="转载请注明出处https-izsk-me"><a href="#转载请注明出处https-izsk-me" class="headerlink" title="转载请注明出处https://izsk.me"></a><strong>转载请注明出处<a href="https://izsk.me" target="_blank" rel="noopener">https://izsk.me</a></strong></h3><hr>
-]]></content>
-      <categories>
-        <category>Python</category>
-      </categories>
-      <tags>
-        <tag>Python</tag>
-      </tags>
-  </entry>
-  <entry>
-    <title>python中调用sqlplus生成多实例oracle-awr-html报告</title>
-    <url>/2017/08/12/python%E4%B8%AD%E8%B0%83%E7%94%A8sqlplus%E7%94%9F%E6%88%90%E5%A4%9A%E5%AE%9E%E4%BE%8Boracle-awr-html%E6%8A%A5%E5%91%8A/</url>
-    <content><![CDATA[<p>这里不多说,说是稍微改了下官方的脚本,这里使用了subprocess调用sqlplus,关于subprocess,可以参考<a href="https://izsk.me/2017/04/08/python%E4%B8%AD%E8%B0%83%E7%94%A8sqlplus/" target="_blank" rel="noopener">这里</a></p>
-<a id="more"></a>
-<p>其中,包含了两个业务相关的参数,这里就不过多说明…</p>
-<figure class="highlight python"><table><tr><td class="code"><pre><span class="line"><span class="function"><span class="keyword">def</span> <span class="title">gen_sqlfile</span><span class="params">(_file)</span>:</span></span><br><span class="line">    <span class="keyword">with</span> open(_file,<span class="string">"w"</span>) <span class="keyword">as</span> f:</span><br><span class="line">        f.write(</span><br><span class="line"><span class="string">"""set define off</span></span><br><span class="line"><span class="string">set feedback off</span></span><br><span class="line"><span class="string">set termout off</span></span><br><span class="line"><span class="string">set pages 0</span></span><br><span class="line"><span class="string">set lines 120</span></span><br><span class="line"><span class="string">set serveroutput on </span></span><br><span class="line"><span class="string">spool oracle_awr_html.sql</span></span><br><span class="line"><span class="string">declare</span></span><br><span class="line"><span class="string">   v_str varchar2(180);</span></span><br><span class="line"><span class="string">   procedure p (l_str  varchar2)</span></span><br><span class="line"><span class="string">   is</span></span><br><span class="line"><span class="string">   begin</span></span><br><span class="line"><span class="string">     dbms_output.put_line(l_str);</span></span><br><span class="line"><span class="string">   end;</span></span><br><span class="line"><span class="string">begin</span></span><br><span class="line"><span class="string">	p('set pages 0');</span></span><br><span class="line"><span class="string">	p('variable dbid number');</span></span><br><span class="line"><span class="string">	p('variable inst_num number');</span></span><br><span class="line"><span class="string">	p('variable inst_name varchar2(20)');</span></span><br><span class="line"><span class="string">	p('variable bid number');</span></span><br><span class="line"><span class="string">	p('variable eid number');</span></span><br><span class="line"><span class="string">	p('variable rpt_options number');</span></span><br><span class="line"><span class="string">	p('variable ENABLE_ADDM number');</span></span><br><span class="line"><span class="string">	p('variable cur_date varchar2(20)');</span></span><br><span class="line"><span class="string">	p('variable city varchar2(20)');</span></span><br><span class="line"><span class="string">	p('');</span></span><br><span class="line"><span class="string">	p('declare');</span></span><br><span class="line"><span class="string">	p('begin');</span></span><br><span class="line"><span class="string">  	p('select distinct first_value (snap_id) over( ');</span></span><br><span class="line"><span class="string">	p('		order by snap_id desc rows between unbounded preceding and unbounded following) max_snap_id ');</span></span><br><span class="line"><span class="string">	p('into :eid ');</span></span><br><span class="line"><span class="string">  	p('	    from  dba_hist_snapshot;');</span></span><br><span class="line"><span class="string">	p('select dbid into :dbid from dba_hist_database_instance where rownum=1;');</span></span><br><span class="line"><span class="string">p('end;');</span></span><br><span class="line"><span class="string">p('/');</span></span><br><span class="line"><span class="string"></span></span><br><span class="line"><span class="string">p('exec :rpt_options :=0;');</span></span><br><span class="line"><span class="string">p('exec :ENABLE_ADDM :=8;');</span></span><br><span class="line"><span class="string">p('exec :cur_date :=to_char(sysdate,''yyyymmdd'');');</span></span><br><span class="line"><span class="string">p('exec :city :=''&amp;1'';');</span></span><br><span class="line"><span class="string">p('exec :bid :=:eid-to_number(''&amp;2'');');</span></span><br><span class="line"><span class="string">p('column rpt_name new_value rpt_name noprint;');</span></span><br><span class="line"><span class="string"></span></span><br><span class="line"><span class="string">for c1 in  (select instance_number,instance_name from gv$instance order by instance_number) </span></span><br><span class="line"><span class="string">loop   </span></span><br><span class="line"><span class="string">   p('exec :inst_num :='||c1.instance_number||';');</span></span><br><span class="line"><span class="string">   p('exec :inst_name :='''||c1.instance_name||''';');</span></span><br><span class="line"><span class="string">   v_str:= q'[select :cur_date||'_'||:city||'_'||:inst_name||'_'||:inst_num||'_'||:bid||'_'||:eid||'.html' rpt_name from dual;]';</span></span><br><span class="line"><span class="string">   p(v_str);</span></span><br><span class="line"><span class="string">   p('set lines 8000');</span></span><br><span class="line"><span class="string">   p('spool &amp;rpt_name');</span></span><br><span class="line"><span class="string">   p(' select output from table(sys.dbms_workload_repository.awr_report_html( :dbid,');</span></span><br><span class="line"><span class="string">   p('                                                         :inst_num,');</span></span><br><span class="line"><span class="string">   p('                                                         :bid, :eid,');</span></span><br><span class="line"><span class="string">   p('                                                         :rpt_options ));');</span></span><br><span class="line"><span class="string">   p('spool off');</span></span><br><span class="line"><span class="string">   v_str := q'[select :cur_date||'_'||:city||'_'||:inst_name||'_'||:inst_num||'_'||:bid||'_'||:eid||'.html' file_name from dual;]';</span></span><br><span class="line"><span class="string">   p(v_str);</span></span><br><span class="line"><span class="string">   p('set termout off');</span></span><br><span class="line"><span class="string">end loop;</span></span><br><span class="line"><span class="string">p('exit');</span></span><br><span class="line"><span class="string">end;</span></span><br><span class="line"><span class="string">/</span></span><br><span class="line"><span class="string">spool off</span></span><br><span class="line"><span class="string">set define on</span></span><br><span class="line"><span class="string">set feedback off</span></span><br><span class="line"><span class="string">set termout on</span></span><br><span class="line"><span class="string">set termout off</span></span><br><span class="line"><span class="string">@oracle_awr_html.sql &amp;1 &amp;2</span></span><br><span class="line"><span class="string">set termout on</span></span><br><span class="line"><span class="string">set pagesize 24</span></span><br><span class="line"><span class="string">"""</span>)</span><br><span class="line"></span><br><span class="line"><span class="class"><span class="keyword">class</span> <span class="title">callsqluldr</span><span class="params">()</span>:</span></span><br><span class="line">    <span class="function"><span class="keyword">def</span> <span class="title">__init__</span><span class="params">(self,username,password,databaseName,city,beforethis)</span>:</span></span><br><span class="line">        self.username = username</span><br><span class="line">        self.password = password</span><br><span class="line">        self.databaseName = databaseName</span><br><span class="line">        self.city = city</span><br><span class="line">        self.beforethis = beforethis</span><br><span class="line">    <span class="function"><span class="keyword">def</span> <span class="title">run</span><span class="params">(self)</span>:</span></span><br><span class="line">        <span class="keyword">try</span>:</span><br><span class="line">            command = <span class="string">"sqlplus "</span> + self.username + <span class="string">"/"</span> + self.password + <span class="string">"@"</span> + self.databaseName + <span class="string">" @gen_oracle_awr_html.sql "</span> + self.city + <span class="string">" "</span> + self.beforethis</span><br><span class="line">            child = subprocess.Popen(command,shell=<span class="literal">True</span>)</span><br><span class="line">            child.wait()</span><br><span class="line">            <span class="comment">#print("&lt;&lt;%s done.&gt;&gt;" %self.city)</span></span><br><span class="line">        <span class="keyword">except</span> Exception <span class="keyword">as</span> e:</span><br><span class="line">            err_txt = <span class="string">"ERROR: CALL ORACLE SQLPLUS ERROR!"</span></span><br><span class="line">            print(err_txt)</span><br><span class="line">            write_errtxt(err_txt)</span><br><span class="line">            </span><br><span class="line"><span class="function"><span class="keyword">def</span> <span class="title">write_errtxt</span><span class="params">(err_txt)</span>:</span></span><br><span class="line">    <span class="keyword">pass</span></span><br></pre></td></tr></table></figure>
-<h3 id="参考文章"><a href="#参考文章" class="headerlink" title="参考文章:"></a><strong>参考文章:</strong></h3><h3 id="转载请注明出处https-izsk-me"><a href="#转载请注明出处https-izsk-me" class="headerlink" title="转载请注明出处https://izsk.me"></a><strong>转载请注明出处<a href="https://izsk.me" target="_blank" rel="noopener">https://izsk.me</a></strong></h3><hr>
 ]]></content>
       <categories>
         <category>Python</category>
