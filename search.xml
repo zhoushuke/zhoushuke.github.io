@@ -1,6 +1,96 @@
 <?xml version="1.0" encoding="utf-8"?>
 <search>
   <entry>
+    <title>argoCD学习(argocd踩坑记)</title>
+    <url>/2021/04/02/argoCD-prombles/</url>
+    <content><![CDATA[<p>argocd配合GitOps，可以实现对kubernetes多集群的应用版本管理，目前已用于我负责的业务环境中实现统一发布平台.</p>
+<p><strong>在这里记录下使用argocd踩过的坑, 不定期更新</strong></p>
+<a id="more"></a>
+<h3 id="UI上出现了不属于某app的资源"><a href="#UI上出现了不属于某app的资源" class="headerlink" title="UI上出现了不属于某app的资源"></a>UI上出现了不属于某app的资源</h3><p>原因: 由于argo controller是根据资源中的annotations里的key(argocd.argoproj.io/instance)来判定这个资源是不是属于某个app,在日常使用的过程，由于团队中使用的是rancher做为容器管理平台，rancher上提供了非常便利的对资源的clone手段，就会产生clone后的资源也会带上相同的annotations，但是在原app下的manifest并不包含这个资源，因此在app下就会出现这个资源且这个资源会被标注为<code>require pruning</code>,那么在每次sync后，这个clone后的资源就会被删除</p>
+<p>解决: 在clone时将annotations删除掉即可.</p>
+<p>参考: <a href="https://github.com/argoproj/argo-cd/issues/5792" target="_blank" rel="noopener">https://github.com/argoproj/argo-cd/issues/5792</a></p>
+<h3 id="使用用户密码登录时提示"><a href="#使用用户密码登录时提示" class="headerlink" title="使用用户密码登录时提示"></a>使用用户密码登录时提示</h3><figure class="highlight bash"><table><tr><td class="code"><pre><span class="line">HTTP response body: &#123;<span class="string">"error"</span>:<span class="string">"no session information"</span>,<span class="string">"code"</span>:16,<span class="string">"message"</span>:<span class="string">"no session information"</span>&#125;</span><br></pre></td></tr></table></figure>
+<p>原因: argocd使用密码认证时会使用密码信息调用/api/session接口生成token信息，然后使用token转换成session， 出现这个错误是由client端没有做这个转换，因此在服务端找不到对应的session信息</p>
+<h3 id="添加集群时提示Unauthenticated-desc-the-server-has-asked-for-the-client-to-provide-credentials"><a href="#添加集群时提示Unauthenticated-desc-the-server-has-asked-for-the-client-to-provide-credentials" class="headerlink" title="添加集群时提示Unauthenticated desc =  the server has asked for the client to provide credentials"></a>添加集群时提示Unauthenticated desc =  the server has asked for the client to provide credentials</h3><p><img src="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20210222114258.png" alt></p>
+<p>原因及解决方案: <a href="https://gist.github.com/janeczku/b16154194f7f03f772645303af8e9f80" target="_blank" rel="noopener">https://gist.github.com/janeczku/b16154194f7f03f772645303af8e9f80</a></p>
+<h3 id="kustomize-build-out-of-index"><a href="#kustomize-build-out-of-index" class="headerlink" title="kustomize build out of index"></a>kustomize build out of index</h3><p><img src="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20210219204446.png" alt></p>
+<p>原因: 这个是新版kustomize(v4.0.1)时使用了kyaml的版本的bug, 原因在于kustomizationl.yml中存在非法字符</p>
+<p>解决: 回退kustomize为v3.6.1</p>
+<h3 id="forbidden-User-“system-anonymouns”-cantnot-get-path"><a href="#forbidden-User-“system-anonymouns”-cantnot-get-path" class="headerlink" title="forbidden: User “system:anonymouns” cantnot get path"></a>forbidden: User “system:anonymouns” cantnot get path</h3><p><img src="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20210119193206.png" alt></p>
+<p>解决: 重新使用命令加一下集群解决</p>
+<figure class="highlight bash"><table><tr><td class="code"><pre><span class="line">rgocd cluster add my-cluster --server <span class="string">'xxxx'</span> --upsert</span><br></pre></td></tr></table></figure>
+<h3 id="login时提示received-the-unexpected-content-type"><a href="#login时提示received-the-unexpected-content-type" class="headerlink" title="login时提示received the unexpected content-type"></a>login时提示received the unexpected content-type</h3><p>执行login 登录命令时提示:</p>
+<figure class="highlight bash"><table><tr><td class="code"><pre><span class="line">argocd login argocd.local:4433</span><br></pre></td></tr></table></figure>
+<p>出现以下错误</p>
+<p><img src="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20201106184926.png" alt></p>
+<p>原因: </p>
+<p>参考: <a href="https://github.com/argoproj/argo-cd/issues/1415" target="_blank" rel="noopener">https://github.com/argoproj/argo-cd/issues/1415</a></p>
+<p>解决:</p>
+<figure class="highlight bash"><table><tr><td class="code"><pre><span class="line">argocd login argocd.local:4433 --grpc-web</span><br></pre></td></tr></table></figure>
+<p>如果添加集群的时候提示以下错误，则需要先使用上面的命令进行登录，登录成功后再进行集群的添加操作.</p>
+<p><img src="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20201106185339.png" alt></p>
+<h3 id="创建token时提示以下错误-not-have-apikey-capability"><a href="#创建token时提示以下错误-not-have-apikey-capability" class="headerlink" title="创建token时提示以下错误 not have apikey capability"></a>创建token时提示以下错误 not have apikey capability</h3><figure class="highlight bash"><table><tr><td class="code"><pre><span class="line">Unable to generate new token: account <span class="string">'admin'</span> does not have apiKey capability</span><br></pre></td></tr></table></figure>
+<p>原因: argocd的用户也是通过角色来进行划分的，创建token的用户需要具有 apiKey的权限，这个可以从argocd部署的configmap中查看使用的用户是否具有什么权限.</p>
+<h3 id="回滚时提示以下错误revision-must-be-resolved"><a href="#回滚时提示以下错误revision-must-be-resolved" class="headerlink" title="回滚时提示以下错误revision must be resolved"></a>回滚时提示以下错误revision must be resolved</h3><figure class="highlight bash"><table><tr><td class="code"><pre><span class="line">Unable to load data: revision HEAD must be resolved</span><br></pre></td></tr></table></figure>
+<p><img src="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20201122185428.png" alt></p>
+<p>原因: 如果使用argocd命令行的方式同步应用，会导致revision没有commit值，如上图，而回滚时需要revision，因此造成上面的报错.</p>
+<h3 id="未完待续"><a href="#未完待续" class="headerlink" title="未完待续"></a>未完待续</h3><h3 id="参考文章"><a href="#参考文章" class="headerlink" title="参考文章:"></a><strong>参考文章:</strong></h3><blockquote>
+<ul>
+<li><a href="https://github.com/argoproj/argo-cd/issues/2802" target="_blank" rel="noopener">https://github.com/argoproj/argo-cd/issues/2802</a></li>
+<li><a href="https://gist.github.com/janeczku/b16154194f7f03f772645303af8e9f80" target="_blank" rel="noopener">https://gist.github.com/janeczku/b16154194f7f03f772645303af8e9f80</a></li>
+<li><a href="https://github.com/argoproj/argo-cd/issues/5792" target="_blank" rel="noopener">https://github.com/argoproj/argo-cd/issues/5792</a></li>
+</ul>
+</blockquote>
+<h3 id="转载请注明出处https-izsk-me"><a href="#转载请注明出处https-izsk-me" class="headerlink" title="转载请注明出处https://izsk.me"></a><strong>转载请注明出处<a href="https://izsk.me" target="_blank" rel="noopener">https://izsk.me</a></strong></h3>]]></content>
+      <categories>
+        <category>CloudNavi</category>
+      </categories>
+      <tags>
+        <tag>CloudNavi</tag>
+      </tags>
+  </entry>
+  <entry>
+    <title>argoCD学习(argocd是如何绑定资源的)</title>
+    <url>/2021/04/02/argoCD-how-to-bind-resource/</url>
+    <content><![CDATA[<p>目前团队使用argo-cd做为统一发布平台，承接所有的环境的发布，最近碰到一个很有意思的问题(下文描述)，跟随这个问题引出另一个问题: argo-cd是如何绑定资源的呢？用了argo-cd这么久了，感叹自己从来都没细致研究过，呵呵了.</p>
+<a id="more"></a>
+<h3 id="问题"><a href="#问题" class="headerlink" title="问题"></a>问题</h3><p><strong>简单描述就是，argo上的应用出现了本不属于它资源</strong></p>
+<p>这里使用kustomize，kustomization.yaml文件如下：</p>
+<figure class="highlight yaml"><table><tr><td class="code"><pre><span class="line"><span class="attr">apiVersion:</span> <span class="string">kustomize.config.k8s.io/v1beta1</span></span><br><span class="line"><span class="attr">kind:</span> <span class="string">Kustomization</span></span><br><span class="line"></span><br><span class="line"><span class="attr">resources:</span></span><br><span class="line"><span class="bullet">-</span> <span class="string">configmap.yml.j2</span></span><br><span class="line"><span class="bullet">-</span> <span class="string">deployment.yml.j2</span></span><br><span class="line"><span class="bullet">-</span> <span class="string">service.yml.j2</span></span><br><span class="line"></span><br><span class="line"><span class="attr">namespace:</span> <span class="string">test</span></span><br></pre></td></tr></table></figure>
+<p>正常来说，发布到k8s中的资源对象，只会有resources下指定的，但是在某个时间点，argo ui上却出现了其它资源，状态是这样的</p>
+<p><img src="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20210405221303.png" alt></p>
+<p>作者非常确定这个资源对象不包含在上述3个文件中，那这个对象是怎么来的呢?</p>
+<h3 id="排查"><a href="#排查" class="headerlink" title="排查"></a>排查</h3><p>作者记得之前应该出现过一二次，但由于当时没有时间仔细排查，还以为是开发团队自己的原因，即没有深究，这次又出现，作者感到绝非偶然，是时候认真排查一下了</p>
+<p>作者又想起，另一个组员跟我反映过，测试环境某个服务的NodePort好几次都莫名地被删除了，测试环境开发是没有权限做删除操作的，但也是作者小组内的同事删的，那又是怎么回事呢?</p>
+<p>由于作者在发布某应用，使用的命令如下:</p>
+<figure class="highlight bash"><table><tr><td class="code"><pre><span class="line">argocd --prune</span><br></pre></td></tr></table></figure>
+<p>其中 –prune会将当前集群中存在的但是在git上不存在的资源进行delete.</p>
+<p>嗯，这二者有关系</p>
+<p>从上面的图中来看，这个资源对象的名称非常符合作者对使用NodePort的统一命名规范，即应用的名字-nodeport,可以肯定的是，这个资源是组员为了开发的某个需求创建的，且是在rancher UI(一种开源的k8s集群管理平台)上进行创建的，这里要说明一下，rancher ui上支持直接对常用资源比如deployment,service等对象进行clone</p>
+<p>跟同事确认了，这个资源也确实是这么创建的，那这个资源又是如何同步反应到argo上的呢?</p>
+<p>因为在作者看来，argo只会关联kustomization.yaml中resource指定的资源，这个不速之客显然不属于</p>
+<p>这就引入一个作者想错或者未细致地了解的问题: argo到底是根据什么绑定资源的呢?</p>
+<p>带着这个疑问，开始找官方文档，作者从将argo-cd引入到生产环境之前，已经将argo-cd官方的文档翻了好几遍，好像没有映象有这方面的介绍，也确实没有找到相关文档</p>
+<p>作者这里犯了个错误，没有第一时间检查clone资源有没有差异，而是直接从argo-cd上查找答案，导致将问题复杂化了.</p>
+<p>作者从这个<a href="https://github.com/argoproj/argo-cd/issues/5792" target="_blank" rel="noopener">issue</a>上找到了问题所在，然后再回头查看clone的资源，然后做了个实验确认事实即是如此</p>
+<h3 id="结论"><a href="#结论" class="headerlink" title="结论"></a>结论</h3><p>由于argo controller是根据资源中的annotations里的key(argocd.argoproj.io/instance)来判定这个资源是不是属于某个app,在日常使用的过程，由于团队中使用的是rancher做为容器管理平台，rancher上提供了非常便利的对资源的clone手段，就会产生clone后的资源也会带上相同的annotations，但是在原app下的manifest并不包含这个资源，因此在app下就会出现这个资源且这个资源会被标注为<code>require pruning</code>,那么在每次sync后，这个clone后的资源就会被删除, 这也就解释了为什么会出现NodePort会莫名其妙地被删了</p>
+<p>那么解决也很简单，在clone时将annotations删除掉即可，这样argo-controller就不会将其绑定到某应用下.</p>
+<h3 id="误区"><a href="#误区" class="headerlink" title="误区"></a>误区</h3><p>这个有个作者的误区，即作者以为argo-cd只会关联kustomization.yaml中resource指定的资源(这里以kustomize为例，argo-cd支持的其它的如helm原理也是如此)，但具体如何关联，作者没有深究，也没有第一时间想到，argo-cd其实也是通过CRD controller机制实现</p>
+<h3 id="参考文章"><a href="#参考文章" class="headerlink" title="参考文章:"></a><strong>参考文章:</strong></h3><blockquote>
+<ul>
+<li><a href="https://github.com/argoproj/argo-cd/issues/5792" target="_blank" rel="noopener">https://github.com/argoproj/argo-cd/issues/5792</a></li>
+<li><a href="https://argoproj.github.io/argo-cd/" target="_blank" rel="noopener">https://argoproj.github.io/argo-cd/</a></li>
+</ul>
+</blockquote>
+<h3 id="转载请注明出处https-izsk-me"><a href="#转载请注明出处https-izsk-me" class="headerlink" title="转载请注明出处https://izsk.me"></a><strong>转载请注明出处<a href="https://izsk.me" target="_blank" rel="noopener">https://izsk.me</a></strong></h3>]]></content>
+      <categories>
+        <category>CloudNavi</category>
+      </categories>
+      <tags>
+        <tag>CloudNavi</tag>
+      </tags>
+  </entry>
+  <entry>
     <title>Kube-batch学习(核心模块)</title>
     <url>/2021/03/27/Kubernetes-kubebatch-action-plugins/</url>
     <content><![CDATA[<p>接上篇，主要介绍了kube-batch中两个重要的对象，queue及podgroup，这次主要讲讲kube-batch的核心的几个模块</p>
@@ -460,51 +550,6 @@
       </categories>
       <tags>
         <tag>Kubernetes</tag>
-      </tags>
-  </entry>
-  <entry>
-    <title>argoCD学习(argocd踩坑记)</title>
-    <url>/2021/03/19/argoCD-prombles/</url>
-    <content><![CDATA[<p>argocd配合GitOps，可以实现对kubernetes多集群的应用版本管理，目前已用于我负责的业务环境中实现统一发布平台.</p>
-<p><strong>在这里记录下使用argocd踩过的坑, 不定期更新</strong></p>
-<a id="more"></a>
-<h3 id="使用用户密码登录时提示"><a href="#使用用户密码登录时提示" class="headerlink" title="使用用户密码登录时提示"></a>使用用户密码登录时提示</h3><figure class="highlight bash"><table><tr><td class="code"><pre><span class="line">HTTP response body: &#123;<span class="string">"error"</span>:<span class="string">"no session information"</span>,<span class="string">"code"</span>:16,<span class="string">"message"</span>:<span class="string">"no session information"</span>&#125;</span><br></pre></td></tr></table></figure>
-<p>原因: argocd使用密码认证时会使用密码信息调用/api/session接口生成token信息，然后使用token转换成session， 出现这个错误是由client端没有做这个转换，因此在服务端找不到对应的session信息</p>
-<h3 id="添加集群时提示Unauthenticated-desc-the-server-has-asked-for-the-client-to-provide-credentials"><a href="#添加集群时提示Unauthenticated-desc-the-server-has-asked-for-the-client-to-provide-credentials" class="headerlink" title="添加集群时提示Unauthenticated desc =  the server has asked for the client to provide credentials"></a>添加集群时提示Unauthenticated desc =  the server has asked for the client to provide credentials</h3><p><img src="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20210222114258.png" alt></p>
-<p>原因及解决方案: <a href="https://gist.github.com/janeczku/b16154194f7f03f772645303af8e9f80" target="_blank" rel="noopener">https://gist.github.com/janeczku/b16154194f7f03f772645303af8e9f80</a></p>
-<h3 id="kustomize-build-out-of-index"><a href="#kustomize-build-out-of-index" class="headerlink" title="kustomize build out of index"></a>kustomize build out of index</h3><p><img src="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20210219204446.png" alt></p>
-<p>原因: 这个是新版kustomize(v4.0.1)时使用了kyaml的版本的bug, 原因在于kustomizationl.yml中存在非法字符</p>
-<p>解决: 回退kustomize为v3.6.1</p>
-<h3 id="forbidden-User-“system-anonymouns”-cantnot-get-path"><a href="#forbidden-User-“system-anonymouns”-cantnot-get-path" class="headerlink" title="forbidden: User “system:anonymouns” cantnot get path"></a>forbidden: User “system:anonymouns” cantnot get path</h3><p><img src="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20210119193206.png" alt></p>
-<p>解决: 重新使用命令加一下集群解决</p>
-<figure class="highlight bash"><table><tr><td class="code"><pre><span class="line">rgocd cluster add my-cluster --server <span class="string">'xxxx'</span> --upsert</span><br></pre></td></tr></table></figure>
-<h3 id="login时提示received-the-unexpected-content-type"><a href="#login时提示received-the-unexpected-content-type" class="headerlink" title="login时提示received the unexpected content-type"></a>login时提示received the unexpected content-type</h3><p>执行login 登录命令时提示:</p>
-<figure class="highlight bash"><table><tr><td class="code"><pre><span class="line">argocd login argocd.local:4433</span><br></pre></td></tr></table></figure>
-<p>出现以下错误</p>
-<p><img src="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20201106184926.png" alt></p>
-<p>原因: </p>
-<p>参考: <a href="https://github.com/argoproj/argo-cd/issues/1415" target="_blank" rel="noopener">https://github.com/argoproj/argo-cd/issues/1415</a></p>
-<p>解决:</p>
-<figure class="highlight bash"><table><tr><td class="code"><pre><span class="line">argocd login argocd.local:4433 --grpc-web</span><br></pre></td></tr></table></figure>
-<p>如果添加集群的时候提示以下错误，则需要先使用上面的命令进行登录，登录成功后再进行集群的添加操作.</p>
-<p><img src="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20201106185339.png" alt></p>
-<h3 id="创建token时提示以下错误-not-have-apikey-capability"><a href="#创建token时提示以下错误-not-have-apikey-capability" class="headerlink" title="创建token时提示以下错误 not have apikey capability"></a>创建token时提示以下错误 not have apikey capability</h3><figure class="highlight bash"><table><tr><td class="code"><pre><span class="line">Unable to generate new token: account <span class="string">'admin'</span> does not have apiKey capability</span><br></pre></td></tr></table></figure>
-<p>原因: argocd的用户也是通过角色来进行划分的，创建token的用户需要具有 apiKey的权限，这个可以从argocd部署的configmap中查看使用的用户是否具有什么权限.</p>
-<h3 id="回滚时提示以下错误revision-must-be-resolved"><a href="#回滚时提示以下错误revision-must-be-resolved" class="headerlink" title="回滚时提示以下错误revision must be resolved"></a>回滚时提示以下错误revision must be resolved</h3><figure class="highlight bash"><table><tr><td class="code"><pre><span class="line">Unable to load data: revision HEAD must be resolved</span><br></pre></td></tr></table></figure>
-<p><img src="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20201122185428.png" alt></p>
-<p>原因: 如果使用argocd命令行的方式同步应用，会导致revision没有commit值，如上图，而回滚时需要revision，因此造成上面的报错.</p>
-<h3 id="未完待续"><a href="#未完待续" class="headerlink" title="未完待续"></a>未完待续</h3><h3 id="参考文章"><a href="#参考文章" class="headerlink" title="参考文章:"></a><strong>参考文章:</strong></h3><blockquote>
-<ul>
-<li><a href="https://github.com/argoproj/argo-cd/issues/2802" target="_blank" rel="noopener">https://github.com/argoproj/argo-cd/issues/2802</a></li>
-<li><a href="https://gist.github.com/janeczku/b16154194f7f03f772645303af8e9f80" target="_blank" rel="noopener">https://gist.github.com/janeczku/b16154194f7f03f772645303af8e9f80</a></li>
-</ul>
-</blockquote>
-<h3 id="转载请注明出处https-izsk-me"><a href="#转载请注明出处https-izsk-me" class="headerlink" title="转载请注明出处https://izsk.me"></a><strong>转载请注明出处<a href="https://izsk.me" target="_blank" rel="noopener">https://izsk.me</a></strong></h3>]]></content>
-      <categories>
-        <category>CloudNavi</category>
-      </categories>
-      <tags>
-        <tag>CloudNavi</tag>
       </tags>
   </entry>
   <entry>
@@ -10444,6 +10489,46 @@
       </tags>
   </entry>
   <entry>
+    <title>HTTP之长连接及短连接</title>
+    <url>/2017/08/12/HTTP%E4%B9%8B%E9%95%BF%E8%BF%9E%E6%8E%A5%E5%8F%8A%E7%9F%AD%E8%BF%9E%E6%8E%A5/</url>
+    <content><![CDATA[<p>我们都说HTTP协议是无状态的,我们又都说HTTP分长连接及短连接,’无状态’到底是个什么意思？</p>
+<a id="more"></a>
+<h3 id="无状态"><a href="#无状态" class="headerlink" title="无状态"></a><strong>无状态</strong></h3><p>HTTP无状态其实指的是协议对于事务处理没有记忆能力,服务器不知道客户端是什么状态.也就是说,打开一个服务器上的网页和你之前打开这个服务器上的网页之间没有任何联系.HTTP是一个无状态的面向连接的协议,无状态不代表HTTP不能保持TCP连接,更不能代表HTTP使用的是UDP协议(无连接).</p>
+<p>那http又是如何保持长连接的呢?</p>
+<p>在<code>HTTP/1.0</code>中,默认使用的是短连接.也就是说,浏览器和服务器每进行一次HTTP操作,就建立一次连接,但任务结束就中断连接.如果客户端浏览器访问的某个HTML或其他类型的 Web页中包含有其他的Web资源,如JavaScript文件、图像文件、CSS文件等；当浏览器每遇到这样一个Web资源,就会建立一个HTTP会话.<br>但从<code>HTTP/1.1</code>起,默认使用长连接,用以保持连接特性.使用长连接的HTTP协议,会在响应头有加入这行代码:</p>
+<p><code>Connection:keep-alive</code></p>
+<p>　　在使用长连接的情况下,当一个网页打开完成后,客户端和服务器之间用于传输HTTP数据的 TCP连接不会关闭,如果客户端再次访问这个服务器上的网页,会继续使用这一条已经建立的连接.<code>Keep-Alive</code>不会永久保持连接,它有一个保持时间,可以在不同的服务器软件（如Apache）中设定这个时间.实现长连接要客户端和服务端都支持长连接.</p>
+<p>当然,在很多web服务器中可以设置这个keep-Alive的保持时间,比如nginx的配置文件nginx.conf中可直接使用:</p>
+<p><code>keepalive_timeout  60;</code></p>
+<p><strong>HTTP协议的长连接和短连接,实质上是TCP协议的长连接和短连接.</strong></p>
+<p>那长短连接各自对应的场景有哪些呢(各自的优缺点)?</p>
+<h3 id="短连接"><a href="#短连接" class="headerlink" title="短连接"></a><strong>短连接</strong></h3><p>场景: client向server发起连接请求,server接到请求,然后双方建立连接.client向server 发送消息,server回应client,然后一次读写就完成了,这时候双方任何一个都可以发起close操作,不过一般都是client先发起 close操作.为什么呢,一般的server不会回复完client后立即关闭连接的,当然不排除有特殊的情况.从上面的描述看,短连接一般只会在 client/server间传递一次读写操作</p>
+<p><strong>短连接管理起来比较简单,存在的连接都是有用的连接,不需要额外的控制手段,但是频繁的创建大量的连接也很耗资源</strong></p>
+<h3 id="长连接"><a href="#长连接" class="headerlink" title="长连接"></a><strong>长连接</strong></h3><p>流程是:client向server发起连接,server接受client连接,双方建立连接.Client与server完成一次读写之后,它们之间的连接并不会主动关闭,后续的读写操作会继续使用这个连接.</p>
+<p>首先说一下TCP/IP详解上讲到的TCP保活功能,保活功能主要为服务器应用提供,服务器应用希望知道客户主机是否崩溃,从而可以代表客户使用资源.如果客户已经消失,使得服务器上保留一个半开放的连接,而服务器又在等待来自客户端的数据,则服务器将应远等待客户端的数据,保活功能就是试图在服务 器端检测到这种半开放的连接.</p>
+<p>如果一个给定的连接在两小时内没有任何的动作,服务器就向客户发一个探测报文段,客户主机必须处于以下4个状态之一:</p>
+<blockquote>
+<ul>
+<li>客户主机依然正常运行,并从服务器可达.客户的TCP响应正常,而服务器也知道对方是正常的,服务器在两小时后将保活定时器复位.</li>
+<li>客户主机已经崩溃,并且关闭或者正在重新启动.在任何一种情况下,客户的TCP都没有响应.服务端将不能收到对探测的响应,并在75秒后超时.服务器总共发送10个这样的探测 ,每个间隔75秒.如果服务器没有收到一个响应,它就认为客户主机已经关闭并终止连接.</li>
+<li>客户主机崩溃并已经重新启动.服务器将收到一个对其保活探测的响应,这个响应是一个复位,使得服务器终止这个连接.</li>
+</ul>
+</blockquote>
+<p>客户机正常运行,但是服务器不可达,这种情况与2类似,TCP能发现的就是没有收到探查的响应.</p>
+<p><strong>从上可以看出http要保持长连接需要做很多次的向客户端试探是否存活,这对性能是个很大的损耗,但是从另一方面来说长连接减少了很多的创关闭连接带来的开销,节约时间.</strong></p>
+<h3 id="场景"><a href="#场景" class="headerlink" title="场景"></a><strong>场景</strong></h3><p><code>长连接</code>多用于操作频繁,点对点的通讯,而且连接数不能太多情况,.每个TCP连接都需要三步握手,这需要时间,如果每个操作都是先连接,再操作的话那么处理速度会降低很多,所以每个操作完后都不断开,次处理时直接发送数据包就OK了,不用建立TCP连接.例如：数据库的连接用长连接, 如果用短连接频繁的通信会造成socket错误,而且频繁的socket 创建也是对资源的浪费. </p>
+<p>而像WEB网站的http服务一般都用<code>短链接</code>,因为长连接对于服务端来说会耗费一定的资源,而像WEB网站这么频繁的成千上万甚至上亿客户端的连接用短连接会更省一些资源,如果用长连接,而且同时有成千上万的用户,如果每个用户都占用一个连接的话,那可想而知吧.所以并发量大,但每个用户无需频繁操作情况下需用短连好.</p>
+<p><strong>没有哪一个更好,只有哪一个最适合,一切跟着场景走,总有一款适合你!</strong></p>
+<h3 id="转载请注明出处https-izsk-me"><a href="#转载请注明出处https-izsk-me" class="headerlink" title="转载请注明出处https://izsk.me"></a><strong>转载请注明出处<a href="https://izsk.me" target="_blank" rel="noopener">https://izsk.me</a></strong></h3><hr>
+]]></content>
+      <categories>
+        <category>Http-Tcp-Ip</category>
+      </categories>
+      <tags>
+        <tag>Http-Tcp-Ip</tag>
+      </tags>
+  </entry>
+  <entry>
     <title>python中调用sqlplus生成多实例oracle-awr-html报告</title>
     <url>/2017/08/12/python%E4%B8%AD%E8%B0%83%E7%94%A8sqlplus%E7%94%9F%E6%88%90%E5%A4%9A%E5%AE%9E%E4%BE%8Boracle-awr-html%E6%8A%A5%E5%91%8A/</url>
     <content><![CDATA[<p>这里不多说,说是稍微改了下官方的脚本,这里使用了subprocess调用sqlplus,关于subprocess,可以参考<a href="https://izsk.me/2017/04/08/python%E4%B8%AD%E8%B0%83%E7%94%A8sqlplus/" target="_blank" rel="noopener">这里</a></p>
@@ -10524,46 +10609,6 @@
       </categories>
       <tags>
         <tag>Python</tag>
-      </tags>
-  </entry>
-  <entry>
-    <title>HTTP之长连接及短连接</title>
-    <url>/2017/08/12/HTTP%E4%B9%8B%E9%95%BF%E8%BF%9E%E6%8E%A5%E5%8F%8A%E7%9F%AD%E8%BF%9E%E6%8E%A5/</url>
-    <content><![CDATA[<p>我们都说HTTP协议是无状态的,我们又都说HTTP分长连接及短连接,’无状态’到底是个什么意思？</p>
-<a id="more"></a>
-<h3 id="无状态"><a href="#无状态" class="headerlink" title="无状态"></a><strong>无状态</strong></h3><p>HTTP无状态其实指的是协议对于事务处理没有记忆能力,服务器不知道客户端是什么状态.也就是说,打开一个服务器上的网页和你之前打开这个服务器上的网页之间没有任何联系.HTTP是一个无状态的面向连接的协议,无状态不代表HTTP不能保持TCP连接,更不能代表HTTP使用的是UDP协议(无连接).</p>
-<p>那http又是如何保持长连接的呢?</p>
-<p>在<code>HTTP/1.0</code>中,默认使用的是短连接.也就是说,浏览器和服务器每进行一次HTTP操作,就建立一次连接,但任务结束就中断连接.如果客户端浏览器访问的某个HTML或其他类型的 Web页中包含有其他的Web资源,如JavaScript文件、图像文件、CSS文件等；当浏览器每遇到这样一个Web资源,就会建立一个HTTP会话.<br>但从<code>HTTP/1.1</code>起,默认使用长连接,用以保持连接特性.使用长连接的HTTP协议,会在响应头有加入这行代码:</p>
-<p><code>Connection:keep-alive</code></p>
-<p>　　在使用长连接的情况下,当一个网页打开完成后,客户端和服务器之间用于传输HTTP数据的 TCP连接不会关闭,如果客户端再次访问这个服务器上的网页,会继续使用这一条已经建立的连接.<code>Keep-Alive</code>不会永久保持连接,它有一个保持时间,可以在不同的服务器软件（如Apache）中设定这个时间.实现长连接要客户端和服务端都支持长连接.</p>
-<p>当然,在很多web服务器中可以设置这个keep-Alive的保持时间,比如nginx的配置文件nginx.conf中可直接使用:</p>
-<p><code>keepalive_timeout  60;</code></p>
-<p><strong>HTTP协议的长连接和短连接,实质上是TCP协议的长连接和短连接.</strong></p>
-<p>那长短连接各自对应的场景有哪些呢(各自的优缺点)?</p>
-<h3 id="短连接"><a href="#短连接" class="headerlink" title="短连接"></a><strong>短连接</strong></h3><p>场景: client向server发起连接请求,server接到请求,然后双方建立连接.client向server 发送消息,server回应client,然后一次读写就完成了,这时候双方任何一个都可以发起close操作,不过一般都是client先发起 close操作.为什么呢,一般的server不会回复完client后立即关闭连接的,当然不排除有特殊的情况.从上面的描述看,短连接一般只会在 client/server间传递一次读写操作</p>
-<p><strong>短连接管理起来比较简单,存在的连接都是有用的连接,不需要额外的控制手段,但是频繁的创建大量的连接也很耗资源</strong></p>
-<h3 id="长连接"><a href="#长连接" class="headerlink" title="长连接"></a><strong>长连接</strong></h3><p>流程是:client向server发起连接,server接受client连接,双方建立连接.Client与server完成一次读写之后,它们之间的连接并不会主动关闭,后续的读写操作会继续使用这个连接.</p>
-<p>首先说一下TCP/IP详解上讲到的TCP保活功能,保活功能主要为服务器应用提供,服务器应用希望知道客户主机是否崩溃,从而可以代表客户使用资源.如果客户已经消失,使得服务器上保留一个半开放的连接,而服务器又在等待来自客户端的数据,则服务器将应远等待客户端的数据,保活功能就是试图在服务 器端检测到这种半开放的连接.</p>
-<p>如果一个给定的连接在两小时内没有任何的动作,服务器就向客户发一个探测报文段,客户主机必须处于以下4个状态之一:</p>
-<blockquote>
-<ul>
-<li>客户主机依然正常运行,并从服务器可达.客户的TCP响应正常,而服务器也知道对方是正常的,服务器在两小时后将保活定时器复位.</li>
-<li>客户主机已经崩溃,并且关闭或者正在重新启动.在任何一种情况下,客户的TCP都没有响应.服务端将不能收到对探测的响应,并在75秒后超时.服务器总共发送10个这样的探测 ,每个间隔75秒.如果服务器没有收到一个响应,它就认为客户主机已经关闭并终止连接.</li>
-<li>客户主机崩溃并已经重新启动.服务器将收到一个对其保活探测的响应,这个响应是一个复位,使得服务器终止这个连接.</li>
-</ul>
-</blockquote>
-<p>客户机正常运行,但是服务器不可达,这种情况与2类似,TCP能发现的就是没有收到探查的响应.</p>
-<p><strong>从上可以看出http要保持长连接需要做很多次的向客户端试探是否存活,这对性能是个很大的损耗,但是从另一方面来说长连接减少了很多的创关闭连接带来的开销,节约时间.</strong></p>
-<h3 id="场景"><a href="#场景" class="headerlink" title="场景"></a><strong>场景</strong></h3><p><code>长连接</code>多用于操作频繁,点对点的通讯,而且连接数不能太多情况,.每个TCP连接都需要三步握手,这需要时间,如果每个操作都是先连接,再操作的话那么处理速度会降低很多,所以每个操作完后都不断开,次处理时直接发送数据包就OK了,不用建立TCP连接.例如：数据库的连接用长连接, 如果用短连接频繁的通信会造成socket错误,而且频繁的socket 创建也是对资源的浪费. </p>
-<p>而像WEB网站的http服务一般都用<code>短链接</code>,因为长连接对于服务端来说会耗费一定的资源,而像WEB网站这么频繁的成千上万甚至上亿客户端的连接用短连接会更省一些资源,如果用长连接,而且同时有成千上万的用户,如果每个用户都占用一个连接的话,那可想而知吧.所以并发量大,但每个用户无需频繁操作情况下需用短连好.</p>
-<p><strong>没有哪一个更好,只有哪一个最适合,一切跟着场景走,总有一款适合你!</strong></p>
-<h3 id="转载请注明出处https-izsk-me"><a href="#转载请注明出处https-izsk-me" class="headerlink" title="转载请注明出处https://izsk.me"></a><strong>转载请注明出处<a href="https://izsk.me" target="_blank" rel="noopener">https://izsk.me</a></strong></h3><hr>
-]]></content>
-      <categories>
-        <category>Http-Tcp-Ip</category>
-      </categories>
-      <tags>
-        <tag>Http-Tcp-Ip</tag>
       </tags>
   </entry>
   <entry>
