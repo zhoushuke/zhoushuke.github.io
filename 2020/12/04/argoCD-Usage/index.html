@@ -68,7 +68,7 @@
 <link href="/css/main.css?v=5.1.0" rel="stylesheet" type="text/css">
 
 
-  <meta name="keywords" content="ArgoCD,">
+  <meta name="keywords" content="CloudNavi,">
 
 
 
@@ -87,7 +87,7 @@
 
 
 <meta name="description" content="运维中经常会存在多套的环境，开发、测试、stagging、prod等，这么多的环境，对于开发同学，如何通过一次部署多环境上线，打通开发与测试间的gap，而对于运维同学来说，则关心如何保障环境之间应用版本一致，而argoCD就是这样一个工具，配合GitOps思路，可以实现对多集群的应用版本管理.">
-<meta name="keywords" content="ArgoCD">
+<meta name="keywords" content="CloudNavi">
 <meta property="og:type" content="article">
 <meta property="og:title" content="argoCD学习(使用argoCD实现多集群应用同步)">
 <meta property="og:url" content="https://zhoushuke.github.io/2020/12/04/argoCD-Usage/index.html">
@@ -104,7 +104,7 @@
 <meta property="og:image" content="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20201106184926.png">
 <meta property="og:image" content="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20201106185339.png">
 <meta property="og:image" content="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20201122185428.png">
-<meta property="og:updated_time" content="2021-01-10T07:40:09.257Z">
+<meta property="og:updated_time" content="2021-04-08T15:56:51.365Z">
 <meta name="twitter:card" content="summary">
 <meta name="twitter:title" content="argoCD学习(使用argoCD实现多集群应用同步)">
 <meta name="twitter:description" content="运维中经常会存在多套的环境，开发、测试、stagging、prod等，这么多的环境，对于开发同学，如何通过一次部署多环境上线，打通开发与测试间的gap，而对于运维同学来说，则关心如何保障环境之间应用版本一致，而argoCD就是这样一个工具，配合GitOps思路，可以实现对多集群的应用版本管理.">
@@ -370,8 +370,8 @@
               
               
                 <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
-                  <a href="/categories/ArgoCD/" itemprop="url" rel="index">
-                    <span itemprop="name">ArgoCD</span>
+                  <a href="/categories/CloudNavi/" itemprop="url" rel="index">
+                    <span itemprop="name">CloudNavi</span>
                   </a>
                 </span>
 
@@ -421,7 +421,7 @@
 <h4 id="ingress"><a href="#ingress" class="headerlink" title="ingress"></a>ingress</h4><p>添加ingress用于暴露argo cd UI</p>
 <figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br></pre></td><td class="code"><pre><span class="line">apiVersion: extensions/v1beta1</span><br><span class="line">kind: Ingress</span><br><span class="line">metadata:</span><br><span class="line">  name: argocd-server-ingress</span><br><span class="line">  namespace: argocd</span><br><span class="line">  annotations:</span><br><span class="line">    cert-manager.io/cluster-issuer: letsencrypt-prod</span><br><span class="line">    kubernetes.io/ingress.class: nginx</span><br><span class="line">    kubernetes.io/tls-acme: <span class="string">"true"</span></span><br><span class="line">    nginx.ingress.kubernetes.io/ssl-passthrough: <span class="string">"true"</span></span><br><span class="line">    <span class="comment"># If you encounter a redirect loop or are getting a 307 response code</span></span><br><span class="line">    <span class="comment"># then you need to force the nginx ingress to connect to the backend using HTTPS.</span></span><br><span class="line">    <span class="comment">#</span></span><br><span class="line">    <span class="comment"># nginx.ingress.kubernetes.io/backend-protocol: "HTTPS"</span></span><br><span class="line">spec:</span><br><span class="line">  rules:</span><br><span class="line">  - host: argocd.local</span><br><span class="line">    http:</span><br><span class="line">      paths:</span><br><span class="line">      - backend:</span><br><span class="line">          serviceName: argocd-server</span><br><span class="line">          servicePort: https</span><br><span class="line">        path: /</span><br><span class="line">  tls:</span><br><span class="line">  - hosts:</span><br><span class="line">    - argocd.example.com</span><br><span class="line">    secretName: argocd-secret <span class="comment"># do not change, this is provided by Argo CD</span></span><br></pre></td></tr></table></figure>
 <h3 id="多集群支持"><a href="#多集群支持" class="headerlink" title="多集群支持"></a>多集群支持</h3><p>目前无法直接在UI上添加其它集群，可使用以下命令添加外部集群，这样就可<strong>使用一套argoCD来同步到多个集群环境</strong></p>
-<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># 先进行argocd的登录</span></span><br><span class="line">argocd loginargocd.example.com:4433 --grpc-web</span><br><span class="line"><span class="comment"># 输入用户名密码即可，出现successfully</span></span><br><span class="line">argocd cluster add mysql-cluster --server <span class="string">'argocd.example.com:4433'</span></span><br><span class="line"><span class="comment"># 出现以下提示则说明添加成功</span></span><br><span class="line">INFO[0000] ServiceAccount <span class="string">"argocd-manager"</span> already exists <span class="keyword">in</span> namespace <span class="string">"kube-system"</span></span><br><span class="line">INFO[0000] ClusterRole <span class="string">"argocd-manager-role"</span> updated</span><br><span class="line">INFO[0000] ClusterRoleBinding <span class="string">"argocd-manager-role-binding"</span> updated</span><br><span class="line">Cluster <span class="string">'https://xxx.xxx.xxx.xxx:6443'</span> added</span><br></pre></td></tr></table></figure>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># 先进行argocd的登录</span></span><br><span class="line">argocd login argocd.example.com:4433 --grpc-web</span><br><span class="line"><span class="comment"># 输入用户名密码即可，出现successfully</span></span><br><span class="line">argocd cluster add mysql-cluster --server <span class="string">'argocd.example.com:4433'</span></span><br><span class="line"><span class="comment"># 出现以下提示则说明添加成功</span></span><br><span class="line">INFO[0000] ServiceAccount <span class="string">"argocd-manager"</span> already exists <span class="keyword">in</span> namespace <span class="string">"kube-system"</span></span><br><span class="line">INFO[0000] ClusterRole <span class="string">"argocd-manager-role"</span> updated</span><br><span class="line">INFO[0000] ClusterRoleBinding <span class="string">"argocd-manager-role-binding"</span> updated</span><br><span class="line">Cluster <span class="string">'https://xxx.xxx.xxx.xxx:6443'</span> added</span><br></pre></td></tr></table></figure>
 <p>那么对于多集群发同步来说，最终实现的效果为:</p>
 <p><img src="https://www.gitops.tech/images/multiple.png" alt></p>
 <p>当然，每个集群的下的应用的触发逻辑可以在CI阶段定义, 这样可以跟测试stag更好地集成,从而实现真正的一次Push，多次发布.</p>
@@ -541,7 +541,7 @@
       
         <div class="post-tags">
           
-            <a href="/tags/ArgoCD/" rel="tag"># ArgoCD</a>
+            <a href="/tags/CloudNavi/" rel="tag"># CloudNavi</a>
           
         </div>
       
@@ -630,7 +630,7 @@
           
             <div class="site-state-item site-state-posts">
               <a href="/archives">
-                <span class="site-state-item-count">170</span>
+                <span class="site-state-item-count">171</span>
                 <span class="site-state-item-name">日志</span>
               </a>
             </div>
@@ -639,7 +639,7 @@
           
             <div class="site-state-item site-state-categories">
               <a href="/categories">
-                <span class="site-state-item-count">15</span>
+                <span class="site-state-item-count">14</span>
                 <span class="site-state-item-name">分类</span>
               </a>
             </div>
@@ -648,7 +648,7 @@
           
             <div class="site-state-item site-state-tags">
               <a href="/tags">
-                <span class="site-state-item-count">15</span>
+                <span class="site-state-item-count">14</span>
                 <span class="site-state-item-name">标签</span>
               </a>
             </div>
