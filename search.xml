@@ -1,6 +1,41 @@
 <?xml version="1.0" encoding="utf-8"?>
 <search>
   <entry>
+    <title>Kong学习(代理多grpc后端)</title>
+    <url>/2021/05/15/Kong-grpc-proxy-multi/</url>
+    <content><![CDATA[<p>kong在v1.3的版本原生支持了grpc协议, 这里说说使用kong来代理多个grpc请求.</p>
+<a id="more"></a>
+<p>需求是这样的，有个应用需要调用多个grpc服务, 内部测试环境都是直接通过kubernetes nodeport进行调用的，显然不是很优雅,</p>
+<p>而kong做为我们的统一api网关，当然可以完美解决这个需求</p>
+<p>整个链路如下:</p>
+<p><img src="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20210513145435.png" alt></p>
+<p>从这个图可以看出，kong接入到grpc请求首先也是通过请求的path来转到配置的kong的service，这个service的host就可以是kubernetes对应中的service了</p>
+<p>有两个方式实现,如下:</p>
+<h3 id="添加service-route"><a href="#添加service-route" class="headerlink" title="添加service/route"></a>添加service/route</h3><p>这里要注意的是，因为需要新建service/route等对象，因此需要kong-db模式</p>
+<figure class="highlight bash"><table><tr><td class="code"><pre><span class="line"><span class="comment"># service-a</span></span><br><span class="line">curl -XPOST 127.0.0.1:8001/services --data name=service<span class="_">-a</span>-grpc --data protocol=grpc --data host=service-A.default.svc.cluster.local --data port=8091</span><br><span class="line">curl -XPOST 127.0.0.1:8001/services/service<span class="_">-a</span>-grpc/routes --data protocols=grpc --data name=service-A-grpc-root --data paths=/service<span class="_">-a</span>-grpc.WorkflowEngineService</span><br><span class="line"><span class="comment"># 其中，127.0.0.1:8001为kong的管理端口，paths对应的具体的grpc后端</span></span><br><span class="line"><span class="comment"># 其它的grpc后端按上新建即可</span></span><br></pre></td></tr></table></figure>
+<p>这样，在客户端就可以通过kong暴露出来的统一端口进行访问了，而如果像本人使用的db-less的模式，有没有办法呢? 当然是有的</p>
+<h3 id="使用ingress"><a href="#使用ingress" class="headerlink" title="使用ingress"></a>使用ingress</h3><figure class="highlight yaml"><table><tr><td class="code"><pre><span class="line"><span class="meta">---</span></span><br><span class="line"><span class="attr">apiVersion:</span> <span class="string">networking.k8s.io/v1beta1</span></span><br><span class="line"><span class="attr">kind:</span> <span class="string">Ingress</span></span><br><span class="line"><span class="attr">metadata:</span></span><br><span class="line">  <span class="attr">name:</span> <span class="string">grpc-service-ingress</span></span><br><span class="line">  <span class="attr">namespace:</span> <span class="string">default</span></span><br><span class="line">  <span class="attr">annotations:</span></span><br><span class="line">    <span class="attr">kubernetes.io/ingress.class:</span> <span class="string">kong-grpcproxy</span></span><br><span class="line">    <span class="attr">konghq.com/protocols:</span> <span class="string">grpc</span></span><br><span class="line"><span class="attr">spec:</span></span><br><span class="line">  <span class="attr">rules:</span></span><br><span class="line">  <span class="bullet">-</span> <span class="attr">http:</span></span><br><span class="line">      <span class="attr">paths:</span></span><br><span class="line">      <span class="bullet">-</span> <span class="attr">path:</span> <span class="string">/service-a-grpc.WorkflowEngineService</span></span><br><span class="line">        <span class="attr">backend:</span></span><br><span class="line">          <span class="attr">serviceName:</span> <span class="string">service-a</span></span><br><span class="line">          <span class="attr">servicePort:</span> <span class="number">8091</span></span><br><span class="line">      <span class="bullet">-</span> <span class="attr">path:</span> <span class="string">/service-b-grpc.ResManServer</span></span><br><span class="line">        <span class="attr">backend:</span></span><br><span class="line">          <span class="attr">serviceName:</span> <span class="string">service-b-grpc</span></span><br><span class="line">          <span class="attr">servicePort:</span> <span class="number">9011</span></span><br><span class="line">      <span class="bullet">-</span> <span class="attr">path:</span> <span class="string">/service-c-grpc.SprCenterService</span></span><br><span class="line">        <span class="attr">backend:</span></span><br><span class="line">          <span class="attr">serviceName:</span> <span class="string">service-b-grpc</span></span><br><span class="line">          <span class="attr">servicePort:</span> <span class="number">9112</span></span><br></pre></td></tr></table></figure>
+<p>同时，需要kuberntes中的service如service-a的annotation添加<code>konghq.com/protocols: grpc</code>即可，如下</p>
+<figure class="highlight yaml"><table><tr><td class="code"><pre><span class="line"><span class="attr">annotations:</span></span><br><span class="line">    <span class="attr">konghq.com/protocols:</span> <span class="string">grpc</span></span><br></pre></td></tr></table></figure>
+<p>这样达到的效果跟上面是一样的，优点是kong使用的是db-less模式</p>
+<p>kong在api-gateway方面还是非常方便的</p>
+<h3 id="参考文章"><a href="#参考文章" class="headerlink" title="参考文章:"></a><strong>参考文章:</strong></h3><blockquote>
+<ul>
+<li><a href="https://www.jianshu.com/p/0a7e3a8fa8a0" target="_blank" rel="noopener">https://www.jianshu.com/p/0a7e3a8fa8a0</a></li>
+<li><a href="https://zhuanlan.zhihu.com/p/140351496" target="_blank" rel="noopener">https://zhuanlan.zhihu.com/p/140351496</a></li>
+<li><a href="https://blog.csdn.net/qq_42728912/article/details/106396421" target="_blank" rel="noopener">https://blog.csdn.net/qq_42728912/article/details/106396421</a></li>
+<li><a href="https://konghq.com/blog/manage-grpc-services-kong/" target="_blank" rel="noopener">https://konghq.com/blog/manage-grpc-services-kong/</a></li>
+</ul>
+</blockquote>
+<h3 id="转载请注明出处https-izsk-me"><a href="#转载请注明出处https-izsk-me" class="headerlink" title="转载请注明出处https://izsk.me"></a><strong>转载请注明出处<a href="https://izsk.me" target="_blank" rel="noopener">https://izsk.me</a></strong></h3>]]></content>
+      <categories>
+        <category>CloudNavi</category>
+      </categories>
+      <tags>
+        <tag>CloudNavi</tag>
+      </tags>
+  </entry>
+  <entry>
     <title>Kubernetes学习(Kubernetes踩坑记)</title>
     <url>/2021/04/28/Kubernetes-prombles/</url>
     <content><![CDATA[<p>记录在使用Kubernetes中遇到的各种问题及解决方案, 好记性不如烂笔头</p>
@@ -280,47 +315,6 @@
       </tags>
   </entry>
   <entry>
-    <title>argoCD学习(argocd是如何绑定资源的)</title>
-    <url>/2021/04/02/argoCD-how-to-bind-resource/</url>
-    <content><![CDATA[<p>目前团队使用argo-cd做为统一发布平台，承接所有的环境的发布，最近碰到一个很有意思的问题(下文描述)，跟随这个问题引出另一个问题: argo-cd是如何绑定资源的呢？用了argo-cd这么久了，感叹自己从来都没细致研究过，呵呵了.</p>
-<a id="more"></a>
-<h3 id="问题"><a href="#问题" class="headerlink" title="问题"></a>问题</h3><p><strong>简单描述就是，argo上的应用出现了本不属于它资源</strong></p>
-<p>这里使用kustomize，kustomization.yaml文件如下：</p>
-<figure class="highlight yaml"><table><tr><td class="code"><pre><span class="line"><span class="attr">apiVersion:</span> <span class="string">kustomize.config.k8s.io/v1beta1</span></span><br><span class="line"><span class="attr">kind:</span> <span class="string">Kustomization</span></span><br><span class="line"></span><br><span class="line"><span class="attr">resources:</span></span><br><span class="line"><span class="bullet">-</span> <span class="string">configmap.yml.j2</span></span><br><span class="line"><span class="bullet">-</span> <span class="string">deployment.yml.j2</span></span><br><span class="line"><span class="bullet">-</span> <span class="string">service.yml.j2</span></span><br><span class="line"></span><br><span class="line"><span class="attr">namespace:</span> <span class="string">test</span></span><br></pre></td></tr></table></figure>
-<p>正常来说，发布到k8s中的资源对象，只会有resources下指定的，但是在某个时间点，argo ui上却出现了其它资源，状态是这样的</p>
-<p><img src="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20210405221303.png" alt></p>
-<p>作者非常确定这个资源对象不包含在上述3个文件中，那这个对象是怎么来的呢?</p>
-<h3 id="排查"><a href="#排查" class="headerlink" title="排查"></a>排查</h3><p>作者记得之前应该出现过一二次，但由于当时没有时间仔细排查，还以为是开发团队自己的原因，即没有深究，这次又出现，作者感到绝非偶然，是时候认真排查一下了</p>
-<p>作者又想起，另一个组员跟我反映过，测试环境某个服务的NodePort好几次都莫名地被删除了，测试环境开发是没有权限做删除操作的，但也是作者小组内的同事删的，那又是怎么回事呢?</p>
-<p>由于作者在发布某应用，使用的命令如下:</p>
-<figure class="highlight bash"><table><tr><td class="code"><pre><span class="line">argocd --prune</span><br></pre></td></tr></table></figure>
-<p>其中 –prune会将当前集群中存在的但是在git上不存在的资源进行delete.</p>
-<p>嗯，这二者有关系</p>
-<p>从上面的图中来看，这个资源对象的名称非常符合作者对使用NodePort的统一命名规范，即应用的名字-nodeport,可以肯定的是，这个资源是组员为了开发的某个需求创建的，且是在rancher UI(一种开源的k8s集群管理平台)上进行创建的，这里要说明一下，rancher ui上支持直接对常用资源比如deployment,service等对象进行clone</p>
-<p>跟同事确认了，这个资源也确实是这么创建的，那这个资源又是如何同步反应到argo上的呢?</p>
-<p>因为在作者看来，argo只会关联kustomization.yaml中resource指定的资源，这个不速之客显然不属于</p>
-<p>这就引入一个作者想错或者未细致地了解的问题: argo到底是根据什么绑定资源的呢?</p>
-<p>带着这个疑问，开始找官方文档，作者从将argo-cd引入到生产环境之前，已经将argo-cd官方的文档翻了好几遍，好像没有映象有这方面的介绍，也确实没有找到相关文档</p>
-<p>作者这里犯了个错误，没有第一时间检查clone资源有没有差异，而是直接从argo-cd上查找答案，导致将问题复杂化了.</p>
-<p>作者从这个<a href="https://github.com/argoproj/argo-cd/issues/5792" target="_blank" rel="noopener">issue</a>上找到了问题所在，然后再回头查看clone的资源，然后做了个实验确认事实即是如此</p>
-<h3 id="结论"><a href="#结论" class="headerlink" title="结论"></a>结论</h3><p>由于argo controller是根据资源中的annotations里的key(argocd.argoproj.io/instance)来判定这个资源是不是属于某个app,在日常使用的过程，由于团队中使用的是rancher做为容器管理平台，rancher上提供了非常便利的对资源的clone手段，就会产生clone后的资源也会带上相同的annotations，但是在原app下的manifest并不包含这个资源，因此在app下就会出现这个资源且这个资源会被标注为<code>require pruning</code>,那么在每次sync后，这个clone后的资源就会被删除, 这也就解释了为什么会出现NodePort会莫名其妙地被删了</p>
-<p>那么解决也很简单，在clone时将annotations删除掉即可，这样argo-controller就不会将其绑定到某应用下.</p>
-<h3 id="误区"><a href="#误区" class="headerlink" title="误区"></a>误区</h3><p>这个有个作者的误区，即作者以为argo-cd只会关联kustomization.yaml中resource指定的资源(这里以kustomize为例，argo-cd支持的其它的如helm原理也是如此)，但具体如何关联，作者没有深究，也没有第一时间想到，argo-cd其实也是通过CRD controller机制实现</p>
-<h3 id="参考文章"><a href="#参考文章" class="headerlink" title="参考文章:"></a><strong>参考文章:</strong></h3><blockquote>
-<ul>
-<li><a href="https://github.com/argoproj/argo-cd/issues/5792" target="_blank" rel="noopener">https://github.com/argoproj/argo-cd/issues/5792</a></li>
-<li><a href="https://argoproj.github.io/argo-cd/" target="_blank" rel="noopener">https://argoproj.github.io/argo-cd/</a></li>
-</ul>
-</blockquote>
-<h3 id="转载请注明出处https-izsk-me"><a href="#转载请注明出处https-izsk-me" class="headerlink" title="转载请注明出处https://izsk.me"></a><strong>转载请注明出处<a href="https://izsk.me" target="_blank" rel="noopener">https://izsk.me</a></strong></h3>]]></content>
-      <categories>
-        <category>CloudNavi</category>
-      </categories>
-      <tags>
-        <tag>CloudNavi</tag>
-      </tags>
-  </entry>
-  <entry>
     <title>argoCD学习(argocd踩坑记)</title>
     <url>/2021/04/02/argoCD-prombles/</url>
     <content><![CDATA[<p>argocd配合GitOps，可以实现对kubernetes多集群的应用版本管理，目前已用于我负责的业务环境中实现统一发布平台.</p>
@@ -359,6 +353,47 @@
 <li><a href="https://github.com/argoproj/argo-cd/issues/2802" target="_blank" rel="noopener">https://github.com/argoproj/argo-cd/issues/2802</a></li>
 <li><a href="https://gist.github.com/janeczku/b16154194f7f03f772645303af8e9f80" target="_blank" rel="noopener">https://gist.github.com/janeczku/b16154194f7f03f772645303af8e9f80</a></li>
 <li><a href="https://github.com/argoproj/argo-cd/issues/5792" target="_blank" rel="noopener">https://github.com/argoproj/argo-cd/issues/5792</a></li>
+</ul>
+</blockquote>
+<h3 id="转载请注明出处https-izsk-me"><a href="#转载请注明出处https-izsk-me" class="headerlink" title="转载请注明出处https://izsk.me"></a><strong>转载请注明出处<a href="https://izsk.me" target="_blank" rel="noopener">https://izsk.me</a></strong></h3>]]></content>
+      <categories>
+        <category>CloudNavi</category>
+      </categories>
+      <tags>
+        <tag>CloudNavi</tag>
+      </tags>
+  </entry>
+  <entry>
+    <title>argoCD学习(argocd是如何绑定资源的)</title>
+    <url>/2021/04/02/argoCD-how-to-bind-resource/</url>
+    <content><![CDATA[<p>目前团队使用argo-cd做为统一发布平台，承接所有的环境的发布，最近碰到一个很有意思的问题(下文描述)，跟随这个问题引出另一个问题: argo-cd是如何绑定资源的呢？用了argo-cd这么久了，感叹自己从来都没细致研究过，呵呵了.</p>
+<a id="more"></a>
+<h3 id="问题"><a href="#问题" class="headerlink" title="问题"></a>问题</h3><p><strong>简单描述就是，argo上的应用出现了本不属于它资源</strong></p>
+<p>这里使用kustomize，kustomization.yaml文件如下：</p>
+<figure class="highlight yaml"><table><tr><td class="code"><pre><span class="line"><span class="attr">apiVersion:</span> <span class="string">kustomize.config.k8s.io/v1beta1</span></span><br><span class="line"><span class="attr">kind:</span> <span class="string">Kustomization</span></span><br><span class="line"></span><br><span class="line"><span class="attr">resources:</span></span><br><span class="line"><span class="bullet">-</span> <span class="string">configmap.yml.j2</span></span><br><span class="line"><span class="bullet">-</span> <span class="string">deployment.yml.j2</span></span><br><span class="line"><span class="bullet">-</span> <span class="string">service.yml.j2</span></span><br><span class="line"></span><br><span class="line"><span class="attr">namespace:</span> <span class="string">test</span></span><br></pre></td></tr></table></figure>
+<p>正常来说，发布到k8s中的资源对象，只会有resources下指定的，但是在某个时间点，argo ui上却出现了其它资源，状态是这样的</p>
+<p><img src="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20210405221303.png" alt></p>
+<p>作者非常确定这个资源对象不包含在上述3个文件中，那这个对象是怎么来的呢?</p>
+<h3 id="排查"><a href="#排查" class="headerlink" title="排查"></a>排查</h3><p>作者记得之前应该出现过一二次，但由于当时没有时间仔细排查，还以为是开发团队自己的原因，即没有深究，这次又出现，作者感到绝非偶然，是时候认真排查一下了</p>
+<p>作者又想起，另一个组员跟我反映过，测试环境某个服务的NodePort好几次都莫名地被删除了，测试环境开发是没有权限做删除操作的，但也是作者小组内的同事删的，那又是怎么回事呢?</p>
+<p>由于作者在发布某应用，使用的命令如下:</p>
+<figure class="highlight bash"><table><tr><td class="code"><pre><span class="line">argocd --prune</span><br></pre></td></tr></table></figure>
+<p>其中 –prune会将当前集群中存在的但是在git上不存在的资源进行delete.</p>
+<p>嗯，这二者有关系</p>
+<p>从上面的图中来看，这个资源对象的名称非常符合作者对使用NodePort的统一命名规范，即应用的名字-nodeport,可以肯定的是，这个资源是组员为了开发的某个需求创建的，且是在rancher UI(一种开源的k8s集群管理平台)上进行创建的，这里要说明一下，rancher ui上支持直接对常用资源比如deployment,service等对象进行clone</p>
+<p>跟同事确认了，这个资源也确实是这么创建的，那这个资源又是如何同步反应到argo上的呢?</p>
+<p>因为在作者看来，argo只会关联kustomization.yaml中resource指定的资源，这个不速之客显然不属于</p>
+<p>这就引入一个作者想错或者未细致地了解的问题: argo到底是根据什么绑定资源的呢?</p>
+<p>带着这个疑问，开始找官方文档，作者从将argo-cd引入到生产环境之前，已经将argo-cd官方的文档翻了好几遍，好像没有映象有这方面的介绍，也确实没有找到相关文档</p>
+<p>作者这里犯了个错误，没有第一时间检查clone资源有没有差异，而是直接从argo-cd上查找答案，导致将问题复杂化了.</p>
+<p>作者从这个<a href="https://github.com/argoproj/argo-cd/issues/5792" target="_blank" rel="noopener">issue</a>上找到了问题所在，然后再回头查看clone的资源，然后做了个实验确认事实即是如此</p>
+<h3 id="结论"><a href="#结论" class="headerlink" title="结论"></a>结论</h3><p>由于argo controller是根据资源中的annotations里的key(argocd.argoproj.io/instance)来判定这个资源是不是属于某个app,在日常使用的过程，由于团队中使用的是rancher做为容器管理平台，rancher上提供了非常便利的对资源的clone手段，就会产生clone后的资源也会带上相同的annotations，但是在原app下的manifest并不包含这个资源，因此在app下就会出现这个资源且这个资源会被标注为<code>require pruning</code>,那么在每次sync后，这个clone后的资源就会被删除, 这也就解释了为什么会出现NodePort会莫名其妙地被删了</p>
+<p>那么解决也很简单，在clone时将annotations删除掉即可，这样argo-controller就不会将其绑定到某应用下.</p>
+<h3 id="误区"><a href="#误区" class="headerlink" title="误区"></a>误区</h3><p>这个有个作者的误区，即作者以为argo-cd只会关联kustomization.yaml中resource指定的资源(这里以kustomize为例，argo-cd支持的其它的如helm原理也是如此)，但具体如何关联，作者没有深究，也没有第一时间想到，argo-cd其实也是通过CRD controller机制实现</p>
+<h3 id="参考文章"><a href="#参考文章" class="headerlink" title="参考文章:"></a><strong>参考文章:</strong></h3><blockquote>
+<ul>
+<li><a href="https://github.com/argoproj/argo-cd/issues/5792" target="_blank" rel="noopener">https://github.com/argoproj/argo-cd/issues/5792</a></li>
+<li><a href="https://argoproj.github.io/argo-cd/" target="_blank" rel="noopener">https://argoproj.github.io/argo-cd/</a></li>
 </ul>
 </blockquote>
 <h3 id="转载请注明出处https-izsk-me"><a href="#转载请注明出处https-izsk-me" class="headerlink" title="转载请注明出处https://izsk.me"></a><strong>转载请注明出处<a href="https://izsk.me" target="_blank" rel="noopener">https://izsk.me</a></strong></h3>]]></content>
