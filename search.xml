@@ -52,6 +52,243 @@
       </tags>
   </entry>
   <entry>
+    <title>Kubernetes学习(k8s基于InfiniBand实现HPC高性能容器网络组网方案实践三)</title>
+    <url>/2021/07/05/Kubernetes-Infinitband-SRIOV-network-3-erros/</url>
+    <content><![CDATA[<p>这次把sriov+infinitband部署期间遇到的问题做一个总结，给有需要的同学做个参考.</p>
+<a id="more"></a>
+<h3 id="CNI-invalid-verion"><a href="#CNI-invalid-verion" class="headerlink" title="CNI: invalid verion"></a>CNI: invalid verion</h3><p><img src="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20210616185012.png" alt></p>
+<p>原因: 作者线上环境的k8s版本相对较旧，新版本的kubernetes需要添加cniVersion字段</p>
+<figure class="highlight bash"><table><tr><td class="code"><pre><span class="line"><span class="string">"cniVersion"</span>: <span class="string">"0.3.1"</span></span><br></pre></td></tr></table></figure>
+<h3 id="Priority-node-critical-not-permitted"><a href="#Priority-node-critical-not-permitted" class="headerlink" title="Priority-node-critical not permitted"></a>Priority-node-critical not permitted</h3><p><img src="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20210622115355.png" alt></p>
+<p>原因: 同上也是因为k8s集群为1.17版本之前，对于设置了priorityclasses: system-node-critical， v1.17版本之前只能部署在kube-system，其它ns是不允许的，在v1.17之后可选，如果必须部署在其它ns，则需要重新打sriov-network-operator及config-daemon镜像.</p>
+<h3 id="no-match-for-kind-“MutatingwebhookConfigration”"><a href="#no-match-for-kind-“MutatingwebhookConfigration”" class="headerlink" title="no match for kind “MutatingwebhookConfigration”"></a>no match for kind “MutatingwebhookConfigration”</h3><p><img src="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20210623144028.png" alt></p>
+<p>原因: 查看operator的Dockerfile发现包含了bindata目录，而bindata目录下的webhook中使用的版本为v1,v1.16之前webhook已不再支持v1，需要切换到v1beta1, 如果不想重新打镜像的话，可以使用configmap挂载替换镜像里的对应文件.</p>
+<h3 id="runtime-error-index-out-of-range"><a href="#runtime-error-index-out-of-range" class="headerlink" title="runtime error: index out of range"></a>runtime error: index out of range</h3><p><img src="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20210624114102.png" alt></p>
+<p>原因: operator维护了一个ib硬件类型列表，在deploy/configmap.yaml文件中，如果使用的硬件不在该supported-nic-ids设备类型中, 可按readme中的格式进行手工添加即可，但官方有提示，不在列表中的硬件也许也work，但不保证.</p>
+<h3 id="invalid-CIDR-address"><a href="#invalid-CIDR-address" class="headerlink" title="invalid CIDR address"></a>invalid CIDR address</h3><p><img src="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20210629154253.png" alt></p>
+<p>原因: 自定义网络中的subnet ip网段格式写错，多写了一位</p>
+<h3 id="Got-invalid-base-LID-65535-from-network"><a href="#Got-invalid-base-LID-65535-from-network" class="headerlink" title="Got invalid base LID 65535 from network"></a>Got invalid base LID 65535 from network</h3><p><img src="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20210705231941.png" alt></p>
+<p>网卡一直处于初始化状态，同时查看opensm的错误，默认位于/var/log/opensm.log,会发现以下错误</p>
+<p><img src="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20210705134012.png" alt></p>
+<p>原因: 网卡的Base LID不能是65535, 可通过重新绑定解决</p>
+<figure class="highlight bash"><table><tr><td class="code"><pre><span class="line"><span class="built_in">echo</span> 0000:83:00.6 &gt; /sys/bus/pci/drivers/mlx5_core/unbind</span><br><span class="line"><span class="built_in">echo</span> 11:22:33:44:77:66:77:60 &gt; /sys/class/infiniband/mlx5_0/device/sriov/5/node</span><br><span class="line"><span class="built_in">echo</span> 11:22:33:44:77:66:77:60 &gt; /sys/class/infiniband/mlx5_0/device/sriov/5/port</span><br><span class="line"><span class="built_in">echo</span> 0000:83:00.6 &gt; /sys/bus/pci/drivers/mlx5_core/<span class="built_in">bind</span></span><br><span class="line"><span class="built_in">echo</span> Follow &gt; /sys/class/infiniband/mlx5_0/device/sriov/5/policy</span><br><span class="line"><span class="comment"># 再次查看后Base LID已经重新分配,网卡正常</span></span><br></pre></td></tr></table></figure>
+<h3 id="部署了sriov的Node会无缘无故被cordor从而导致无法调度"><a href="#部署了sriov的Node会无缘无故被cordor从而导致无法调度" class="headerlink" title="部署了sriov的Node会无缘无故被cordor从而导致无法调度"></a>部署了sriov的Node会无缘无故被cordor从而导致无法调度</h3><p><img src="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20210705221717.png" alt></p>
+<p>原因: 由于本人开始时指定的<code>/sys/class/net/ib0/device/sriov_numvfs</code>为32, 后来又改成了8, 期间没有重启，这样会导致<code>sriov-network-config-daemon</code>给node打上<code>sriovnetwork.openshift.io/state: Draining</code>的注释，从而cordor节点，这个从<code>sriov-network-config-daemon</code>的日志也可以看到，会提示需要重启节点(这里忘截图了)，节点重启后就ok了.</p>
+<p>感兴趣的可以查看源码，非常清晰</p>
+<p>下次总结一个整个方案使用到的细节</p>
+<h3 id="参考文章"><a href="#参考文章" class="headerlink" title="参考文章:"></a><strong>参考文章:</strong></h3><h3 id="转载请注明出处https-izsk-me"><a href="#转载请注明出处https-izsk-me" class="headerlink" title="转载请注明出处https://izsk.me"></a><strong>转载请注明出处<a href="https://izsk.me" target="_blank" rel="noopener">https://izsk.me</a></strong></h3>]]></content>
+      <categories>
+        <category>Kubernetes</category>
+      </categories>
+      <tags>
+        <tag>Kubernetes</tag>
+      </tags>
+  </entry>
+  <entry>
+    <title>Kubernetes学习(k8s基于InfiniBand实现HPC高性能容器网络组网方案实践二)</title>
+    <url>/2021/07/03/Kubernetes-Infinitband-SRIOV-network-2-deploy/</url>
+    <content><![CDATA[<p>上回简单介绍了下技术背景，这次真正进入实践阶段,之前提到过，sriov是需要硬件支持, 一般开启sriov需要在IBOS中进行设置，这个根据服务器型号不同而操作不同, 具体可参考官网.</p>
+<a id="more"></a>
+<h3 id="k8s集群"><a href="#k8s集群" class="headerlink" title="k8s集群"></a>k8s集群</h3><p>现有的k8s集群使用的容器网络为flannel，k8s版本为v1.15.9， 这里要特别说明一下，1.15.9的版本相对来说已经较旧了，后面部署sriov-network-operator遇到好几个坑都是因为版本问题，后面会细说，其它没什么特别的.</p>
+<h3 id="硬件开启SRIOV功能"><a href="#硬件开启SRIOV功能" class="headerlink" title="硬件开启SRIOV功能"></a>硬件开启SRIOV功能</h3><p>由于服务器的型号不一样，操作方法不一样，但是万变不离其综，在IBOS中多找找，一般都可以找到.</p>
+<p>参考: <a href="https://docs.mellanox.com/pages/viewpage.action?pageId=19798214" target="_blank" rel="noopener">https://docs.mellanox.com/pages/viewpage.action?pageId=19798214</a></p>
+<h3 id="安装驱动"><a href="#安装驱动" class="headerlink" title="安装驱动"></a>安装驱动</h3><figure class="highlight bash"><table><tr><td class="code"><pre><span class="line">wget  <span class="string">'http://www.mellanox.com/page/mlnx_ofed_eula?mtag=linux_sw_drivers&amp;mrequest=downloads&amp;mtype=ofed&amp;mver=MLNX_OFED-4.5-1.0.1.0&amp;mname=MLNX_OFED_LINUX-4.5-1.0.1.0-rhel7.4-x86_64.tgz'</span></span><br><span class="line"></span><br><span class="line">yum install -y tcsh pciutils lsof python-devel gtk2 atk cairo tcl gcc-gfortran tk python-devel redhat-rpm-config rpm-build</span><br><span class="line"></span><br><span class="line">tar xf /home/xx/MLNX_OFED_LINUX-4.5-1.0.1.0-rhel7.4-x86_64.tgz -C /home/xx/ &amp;&amp; <span class="built_in">cd</span> /home/xx/MLNX_OFED_LINUX-4.5-1.0.1.0-rhel7.4-x86_64 &amp;&amp; ./mlnxofedinstall --add-kernel-support --skip-repo</span><br></pre></td></tr></table></figure>
+<p>在安装完驱动之后<strong>机器需要重启</strong>，</p>
+<figure class="highlight bash"><table><tr><td class="code"><pre><span class="line"><span class="comment"># 重启完之后ib的驱动会自动启动，且一般默认开机自启</span></span><br><span class="line">systemctl status openibd</span><br></pre></td></tr></table></figure>
+<p>这时需要为 ib 端口配置一个 IP 地址，以方便网络的识别和诊 断，配置方法和以太网端口的 IP 配置方法一样，具体步骤如下： </p>
+<p>步骤 1:  在节点的<code>/etc/sysconfig/network-scripts/</code>创建 ifcfg-ib0 网络配置文件，IP 地址和子网掩码 按照 LLD 规划设计，内容如下:</p>
+<figure class="highlight bash"><table><tr><td class="code"><pre><span class="line"><span class="comment"># cat /etc/sysconfig/network-scripts/ifcfg-ib0 </span></span><br><span class="line">IPADDR=10.4.52.5</span><br><span class="line">NETMASK=255.255.255.0</span><br><span class="line">STARTMODE=auto</span><br><span class="line">CONNECTED_MODE=no</span><br><span class="line">TYPE=InfiniBand</span><br><span class="line">PROXY_METHOD=none</span><br><span class="line">BROWSER_ONLY=no</span><br><span class="line">BOOTPROTO=static</span><br><span class="line">DEFROUTE=yes</span><br><span class="line">IPV4_FAILURE_FATAL=no</span><br><span class="line">IPV6INIT=yes</span><br><span class="line">IPV6_AUTOCONF=yes</span><br><span class="line">IPV6_DEFROUTE=yes</span><br><span class="line">IPV6_FAILURE_FATAL=no</span><br><span class="line">IPV6_ADDR_GEN_MODE=stable-privacy</span><br><span class="line">NAME=ib0</span><br><span class="line">DEVICE=ib0</span><br><span class="line">ONBOOT=yes</span><br></pre></td></tr></table></figure>
+<p>步骤 2: 启动 ib0 端口，命令为<code>ifup ib0</code></p>
+<p>步骤 3: 按照以上两步完成所有节点 IB 网络的 IP 配置</p>
+<h3 id="开启vf"><a href="#开启vf" class="headerlink" title="开启vf"></a>开启vf</h3><figure class="highlight bash"><table><tr><td class="code"><pre><span class="line"><span class="comment"># mst status</span></span><br><span class="line"><span class="comment"># 输出</span></span><br><span class="line">MST modules:</span><br><span class="line">------------</span><br><span class="line">    MST PCI module is not loaded</span><br><span class="line">    MST PCI configuration module is not loaded</span><br><span class="line"></span><br><span class="line">PCI Devices:</span><br><span class="line">------------</span><br><span class="line"></span><br><span class="line">83:00.0</span><br><span class="line"></span><br><span class="line"><span class="comment"># 启动 MST (Mellanox Software Tools)</span></span><br><span class="line"><span class="comment"># mst start</span></span><br><span class="line">Starting MST (Mellanox Software Tools) driver <span class="built_in">set</span></span><br><span class="line">Loading MST PCI module - Success</span><br><span class="line">Loading MST PCI configuration module - Success</span><br><span class="line">Create devices</span><br><span class="line">-W- Missing <span class="string">"lsusb"</span> <span class="built_in">command</span>, skipping MTUSB devices detection</span><br><span class="line">Unloading MST PCI module (unused) - Success</span><br><span class="line"></span><br><span class="line"><span class="comment"># mst status</span></span><br><span class="line">MST modules:</span><br><span class="line">------------</span><br><span class="line">    MST PCI module is not loaded</span><br><span class="line">    MST PCI configuration module loaded</span><br><span class="line"></span><br><span class="line">MST devices:</span><br><span class="line">------------</span><br><span class="line">/dev/mst/mt4119_pciconf0         - PCI configuration cycles access.</span><br><span class="line">                                   domain:bus:dev.fn=0000:83:00.0 addr.reg=88 data.reg=92</span><br><span class="line">                                   Chip revision is: 00</span><br><span class="line"></span><br><span class="line"><span class="comment"># 配置SRIOV是否开启、虚拟化数量，需要重启机器</span></span><br><span class="line"><span class="comment"># mlxconfig -d /dev/mst/mt4119_pciconf0 set SRIOV_EN=1 NUM_OF_VFS=8</span></span><br><span class="line"></span><br><span class="line">Device <span class="comment">#1:</span></span><br><span class="line">----------</span><br><span class="line"></span><br><span class="line">Device <span class="built_in">type</span>:    ConnectX5</span><br><span class="line">Name:           N/A</span><br><span class="line">Description:    N/A</span><br><span class="line">Device:         /dev/mst/mt4119_pciconf0  <span class="comment"># 这里是设备</span></span><br><span class="line"></span><br><span class="line">Configurations:                              Next Boot       New</span><br><span class="line">         SRIOV_EN                            True(1)         True(1)</span><br><span class="line">         NUM_OF_VFS                          8               8</span><br><span class="line"></span><br><span class="line"> Apply new Configuration? (y/n) [n] : y</span><br><span class="line">Applying... Done!</span><br><span class="line">-I- Please reboot machine to load new configurations.</span><br><span class="line"></span><br><span class="line"><span class="comment"># 重启机器</span></span><br><span class="line"><span class="comment"># systemctl reboot</span></span><br><span class="line"></span><br><span class="line"></span><br><span class="line"><span class="comment">#注意：机器启动后还无法通过lspci看到VFS，只有在MLNX OFED驱动程序上启用SR-IOV后，你才能看到它们</span></span><br><span class="line"></span><br><span class="line"><span class="comment"># 设置固件中VFS数量，上面是配置设备的</span></span><br><span class="line"><span class="comment"># echo 8 &gt; /sys/class/net/ib0/device/sriov_numvfs</span></span><br><span class="line"><span class="comment"># 注意，vfs最好不要超过64个</span></span><br><span class="line"></span><br><span class="line"><span class="comment"># 查看</span></span><br><span class="line">ibstat</span><br><span class="line">ibdev2netdev -v</span><br><span class="line"><span class="comment"># 会发现除了ib0外其它的ib网卡都是DOWN状态</span></span><br><span class="line"></span><br><span class="line"><span class="comment"># 查看PCI设备</span></span><br><span class="line">lspci | grep Mellanox</span><br><span class="line"><span class="comment"># 能看到有8个Mellanox， 其中7个为Virtual Function</span></span><br></pre></td></tr></table></figure>
+<p>开启ib0 vf网卡的state从disable为enable, 每次机器重启后，都会变回到disable,因此这条语句需要加入到开机启动中,</p>
+<figure class="highlight bash"><table><tr><td class="code"><pre><span class="line"><span class="keyword">for</span> ((i = 0 ; i &lt; 8 ; i++ )); <span class="keyword">do</span> ip link <span class="built_in">set</span> dev ib0 vf <span class="variable">$i</span> state <span class="built_in">enable</span>; <span class="keyword">done</span></span><br></pre></td></tr></table></figure>
+<p>参考: <a href="https://codimd.mcl.math.ncu.edu.tw/s/SyG8zjJpE" target="_blank" rel="noopener">https://codimd.mcl.math.ncu.edu.tw/s/SyG8zjJpE</a></p>
+<p>使用ip看到所有VF的mac地址都是全0，但实际这个是ip命令的bug，需要通过以下的方式查看具体的mac地址</p>
+<figure class="highlight bash"><table><tr><td class="code"><pre><span class="line">[root@sh-office-10-5-40-94 bin]<span class="comment"># cat /sys/class/net/ib0/device/virtfn0/net/ib1/address</span></span><br><span class="line">20:00:08:a5:fe:80:00:00:00:00:00:00:dc:56:31:60:6a:ac:03:bd</span><br></pre></td></tr></table></figure>
+<p>Ibstat 显示除了mlx5_0的 state为active外，其它的7个(mlx5_1-mlx5_8)的state都为Down,目前这个是正常的</p>
+<h3 id="配置子网管理器"><a href="#配置子网管理器" class="headerlink" title="配置子网管理器"></a>配置子网管理器</h3><p>IB 网络使用子网管理器（SM, Subnet Manager）管理网络路由，子网管理器可以运行在 服务器节点或具有管理功能的 IB 交换机上，由于IB交换机作者没有权限，因此这里直接部署在两台服务器节点上，由于子网管理器也要考虑单点问题，而SM本身就支持主备切换，同时只 有一台处于 Active 状态，因此部署两台，一主一备，</p>
+<p>MLNX_OFED 驱动当中集成了子网管理器 OpenSM，安装 MLNX_OFED 驱动后， OpenSM 已默认安装。启动子网管理器的方法如下： 步骤 1: 运行下述命令来创建 opensm.conf 配置文件:</p>
+<figure class="highlight bash"><table><tr><td class="code"><pre><span class="line">opensm --create-config /etc/opensm/opensm.conf</span><br></pre></td></tr></table></figure>
+<p>步骤 2 基于上述初始化创建，OpenSM 使用默认的路由算法 minihop。当网络使用 Fat-Tree 或 Up-Down 等其它拓扑组网时，需要在 opensm.conf 配置文件中将 routing_engine 修改为 对应的路由算法</p>
+<p>修改默认配置:</p>
+<figure class="highlight bash"><table><tr><td class="code"><pre><span class="line"><span class="comment"># vim /etc/opensm/opensm.conf</span></span><br><span class="line"><span class="comment"># 修改以下内容，两台sm都需要修改</span></span><br><span class="line">routing_engine updn</span><br><span class="line">sm_priority 13  <span class="comment"># 范围为0-15， 这里两台sm要不一样，数值大的为master，另一台即为back</span></span><br><span class="line"><span class="comment"># 保存后启动</span></span><br><span class="line">systemctl start opensm</span><br><span class="line"><span class="comment"># 开机启动</span></span><br><span class="line">systemctl <span class="built_in">enable</span> opensm</span><br><span class="line"><span class="comment"># 能够启动说明没有问题，如果无法启动可查看相关日志</span></span><br></pre></td></tr></table></figure>
+<h3 id="检查网络"><a href="#检查网络" class="headerlink" title="检查网络"></a>检查网络</h3><p>检查 IB 端口状态 检查 IB 端口状态是否 up，端口速率是否达到标称值，通过 ibstat 命令来进行检查，下 面打印结果为 mlx5_0 端口 up，状态为 active，速率为 100Gbps</p>
+<p><img src="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20210704205640.png" alt></p>
+<h3 id="部署"><a href="#部署" class="headerlink" title="部署"></a>部署</h3><h4 id="准备工作-可选"><a href="#准备工作-可选" class="headerlink" title="准备工作[可选]"></a>准备工作[可选]</h4><p>由于本人集群中有一些psp的限制 ，需要以下操作</p>
+<figure class="highlight yaml"><table><tr><td class="code"><pre><span class="line"><span class="comment"># psp.yaml</span></span><br><span class="line"><span class="attr">apiVersion:</span> <span class="string">extensions/v1beta1</span></span><br><span class="line"><span class="attr">kind:</span> <span class="string">PodSecurityPolicy</span></span><br><span class="line"><span class="attr">metadata:</span></span><br><span class="line">  <span class="attr">name:</span> <span class="string">sriov-network-psp</span></span><br><span class="line"><span class="attr">spec:</span></span><br><span class="line">  <span class="attr">allowPrivilegeEscalation:</span> <span class="literal">true</span></span><br><span class="line">  <span class="attr">allowedHostPaths:</span></span><br><span class="line">  <span class="bullet">-</span> <span class="attr">pathPrefix:</span> <span class="string">/</span></span><br><span class="line">  <span class="attr">fsGroup:</span></span><br><span class="line">    <span class="attr">ranges:</span></span><br><span class="line">    <span class="bullet">-</span> <span class="attr">max:</span> <span class="number">65535</span></span><br><span class="line">      <span class="attr">min:</span> <span class="number">1</span></span><br><span class="line">    <span class="attr">rule:</span> <span class="string">RunAsAny</span></span><br><span class="line">  <span class="attr">hostNetwork:</span> <span class="literal">true</span></span><br><span class="line">  <span class="attr">hostPID:</span> <span class="literal">true</span></span><br><span class="line">  <span class="attr">hostPorts:</span></span><br><span class="line">  <span class="bullet">-</span> <span class="attr">max:</span> <span class="number">9796</span></span><br><span class="line">    <span class="attr">min:</span> <span class="number">9796</span></span><br><span class="line">  <span class="attr">privileged:</span> <span class="literal">true</span></span><br><span class="line">  <span class="attr">requiredDropCapabilities:</span></span><br><span class="line">  <span class="bullet">-</span> <span class="string">ALL</span></span><br><span class="line">  <span class="attr">runAsUser:</span></span><br><span class="line">    <span class="attr">rule:</span> <span class="string">RunAsAny</span></span><br><span class="line">  <span class="attr">seLinux:</span></span><br><span class="line">    <span class="attr">rule:</span> <span class="string">RunAsAny</span></span><br><span class="line">  <span class="attr">supplementalGroups:</span></span><br><span class="line">    <span class="attr">ranges:</span></span><br><span class="line">    <span class="bullet">-</span> <span class="attr">max:</span> <span class="number">65535</span></span><br><span class="line">      <span class="attr">min:</span> <span class="number">1</span></span><br><span class="line">    <span class="attr">rule:</span> <span class="string">RunAsAny</span></span><br><span class="line">  <span class="attr">volumes:</span></span><br><span class="line">  <span class="bullet">-</span> <span class="string">configMap</span></span><br><span class="line">  <span class="bullet">-</span> <span class="string">emptyDir</span></span><br><span class="line">  <span class="bullet">-</span> <span class="string">projected</span></span><br><span class="line">  <span class="bullet">-</span> <span class="string">secret</span></span><br><span class="line">  <span class="bullet">-</span> <span class="string">downwardAPI</span></span><br><span class="line">  <span class="bullet">-</span> <span class="string">persistentVolumeClaim</span></span><br><span class="line">  <span class="bullet">-</span> <span class="string">hostPath</span></span><br><span class="line">  </span><br><span class="line"><span class="comment"># kubectl apply -f psp.yaml -n kube-system </span></span><br><span class="line"><span class="comment"># 修改deploy/role.yaml, 在Role/Rules域下新增以下</span></span><br><span class="line"><span class="bullet">-</span> <span class="attr">apiGroups:</span> <span class="string">['policy']</span></span><br><span class="line">  <span class="attr">resources:</span> <span class="string">['podsecuritypolicies']</span></span><br><span class="line">  <span class="attr">verbs:</span>     <span class="string">['use']</span></span><br><span class="line">  <span class="attr">resourceNames:</span></span><br><span class="line">  <span class="bullet">-</span> <span class="string">sriov-network-psp</span></span><br></pre></td></tr></table></figure>
+<h4 id="部署multus"><a href="#部署multus" class="headerlink" title="部署multus"></a>部署multus</h4><p>由于在一个k8s中要支持多个容器网络，CNCF有几款项目可以实现这个功能，而multus即为比较好的解决方案</p>
+<p><strong>multus的主要作用是: 在给pod分配ip时，会先经过multus,由multus根据pod是否存在指定的annotations来分配相关的网络，同时，需要指定一个默认的容器网络(这里是flannel)， multus其实就是个网络代理</strong></p>
+<p>这里要注意的是，multus里的部署yaml文件中crd的版本因k8s的版本不同而不同，在v1.16之前的版本为v1beta1,之后为v1,请特别注意</p>
+<p>v1.16版本之前的使用以下的yaml文件</p>
+<figure class="highlight bash"><table><tr><td class="code"><pre><span class="line">https://github.com/k8snetworkplumbingwg/multus-cni/tree/master/images/deprecated</span><br></pre></td></tr></table></figure>
+<p>请根据实际情况配置cm，如下:</p>
+<figure class="highlight yaml"><table><tr><td class="code"><pre><span class="line"><span class="attr">apiVersion:</span> <span class="string">v1</span></span><br><span class="line"><span class="attr">data:</span></span><br><span class="line">  <span class="attr">cni-conf.json:</span> <span class="string">|</span></span><br><span class="line">    <span class="string">&#123;</span></span><br><span class="line">      <span class="attr">"name":</span> <span class="string">"multus-cni-network"</span><span class="string">,</span></span><br><span class="line">      <span class="attr">"type":</span> <span class="string">"multus"</span><span class="string">,</span></span><br><span class="line">      <span class="attr">"capabilities":</span> <span class="string">&#123;</span></span><br><span class="line">        <span class="attr">"portMappings":</span> <span class="literal">true</span></span><br><span class="line">      <span class="string">&#125;,</span></span><br><span class="line">      <span class="attr">"delegates":</span> <span class="string">[</span></span><br><span class="line">        <span class="string">&#123;</span></span><br><span class="line">          <span class="attr">"cniVersion":</span> <span class="string">"0.2.0"</span><span class="string">,</span></span><br><span class="line">          <span class="attr">"name":</span> <span class="string">"flannel"</span><span class="string">,</span></span><br><span class="line">          <span class="attr">"plugins":</span> <span class="string">[</span></span><br><span class="line">            <span class="string">&#123;</span></span><br><span class="line">              <span class="attr">"type":</span> <span class="string">"flannel"</span><span class="string">,</span></span><br><span class="line">              <span class="attr">"name":</span> <span class="string">"cbr0"</span><span class="string">,</span></span><br><span class="line">                <span class="attr">"delegate":</span> <span class="string">&#123;</span></span><br><span class="line">                  <span class="attr">"isDefaultGateway":</span> <span class="literal">true</span><span class="string">,</span></span><br><span class="line">                  <span class="attr">"hairpinMode":</span> <span class="literal">true</span></span><br><span class="line">                <span class="string">&#125;</span></span><br><span class="line">              <span class="string">&#125;,</span></span><br><span class="line">              <span class="string">&#123;</span></span><br><span class="line">                <span class="attr">"type":</span> <span class="string">"portmap"</span><span class="string">,</span></span><br><span class="line">                <span class="attr">"capabilities":</span> <span class="string">&#123;</span></span><br><span class="line">                  <span class="attr">"portMappings":</span> <span class="literal">true</span></span><br><span class="line">                <span class="string">&#125;</span></span><br><span class="line">              <span class="string">&#125;</span></span><br><span class="line">          <span class="string">]</span></span><br><span class="line">        <span class="string">&#125;</span></span><br><span class="line">      <span class="string">],</span></span><br><span class="line">      <span class="attr">"kubeconfig":</span> <span class="string">"/etc/cni/net.d/multus.d/multus.kubeconfig"</span></span><br><span class="line">    <span class="string">&#125;</span></span><br><span class="line"><span class="attr">kind:</span> <span class="string">ConfigMap</span></span><br><span class="line"><span class="attr">name:</span> <span class="string">multus-cni-config</span></span><br><span class="line"><span class="attr">namespace:</span> <span class="string">kube-system</span></span><br></pre></td></tr></table></figure>
+<p>最终在`/etc/cni/net.d/00-multus.conf的文件如下</p>
+<figure class="highlight bash"><table><tr><td class="code"><pre><span class="line">&#123; <span class="string">"name"</span>: <span class="string">"multus-cni-network"</span>, <span class="string">"type"</span>: <span class="string">"multus"</span>, <span class="string">"capabilities"</span>: &#123;<span class="string">"portMappings"</span>: <span class="literal">true</span>&#125;, <span class="string">"kubeconfig"</span>: <span class="string">"/etc/cni/net.d/multus.d/multus.kubeconfig"</span>, <span class="string">"delegates"</span>: [ &#123; <span class="string">"cniVersion"</span>: <span class="string">"0.2.0"</span>, <span class="string">"name"</span>: <span class="string">"cbr0"</span>, <span class="string">"plugins"</span>: [ &#123; <span class="string">"type"</span>: <span class="string">"flannel"</span>, <span class="string">"delegate"</span>: &#123; <span class="string">"hairpinMode"</span>: <span class="literal">true</span>, <span class="string">"isDefaultGateway"</span>: <span class="literal">true</span> &#125; &#125;, &#123; <span class="string">"type"</span>: <span class="string">"portmap"</span>, <span class="string">"capabilities"</span>: &#123; <span class="string">"portMappings"</span>: <span class="literal">true</span> &#125; &#125; ] &#125; ] &#125;</span><br></pre></td></tr></table></figure>
+<p>参考: <a href="https://github.com/k8snetworkplumbingwg/multus-cni" target="_blank" rel="noopener">https://github.com/k8snetworkplumbingwg/multus-cni</a></p>
+<h4 id="部署whereabouts"><a href="#部署whereabouts" class="headerlink" title="部署whereabouts"></a>部署whereabouts</h4><p>whereabounts是用于管理ip分配，这样多台node节点上的ip能够保证不出现重复</p>
+<figure class="highlight bash"><table><tr><td class="code"><pre><span class="line"><span class="comment"># kubectl apply -f https://raw.githubusercontent.com/openshift/whereabouts-cni/master/doc/daemonset-install.yaml</span></span><br><span class="line"><span class="comment"># kubectl apply -f https://raw.githubusercontent.com/openshift/whereabouts-cni/master/doc/whereabouts.cni.cncf.io_ippools.yaml</span></span><br><span class="line"><span class="comment"># kubectl apply -f https://raw.githubusercontent.com/openshift/whereabouts-cni/master/doc/whereabouts.cni.cncf.io_overlappingrangeipreservations.yaml</span></span><br></pre></td></tr></table></figure>
+<p>参考:<a href="https://github.com/openshift/whereabouts-cni" target="_blank" rel="noopener">https://github.com/openshift/whereabouts-cni</a></p>
+<h4 id="部署sriov-network-operator"><a href="#部署sriov-network-operator" class="headerlink" title="部署sriov-network-operator"></a>部署sriov-network-operator</h4><p>sriov-network-operator是openshift开源的一个包含了cni及device-plugin的部署operator，方便直接.</p>
+<figure class="highlight bash"><table><tr><td class="code"><pre><span class="line"><span class="comment"># 1. centos先安装依赖</span></span><br><span class="line">yum install skopeo golang</span><br><span class="line"></span><br><span class="line"><span class="comment"># 2. 下载git源码，使用release-4.7版本</span></span><br><span class="line">git <span class="built_in">clone</span> https://github.com/k8snetworkplumbingwg/sriov-network-operator</span><br><span class="line">git checkout release-4.7</span><br><span class="line"></span><br><span class="line"><span class="comment"># 3. 修改deploy/operator.yaml中的RELEASE_VERSION从4.3.0为4.7.0</span></span><br><span class="line"><span class="comment"># 4. 这里由于k8s的版本为1.15.9,不支持crd v1的版本，需要修改Makefile中的CRD_OPTIONS ?= "crd:crdVersions=&#123;v1&#125;,trivialVersions=true"为CRD_OPTIONS ?= "crd:crdVersions=&#123;v1beta1&#125;,trivialVersions=true"</span></span><br><span class="line"></span><br><span class="line"><span class="comment"># 5. 由于集群限制，需要添加psp, 在deploy目录下添加psp.yaml, 修改role, 见上文</span></span><br><span class="line"></span><br><span class="line"><span class="comment"># 6. 给ib机器添加label,值为空即可</span></span><br><span class="line">kubectl label nodes spring-30 node-role.kubernetes.io/worker=</span><br><span class="line">kubectl label nodes spring-30 feature.node.kubernetes.io/custom-rdma.available=<span class="string">'true'</span></span><br><span class="line"><span class="comment"># 7. 默认部署在kube-system ns下最为方便，但不推荐，原因看注意事项</span></span><br><span class="line"><span class="built_in">export</span> GOPROXY=https://goproxy.cn</span><br><span class="line"><span class="comment"># 8. 修改Makefile ns</span></span><br><span class="line">make deploy-setup-k8s</span><br></pre></td></tr></table></figure>
+<p>安装完成</p>
+<p><img src="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20210622114208.png" alt></p>
+<p>需要注意以下事项: </p>
+<ol>
+<li><p>8ks v1.17之前的版本不支持在除kube-system之外的ns在pod中指定<strong>system-node-critical priorityClass</strong>，而官方镜像sriov-network-operator及sriov-network-config-daemon镜像中的yaml写死了<strong>system-node-critical priorityClass</strong>，要部署在其它ns中对于v1.17之前的版本需要特殊处理，需要重新打sriov-network-operator跟sriov-network-config-daemon的镜像，因为bindata/manifests目录被打进了镜像中，要么通过挂载的方式进行覆盖或者重新打镜像，操作如下:</p>
+<figure class="highlight bash"><table><tr><td class="code"><pre><span class="line"><span class="comment"># 首先通过上述操作修改了crdversion,由v1--&gt; v1beta1, bindata下的文件会自动生成</span></span><br><span class="line"><span class="comment"># bindata下涉及到 priorityClassName: "system-node-critical"的文件有,可以去掉</span></span><br><span class="line">	<span class="comment"># bindata/manifests/daemon/daemonset.yaml</span></span><br><span class="line">	<span class="comment"># bindata/manifests/plugins/sriov-cni.yaml</span></span><br><span class="line">	<span class="comment"># bindata/manifests/plugins/sriov-device-plugin.yaml</span></span><br><span class="line">	<span class="comment"># deploy/operator.yaml</span></span><br><span class="line">	</span><br><span class="line"><span class="comment"># 重新Docker build</span></span><br></pre></td></tr></table></figure>
+</li>
+</ol>
+<p><code>make deploy-setup-k8s</code>部署完之后查看<code>sriovnetworknodestates.sriovnetwork.openshift.io</code></p>
+<figure class="highlight bash"><table><tr><td class="code"><pre><span class="line">kubectl -n kube-system get sriovnetworknodestates.sriovnetwork.openshift.io spring-30 -oyaml</span><br></pre></td></tr></table></figure>
+<p>输出如下:</p>
+<p><img src="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20210623195800.png" alt></p>
+<h4 id="发布nodepolicy-yaml"><a href="#发布nodepolicy-yaml" class="headerlink" title="发布nodepolicy.yaml"></a>发布nodepolicy.yaml</h4><figure class="highlight yaml"><table><tr><td class="code"><pre><span class="line"><span class="attr">apiVersion:</span> <span class="string">sriovnetwork.openshift.io/v1</span></span><br><span class="line"><span class="attr">kind:</span> <span class="string">SriovNetworkNodePolicy</span></span><br><span class="line"><span class="attr">metadata:</span></span><br><span class="line">  <span class="attr">name:</span> <span class="string">policy-ib0</span></span><br><span class="line">  <span class="attr">namespace:</span> <span class="string">kube-system</span></span><br><span class="line"><span class="attr">spec:</span></span><br><span class="line">  <span class="attr">resourceName:</span> <span class="string">"mlnx_ib0"</span></span><br><span class="line">  <span class="attr">nodeSelector:</span></span><br><span class="line">    <span class="attr">feature.node.kubernetes.io/custom-rdma.available:</span> <span class="string">"true"</span></span><br><span class="line">  <span class="attr">priority:</span> <span class="number">10</span></span><br><span class="line">  <span class="attr">numVfs:</span> <span class="number">8</span></span><br><span class="line">  <span class="attr">nicSelector:</span></span><br><span class="line">    <span class="attr">vendor:</span> <span class="string">"15b3"</span></span><br><span class="line">    <span class="attr">deviceID:</span> <span class="string">"1017"</span></span><br><span class="line">    <span class="attr">rootDevices:</span></span><br><span class="line">      <span class="bullet">-</span> <span class="number">0000</span><span class="string">:83:00.0</span></span><br><span class="line">    <span class="attr">pfNames:</span> <span class="string">[</span> <span class="string">"ib0"</span> <span class="string">]</span></span><br><span class="line">  <span class="attr">isRdma:</span> <span class="literal">true</span></span><br><span class="line">  <span class="attr">linkType:</span> <span class="string">ib</span></span><br></pre></td></tr></table></figure>
+<p>说明:</p>
+<figure class="highlight bash"><table><tr><td class="code"><pre><span class="line"><span class="comment"># 1. 自定义resourceName名，这个字段后续会绑定在 NetworkAttachmentDefinition 上</span></span><br><span class="line"><span class="comment"># 2. nicSelector字段信息都由 get sriovnetworknodestates.sriovnetwork.openshift.io 信息获得</span></span><br><span class="line">kubectl apply -f nodeploicy.yaml -n kube-system</span><br><span class="line">kubectl get networkattachmentdefinition.k8s.cni.cncf.io -n kube-system</span><br></pre></td></tr></table></figure>
+<h4 id="部署NetworkAttachmentDefinition"><a href="#部署NetworkAttachmentDefinition" class="headerlink" title="部署NetworkAttachmentDefinition"></a>部署NetworkAttachmentDefinition</h4><figure class="highlight yaml"><table><tr><td class="code"><pre><span class="line"><span class="attr">apiVersion:</span> <span class="string">sriovnetwork.openshift.io/v1</span></span><br><span class="line"><span class="attr">kind:</span> <span class="string">SriovIBNetwork</span></span><br><span class="line"><span class="attr">metadata:</span></span><br><span class="line">  <span class="attr">name:</span> <span class="string">sriovnetwork</span></span><br><span class="line">  <span class="attr">namespace:</span> <span class="string">kube-system</span></span><br><span class="line"><span class="attr">spec:</span></span><br><span class="line">  <span class="attr">ipam:</span> <span class="string">|</span></span><br><span class="line">    <span class="string">&#123;</span></span><br><span class="line">      <span class="attr">"type":</span> <span class="string">"whereabouts"</span><span class="string">,</span></span><br><span class="line">      <span class="attr">"range":</span> <span class="string">"192.168.10.0/24"</span></span><br><span class="line">    <span class="string">&#125;</span></span><br><span class="line">  <span class="attr">vlan:</span> <span class="number">0</span></span><br><span class="line">  <span class="attr">resourceName:</span> <span class="string">mlnx_ib0</span></span><br></pre></td></tr></table></figure>
+<p>上述的配置ip地址从192.168.10.1开始分配，whereabouts默认是将ip信息保存在kubernetes中,部署完whereabouts会在node上的/etc/cni/net.d/whereabounts.d下生成存储信息及认证，因此可以省略使用etcd,方便.</p>
+<h3 id="验证"><a href="#验证" class="headerlink" title="验证"></a>验证</h3><p>使用以下的yaml进行验证</p>
+<figure class="highlight yaml"><table><tr><td class="code"><pre><span class="line"><span class="attr">apiVersion:</span> <span class="string">apps/v1</span></span><br><span class="line"><span class="attr">kind:</span> <span class="string">Deployment</span></span><br><span class="line"><span class="attr">metadata:</span></span><br><span class="line">  <span class="attr">name:</span> <span class="string">sample-pod-4</span></span><br><span class="line">  <span class="attr">labels:</span></span><br><span class="line">    <span class="attr">app:</span> <span class="string">sriov</span></span><br><span class="line"><span class="attr">spec:</span></span><br><span class="line">  <span class="attr">replicas:</span> <span class="number">2</span></span><br><span class="line">  <span class="attr">selector:</span></span><br><span class="line">    <span class="attr">matchLabels:</span></span><br><span class="line">      <span class="attr">app:</span> <span class="string">sample-pod-4</span></span><br><span class="line">  <span class="attr">template:</span></span><br><span class="line">    <span class="attr">metadata:</span></span><br><span class="line">      <span class="attr">labels:</span></span><br><span class="line">        <span class="attr">app:</span> <span class="string">sample-pod-4</span></span><br><span class="line">      <span class="attr">annotations:</span></span><br><span class="line">        <span class="attr">k8s.v1.cni.cncf.io/networks:</span> <span class="string">kube-system/sriovnetwork</span></span><br><span class="line">    <span class="attr">spec:</span></span><br><span class="line">      <span class="attr">containers:</span></span><br><span class="line">      <span class="bullet">-</span> <span class="attr">image:</span> <span class="string">nvidia/cuda-11.2.2-devel-centos7:v0.3</span>  <span class="comment">#自定义镜像,里面包含cuda及ib_write_bw工具,未尾有Dockerfile</span></span><br><span class="line">        <span class="attr">imagePullPolicy:</span> <span class="string">IfNotPresent</span></span><br><span class="line">        <span class="attr">name:</span> <span class="string">mlnx-inbox-ctr</span></span><br><span class="line">        <span class="attr">securityContext:</span></span><br><span class="line">          <span class="attr">capabilities:</span></span><br><span class="line">            <span class="attr">add:</span> <span class="string">[</span> <span class="string">"IPC_LOCK"</span> <span class="string">]</span></span><br><span class="line">        <span class="attr">resources:</span></span><br><span class="line">          <span class="attr">requests:</span></span><br><span class="line">            <span class="attr">openshift.io/mlnx_ib0:</span> <span class="string">'1'</span></span><br><span class="line">            <span class="attr">nvidia.com/gpu:</span> <span class="number">1</span></span><br><span class="line">          <span class="attr">limits:</span></span><br><span class="line">            <span class="attr">openshift.io/mlnx_ib0:</span> <span class="string">'1'</span></span><br><span class="line">            <span class="attr">nvidia.com/gpu:</span> <span class="number">1</span></span><br><span class="line">        <span class="attr">command:</span></span><br><span class="line">        <span class="bullet">-</span> <span class="string">sh</span></span><br><span class="line">        <span class="bullet">-</span> <span class="string">-c</span></span><br><span class="line">        <span class="bullet">-</span> <span class="string">sleep</span> <span class="string">inf</span></span><br></pre></td></tr></table></figure>
+<p>发布到镜像后可以看到容器具有两个ip</p>
+<p><img src="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20210630195111.png" alt></p>
+<p>同时查看pod的yaml,可以看到annotation中存在两个ip地址</p>
+<p><img src="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20210630191658.png" alt></p>
+<p>可以使用ib的测试工具来验证网络的传输速度</p>
+<p>在其中一个pod充当服务端，执行以下命令:</p>
+<figure class="highlight bash"><table><tr><td class="code"><pre><span class="line"><span class="comment"># kubectl exec -it sample-pod-65b94586b4-8k784 -- bash</span></span><br><span class="line"> </span><br><span class="line">root@sample-pod-65b94586b4-8k784:/tmp<span class="comment"># ibdev2netdev</span></span><br><span class="line">mlx5_9 port 1 ==&gt; net1 (Up)</span><br><span class="line">root@sample-pod-65b94586b4-8k784:/tmp<span class="comment"># ib_write_bw -a -d mlx5_9 &amp;</span></span><br></pre></td></tr></table></figure>
+<p><img src="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20210701152802.png" alt></p>
+<p>在另一个pod中执行充当客户端，执行以下命令；</p>
+<figure class="highlight bash"><table><tr><td class="code"><pre><span class="line"><span class="comment"># kubectl exec -it sample-pod-65b94586b4-8xn6m -- bash</span></span><br><span class="line"> </span><br><span class="line">root@sample-pod-65b94586b4-8xn6m:/tmp<span class="comment"># ibdev2netdev</span></span><br><span class="line">mlx5_7 port 1 ==&gt; net1 (Up)</span><br><span class="line">root@sample-pod-65b94586b4-8xn6m:/tmp<span class="comment"># ib_write_bw -a -F 192.168.101.1 -d mlx5_7 --report_gbits</span></span><br></pre></td></tr></table></figure>
+<p><img src="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20210630115645.png" alt></p>
+<p>会发现，速率接近100G/s, 符合IB网卡的理想速度.</p>
+<p>测试使用的Dockerfile</p>
+<figure class="highlight bash"><table><tr><td class="code"><pre><span class="line">FROM nvidia/cuda:11.2.2-devel-centos7</span><br><span class="line"></span><br><span class="line">COPY ib_write_bw /bin/ib_write_bw</span><br><span class="line">COPY ibdev2netdev /bin/ibdev2netdev</span><br></pre></td></tr></table></figure>
+<h3 id="部署开启webhook，非必须"><a href="#部署开启webhook，非必须" class="headerlink" title="部署开启webhook，非必须"></a>部署开启webhook，非必须</h3><p>Operator也可以选择开启webhook, 功能作用不大，默认也是关闭的，如果想开启的话，参考下面的方式</p>
+<figure class="highlight bash"><table><tr><td class="code"><pre><span class="line">kubectl -n kube-system create secret tls operator-webhook-service --cert=server.pem --key=serverkey.pem</span><br><span class="line">kubectl -n kube-system create secret tls network-resources-injector-secret --cert=server.pem --key=serverkey.pem</span><br><span class="line"><span class="built_in">export</span> ENABLE_ADMISSION_CONTROLLER=<span class="literal">true</span></span><br><span class="line"><span class="built_in">export</span> WEBHOOK_CA_BUNDLE=$(base64 -w 0 &lt; cacert.pem)</span><br></pre></td></tr></table></figure>
+<p>上述的server.pem、serverkey.pem、cacert.pem可通过openssl生成</p>
+<figure class="highlight bash"><table><tr><td class="code"><pre><span class="line"><span class="comment"># 一条命令生成 ca根证书及密钥</span></span><br><span class="line">openssl req -x509 -newkey rsa:4096 -sha256 -nodes -keyout privkey.pem -out cacert.pem -days 3650</span><br><span class="line"><span class="comment"># 按提示输入需要的信息</span></span><br><span class="line"></span><br><span class="line"><span class="comment">## 使用ca根证书签发证书</span></span><br><span class="line"></span><br><span class="line"><span class="comment"># 生成私钥</span></span><br><span class="line">openssl genrsa -out serverkey.pem 1024</span><br><span class="line"></span><br><span class="line"><span class="comment"># 生成证书csr文件</span></span><br><span class="line">openssl req -new -key serverkey.pem -out servercsr.pem</span><br><span class="line"></span><br><span class="line"><span class="comment"># 使用证书</span></span><br><span class="line">openssl ca -<span class="keyword">in</span> servercsr.pem -out server.pem -cert cacert.pem -keyfile privkey.pem -days 3650</span><br><span class="line"></span><br><span class="line"><span class="comment"># 然后在部署operator时export以下变量即可</span></span><br><span class="line"><span class="built_in">export</span> ENABLE_ADMISSION_CONTROLLER=<span class="literal">true</span></span><br><span class="line"><span class="built_in">export</span> WEBHOOK_CA_BUNDLE=$(base64 -w 0 &lt; cacert.pem)</span><br><span class="line">make deploy-setup-k8s</span><br></pre></td></tr></table></figure>
+<p>整体都跑起来了，但是其中还是遇到这么多的坑，下次做过完整总结</p>
+<h3 id="参考文章"><a href="#参考文章" class="headerlink" title="参考文章:"></a><strong>参考文章:</strong></h3><blockquote>
+<ul>
+<li><a href="https://github.com/openshift/whereabouts-cni" target="_blank" rel="noopener">https://github.com/openshift/whereabouts-cni</a></li>
+<li><a href="https://docs.mellanox.com/pages/viewpage.action?pageId=19798214" target="_blank" rel="noopener">https://docs.mellanox.com/pages/viewpage.action?pageId=19798214</a></li>
+<li><a href="https://docs.mellanox.com/pages/releaseview.action?pageId=39266293#RDG:KubernetesclusterdeploymentwithNVIDIAGPUoverInfiniBandfabric.-NodesConfiguration" target="_blank" rel="noopener">https://docs.mellanox.com/pages/releaseview.action?pageId=39266293#RDG:KubernetesclusterdeploymentwithNVIDIAGPUoverInfiniBandfabric.-NodesConfiguration</a></li>
+<li><a href="https://www.jianshu.com/p/2796f8ddf2c2" target="_blank" rel="noopener">https://www.jianshu.com/p/2796f8ddf2c2</a></li>
+<li><a href="https://docs.mellanox.com/pages/viewpage.action?pageId=19798214" target="_blank" rel="noopener">https://docs.mellanox.com/pages/viewpage.action?pageId=19798214</a></li>
+<li><a href="https://support.huawei.com/view/PdfRead/EDOC1000172992/SUPE_DOC/k001/document.pdf" target="_blank" rel="noopener">https://support.huawei.com/view/PdfRead/EDOC1000172992/SUPE_DOC/k001/document.pdf</a></li>
+<li><a href="https://access.redhat.com/documentation/zh-cn/red_hat_enterprise_linux/8/pdf/configuring_infiniband_and_rdma_networks/Red_Hat_Enterprise_Linux-8-Configuring_InfiniBand_and_RDMA_networks-zh-CN.pdf" target="_blank" rel="noopener">https://access.redhat.com/documentation/zh-cn/red_hat_enterprise_linux/8/pdf/configuring_infiniband_and_rdma_networks/Red_Hat_Enterprise_Linux-8-Configuring_InfiniBand_and_RDMA_networks-zh-CN.pdf</a></li>
+</ul>
+</blockquote>
+<h3 id="转载请注明出处https-izsk-me"><a href="#转载请注明出处https-izsk-me" class="headerlink" title="转载请注明出处https://izsk.me"></a><strong>转载请注明出处<a href="https://izsk.me" target="_blank" rel="noopener">https://izsk.me</a></strong></h3>]]></content>
+      <categories>
+        <category>Kubernetes</category>
+      </categories>
+      <tags>
+        <tag>Kubernetes</tag>
+      </tags>
+  </entry>
+  <entry>
+    <title>Kubernetes学习(k8s基于InfiniBand实现HPC高性能容器网络组网方案实践一)</title>
+    <url>/2021/07/02/Kubernetes-Infinitband-SRIOV-network-1-backgroud/</url>
+    <content><![CDATA[<p>在HPC场景下，底层网络的性能直接影响最终的结果，HPC往往会伴随海量的数据交换，特别是在跨Node之间，10Gb的以太网网络传输肯定要比100Gb的IB网络传输慢，本人所负责的训练平台也是如此，在一次训练过程中，GPU存在海量数据交换，虽然是在GPU之间，但本质还是通过网络进行传输，但是以太网的传输在HPC场景下往往显得不那么高效，因此可以通过RDMA或者如果预算够的话，通过硬件IB实现数据交换，能大大提高训练质量</p>
+<a id="more"></a>
+<p>本人所负责的训练平台是完全基于k8s的，现在要迁移至IB网络同时不影响现有业务进行，大大增加了实施难度，在经过一番调研之后，最终的方案为在原有的容器网络基础之上，再加一层IB网络层，即在k8s集群中同时存在2个网络，这在k8s是完全支持的，即在容器中除了eth0，由flannel cni分配， 还会有一个net1网络，由IB cni分配, eth0的网络用于集群之间的通信，而net1则用于训练时pod与pod节点进行通信，在实践之前先介绍几个比较重要的技术</p>
+<h3 id="Infinitband"><a href="#Infinitband" class="headerlink" title="Infinitband"></a>Infinitband</h3><p>infinitband做专门为高带宽，低时延，高可靠，不占用cpu资源的网络互联技术，大量被用于超算、AI等HPC场景下</p>
+<p><img src="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20210704215748.png" alt></p>
+<p>这里不对infintband展开细说，感兴趣的可以参考下列连接</p>
+<p><a href="https://zhuanlan.zhihu.com/p/74238082" target="_blank" rel="noopener">https://zhuanlan.zhihu.com/p/74238082</a></p>
+<p><a href="https://zhuanlan.zhihu.com/p/163104439" target="_blank" rel="noopener">https://zhuanlan.zhihu.com/p/163104439</a></p>
+<p><a href="https://blog.csdn.net/swingwang/article/details/72935461" target="_blank" rel="noopener">https://blog.csdn.net/swingwang/article/details/72935461</a></p>
+<h3 id="sr-iov"><a href="#sr-iov" class="headerlink" title="sr-iov"></a>sr-iov</h3><p>SR-IOV (Single Root Input/Output Virtualization) 的主要作用是将一个物理设备模拟成多个虚拟设备,在虚拟化技术中使用非常频繁，</p>
+<p><strong>sr-iov需要硬件上的支持，好在目前大部分服务器都支持了该技术</strong>，这里也不过多介绍其中的细节，后续用到的两个比较重要的概念:</p>
+<p>SR-IOV引入了两种新的PCIe的Function：</p>
+<ol>
+<li>PFs：完整功能的PCIe Function包含了SR-IOV Extended Capability。这个Capability被用来配置和管理SR-IOV的功能。</li>
+<li>VFs：一部分轻量级的PCIe function，只包含必要的用于数据移动的最小可配置的资源。</li>
+</ol>
+<p>一个 具备SR-IOV能力的设备可以被配置成被枚举出多个Virtual Functions（数量可控制），而且每个Funciton 都有自己的完整有BAR的配置空间。每个VF 分配给虚拟或者容器</p>
+<p><a href="https://zhuanlan.zhihu.com/p/347204232" target="_blank" rel="noopener">https://zhuanlan.zhihu.com/p/347204232</a></p>
+<p><a href="https://blog.csdn.net/wangdd_199326/article/details/90476728" target="_blank" rel="noopener">https://blog.csdn.net/wangdd_199326/article/details/90476728</a></p>
+<h3 id="资源清单"><a href="#资源清单" class="headerlink" title="资源清单"></a>资源清单</h3><p>下列的资源清单为部分集群资源且机器ip不为真实ip</p>
+<table>
+<thead>
+<tr>
+<th>机器</th>
+<th>角色</th>
+<th>以太网/IB网卡</th>
+<th>内核/发行版</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>10.4.52.2</td>
+<td>k8s master/v1.15.5</td>
+<td>Y/N</td>
+<td>Linux-4.19 centos7.4</td>
+</tr>
+<tr>
+<td>10.4.52.3</td>
+<td>k8s master/v1.15.5</td>
+<td>Y/N</td>
+<td>Linux-4.19 centos7.4</td>
+</tr>
+<tr>
+<td>10.4.52.4</td>
+<td>k8s master/v1.15.5</td>
+<td>Y/N</td>
+<td>Linux-4.19 centos7.4</td>
+</tr>
+<tr>
+<td>10.4.52.5</td>
+<td>k8s node/v1.15.5</td>
+<td>Y/Y，一个ib网口</td>
+<td>Linux-4.19 centos7.4</td>
+</tr>
+<tr>
+<td>10.4.52.6</td>
+<td>k8s node/v1.15.5</td>
+<td>Y/Y，一个ib网口</td>
+<td>Linux-4.19 centos7.4</td>
+</tr>
+<tr>
+<td>10.4.52.7</td>
+<td>k8s node/v1.15.5</td>
+<td>Y/Y，一个ib网口</td>
+<td>Linux-4.19 centos7.4</td>
+</tr>
+</tbody>
+</table>
+<p>master做为控制面，用于集群间的管理角色</p>
+<p>node上做为数据面，以太网用于与控制面进行交互，同时IB网卡用于HPC业务</p>
+<h3 id="组网图"><a href="#组网图" class="headerlink" title="组网图"></a>组网图</h3><p><img src="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20210704191648.png" alt></p>
+<p>在集群物理机器上，实际存在3个网络:</p>
+<ol>
+<li>管理网(eth1), 用于机器的管控网，一般叫做ipmi或者带外、外带等,在服务器上有专门的网口标识</li>
+<li>业务网(eth0), 用于flannel的启动参数指定的网卡名，这个网络在pod中用于与k8s控制面进行交互</li>
+<li>IB网(eth100), 用于ib网卡,在这个网卡上会通过sriov虚拟出若干网卡用于pod中</li>
+</ol>
+<h3 id="架构图"><a href="#架构图" class="headerlink" title="架构图"></a>架构图</h3><p><img src="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20210704191622.png" alt></p>
+<h3 id="实现目的"><a href="#实现目的" class="headerlink" title="实现目的"></a>实现目的</h3><p>最终要实现的目标为: 通过sriov在IB网卡上实现高性能容器网络以加速分布式训练的GPU数据交换</p>
+<h3 id="参考文章"><a href="#参考文章" class="headerlink" title="参考文章:"></a><strong>参考文章:</strong></h3><blockquote>
+<ul>
+<li><a href="https://zhuanlan.zhihu.com/p/347204232" target="_blank" rel="noopener">https://zhuanlan.zhihu.com/p/347204232</a></li>
+<li><a href="https://blog.csdn.net/wangdd_199326/article/details/90476728" target="_blank" rel="noopener">https://blog.csdn.net/wangdd_199326/article/details/90476728</a></li>
+<li><a href="https://zhuanlan.zhihu.com/p/74238082" target="_blank" rel="noopener">https://zhuanlan.zhihu.com/p/74238082</a></li>
+<li><a href="https://zhuanlan.zhihu.com/p/163104439" target="_blank" rel="noopener">https://zhuanlan.zhihu.com/p/163104439</a></li>
+<li><a href="https://blog.csdn.net/swingwang/article/details/72935461" target="_blank" rel="noopener">https://blog.csdn.net/swingwang/article/details/72935461</a></li>
+</ul>
+</blockquote>
+<h3 id="转载请注明出处https-izsk-me"><a href="#转载请注明出处https-izsk-me" class="headerlink" title="转载请注明出处https://izsk.me"></a><strong>转载请注明出处<a href="https://izsk.me" target="_blank" rel="noopener">https://izsk.me</a></strong></h3>]]></content>
+      <categories>
+        <category>Kubernetes</category>
+      </categories>
+      <tags>
+        <tag>Kubernetes</tag>
+      </tags>
+  </entry>
+  <entry>
     <title>Grafana学习(Loki踩坑记)</title>
     <url>/2021/06/10/Loki-Prombles/</url>
     <content><![CDATA[<p>grafana出品的loki日志框架完美地与kubernetes的label理念结合，相对于EFK来说更加轻量级，非常适合不需要日志聚合的场景.目前新上集群考虑都彩loki做为基础工具, 直接在grafana中展示</p>
@@ -415,47 +652,6 @@
       </tags>
   </entry>
   <entry>
-    <title>argoCD学习(argocd是如何绑定资源的)</title>
-    <url>/2021/04/02/argoCD-how-to-bind-resource/</url>
-    <content><![CDATA[<p>目前团队使用argo-cd做为统一发布平台，承接所有的环境的发布，最近碰到一个很有意思的问题(下文描述)，跟随这个问题引出另一个问题: argo-cd是如何绑定资源的呢？用了argo-cd这么久了，感叹自己从来都没细致研究过，呵呵了.</p>
-<a id="more"></a>
-<h3 id="问题"><a href="#问题" class="headerlink" title="问题"></a>问题</h3><p><strong>简单描述就是，argo上的应用出现了本不属于它资源</strong></p>
-<p>这里使用kustomize，kustomization.yaml文件如下：</p>
-<figure class="highlight yaml"><table><tr><td class="code"><pre><span class="line"><span class="attr">apiVersion:</span> <span class="string">kustomize.config.k8s.io/v1beta1</span></span><br><span class="line"><span class="attr">kind:</span> <span class="string">Kustomization</span></span><br><span class="line"></span><br><span class="line"><span class="attr">resources:</span></span><br><span class="line"><span class="bullet">-</span> <span class="string">configmap.yml.j2</span></span><br><span class="line"><span class="bullet">-</span> <span class="string">deployment.yml.j2</span></span><br><span class="line"><span class="bullet">-</span> <span class="string">service.yml.j2</span></span><br><span class="line"></span><br><span class="line"><span class="attr">namespace:</span> <span class="string">test</span></span><br></pre></td></tr></table></figure>
-<p>正常来说，发布到k8s中的资源对象，只会有resources下指定的，但是在某个时间点，argo ui上却出现了其它资源，状态是这样的</p>
-<p><img src="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20210405221303.png" alt></p>
-<p>作者非常确定这个资源对象不包含在上述3个文件中，那这个对象是怎么来的呢?</p>
-<h3 id="排查"><a href="#排查" class="headerlink" title="排查"></a>排查</h3><p>作者记得之前应该出现过一二次，但由于当时没有时间仔细排查，还以为是开发团队自己的原因，即没有深究，这次又出现，作者感到绝非偶然，是时候认真排查一下了</p>
-<p>作者又想起，另一个组员跟我反映过，测试环境某个服务的NodePort好几次都莫名地被删除了，测试环境开发是没有权限做删除操作的，但也是作者小组内的同事删的，那又是怎么回事呢?</p>
-<p>由于作者在发布某应用，使用的命令如下:</p>
-<figure class="highlight bash"><table><tr><td class="code"><pre><span class="line">argocd --prune</span><br></pre></td></tr></table></figure>
-<p>其中 –prune会将当前集群中存在的但是在git上不存在的资源进行delete.</p>
-<p>嗯，这二者有关系</p>
-<p>从上面的图中来看，这个资源对象的名称非常符合作者对使用NodePort的统一命名规范，即应用的名字-nodeport,可以肯定的是，这个资源是组员为了开发的某个需求创建的，且是在rancher UI(一种开源的k8s集群管理平台)上进行创建的，这里要说明一下，rancher ui上支持直接对常用资源比如deployment,service等对象进行clone</p>
-<p>跟同事确认了，这个资源也确实是这么创建的，那这个资源又是如何同步反应到argo上的呢?</p>
-<p>因为在作者看来，argo只会关联kustomization.yaml中resource指定的资源，这个不速之客显然不属于</p>
-<p>这就引入一个作者想错或者未细致地了解的问题: argo到底是根据什么绑定资源的呢?</p>
-<p>带着这个疑问，开始找官方文档，作者从将argo-cd引入到生产环境之前，已经将argo-cd官方的文档翻了好几遍，好像没有映象有这方面的介绍，也确实没有找到相关文档</p>
-<p>作者这里犯了个错误，没有第一时间检查clone资源有没有差异，而是直接从argo-cd上查找答案，导致将问题复杂化了.</p>
-<p>作者从这个<a href="https://github.com/argoproj/argo-cd/issues/5792" target="_blank" rel="noopener">issue</a>上找到了问题所在，然后再回头查看clone的资源，然后做了个实验确认事实即是如此</p>
-<h3 id="结论"><a href="#结论" class="headerlink" title="结论"></a>结论</h3><p>由于argo controller是根据资源中的annotations里的key(argocd.argoproj.io/instance)来判定这个资源是不是属于某个app,在日常使用的过程，由于团队中使用的是rancher做为容器管理平台，rancher上提供了非常便利的对资源的clone手段，就会产生clone后的资源也会带上相同的annotations，但是在原app下的manifest并不包含这个资源，因此在app下就会出现这个资源且这个资源会被标注为<code>require pruning</code>,那么在每次sync后，这个clone后的资源就会被删除, 这也就解释了为什么会出现NodePort会莫名其妙地被删了</p>
-<p>那么解决也很简单，在clone时将annotations删除掉即可，这样argo-controller就不会将其绑定到某应用下.</p>
-<h3 id="误区"><a href="#误区" class="headerlink" title="误区"></a>误区</h3><p>这个有个作者的误区，即作者以为argo-cd只会关联kustomization.yaml中resource指定的资源(这里以kustomize为例，argo-cd支持的其它的如helm原理也是如此)，但具体如何关联，作者没有深究，也没有第一时间想到，argo-cd其实也是通过CRD controller机制实现</p>
-<h3 id="参考文章"><a href="#参考文章" class="headerlink" title="参考文章:"></a><strong>参考文章:</strong></h3><blockquote>
-<ul>
-<li><a href="https://github.com/argoproj/argo-cd/issues/5792" target="_blank" rel="noopener">https://github.com/argoproj/argo-cd/issues/5792</a></li>
-<li><a href="https://argoproj.github.io/argo-cd/" target="_blank" rel="noopener">https://argoproj.github.io/argo-cd/</a></li>
-</ul>
-</blockquote>
-<h3 id="转载请注明出处https-izsk-me"><a href="#转载请注明出处https-izsk-me" class="headerlink" title="转载请注明出处https://izsk.me"></a><strong>转载请注明出处<a href="https://izsk.me" target="_blank" rel="noopener">https://izsk.me</a></strong></h3>]]></content>
-      <categories>
-        <category>CloudNavi</category>
-      </categories>
-      <tags>
-        <tag>CloudNavi</tag>
-      </tags>
-  </entry>
-  <entry>
     <title>argoCD学习(argocd踩坑记)</title>
     <url>/2021/04/02/argoCD-prombles/</url>
     <content><![CDATA[<p>argocd配合GitOps，可以实现对kubernetes多集群的应用版本管理，目前已用于我负责的业务环境中实现统一发布平台.</p>
@@ -494,6 +690,47 @@
 <li><a href="https://github.com/argoproj/argo-cd/issues/2802" target="_blank" rel="noopener">https://github.com/argoproj/argo-cd/issues/2802</a></li>
 <li><a href="https://gist.github.com/janeczku/b16154194f7f03f772645303af8e9f80" target="_blank" rel="noopener">https://gist.github.com/janeczku/b16154194f7f03f772645303af8e9f80</a></li>
 <li><a href="https://github.com/argoproj/argo-cd/issues/5792" target="_blank" rel="noopener">https://github.com/argoproj/argo-cd/issues/5792</a></li>
+</ul>
+</blockquote>
+<h3 id="转载请注明出处https-izsk-me"><a href="#转载请注明出处https-izsk-me" class="headerlink" title="转载请注明出处https://izsk.me"></a><strong>转载请注明出处<a href="https://izsk.me" target="_blank" rel="noopener">https://izsk.me</a></strong></h3>]]></content>
+      <categories>
+        <category>CloudNavi</category>
+      </categories>
+      <tags>
+        <tag>CloudNavi</tag>
+      </tags>
+  </entry>
+  <entry>
+    <title>argoCD学习(argocd是如何绑定资源的)</title>
+    <url>/2021/04/02/argoCD-how-to-bind-resource/</url>
+    <content><![CDATA[<p>目前团队使用argo-cd做为统一发布平台，承接所有的环境的发布，最近碰到一个很有意思的问题(下文描述)，跟随这个问题引出另一个问题: argo-cd是如何绑定资源的呢？用了argo-cd这么久了，感叹自己从来都没细致研究过，呵呵了.</p>
+<a id="more"></a>
+<h3 id="问题"><a href="#问题" class="headerlink" title="问题"></a>问题</h3><p><strong>简单描述就是，argo上的应用出现了本不属于它资源</strong></p>
+<p>这里使用kustomize，kustomization.yaml文件如下：</p>
+<figure class="highlight yaml"><table><tr><td class="code"><pre><span class="line"><span class="attr">apiVersion:</span> <span class="string">kustomize.config.k8s.io/v1beta1</span></span><br><span class="line"><span class="attr">kind:</span> <span class="string">Kustomization</span></span><br><span class="line"></span><br><span class="line"><span class="attr">resources:</span></span><br><span class="line"><span class="bullet">-</span> <span class="string">configmap.yml.j2</span></span><br><span class="line"><span class="bullet">-</span> <span class="string">deployment.yml.j2</span></span><br><span class="line"><span class="bullet">-</span> <span class="string">service.yml.j2</span></span><br><span class="line"></span><br><span class="line"><span class="attr">namespace:</span> <span class="string">test</span></span><br></pre></td></tr></table></figure>
+<p>正常来说，发布到k8s中的资源对象，只会有resources下指定的，但是在某个时间点，argo ui上却出现了其它资源，状态是这样的</p>
+<p><img src="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20210405221303.png" alt></p>
+<p>作者非常确定这个资源对象不包含在上述3个文件中，那这个对象是怎么来的呢?</p>
+<h3 id="排查"><a href="#排查" class="headerlink" title="排查"></a>排查</h3><p>作者记得之前应该出现过一二次，但由于当时没有时间仔细排查，还以为是开发团队自己的原因，即没有深究，这次又出现，作者感到绝非偶然，是时候认真排查一下了</p>
+<p>作者又想起，另一个组员跟我反映过，测试环境某个服务的NodePort好几次都莫名地被删除了，测试环境开发是没有权限做删除操作的，但也是作者小组内的同事删的，那又是怎么回事呢?</p>
+<p>由于作者在发布某应用，使用的命令如下:</p>
+<figure class="highlight bash"><table><tr><td class="code"><pre><span class="line">argocd --prune</span><br></pre></td></tr></table></figure>
+<p>其中 –prune会将当前集群中存在的但是在git上不存在的资源进行delete.</p>
+<p>嗯，这二者有关系</p>
+<p>从上面的图中来看，这个资源对象的名称非常符合作者对使用NodePort的统一命名规范，即应用的名字-nodeport,可以肯定的是，这个资源是组员为了开发的某个需求创建的，且是在rancher UI(一种开源的k8s集群管理平台)上进行创建的，这里要说明一下，rancher ui上支持直接对常用资源比如deployment,service等对象进行clone</p>
+<p>跟同事确认了，这个资源也确实是这么创建的，那这个资源又是如何同步反应到argo上的呢?</p>
+<p>因为在作者看来，argo只会关联kustomization.yaml中resource指定的资源，这个不速之客显然不属于</p>
+<p>这就引入一个作者想错或者未细致地了解的问题: argo到底是根据什么绑定资源的呢?</p>
+<p>带着这个疑问，开始找官方文档，作者从将argo-cd引入到生产环境之前，已经将argo-cd官方的文档翻了好几遍，好像没有映象有这方面的介绍，也确实没有找到相关文档</p>
+<p>作者这里犯了个错误，没有第一时间检查clone资源有没有差异，而是直接从argo-cd上查找答案，导致将问题复杂化了.</p>
+<p>作者从这个<a href="https://github.com/argoproj/argo-cd/issues/5792" target="_blank" rel="noopener">issue</a>上找到了问题所在，然后再回头查看clone的资源，然后做了个实验确认事实即是如此</p>
+<h3 id="结论"><a href="#结论" class="headerlink" title="结论"></a>结论</h3><p>由于argo controller是根据资源中的annotations里的key(argocd.argoproj.io/instance)来判定这个资源是不是属于某个app,在日常使用的过程，由于团队中使用的是rancher做为容器管理平台，rancher上提供了非常便利的对资源的clone手段，就会产生clone后的资源也会带上相同的annotations，但是在原app下的manifest并不包含这个资源，因此在app下就会出现这个资源且这个资源会被标注为<code>require pruning</code>,那么在每次sync后，这个clone后的资源就会被删除, 这也就解释了为什么会出现NodePort会莫名其妙地被删了</p>
+<p>那么解决也很简单，在clone时将annotations删除掉即可，这样argo-controller就不会将其绑定到某应用下.</p>
+<h3 id="误区"><a href="#误区" class="headerlink" title="误区"></a>误区</h3><p>这个有个作者的误区，即作者以为argo-cd只会关联kustomization.yaml中resource指定的资源(这里以kustomize为例，argo-cd支持的其它的如helm原理也是如此)，但具体如何关联，作者没有深究，也没有第一时间想到，argo-cd其实也是通过CRD controller机制实现</p>
+<h3 id="参考文章"><a href="#参考文章" class="headerlink" title="参考文章:"></a><strong>参考文章:</strong></h3><blockquote>
+<ul>
+<li><a href="https://github.com/argoproj/argo-cd/issues/5792" target="_blank" rel="noopener">https://github.com/argoproj/argo-cd/issues/5792</a></li>
+<li><a href="https://argoproj.github.io/argo-cd/" target="_blank" rel="noopener">https://argoproj.github.io/argo-cd/</a></li>
 </ul>
 </blockquote>
 <h3 id="转载请注明出处https-izsk-me"><a href="#转载请注明出处https-izsk-me" class="headerlink" title="转载请注明出处https://izsk.me"></a><strong>转载请注明出处<a href="https://izsk.me" target="_blank" rel="noopener">https://izsk.me</a></strong></h3>]]></content>
@@ -1614,48 +1851,6 @@
   </entry>
   <entry>
     <title>使用crash查看Linux系统异常重启原因</title>
-    <url>/2020/09/27/kernel-panic-debug/</url>
-    <content><![CDATA[<p>最近有一台物理机间歇性的发生重启, 本以为是偶发事件就没多在意，今天又给重启了, 因此决定探探究竟</p>
-<a id="more"></a>
-<p>首先看一下kdump服务是否开启, kdump主要用于内核发生crash时记录相关上下文的. 用来转储运行内存的一个工具</p>
-<p>简言之: 系统一旦崩溃，内核就没法正常工作了，这个时候将由kdump提供一个用于捕获当前运行信息的内核，</p>
-<p>该内核会将此时内存中的所有运行状态和数据信息收集到一个dump core文件中以便之后分析崩溃原因</p>
-<p>之后系统便会重启.</p>
-<p>关于kdump在内核已经崩溃的前提下还能够捕获到异常信息, 原理可<a href="https://blog.csdn.net/zhangskd/article/details/38084337" target="_blank" rel="noopener">参考</a></p>
-<p><img src="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20200927180148.png" alt></p>
-<p>这里引用<a href="https://blog.csdn.net/zhangskd/article/details/38084337" target="_blank" rel="noopener">一张图</a></p>
-<p><img src="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20200927185450.png" alt></p>
-<p>要分析core文件，可以使用crash工具，首先是安装:</p>
-<p>注意, 要安装与当前内核对应的版本, 要不然crash无法使用.</p>
-<figure class="highlight bash"><table><tr><td class="code"><pre><span class="line">wget http://debuginfo.centos.org/7/x86_64/kernel-debuginfo-common-x86_64-3.10.0-693.el7.x86_64.rpm</span><br><span class="line">wget http://debuginfo.centos.org/7/x86_64/kernel-debuginfo-3.10.0-693.el7.x86_64.rpm</span><br><span class="line"></span><br><span class="line">rpm -ivh kernel-debuginfo-common-x86_64-3.10.0-693.el7.x86_64.rpm</span><br><span class="line">rpm -ivh kernel-debuginfo-3.10.0-693.el7.x86_64.rpm</span><br><span class="line"></span><br><span class="line">yum install crash</span><br></pre></td></tr></table></figure>
-<p>通常, 内核crash后保存的core文件保存在<code>/var/crash</code>目录下，在该目录下找到最近一次crash的时间，使用以下命令启动crash分析dump.</p>
-<figure class="highlight bash"><table><tr><td class="code"><pre><span class="line">crash vmcore /usr/lib/debug/lib/modules/3.10.0-693.el7.x86_64/vmlinux</span><br></pre></td></tr></table></figure>
-<p>启动之后就进入到了crash命令行，很明显地显示出crash的原因,如下图红框所示:</p>
-<p><img src="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20200927175237.png" alt></p>
-<p>这里简要地反应出内核crash时的一些内存信息快照，包含一些物理信息, tasks数量，最重要的就是导致crash的command与panic的原因</p>
-<p>这里可直接使用ps查看进程的相关信息,跟linux 命令行下的ps功能相似</p>
-<p><img src="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20200927175207.png" alt></p>
-<p>还可以使用bt命令来查看trace信息, 当然都是一些汇编层的内容，需要有一定的专业知识，理解起来比较困难.</p>
-<p>从上面已经知道了panic的原因后就可对症下药.</p>
-<p>另外crash支持很多的子命令,大家可使用man crash查看，比较常用的为</p>
-<figure class="highlight bash"><table><tr><td class="code"><pre><span class="line">crash ps <span class="comment"># 查看进程</span></span><br><span class="line">crash sys <span class="comment"># 查看系统信息</span></span><br><span class="line">crash bt <span class="comment"># 查看堆栈信息</span></span><br><span class="line">crash files <span class="comment"># 查看异常时进程打开的文件</span></span><br><span class="line">crash task <span class="comment"># 查看指定task的信息</span></span><br></pre></td></tr></table></figure>
-<h3 id="参考文章"><a href="#参考文章" class="headerlink" title="参考文章:"></a><strong>参考文章:</strong></h3><blockquote>
-<ul>
-<li><a href="https://www.linuxtechi.com/how-to-enable-kdump-on-rhel-7-and-centos-7/" target="_blank" rel="noopener">https://www.linuxtechi.com/how-to-enable-kdump-on-rhel-7-and-centos-7/</a></li>
-<li><a href="https://www.cnblogs.com/doctormo/p/12619485.html" target="_blank" rel="noopener">https://www.cnblogs.com/doctormo/p/12619485.html</a></li>
-<li><a href="https://blog.csdn.net/zhangskd/article/details/38084337" target="_blank" rel="noopener">https://blog.csdn.net/zhangskd/article/details/38084337</a></li>
-</ul>
-</blockquote>
-<h3 id="转载请注明出处https-izsk-me"><a href="#转载请注明出处https-izsk-me" class="headerlink" title="转载请注明出处https://izsk.me"></a><strong>转载请注明出处<a href="https://izsk.me" target="_blank" rel="noopener">https://izsk.me</a></strong></h3>]]></content>
-      <categories>
-        <category>Shell</category>
-      </categories>
-      <tags>
-        <tag>Shell</tag>
-      </tags>
-  </entry>
-  <entry>
-    <title>使用crash查看Linux系统异常重启原因</title>
     <url>/2020/09/27/System-kernel-panic-debug/</url>
     <content><![CDATA[<p>最近有一台物理机间歇性的发生重启, 本以为是偶发事件就没多在意，今天又给重启了, 因此决定探探究竟</p>
 <a id="more"></a>
@@ -1694,6 +1889,48 @@
       </categories>
       <tags>
         <tag>System</tag>
+      </tags>
+  </entry>
+  <entry>
+    <title>使用crash查看Linux系统异常重启原因</title>
+    <url>/2020/09/27/kernel-panic-debug/</url>
+    <content><![CDATA[<p>最近有一台物理机间歇性的发生重启, 本以为是偶发事件就没多在意，今天又给重启了, 因此决定探探究竟</p>
+<a id="more"></a>
+<p>首先看一下kdump服务是否开启, kdump主要用于内核发生crash时记录相关上下文的. 用来转储运行内存的一个工具</p>
+<p>简言之: 系统一旦崩溃，内核就没法正常工作了，这个时候将由kdump提供一个用于捕获当前运行信息的内核，</p>
+<p>该内核会将此时内存中的所有运行状态和数据信息收集到一个dump core文件中以便之后分析崩溃原因</p>
+<p>之后系统便会重启.</p>
+<p>关于kdump在内核已经崩溃的前提下还能够捕获到异常信息, 原理可<a href="https://blog.csdn.net/zhangskd/article/details/38084337" target="_blank" rel="noopener">参考</a></p>
+<p><img src="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20200927180148.png" alt></p>
+<p>这里引用<a href="https://blog.csdn.net/zhangskd/article/details/38084337" target="_blank" rel="noopener">一张图</a></p>
+<p><img src="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20200927185450.png" alt></p>
+<p>要分析core文件，可以使用crash工具，首先是安装:</p>
+<p>注意, 要安装与当前内核对应的版本, 要不然crash无法使用.</p>
+<figure class="highlight bash"><table><tr><td class="code"><pre><span class="line">wget http://debuginfo.centos.org/7/x86_64/kernel-debuginfo-common-x86_64-3.10.0-693.el7.x86_64.rpm</span><br><span class="line">wget http://debuginfo.centos.org/7/x86_64/kernel-debuginfo-3.10.0-693.el7.x86_64.rpm</span><br><span class="line"></span><br><span class="line">rpm -ivh kernel-debuginfo-common-x86_64-3.10.0-693.el7.x86_64.rpm</span><br><span class="line">rpm -ivh kernel-debuginfo-3.10.0-693.el7.x86_64.rpm</span><br><span class="line"></span><br><span class="line">yum install crash</span><br></pre></td></tr></table></figure>
+<p>通常, 内核crash后保存的core文件保存在<code>/var/crash</code>目录下，在该目录下找到最近一次crash的时间，使用以下命令启动crash分析dump.</p>
+<figure class="highlight bash"><table><tr><td class="code"><pre><span class="line">crash vmcore /usr/lib/debug/lib/modules/3.10.0-693.el7.x86_64/vmlinux</span><br></pre></td></tr></table></figure>
+<p>启动之后就进入到了crash命令行，很明显地显示出crash的原因,如下图红框所示:</p>
+<p><img src="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20200927175237.png" alt></p>
+<p>这里简要地反应出内核crash时的一些内存信息快照，包含一些物理信息, tasks数量，最重要的就是导致crash的command与panic的原因</p>
+<p>这里可直接使用ps查看进程的相关信息,跟linux 命令行下的ps功能相似</p>
+<p><img src="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20200927175207.png" alt></p>
+<p>还可以使用bt命令来查看trace信息, 当然都是一些汇编层的内容，需要有一定的专业知识，理解起来比较困难.</p>
+<p>从上面已经知道了panic的原因后就可对症下药.</p>
+<p>另外crash支持很多的子命令,大家可使用man crash查看，比较常用的为</p>
+<figure class="highlight bash"><table><tr><td class="code"><pre><span class="line">crash ps <span class="comment"># 查看进程</span></span><br><span class="line">crash sys <span class="comment"># 查看系统信息</span></span><br><span class="line">crash bt <span class="comment"># 查看堆栈信息</span></span><br><span class="line">crash files <span class="comment"># 查看异常时进程打开的文件</span></span><br><span class="line">crash task <span class="comment"># 查看指定task的信息</span></span><br></pre></td></tr></table></figure>
+<h3 id="参考文章"><a href="#参考文章" class="headerlink" title="参考文章:"></a><strong>参考文章:</strong></h3><blockquote>
+<ul>
+<li><a href="https://www.linuxtechi.com/how-to-enable-kdump-on-rhel-7-and-centos-7/" target="_blank" rel="noopener">https://www.linuxtechi.com/how-to-enable-kdump-on-rhel-7-and-centos-7/</a></li>
+<li><a href="https://www.cnblogs.com/doctormo/p/12619485.html" target="_blank" rel="noopener">https://www.cnblogs.com/doctormo/p/12619485.html</a></li>
+<li><a href="https://blog.csdn.net/zhangskd/article/details/38084337" target="_blank" rel="noopener">https://blog.csdn.net/zhangskd/article/details/38084337</a></li>
+</ul>
+</blockquote>
+<h3 id="转载请注明出处https-izsk-me"><a href="#转载请注明出处https-izsk-me" class="headerlink" title="转载请注明出处https://izsk.me"></a><strong>转载请注明出处<a href="https://izsk.me" target="_blank" rel="noopener">https://izsk.me</a></strong></h3>]]></content>
+      <categories>
+        <category>Shell</category>
+      </categories>
+      <tags>
+        <tag>Shell</tag>
       </tags>
   </entry>
   <entry>
@@ -3124,105 +3361,6 @@
 <h3 id="转载请注明出处https-izsk-me"><a href="#转载请注明出处https-izsk-me" class="headerlink" title="转载请注明出处https://izsk.me"></a><strong>转载请注明出处<a href="https://izsk.me" target="_blank" rel="noopener">https://izsk.me</a></strong></h3>]]></content>
       <categories>
         <category>Gitlab</category>
-      </categories>
-      <tags>
-        <tag>Kubernetes</tag>
-      </tags>
-  </entry>
-  <entry>
-    <title>Kubernetes学习(k8s基于InfiniBand实现HPC高性能容器网络组网方案实践一)</title>
-    <url>/2020/07/02/Kubernetes-Infinitband-SRIOV-network-1-backgroud/</url>
-    <content><![CDATA[<p>在HPC场景下，底层网络的性能直接影响最终的结果，HPC往往会伴随海量的数据交换，特别是在跨Node之间，10Gb的以太网网络传输肯定要比100Gb的IB网络传输慢，本人所负责的训练平台也是如此，在一次训练过程中，GPU存在海量数据交换，虽然是在GPU之间，但本质还是通过网络进行传输，但是以太网的传输在HPC场景下往往显得不那么高效，因此可以通过RDMA或者如果预算够的话，通过硬件IB实现数据交换，能大大提高训练质量</p>
-<a id="more"></a>
-<p>本人所负责的训练平台是完全基于k8s的，现在要迁移至IB网络同时不影响现有业务进行，大大增加了实施难度，在经过一番调研之后，最终的方案为在原有的容器网络基础之上，再加一层IB网络层，即在k8s集群中同时存在2个网络，这在k8s是完全支持的，即在容器中除了eth0，由flannel cni分配， 还会有一个net1网络，由IB cni分配, eth0的网络用于集群之间的通信，而net1则用于训练时pod与pod节点进行通信，在实践之前先介绍几个比较重要的技术</p>
-<h3 id="Infinitband"><a href="#Infinitband" class="headerlink" title="Infinitband"></a>Infinitband</h3><p>infinitband做专门为高带宽，低时延，高可靠，不占用cpu资源的网络互联技术，大量被用于超算、AI等HPC场景下</p>
-<p><img src="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20210704215748.png" alt></p>
-<p>这里不对infintband展开细说，感兴趣的可以参考下列连接</p>
-<p><a href="https://zhuanlan.zhihu.com/p/74238082" target="_blank" rel="noopener">https://zhuanlan.zhihu.com/p/74238082</a></p>
-<p><a href="https://zhuanlan.zhihu.com/p/163104439" target="_blank" rel="noopener">https://zhuanlan.zhihu.com/p/163104439</a></p>
-<p><a href="https://blog.csdn.net/swingwang/article/details/72935461" target="_blank" rel="noopener">https://blog.csdn.net/swingwang/article/details/72935461</a></p>
-<h3 id="sr-iov"><a href="#sr-iov" class="headerlink" title="sr-iov"></a>sr-iov</h3><p>SR-IOV (Single Root Input/Output Virtualization) 的主要作用是将一个物理设备模拟成多个虚拟设备,在虚拟化技术中使用非常频繁，</p>
-<p><strong>sr-iov需要硬件上的支持，好在目前大部分服务器都支持了该技术</strong>，这里也不过多介绍其中的细节，后续用到的两个比较重要的概念:</p>
-<p>SR-IOV引入了两种新的PCIe的Function：</p>
-<ol>
-<li>PFs：完整功能的PCIe Function包含了SR-IOV Extended Capability。这个Capability被用来配置和管理SR-IOV的功能。</li>
-<li>VFs：一部分轻量级的PCIe function，只包含必要的用于数据移动的最小可配置的资源。</li>
-</ol>
-<p>一个 具备SR-IOV能力的设备可以被配置成被枚举出多个Virtual Functions（数量可控制），而且每个Funciton 都有自己的完整有BAR的配置空间。每个VF 分配给虚拟或者容器</p>
-<p><a href="https://zhuanlan.zhihu.com/p/347204232" target="_blank" rel="noopener">https://zhuanlan.zhihu.com/p/347204232</a></p>
-<p><a href="https://blog.csdn.net/wangdd_199326/article/details/90476728" target="_blank" rel="noopener">https://blog.csdn.net/wangdd_199326/article/details/90476728</a></p>
-<h3 id="资源清单"><a href="#资源清单" class="headerlink" title="资源清单"></a>资源清单</h3><p>下列的资源清单为部分集群资源且机器ip不为真实ip</p>
-<table>
-<thead>
-<tr>
-<th>机器</th>
-<th>角色</th>
-<th>以太网/IB网卡</th>
-<th>内核/发行版</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td>10.4.52.2</td>
-<td>k8s master/v1.15.5</td>
-<td>Y/N</td>
-<td>Linux-4.19 centos7.4</td>
-</tr>
-<tr>
-<td>10.4.52.3</td>
-<td>k8s master/v1.15.5</td>
-<td>Y/N</td>
-<td>Linux-4.19 centos7.4</td>
-</tr>
-<tr>
-<td>10.4.52.4</td>
-<td>k8s master/v1.15.5</td>
-<td>Y/N</td>
-<td>Linux-4.19 centos7.4</td>
-</tr>
-<tr>
-<td>10.4.52.5</td>
-<td>k8s node/v1.15.5</td>
-<td>Y/Y，一个ib网口</td>
-<td>Linux-4.19 centos7.4</td>
-</tr>
-<tr>
-<td>10.4.52.6</td>
-<td>k8s node/v1.15.5</td>
-<td>Y/Y，一个ib网口</td>
-<td>Linux-4.19 centos7.4</td>
-</tr>
-<tr>
-<td>10.4.52.7</td>
-<td>k8s node/v1.15.5</td>
-<td>Y/Y，一个ib网口</td>
-<td>Linux-4.19 centos7.4</td>
-</tr>
-</tbody>
-</table>
-<p>master做为控制面，用于集群间的管理角色</p>
-<p>node上做为数据面，以太网用于与控制面进行交互，同时IB网卡用于HPC业务</p>
-<h3 id="组网图"><a href="#组网图" class="headerlink" title="组网图"></a>组网图</h3><p><img src="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20210704191648.png" alt></p>
-<p>在集群物理机器上，实际存在3个网络:</p>
-<ol>
-<li>管理网(eth1), 用于机器的管控网，一般叫做ipmi或者带外、外带等,在服务器上有专门的网口标识</li>
-<li>业务网(eth0), 用于flannel的启动参数指定的网卡名，这个网络在pod中用于与k8s控制面进行交互</li>
-<li>IB网(eth100), 用于ib网卡,在这个网卡上会通过sriov虚拟出若干网卡用于pod中</li>
-</ol>
-<h3 id="架构图"><a href="#架构图" class="headerlink" title="架构图"></a>架构图</h3><p><img src="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20210704191622.png" alt></p>
-<h3 id="实现目的"><a href="#实现目的" class="headerlink" title="实现目的"></a>实现目的</h3><p>最终要实现的目标为: 通过sriov在IB网卡上实现高性能容器网络以加速分布式训练的GPU数据交换</p>
-<h3 id="参考文章"><a href="#参考文章" class="headerlink" title="参考文章:"></a><strong>参考文章:</strong></h3><blockquote>
-<ul>
-<li><a href="https://zhuanlan.zhihu.com/p/347204232" target="_blank" rel="noopener">https://zhuanlan.zhihu.com/p/347204232</a></li>
-<li><a href="https://blog.csdn.net/wangdd_199326/article/details/90476728" target="_blank" rel="noopener">https://blog.csdn.net/wangdd_199326/article/details/90476728</a></li>
-<li><a href="https://zhuanlan.zhihu.com/p/74238082" target="_blank" rel="noopener">https://zhuanlan.zhihu.com/p/74238082</a></li>
-<li><a href="https://zhuanlan.zhihu.com/p/163104439" target="_blank" rel="noopener">https://zhuanlan.zhihu.com/p/163104439</a></li>
-<li><a href="https://blog.csdn.net/swingwang/article/details/72935461" target="_blank" rel="noopener">https://blog.csdn.net/swingwang/article/details/72935461</a></li>
-</ul>
-</blockquote>
-<h3 id="转载请注明出处https-izsk-me"><a href="#转载请注明出处https-izsk-me" class="headerlink" title="转载请注明出处https://izsk.me"></a><strong>转载请注明出处<a href="https://izsk.me" target="_blank" rel="noopener">https://izsk.me</a></strong></h3>]]></content>
-      <categories>
-        <category>Kubernetes</category>
       </categories>
       <tags>
         <tag>Kubernetes</tag>
@@ -7957,6 +8095,74 @@
       </tags>
   </entry>
   <entry>
+    <title>记一次排查ES FGC导致的集群宕机异常</title>
+    <url>/2019/10/06/ES-FGC-Fix/</url>
+    <content><![CDATA[<p>有一个私有云环境的运维同事反应项目中的ES集群无法查询, 由于是私有云环境, 没有直接运维权限, 所以没有接收到一线报警, 远程登录上去后发现ES集群已经宕机了, 这次的排查过程也发现了几个比较容易忽视的细节, 在此记录一下,比较有意思.</p>
+<a id="more"></a>
+<h3 id="集群状态"><a href="#集群状态" class="headerlink" title="集群状态"></a>集群状态</h3><p>ES集群为3节点.</p>
+<p>首先肯定是查看集群状态</p>
+<figure class="highlight bash"><table><tr><td class="code"><pre><span class="line">curl <span class="string">'http://localhost:9200/_cluster/health?pretty'</span> -u xxx:yyy</span><br><span class="line"><span class="comment">#发现状态为Red</span></span><br></pre></td></tr></table></figure>
+<p>查看节点状态</p>
+<figure class="highlight bash"><table><tr><td class="code"><pre><span class="line">curl <span class="string">'http://localhost:9200/_cat/node?v'</span> -u xxx:yyy</span><br><span class="line"><span class="comment">#节点数正常</span></span><br></pre></td></tr></table></figure>
+<p>查看各节点使用的磁盘情况</p>
+<figure class="highlight bash"><table><tr><td class="code"><pre><span class="line">curl -XGET <span class="string">'localhost:9200/_cat/allocation?v&amp;pretty'</span> -u xxx:yyy</span><br><span class="line"><span class="comment">#未发现异常</span></span><br></pre></td></tr></table></figure>
+<h3 id="集群日志"><a href="#集群日志" class="headerlink" title="集群日志"></a>集群日志</h3><p>登录一个ES节点查看日志，发现以下报错，查看其它2个节点，情况相同</p>
+<p><img src="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20200204134510.png" alt></p>
+<p>从日志来看, 可以发现几个问题:</p>
+<blockquote>
+<ul>
+<li>Full GC很频繁, 而且时间也非常的长 </li>
+<li>每次GC完之后所能释放的内存非常有限</li>
+</ul>
+</blockquote>
+<p>到这，其它原因已经很明朗, <strong>内存不够导致的full gc 频繁，但是又不能释放太多的空间，又导致full gc的恶意循环</strong></p>
+<p>如果大家对gc的日志不很了解的话, 这里解释下上面日志的各个字段含义, 假如有以下一条gc日志</p>
+<figure class="highlight bash"><table><tr><td class="code"><pre><span class="line">[2018-06-30T17:57:29,020][INFO ][o.e.m.j.JvmGcMonitorService] [qoo--ES] [gc][old][228385][160772] duration [5s], collections [1]/[5.1s], total [5s]/[4.4d], memory [945.4mb]-&gt;[958.5mb]/[1007.3mb], all_pools &#123;[young] [87.8mb]-&gt;[100.9mb]/[133.1mb]&#125;&#123;[survivor] [0b]-&gt;[0b]/[16.6mb]&#125;&#123;[old] [857.6mb]-&gt;[857.6mb]/[857.6mb]&#125;</span><br></pre></td></tr></table></figure>
+<ul>
+<li><strong>gc old</strong> 本次是 old GC 这是第228385次 GC 检查][从 JVM 启动至今发生的第 160772次 G]</li>
+<li><strong>duration</strong> [本次检查到的 GC 总耗时 <strong>5</strong> 秒，可能是多次的加和</li>
+<li><strong>collections</strong> [从上次检查至今总共发生<strong>1</strong>次GC]/[从上次检查至今已过去 <strong>5.1</strong> 秒],</li>
+<li><strong>total</strong> [本次检查到的 GC 总耗时为 <strong>5</strong> 秒]/[从 JVM 启动至今发生的 GC 总耗时为 <strong>4.4</strong> 天]，</li>
+<li><strong>memory</strong> [ GC 前 Heap memory 空间]-&gt;[GC 后 Heap memory 空间]/[Heap memory 总空间],</li>
+<li><strong>all_pools</strong>(分代部分的详情) {young 区][GC 前 Memory ]-&gt;[GC后 Memory]/[young区 Memory 总大小] }</li>
+<li><strong>survivor</strong> [GC 前 Memory ]-&gt;[GC后 Memory]/[Memory 总大小] }{old 区[GC 前 Memory ]-&gt;[GC后 Memory]/[old区 Memory 总大小] }</li>
+</ul>
+<p>那为何会内存不足呢, 想起前几天服务拓展，添加收集了几个服务的日志, 日志量不算小, 而且这3个ES节点所在的机器内存只分配了8个G, 显然, 加完这几个日志之后内存不够用了.</p>
+<h3 id="Index-Mapping"><a href="#Index-Mapping" class="headerlink" title="Index Mapping"></a>Index Mapping</h3><p>而且，从日志中， 还发现几处很诡异的日志</p>
+<p><img src="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20200204141415.png" alt></p>
+<p>红框中的错误: <strong>object mapping for [msg] tried to pasrse field [msg] as object, but found a concrete</strong></p>
+<p>翻译过来就是说, 日志中的msg这个字段的类型匹配不上, ES尽力把它解析为object类型，但是它却是个确切的值.</p>
+<p>就好比你在python中定义了一个字典, 但是你给它赋值一个整形, 这确定要报错.</p>
+<p>但是这个mapping是从何而来的呢.</p>
+<p>经过网上搜索一翻, 终于明白:</p>
+<p>ES中为了加强性能，对于索引中的<strong>第一条数据, ES会默认(可设置)按照这条数据建立index mapping, 相当于是一个索引模板, 好比是mysql中表的定义一个概念, 后续这个索引中的所有日志都按照该模板进行解析</strong></p>
+<p>后来经过查看源码, 我们发现，出现上图中的问题是因为代码中的日志打印不规范, 有一个地方如果抛出异常时，打印的是一个单一字符串, 而正常情况下打印的是一个json, 所以当第一条正常的日志传递给ES时，ES建立的索引 模板记录这个字段为object类型(可以类比为python中的字典, 本身是可以新增元素的), 当应用抛出异常时，日志中又传递了一个单一字符串, 但是索引模板已经记录为object类型，所以无法匹配, 这就是问题所在</p>
+<h3 id="Fix-Bug"><a href="#Fix-Bug" class="headerlink" title="Fix Bug"></a>Fix Bug</h3><p>从3个方面解决上面的问题</p>
+<p>首先是修复代码中日志不规范问题, 这个充暴露了code view不严谨.</p>
+<p>第2个是加大ES的内存,毕竟日志量确实是上来了, 从8G添加到12G</p>
+<p>第3个是优化ES的gc问题, ES中有个逻辑是：<strong>默认情况下，主节点每30秒会去检查其他节点的状态，如果任何节点的垃圾回收时间超过30秒（Garbage collection duration）且在重复次数内都超时，则会导致主节点任务该节点脱离集群, 节点脱离集群后会引起分片的rebalance</strong></p>
+<p>这个机制让ES节点频繁的脱离集群，而又引起整个集群的rebalance，ES本身的内存就不够，rebalance更是雪上加霜, 如此往复就导致整个ES集群宕机.</p>
+<p>可修改主节点的检查时间及重复次数,让其它节点有充分的时间进行full gc.</p>
+<p>在ES的配置文件中添加以下配置:</p>
+<figure class="highlight yml"><table><tr><td class="code"><pre><span class="line"><span class="attr">discovery.zen.fd.ping_timeout:</span> <span class="string">300s</span></span><br><span class="line"><span class="attr">discovery.zen.fd.ping_retriES:</span> <span class="number">10</span></span><br></pre></td></tr></table></figure>
+<p>这样, 达到这两个条件时才能触发节点脱离集群</p>
+<p>至此, 依次重启ES节点, 问题圆满解决.</p>
+<h3 id="参考文章"><a href="#参考文章" class="headerlink" title="参考文章:"></a><strong>参考文章:</strong></h3><blockquote>
+<ul>
+<li><a href="https://www.elastic.co/guide/en/elasticsearch/reference/current/mapping.html" target="_blank" rel="noopener">elasticsearch index mapping</a></li>
+<li><a href="https://blog.csdn.net/sinat_35930259/article/details/80354732" target="_blank" rel="noopener">elasticsearch篇之mapping</a></li>
+<li><a href="https://segmentfault.com/a/1190000016494488" target="_blank" rel="noopener">你看懂 Elasticsearch Log 中的 GC 日志了吗？</a></li>
+</ul>
+</blockquote>
+<h3 id="转载请注明出处https-izsk-me"><a href="#转载请注明出处https-izsk-me" class="headerlink" title="转载请注明出处https://izsk.me"></a><strong>转载请注明出处<a href="https://izsk.me" target="_blank" rel="noopener">https://izsk.me</a></strong></h3>]]></content>
+      <categories>
+        <category>FELK</category>
+      </categories>
+      <tags>
+        <tag>FELK</tag>
+      </tags>
+  </entry>
+  <entry>
     <title>CockRoachDB学习(架构)</title>
     <url>/2019/10/06/CockroachDB-Struct/</url>
     <content><![CDATA[<p>项目中需要一个分布式数据库用于存储业务的KV数据, 在前期项目调研结合业务比对了业界常用的KV数据库模型后, 最后选择了CockRoachDB(CRDB).</p>
@@ -8091,74 +8297,6 @@
       </categories>
       <tags>
         <tag>分布式架构</tag>
-      </tags>
-  </entry>
-  <entry>
-    <title>记一次排查ES FGC导致的集群宕机异常</title>
-    <url>/2019/10/06/ES-FGC-Fix/</url>
-    <content><![CDATA[<p>有一个私有云环境的运维同事反应项目中的ES集群无法查询, 由于是私有云环境, 没有直接运维权限, 所以没有接收到一线报警, 远程登录上去后发现ES集群已经宕机了, 这次的排查过程也发现了几个比较容易忽视的细节, 在此记录一下,比较有意思.</p>
-<a id="more"></a>
-<h3 id="集群状态"><a href="#集群状态" class="headerlink" title="集群状态"></a>集群状态</h3><p>ES集群为3节点.</p>
-<p>首先肯定是查看集群状态</p>
-<figure class="highlight bash"><table><tr><td class="code"><pre><span class="line">curl <span class="string">'http://localhost:9200/_cluster/health?pretty'</span> -u xxx:yyy</span><br><span class="line"><span class="comment">#发现状态为Red</span></span><br></pre></td></tr></table></figure>
-<p>查看节点状态</p>
-<figure class="highlight bash"><table><tr><td class="code"><pre><span class="line">curl <span class="string">'http://localhost:9200/_cat/node?v'</span> -u xxx:yyy</span><br><span class="line"><span class="comment">#节点数正常</span></span><br></pre></td></tr></table></figure>
-<p>查看各节点使用的磁盘情况</p>
-<figure class="highlight bash"><table><tr><td class="code"><pre><span class="line">curl -XGET <span class="string">'localhost:9200/_cat/allocation?v&amp;pretty'</span> -u xxx:yyy</span><br><span class="line"><span class="comment">#未发现异常</span></span><br></pre></td></tr></table></figure>
-<h3 id="集群日志"><a href="#集群日志" class="headerlink" title="集群日志"></a>集群日志</h3><p>登录一个ES节点查看日志，发现以下报错，查看其它2个节点，情况相同</p>
-<p><img src="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20200204134510.png" alt></p>
-<p>从日志来看, 可以发现几个问题:</p>
-<blockquote>
-<ul>
-<li>Full GC很频繁, 而且时间也非常的长 </li>
-<li>每次GC完之后所能释放的内存非常有限</li>
-</ul>
-</blockquote>
-<p>到这，其它原因已经很明朗, <strong>内存不够导致的full gc 频繁，但是又不能释放太多的空间，又导致full gc的恶意循环</strong></p>
-<p>如果大家对gc的日志不很了解的话, 这里解释下上面日志的各个字段含义, 假如有以下一条gc日志</p>
-<figure class="highlight bash"><table><tr><td class="code"><pre><span class="line">[2018-06-30T17:57:29,020][INFO ][o.e.m.j.JvmGcMonitorService] [qoo--ES] [gc][old][228385][160772] duration [5s], collections [1]/[5.1s], total [5s]/[4.4d], memory [945.4mb]-&gt;[958.5mb]/[1007.3mb], all_pools &#123;[young] [87.8mb]-&gt;[100.9mb]/[133.1mb]&#125;&#123;[survivor] [0b]-&gt;[0b]/[16.6mb]&#125;&#123;[old] [857.6mb]-&gt;[857.6mb]/[857.6mb]&#125;</span><br></pre></td></tr></table></figure>
-<ul>
-<li><strong>gc old</strong> 本次是 old GC 这是第228385次 GC 检查][从 JVM 启动至今发生的第 160772次 G]</li>
-<li><strong>duration</strong> [本次检查到的 GC 总耗时 <strong>5</strong> 秒，可能是多次的加和</li>
-<li><strong>collections</strong> [从上次检查至今总共发生<strong>1</strong>次GC]/[从上次检查至今已过去 <strong>5.1</strong> 秒],</li>
-<li><strong>total</strong> [本次检查到的 GC 总耗时为 <strong>5</strong> 秒]/[从 JVM 启动至今发生的 GC 总耗时为 <strong>4.4</strong> 天]，</li>
-<li><strong>memory</strong> [ GC 前 Heap memory 空间]-&gt;[GC 后 Heap memory 空间]/[Heap memory 总空间],</li>
-<li><strong>all_pools</strong>(分代部分的详情) {young 区][GC 前 Memory ]-&gt;[GC后 Memory]/[young区 Memory 总大小] }</li>
-<li><strong>survivor</strong> [GC 前 Memory ]-&gt;[GC后 Memory]/[Memory 总大小] }{old 区[GC 前 Memory ]-&gt;[GC后 Memory]/[old区 Memory 总大小] }</li>
-</ul>
-<p>那为何会内存不足呢, 想起前几天服务拓展，添加收集了几个服务的日志, 日志量不算小, 而且这3个ES节点所在的机器内存只分配了8个G, 显然, 加完这几个日志之后内存不够用了.</p>
-<h3 id="Index-Mapping"><a href="#Index-Mapping" class="headerlink" title="Index Mapping"></a>Index Mapping</h3><p>而且，从日志中， 还发现几处很诡异的日志</p>
-<p><img src="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20200204141415.png" alt></p>
-<p>红框中的错误: <strong>object mapping for [msg] tried to pasrse field [msg] as object, but found a concrete</strong></p>
-<p>翻译过来就是说, 日志中的msg这个字段的类型匹配不上, ES尽力把它解析为object类型，但是它却是个确切的值.</p>
-<p>就好比你在python中定义了一个字典, 但是你给它赋值一个整形, 这确定要报错.</p>
-<p>但是这个mapping是从何而来的呢.</p>
-<p>经过网上搜索一翻, 终于明白:</p>
-<p>ES中为了加强性能，对于索引中的<strong>第一条数据, ES会默认(可设置)按照这条数据建立index mapping, 相当于是一个索引模板, 好比是mysql中表的定义一个概念, 后续这个索引中的所有日志都按照该模板进行解析</strong></p>
-<p>后来经过查看源码, 我们发现，出现上图中的问题是因为代码中的日志打印不规范, 有一个地方如果抛出异常时，打印的是一个单一字符串, 而正常情况下打印的是一个json, 所以当第一条正常的日志传递给ES时，ES建立的索引 模板记录这个字段为object类型(可以类比为python中的字典, 本身是可以新增元素的), 当应用抛出异常时，日志中又传递了一个单一字符串, 但是索引模板已经记录为object类型，所以无法匹配, 这就是问题所在</p>
-<h3 id="Fix-Bug"><a href="#Fix-Bug" class="headerlink" title="Fix Bug"></a>Fix Bug</h3><p>从3个方面解决上面的问题</p>
-<p>首先是修复代码中日志不规范问题, 这个充暴露了code view不严谨.</p>
-<p>第2个是加大ES的内存,毕竟日志量确实是上来了, 从8G添加到12G</p>
-<p>第3个是优化ES的gc问题, ES中有个逻辑是：<strong>默认情况下，主节点每30秒会去检查其他节点的状态，如果任何节点的垃圾回收时间超过30秒（Garbage collection duration）且在重复次数内都超时，则会导致主节点任务该节点脱离集群, 节点脱离集群后会引起分片的rebalance</strong></p>
-<p>这个机制让ES节点频繁的脱离集群，而又引起整个集群的rebalance，ES本身的内存就不够，rebalance更是雪上加霜, 如此往复就导致整个ES集群宕机.</p>
-<p>可修改主节点的检查时间及重复次数,让其它节点有充分的时间进行full gc.</p>
-<p>在ES的配置文件中添加以下配置:</p>
-<figure class="highlight yml"><table><tr><td class="code"><pre><span class="line"><span class="attr">discovery.zen.fd.ping_timeout:</span> <span class="string">300s</span></span><br><span class="line"><span class="attr">discovery.zen.fd.ping_retriES:</span> <span class="number">10</span></span><br></pre></td></tr></table></figure>
-<p>这样, 达到这两个条件时才能触发节点脱离集群</p>
-<p>至此, 依次重启ES节点, 问题圆满解决.</p>
-<h3 id="参考文章"><a href="#参考文章" class="headerlink" title="参考文章:"></a><strong>参考文章:</strong></h3><blockquote>
-<ul>
-<li><a href="https://www.elastic.co/guide/en/elasticsearch/reference/current/mapping.html" target="_blank" rel="noopener">elasticsearch index mapping</a></li>
-<li><a href="https://blog.csdn.net/sinat_35930259/article/details/80354732" target="_blank" rel="noopener">elasticsearch篇之mapping</a></li>
-<li><a href="https://segmentfault.com/a/1190000016494488" target="_blank" rel="noopener">你看懂 Elasticsearch Log 中的 GC 日志了吗？</a></li>
-</ul>
-</blockquote>
-<h3 id="转载请注明出处https-izsk-me"><a href="#转载请注明出处https-izsk-me" class="headerlink" title="转载请注明出处https://izsk.me"></a><strong>转载请注明出处<a href="https://izsk.me" target="_blank" rel="noopener">https://izsk.me</a></strong></h3>]]></content>
-      <categories>
-        <category>FELK</category>
-      </categories>
-      <tags>
-        <tag>FELK</tag>
       </tags>
   </entry>
   <entry>
