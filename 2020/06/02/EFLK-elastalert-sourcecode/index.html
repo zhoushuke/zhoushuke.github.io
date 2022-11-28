@@ -1,38 +1,931 @@
-{% extends '_layout.swig' %}
-{% import '_macro/post.swig' as post_template %}
-{% import '_macro/sidebar.swig' as sidebar_template %}
+<!doctype html>
 
 
-{% block title %} {{ page.title }} | {{ config.title }} {% endblock %}
 
-{% block page_class %}page-post-detail{% endblock %}
+  
 
 
-{% block content %}
+<html class="theme-next mist use-motion" lang="zh-Hans">
+<head>
+  <meta charset="UTF-8"/>
+<meta http-equiv="X-UA-Compatible" content="IE=edge" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1"/>
+
+
+
+<meta http-equiv="Cache-Control" content="no-transform" />
+<meta http-equiv="Cache-Control" content="no-siteapp" />
+
+
+
+
+
+
+
+
+
+
+
+
+  
+  
+  <link href="/lib/fancybox/source/jquery.fancybox.css?v=2.1.5" rel="stylesheet" type="text/css" />
+
+
+
+
+  
+  
+  
+  
+
+  
+    
+    
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+    
+    
+    <link href="//fonts.googleapis.com/css?family=Lato:300,300italic,400,400italic,700,700italic&subset=latin,latin-ext" rel="stylesheet" type="text/css">
+  
+
+
+
+
+
+
+<link href="/lib/font-awesome/css/font-awesome.min.css?v=4.6.2" rel="stylesheet" type="text/css" />
+
+<link href="/css/main.css?v=5.1.0" rel="stylesheet" type="text/css" />
+
+
+  <meta name="keywords" content="FELK," />
+
+
+
+
+
+
+
+
+  <link rel="shortcut icon" type="image/x-icon" href="/favicon.ico?v=5.1.0" />
+
+
+
+
+
+
+<meta name="description" content="在调研elastalert时几乎把整个源码都看了一遍，记录一下几个重要的部分.">
+<meta property="og:type" content="article">
+<meta property="og:title" content="FELK学习(elastalert源码分析)">
+<meta property="og:url" content="https://zhoushuke.github.io/2020/06/02/EFLK-elastalert-sourcecode/index.html">
+<meta property="og:site_name" content="Z.S.K.&#39;s Records">
+<meta property="og:description" content="在调研elastalert时几乎把整个源码都看了一遍，记录一下几个重要的部分.">
+<meta property="og:locale">
+<meta property="og:image" content="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20200602165705.png">
+<meta property="og:image" content="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20200601111948.png">
+<meta property="article:published_time" content="2020-06-02T07:30:53.000Z">
+<meta property="article:modified_time" content="2022-07-19T03:16:00.957Z">
+<meta property="article:author" content="Z.S.K.">
+<meta property="article:tag" content="FELK">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:image" content="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20200602165705.png">
+
+
+
+<script type="text/javascript" id="hexo.configurations">
+  var NexT = window.NexT || {};
+  var CONFIG = {
+    root: '',
+    scheme: 'Mist',
+    sidebar: {"position":"left","display":"post"},
+    fancybox: true,
+    motion: true,
+    duoshuo: {
+      userId: 'undefined',
+      author: '博主'
+    },
+    algolia: {
+      applicationID: '',
+      apiKey: '',
+      indexName: '',
+      hits: {"per_page":10},
+      labels: {"input_placeholder":"Search for Posts","hits_empty":"We didn't find any results for the search: ${query}","hits_stats":"${hits} results found in ${time} ms"}
+    }
+  };
+</script>
+
+
+
+  <link rel="canonical" href="https://zhoushuke.github.io/2020/06/02/EFLK-elastalert-sourcecode/"/>
+
+
+
+
+
+  <title> FELK学习(elastalert源码分析) | Z.S.K.'s Records </title>
+<meta name="generator" content="Hexo 6.2.0"></head>
+
+<body itemscope itemtype="http://schema.org/WebPage" lang="zh-Hans">
+
+  
+
+
+
+
+
+
+
+
+
+
+  
+  
+    
+  
+
+  <div class="container one-collumn sidebar-position-left page-post-detail ">
+    <div class="headband"></div>
+
+    <header id="header" class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-meta ">
+  
+
+  <div class="custom-logo-site-title">
+    <a href="/"  class="brand" rel="start">
+      <span class="logo-line-before"><i></i></span>
+      <span class="site-title">Z.S.K.'s Records</span>
+      <span class="logo-line-after"><i></i></span>
+    </a>
+  </div>
+    
+      <p class="site-subtitle"></p>
+    
+</div>
+
+<div class="site-nav-toggle">
+  <button>
+    <span class="btn-bar"></span>
+    <span class="btn-bar"></span>
+    <span class="btn-bar"></span>
+  </button>
+</div>
+
+<nav class="site-nav">
+  
+
+  
+    <ul id="menu" class="menu">
+      
+        
+        <li class="menu-item menu-item-home">
+          <a href="/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-home"></i> <br />
+            
+            首页
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-categories">
+          <a href="/categories" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-th"></i> <br />
+            
+            分类
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-about">
+          <a href="/about/ZSK-Profile.pdf" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-user"></i> <br />
+            
+            简历
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-archives">
+          <a href="/archives" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-archive"></i> <br />
+            
+            归档
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-tags">
+          <a href="/tags" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-tags"></i> <br />
+            
+            标签
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-commonweal">
+          <a href="/404.html" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-heartbeat"></i> <br />
+            
+            公益404
+          </a>
+        </li>
+      
+
+      
+        <li class="menu-item menu-item-search">
+          
+            <a href="javascript:;" class="popup-trigger">
+          
+            
+              <i class="menu-item-icon fa fa-search fa-fw"></i> <br />
+            
+            搜索
+          </a>
+        </li>
+      
+    </ul>
+  
+
+  
+    <div class="site-search">
+      
+  <div class="popup">
+ <span class="search-icon fa fa-search"></span>
+ <input type="text" id="local-search-input">
+ <div id="local-search-result"></div>
+ <span class="popup-btn-close">close</span>
+</div>
+
+
+    </div>
+  
+</nav>
+
+
+
+ </div>
+    </header>
+
+    <main id="main" class="main">
+      <div class="main-inner">
+        <div class="content-wrap">
+          <div id="content" class="content">
+            
 
   <div id="posts" class="posts-expand">
-    {{ post_template.render(page) }}
+    
 
-    <div class="post-spread">
-      {% if theme.jiathis %}
-        {% include '_partials/share/jiathis.swig' %}
-      {% elseif theme.baidushare %}
-        {% include '_partials/share/baidushare.swig' %}
-      {% elseif theme.add_this_id %}
-        {% include '_partials/share/add-this.swig' %}
-      {% elseif theme.duoshuo_shortname and theme.duoshuo_share %}
-        {% include '_partials/share/duoshuo_share.swig' %}
-      {% endif %}
+  
+
+  
+  
+  
+
+  <article class="post post-type-normal " itemscope itemtype="http://schema.org/Article">
+  <link itemprop="mainEntityOfPage" href="https://zhoushuke.github.io/2020/06/02/EFLK-elastalert-sourcecode/">
+
+  <span style="display:none" itemprop="author" itemscope itemtype="http://schema.org/Person">
+    <meta itemprop="name" content="">
+    <meta itemprop="description" content="">
+    <meta itemprop="image" content="/images/avatar.gif">
+  </span>
+
+  <span style="display:none" itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+    <meta itemprop="name" content="Z.S.K.'s Records">
+    <span style="display:none" itemprop="logo" itemscope itemtype="http://schema.org/ImageObject">
+      <img style="display:none;" itemprop="url image" alt="Z.S.K.'s Records" src="">
+    </span>
+  </span>
+
+    
+      <header class="post-header">
+
+        
+        
+          <h1 class="post-title" itemprop="name headline">
+            
+            
+              
+                FELK学习(elastalert源码分析)
+              
+            
+          </h1>
+        
+
+        <div class="post-meta">
+          <span class="post-time">
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">发表于</span>
+              
+              <time title="Post created" itemprop="dateCreated datePublished" datetime="2020-06-02T15:30:53+08:00">
+                2020-06-02
+              </time>
+            
+
+            
+
+            
+          </span>
+
+          
+            <span class="post-category" >
+            
+              <span class="post-meta-divider">|</span>
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-folder-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">分类于</span>
+              
+              
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/FELK/" itemprop="url" rel="index">
+                    <span itemprop="name">FELK</span>
+                  </a>
+                </span>
+
+                
+                
+              
+            </span>
+          
+
+          
+            
+          
+
+          
+
+          
+          
+
+          
+
+          
+
+        </div>
+      </header>
+    
+
+
+    <div class="post-body" itemprop="articleBody">
+
+      
+      
+
+      
+        <p>在调研elastalert时几乎把整个源码都看了一遍，记录一下几个重要的部分.</p>
+<span id="more"></span>
+
+
+
+<h3 id="核心查询"><a href="#核心查询" class="headerlink" title="核心查询"></a>核心查询</h3><p>rule文件配置的filter，最终都会转换成es底层支持的格式, 核心代码如下:</p>
+ <figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">def</span> <span class="title function_">get_query</span>(<span class="params">filters, starttime=<span class="literal">None</span>, endtime=<span class="literal">None</span>, sort=<span class="literal">True</span>, timestamp_field=<span class="string">&#x27;@timestamp&#x27;</span>, to_ts_func=dt_to_ts, desc=<span class="literal">False</span>,</span></span><br><span class="line"><span class="params">              five=<span class="literal">False</span></span>):</span><br><span class="line">    <span class="string">&quot;&quot;&quot; Returns a query dict that will apply a list of filters, filter by</span></span><br><span class="line"><span class="string">    start and end time, and sort results by timestamp.</span></span><br><span class="line"><span class="string"></span></span><br><span class="line"><span class="string">    :param filters: A list of Elasticsearch filters to use.</span></span><br><span class="line"><span class="string">    :param starttime: A timestamp to use as the start time of the query.</span></span><br><span class="line"><span class="string">    :param endtime: A timestamp to use as the end time of the query.</span></span><br><span class="line"><span class="string">    :param sort: If true, sort results by timestamp. (Default True)</span></span><br><span class="line"><span class="string">    :return: A query dictionary to pass to Elasticsearch.</span></span><br><span class="line"><span class="string">    &quot;&quot;&quot;</span></span><br><span class="line">    starttime = to_ts_func(starttime)</span><br><span class="line">    endtime = to_ts_func(endtime)</span><br><span class="line">    filters = copy.copy(filters)</span><br><span class="line">    es_filters = &#123;<span class="string">&#x27;filter&#x27;</span>: &#123;<span class="string">&#x27;bool&#x27;</span>: &#123;<span class="string">&#x27;must&#x27;</span>: filters&#125;&#125;&#125;</span><br><span class="line">    <span class="keyword">if</span> starttime <span class="keyword">and</span> endtime:</span><br><span class="line">        es_filters[<span class="string">&#x27;filter&#x27;</span>][<span class="string">&#x27;bool&#x27;</span>][<span class="string">&#x27;must&#x27;</span>].insert(<span class="number">0</span>, &#123;<span class="string">&#x27;range&#x27;</span>: &#123;timestamp_field: &#123;<span class="string">&#x27;gt&#x27;</span>: starttime,</span><br><span class="line">                                                                                    <span class="string">&#x27;lte&#x27;</span>: endtime&#125;&#125;&#125;)</span><br><span class="line">    <span class="keyword">if</span> five:</span><br><span class="line">        query = &#123;<span class="string">&#x27;query&#x27;</span>: &#123;<span class="string">&#x27;bool&#x27;</span>: es_filters&#125;&#125;</span><br><span class="line">    <span class="keyword">else</span>:</span><br><span class="line">        query = &#123;<span class="string">&#x27;query&#x27;</span>: &#123;<span class="string">&#x27;filtered&#x27;</span>: es_filters&#125;&#125;</span><br><span class="line">    <span class="keyword">if</span> sort:</span><br><span class="line">        query[<span class="string">&#x27;sort&#x27;</span>] = [&#123;timestamp_field: &#123;<span class="string">&#x27;order&#x27;</span>: <span class="string">&#x27;desc&#x27;</span> <span class="keyword">if</span> desc <span class="keyword">else</span> <span class="string">&#x27;asc&#x27;</span>&#125;&#125;]</span><br><span class="line">    <span class="keyword">return</span> quer</span><br></pre></td></tr></table></figure>
+
+<p>最终转换成的格式如下, 如果查询的结果与期望值不一样，也可以生产的此语句进行排查.</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br></pre></td><td class="code"><pre><span class="line">curl -H <span class="string">&#x27;Content-Type: application/json&#x27;</span> -XGET <span class="string">&#x27;http://localhost:9200/demo.demo-*/_search?pretty&amp;_source_include=%40timestamp%2C%2A&amp;ignore_unavailable=true&amp;scroll=30s&amp;size=10000&#x27;</span> -d <span class="string">&#x27;&#123;</span></span><br><span class="line"><span class="string">  &quot;query&quot;: &#123;</span></span><br><span class="line"><span class="string">    &quot;bool&quot;: &#123;</span></span><br><span class="line"><span class="string">      &quot;filter&quot;: &#123;                             </span></span><br><span class="line"><span class="string">        &quot;bool&quot;: &#123;                                                   </span></span><br><span class="line"><span class="string">          &quot;must&quot;: [            &#123;                                                                                </span></span><br><span class="line"><span class="string">              &quot;range&quot;: &#123;                                                                                                                                                              </span></span><br><span class="line"><span class="string">                &quot;@timestamp&quot;: &#123;                                                                                           </span></span><br><span class="line"><span class="string">                  &quot;gt&quot;: &quot;2020-05-29T11:04:00.198218Z&quot;,</span></span><br><span class="line"><span class="string">                  &quot;lte&quot;: &quot;2020-05-29T11:09:00.198218Z&quot;                                                                                                                   </span></span><br><span class="line"><span class="string">                &#125;                                          </span></span><br><span class="line"><span class="string">              &#125;</span></span><br><span class="line"><span class="string">            &#125;,                                                 </span></span><br><span class="line"><span class="string">            &#123;</span></span><br><span class="line"><span class="string">              &quot;wildcard&quot;: &#123; # 这里是根据rule文件中的filter条件.                                                                                </span></span><br><span class="line"><span class="string">                &quot;backendMod&quot;: &quot;*senseface*&quot;     </span></span><br><span class="line"><span class="string">              &#125;              </span></span><br><span class="line"><span class="string">            &#125;                                    </span></span><br><span class="line"><span class="string">          ]                                                                                       </span></span><br><span class="line"><span class="string">        &#125;                                                             </span></span><br><span class="line"><span class="string">      &#125;                                 </span></span><br><span class="line"><span class="string">    &#125;</span></span><br><span class="line"><span class="string">  &#125;,</span></span><br><span class="line"><span class="string">  &quot;sort&quot;: [</span></span><br><span class="line"><span class="string">    &#123;</span></span><br><span class="line"><span class="string">      &quot;@timestamp&quot;: &#123;                 </span></span><br><span class="line"><span class="string">        &quot;order&quot;: &quot;asc&quot;                                         </span></span><br><span class="line"><span class="string">      &#125;                                                                                             </span></span><br><span class="line"><span class="string">    &#125;                                                                                        </span></span><br><span class="line"><span class="string">  ]                                                                                     </span></span><br><span class="line"><span class="string">&#125;&#x27;</span></span><br></pre></td></tr></table></figure>
+
+
+
+<h3 id="match-body"><a href="#match-body" class="headerlink" title="match_body"></a>match_body</h3><h4 id="num-hits-vs-num-matches"><a href="#num-hits-vs-num-matches" class="headerlink" title="num_hits vs num_matches"></a>num_hits vs num_matches</h4><figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br></pre></td><td class="code"><pre><span class="line">num_hits is the number of documents returned by elasticsearch <span class="keyword">for</span> a given query. num_matches is how many <span class="built_in">times</span> that data matched your rule, each one potentially generating an alert.</span><br><span class="line"></span><br><span class="line">If it makes a query over a 10 minute range and gets 10 hits, and you have</span><br><span class="line"></span><br><span class="line"><span class="built_in">type</span>: frequency</span><br><span class="line">num_events: 10</span><br><span class="line">timeframe:</span><br><span class="line">  minutes: 10</span><br><span class="line"><span class="keyword">then</span> you<span class="string">&#x27;ll get 1 match.</span></span><br><span class="line"><span class="string"></span></span><br><span class="line"><span class="string">总结:</span></span><br><span class="line"><span class="string">num_hits表示的是根据filter条件及查询时间段从es返回的记录,而num_matches表示的是预计会产生多少条报警</span></span><br><span class="line"><span class="string">因此 num_matches = num_hits / num_events, 会四舍五入,所以在告警内容中会发现两者都是这样的关系</span></span><br></pre></td></tr></table></figure>
+
+<h3 id="写回到es索引-elastalert-status"><a href="#写回到es索引-elastalert-status" class="headerlink" title="写回到es索引:elastalert_status"></a>写回到es索引:elastalert_status</h3><p>同样，产生的告警的现场日志在发送到告警介质后都会写入到es索引中</p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">def</span> <span class="title function_">send_alert</span>(<span class="params">self, matches, rule, alert_time=<span class="literal">None</span>, retried=<span class="literal">False</span></span>):</span><br><span class="line">	<span class="comment"># ...</span></span><br><span class="line">      <span class="keyword">for</span> alert <span class="keyword">in</span> rule[<span class="string">&#x27;alert&#x27;</span>]:</span><br><span class="line">            alert.pipeline = alert_pipeline</span><br><span class="line">            <span class="keyword">try</span>:</span><br><span class="line">                alert.alert(matches)</span><br><span class="line">            <span class="keyword">except</span> EAException <span class="keyword">as</span> e:</span><br><span class="line">                self.handle_error(<span class="string">&#x27;Error while running alert %s: %s&#x27;</span> % (alert.get_info()[<span class="string">&#x27;type&#x27;</span>], e), &#123;<span class="string">&#x27;rule&#x27;</span>: rule[<span class="string">&#x27;name&#x27;</span>]&#125;)</span><br><span class="line">                alert_exception = <span class="built_in">str</span>(e)</span><br><span class="line">            <span class="keyword">else</span>:</span><br><span class="line">                self.thread_data.alerts_sent += <span class="number">1</span></span><br><span class="line">                alert_sent = <span class="literal">True</span></span><br><span class="line">      <span class="comment"># ...</span></span><br><span class="line">      <span class="keyword">for</span> <span class="keyword">match</span> <span class="keyword">in</span> matches:</span><br><span class="line">            alert_body = self.get_alert_body(<span class="keyword">match</span>, rule, alert_sent, alert_time, alert_exception)</span><br><span class="line">            <span class="comment"># Set all matches to aggregate together</span></span><br><span class="line">            <span class="keyword">if</span> agg_id:</span><br><span class="line">                alert_body[<span class="string">&#x27;aggregate_id&#x27;</span>] = agg_id</span><br><span class="line">            res = self.writeback(<span class="string">&#x27;elastalert&#x27;</span>, alert_body, rule)</span><br><span class="line">            <span class="keyword">if</span> res <span class="keyword">and</span> <span class="keyword">not</span> agg_id:</span><br><span class="line">                agg_id = res[<span class="string">&#x27;_id&#x27;</span>]</span><br></pre></td></tr></table></figure>
+
+
+
+<h3 id="starttime-x2F-endtime-x2F-original-time"><a href="#starttime-x2F-endtime-x2F-original-time" class="headerlink" title="starttime&#x2F;endtime&#x2F;original_time"></a>starttime&#x2F;endtime&#x2F;original_time</h3><p>endtime一般都是执行查询时取的当前时间，因此elastalert默认没有保存，starttime一般是由endtime减去timeframe计算而来，但是如果elastalert重启的话, starttime会跟期望的不太一样，通过源码可以看到还有一个original_time, original_time为存在在es中的上一次执行的endtime, 因此，每次查询的时候，都会从original_time处开始查询, endtime为当前时间</p>
+<p>因此starttime最好设置为original_time，使用starttime有产生歧义</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line">body = &#123;<span class="string">&#x27;rule_name&#x27;</span>: rule[<span class="string">&#x27;name&#x27;</span>],</span><br><span class="line">               <span class="string">&#x27;endtime&#x27;</span>: endtime,</span><br><span class="line">               <span class="string">&#x27;starttime&#x27;</span>: rule[<span class="string">&#x27;original_starttime&#x27;</span>],</span><br><span class="line">               <span class="string">&#x27;matches&#x27;</span>: num_matches,</span><br><span class="line">               <span class="string">&#x27;hits&#x27;</span>: max(self.thread_data.num_hits, self.thread_data.cumulative_hits),</span><br><span class="line">               <span class="string">&#x27;@timestamp&#x27;</span>: ts_now(),</span><br><span class="line">               <span class="string">&#x27;time_taken&#x27;</span>: time_taken&#125;</span><br><span class="line">       self.writeback(<span class="string">&#x27;elastalert_status&#x27;</span>, body)</span><br></pre></td></tr></table></figure>
+
+<p>当然为了避免elastalert重启时离上次运行的时间间隔太久, 默认情况下启动后会从es中读取<code>starttime</code>,以这个时间点到当前时间为时间窗口，然后以run_every给定的时间进行查询,所以，在这种情况下可能会出现刚重启时就出现大量的查询，很多时间太久的历史日志监控是无意义，因此可以在elastalert.yaml中指定<code>old_query_limit: minutes: 1</code>来限定starttime为当前时间的前一分钟.</p>
+<h3 id="enhancement"><a href="#enhancement" class="headerlink" title="enhancement"></a>enhancement</h3><p>elastalert提供两种方案可以让在找到匹配项后立即运行增强功能(run_enhancements_first)或者在发送告警前进行操作,比如修改match操作(match_enhancements)</p>
+<h4 id="run-enhancements-first"><a href="#run-enhancements-first" class="headerlink" title="run_enhancements_first"></a>run_enhancements_first</h4><p>如果在rule配置中指定的了run_enhancements_first，源码如下:</p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">def</span> <span class="title function_">run_rule</span>(<span class="params">self, rule, endtime, starttime=<span class="literal">None</span></span>):</span><br><span class="line">	<span class="comment"># ...</span></span><br><span class="line">  self.run_query()</span><br><span class="line">  <span class="keyword">if</span> rule.get(<span class="string">&#x27;run_enhancements_first&#x27;</span>):</span><br><span class="line">                <span class="keyword">try</span>:</span><br><span class="line">                    <span class="keyword">for</span> enhancement <span class="keyword">in</span> rule[<span class="string">&#x27;match_enhancements&#x27;</span>]:</span><br><span class="line">                        <span class="keyword">try</span>:</span><br><span class="line">                            enhancement.process(<span class="keyword">match</span>) <span class="comment"># point</span></span><br><span class="line">                        <span class="keyword">except</span> EAException <span class="keyword">as</span> e:</span><br><span class="line">                            self.handle_error(<span class="string">&quot;Error running match enhancement: %s&quot;</span> % (e), &#123;<span class="string">&#x27;rule&#x27;</span>: rule[<span class="string">&#x27;name&#x27;</span>]&#125;)</span><br><span class="line">                <span class="keyword">except</span> DropMatchException:</span><br><span class="line">                    <span class="keyword">continue</span></span><br><span class="line">  </span><br></pre></td></tr></table></figure>
+
+<h4 id="match-enhancements"><a href="#match-enhancements" class="headerlink" title="match_enhancements"></a>match_enhancements</h4><figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">def</span> <span class="title function_">send_alert</span>(<span class="params">self, matches, rule, alert_time=<span class="literal">None</span>, retried=<span class="literal">False</span></span>):</span><br><span class="line"><span class="comment"># ...</span></span><br><span class="line">	 <span class="keyword">if</span> <span class="keyword">not</span> rule.get(<span class="string">&#x27;run_enhancements_first&#x27;</span>) <span class="keyword">and</span> <span class="keyword">not</span> retried:</span><br><span class="line">            <span class="keyword">for</span> enhancement <span class="keyword">in</span> rule[<span class="string">&#x27;match_enhancements&#x27;</span>]:</span><br><span class="line">                valid_matches = []</span><br><span class="line">                <span class="keyword">for</span> <span class="keyword">match</span> <span class="keyword">in</span> matches:</span><br><span class="line">                    <span class="keyword">try</span>:</span><br><span class="line">                        enhancement.process(<span class="keyword">match</span>) <span class="comment"># point</span></span><br><span class="line">                        valid_matches.append(<span class="keyword">match</span>)</span><br><span class="line">                    <span class="keyword">except</span> DropMatchException:</span><br><span class="line">                        <span class="keyword">pass</span></span><br><span class="line">                    <span class="keyword">except</span> EAException <span class="keyword">as</span> e:</span><br><span class="line">                        self.handle_error(<span class="string">&quot;Error running match enhancement: %s&quot;</span> % (e), &#123;<span class="string">&#x27;rule&#x27;</span>: rule[<span class="string">&#x27;name&#x27;</span>]&#125;)</span><br><span class="line">                matches = valid_matches</span><br><span class="line">                <span class="keyword">if</span> <span class="keyword">not</span> matches:</span><br><span class="line">                    <span class="keyword">return</span> <span class="literal">None</span></span><br><span class="line">    <span class="comment"># ...</span></span><br><span class="line">    alert.alert(matches)</span><br></pre></td></tr></table></figure>
+
+<p>很多人关心的elastalert没有保存的endtime字段，其实就可以match_enhancements中添加字段.</p>
+<h3 id="自定义告警"><a href="#自定义告警" class="headerlink" title="自定义告警"></a>自定义告警</h3><h4 id="自定义邮件格式"><a href="#自定义邮件格式" class="headerlink" title="自定义邮件格式"></a>自定义邮件格式</h4><p>由于默认的邮件告警只是简单的把str格式的内容通过邮件发送出去,非常不美观，因此通过jinja2的形式自定义了邮件格式</p>
+<p>首先在rule配置中定义<code>email_format: html</code></p>
+<p>由于只是在发送邮件的时候才使用jinja2的html模板，因此需要对<code>alert</code>的类型进行判断</p>
+<p>修改的源码如下:</p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">class</span> <span class="title class_">BasicMatchString</span>(<span class="title class_ inherited__">object</span>):</span><br><span class="line">    <span class="string">&quot;&quot;&quot; Creates a string containing fields in match for the given rule. &quot;&quot;&quot;</span></span><br><span class="line">    <span class="keyword">def</span> <span class="title function_">__init__</span>(<span class="params">self, rule, <span class="keyword">match</span>, alert_type</span>): <span class="comment"># 新增一个alert_type，为告警类型</span></span><br><span class="line">        self.rule = rule</span><br><span class="line">        self.<span class="keyword">match</span> = <span class="keyword">match</span></span><br><span class="line">        self.alert_type = alert_type</span><br><span class="line"><span class="meta">    @staticmethod</span></span><br><span class="line">    <span class="keyword">def</span> <span class="title function_">render_html</span>(<span class="params">summary_str, data</span>):</span><br><span class="line">        env = Environment(loader=FileSystemLoader(</span><br><span class="line">            os.path.join(os.path.dirname(__file__), <span class="string">&quot;templates&quot;</span>)))</span><br><span class="line">        template = env.get_template(<span class="string">&#x27;mail.html.tpl&#x27;</span>)</span><br><span class="line">        out = template.render(summary_str=summary_str, data=data)</span><br><span class="line">        <span class="comment">#with open(&#x27;mail.html&#x27;, &#x27;w&#x27;, encoding=&#x27;utf-8&#x27;) as f:</span></span><br><span class="line">        <span class="comment">#   f.write(out)</span></span><br><span class="line">        <span class="keyword">return</span> out</span><br><span class="line">     <span class="keyword">def</span> <span class="title function_">_add_custom_alert_text</span>(<span class="params">self</span>):</span><br><span class="line">        missing = self.rule.get(<span class="string">&#x27;alert_missing_value&#x27;</span>, <span class="string">&#x27;&lt;MISSING VALUE&gt;&#x27;</span>)</span><br><span class="line">        <span class="keyword">if</span> <span class="string">&#x27;alert_text_args&#x27;</span> <span class="keyword">in</span> self.rule:</span><br><span class="line">            alert_text_args = self.rule.get(<span class="string">&#x27;alert_text_args&#x27;</span>)</span><br><span class="line">            <span class="comment"># 判断告警的类型</span></span><br><span class="line">            <span class="keyword">if</span> <span class="string">&#x27;email&#x27;</span> == self.alert_type:</span><br><span class="line">                summary_str = self.rule[<span class="string">&#x27;type&#x27;</span>].get_match_str(self.<span class="keyword">match</span>)</span><br><span class="line">                alert_text = <span class="built_in">str</span>(self.render_html(summary_str, alert_text_args))</span><br><span class="line">            <span class="comment"># 如果不是email则保存跟源码一致</span></span><br><span class="line">            <span class="keyword">else</span>:</span><br><span class="line">                alert_text = <span class="built_in">str</span>(self.rule.get(<span class="string">&#x27;alert_text&#x27;</span>, <span class="string">&#x27;&#x27;</span>))</span><br><span class="line">            <span class="comment"># ...</span></span><br></pre></td></tr></table></figure>
+
+<p>由于所有的告警类型的基类都是<code>Alerter</code>,因此通过这个来传递告警类型.</p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">class</span> <span class="title class_">Alerter</span>(<span class="title class_ inherited__">object</span>):</span><br><span class="line">  <span class="comment">#...</span></span><br><span class="line">   <span class="keyword">def</span> <span class="title function_">create_alert_body</span>(<span class="params">self, matches</span>):</span><br><span class="line">        alert_type = self.get_info()[<span class="string">&#x27;type&#x27;</span>] <span class="comment"># 通过get_info 获取alerter实例的type</span></span><br><span class="line">        body = self.get_aggregation_summary_text(matches)</span><br><span class="line">        <span class="keyword">if</span> self.rule.get(<span class="string">&#x27;alert_text_type&#x27;</span>) != <span class="string">&#x27;aggregation_summary_only&#x27;</span>:</span><br><span class="line">            <span class="keyword">for</span> <span class="keyword">match</span> <span class="keyword">in</span> matches:</span><br><span class="line">                body += <span class="built_in">str</span>(BasicMatchString(self.rule, <span class="keyword">match</span>, alert_type)) <span class="comment"># 传入BasicMatchString</span></span><br><span class="line">                <span class="comment"># Separate text of aggregated alerts with dashes</span></span><br><span class="line">                <span class="keyword">if</span> <span class="built_in">len</span>(matches) &gt; <span class="number">1</span>:</span><br><span class="line">                    body += <span class="string">&#x27;\n----------------------------------------\n&#x27;</span></span><br><span class="line">        <span class="keyword">return</span> body</span><br></pre></td></tr></table></figure>
+
+<p>这样就完成自定义邮件格式了,模板如下:</p>
+<p><img src="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20200602165705.png"></p>
+<p>字段直接在rule文件中alert_text_args中传入即可.</p>
+<h4 id="微信报警"><a href="#微信报警" class="headerlink" title="微信报警"></a>微信报警</h4><p>elastalert本身支持自定义的告警接入，只需要实现<code> body = self.create_alert_body(matches)</code>方法即可.不难，难点在于企业微信api如何使用, 代码参考<a target="_blank" rel="noopener" href="https://anjia0532.github.io/2017/02/16/elastalert-wechat-plugin/">elastalert-wechat-plugin</a>, 亲测可用.</p>
+<h3 id="问题"><a href="#问题" class="headerlink" title="问题"></a>问题</h3><ol>
+<li>如果修改源码后rule执行出现问题, 则会自动地生成exception写入到索引中且该rule会被disable掉,直到不再报错之前都不再执行.</li>
+</ol>
+<p><img src="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20200601111948.png"></p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">03:18:59.552Z ERROR elastalert-server:</span><br><span class="line">    ProcessController:  INFO:elastalert:Disabled rules are: [<span class="string">&#x27;index realty find invalid keyword&#x27;</span>]</span><br></pre></td></tr></table></figure>
+
+
+
+<ol start="2">
+<li>es中的until字段记录了下次执行的时候(由apscheduler框架支持)</li>
+</ol>
+<figure class="highlight yaml"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br></pre></td><td class="code"><pre><span class="line">&#123;</span><br><span class="line">  <span class="attr">&quot;_index&quot;:</span> <span class="string">&quot;demo.elastalert_status&quot;</span>,</span><br><span class="line">  <span class="attr">&quot;_type&quot;:</span> <span class="string">&quot;silence&quot;</span>,</span><br><span class="line">  <span class="attr">&quot;_id&quot;:</span> <span class="string">&quot;AXJt-tKUPz_v1Z2rFGRX&quot;</span>,</span><br><span class="line">  <span class="attr">&quot;_score&quot;:</span> <span class="literal">null</span>,</span><br><span class="line">  <span class="attr">&quot;_source&quot;:</span> &#123;</span><br><span class="line">    <span class="attr">&quot;exponent&quot;:</span> <span class="number">0</span>,</span><br><span class="line">    <span class="attr">&quot;rule_name&quot;:</span> <span class="string">&quot;index realty find invalid keyword.senseface&quot;</span>,</span><br><span class="line">    <span class="string">&quot;@timestamp&quot;</span><span class="string">:</span> <span class="string">&quot;2020-06-01T03:44:13.967765Z&quot;</span>,</span><br><span class="line">    <span class="attr">&quot;until&quot;:</span> <span class="string">&quot;2020-06-01T03:49:13.967756Z&quot;</span> <span class="comment"># here</span></span><br><span class="line">  &#125;,</span><br><span class="line">  <span class="attr">&quot;fields&quot;:</span> &#123;</span><br><span class="line">    <span class="string">&quot;@timestamp&quot;</span><span class="string">:</span> [</span><br><span class="line">      <span class="number">1590983053967</span></span><br><span class="line">    ],</span><br><span class="line">    <span class="attr">&quot;until&quot;:</span> [</span><br><span class="line">      <span class="number">1590983353967</span></span><br><span class="line">    ]</span><br><span class="line">  &#125;,</span><br><span class="line">  <span class="attr">&quot;sort&quot;:</span> [</span><br><span class="line">    <span class="number">1590983053967</span></span><br><span class="line">  ]</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+
+
+<h3 id="参考文章"><a href="#参考文章" class="headerlink" title="参考文章:"></a><strong>参考文章:</strong></h3><blockquote>
+<ul>
+<li><a target="_blank" rel="noopener" href="https://github.com/Yelp/elastalert/issues/2754">https://github.com/Yelp/elastalert/issues/2754</a></li>
+<li><a target="_blank" rel="noopener" href="https://anjia0532.github.io/2017/02/16/elastalert-wechat-plugin/">https://anjia0532.github.io/2017/02/16/elastalert-wechat-plugin/</a></li>
+<li><a target="_blank" rel="noopener" href="https://work.weixin.qq.com/api/doc">https://work.weixin.qq.com/api/doc</a></li>
+</ul>
+</blockquote>
+<h3 id="转载请注明出处https-izsk-me"><a href="#转载请注明出处https-izsk-me" class="headerlink" title="转载请注明出处https://izsk.me"></a><strong>转载请注明出处<a target="_blank" rel="noopener" href="https://izsk.me/">https://izsk.me</a></strong></h3>
+      
+    </div>
+
+    <div>
+      
+        
+<div id="wechat_subscriber" style="display: block; padding: 10px 0; margin: 20px auto; width: 100%; text-align: center">
+    <img id="wechat_subscriber_qcode" src="/images/websitecode250.png" alt=" wechat" style="width: 200px; max-width: 100%;"/>
+    <div>Scan Me To Read on Phone</div>
+</div>
+
+
+      
+    </div>
+
+    <div>
+      
+        
+  <div style="padding: 10px 0; margin: 20px auto; width: 90%; text-align: center;">
+    <div>I know you won't do this,but what if you did?</div>
+    <button id="rewardButton" disable="enable" onclick="var qr = document.getElementById('QR'); if (qr.style.display === 'none') {qr.style.display='block';} else {qr.style.display='none'}">
+      <span>赏</span>
+    </button>
+    <div id="QR" style="display: none;">
+      
+        <div id="wechat" style="display: inline-block">
+          <img id="wechat_qr" src="/images/wechatpayme.png" alt=" WeChat Pay"/>
+          <p>微信打赏</p>
+        </div>
+      
+      
+        <div id="alipay" style="display: inline-block">
+          <img id="alipay_qr" src="/images/alipayme.jpg" alt=" Alipay"/>
+          <p>支付宝打赏</p>
+        </div>
+      
     </div>
   </div>
 
-{% endblock %}
 
-{% block sidebar %}
-  {{ sidebar_template.render(true) }}
-{% endblock %}
+      
+    </div>
 
 
-{% block script_extra %}
-  {% include '_scripts/pages/post-details.swig' %}
-{% endblock %}
+    <footer class="post-footer">
+      
+        <div class="post-tags">
+          
+            <a href="/tags/FELK/" rel="tag"># FELK</a>
+          
+        </div>
+      
+
+      
+        <div class="post-nav">
+          <div class="post-nav-next post-nav-item">
+            
+              <a href="/2020/05/30/Kubernetes-ck-operator-install/" rel="next" title="Kubernetes学习(operator部署高可用Clickhouse)">
+                <i class="fa fa-chevron-left"></i> Kubernetes学习(operator部署高可用Clickhouse)
+              </a>
+            
+          </div>
+
+          <span class="post-nav-divider"></span>
+
+          <div class="post-nav-prev post-nav-item">
+            
+              <a href="/2020/06/10/Kubernetes-coredns-5s-timeout/" rel="prev" title="Kubernetes学习(关于CoreDNS的5s超时问题)">
+                Kubernetes学习(关于CoreDNS的5s超时问题) <i class="fa fa-chevron-right"></i>
+              </a>
+            
+          </div>
+        </div>
+      
+
+      
+      
+    </footer>
+  </article>
+
+
+
+    <div class="post-spread">
+      
+    </div>
+  </div>
+
+
+          </div>
+          
+
+
+          
+  <div class="comments" id="comments">
+    
+  </div>
+
+
+        </div>
+        
+          
+  
+  <div class="sidebar-toggle">
+    <div class="sidebar-toggle-line-wrap">
+      <span class="sidebar-toggle-line sidebar-toggle-line-first"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-middle"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-last"></span>
+    </div>
+  </div>
+
+  <aside id="sidebar" class="sidebar">
+    <div class="sidebar-inner">
+
+      
+
+      
+        <ul class="sidebar-nav motion-element">
+          <li class="sidebar-nav-toc sidebar-nav-active" data-target="post-toc-wrap" >
+            文章目录
+          </li>
+          <li class="sidebar-nav-overview" data-target="site-overview">
+            站点概览
+          </li>
+        </ul>
+      
+
+      <section class="site-overview sidebar-panel">
+        <div class="site-author motion-element" itemprop="author" itemscope itemtype="http://schema.org/Person">
+          <img class="site-author-image" itemprop="image"
+               src="/images/avatar.gif"
+               alt="" />
+          <p class="site-author-name" itemprop="name"></p>
+          <p class="site-description motion-element" itemprop="description"></p>
+        </div>
+        <nav class="site-state motion-element">
+        
+          
+            <div class="site-state-item site-state-posts">
+              <a href="/archives">
+                <span class="site-state-item-count">192</span>
+                <span class="site-state-item-name">日志</span>
+              </a>
+            </div>
+          
+
+          
+            <div class="site-state-item site-state-categories">
+              <a href="/categories">
+                <span class="site-state-item-count">14</span>
+                <span class="site-state-item-name">分类</span>
+              </a>
+            </div>
+          
+
+          
+            <div class="site-state-item site-state-tags">
+              <a href="/tags">
+                <span class="site-state-item-count">14</span>
+                <span class="site-state-item-name">标签</span>
+              </a>
+            </div>
+          
+
+        </nav>
+
+        
+
+        <div class="links-of-author motion-element">
+          
+        </div>
+
+        
+        
+
+        
+        
+
+        
+
+
+      </section>
+
+      
+      <!--noindex-->
+        <section class="post-toc-wrap motion-element sidebar-panel sidebar-panel-active">
+          <div class="post-toc">
+
+            
+              
+            
+
+            
+              <div class="post-toc-content"><ol class="nav"><li class="nav-item nav-level-3"><a class="nav-link" href="#%E6%A0%B8%E5%BF%83%E6%9F%A5%E8%AF%A2"><span class="nav-number">1.</span> <span class="nav-text">核心查询</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#match-body"><span class="nav-number">2.</span> <span class="nav-text">match_body</span></a><ol class="nav-child"><li class="nav-item nav-level-4"><a class="nav-link" href="#num-hits-vs-num-matches"><span class="nav-number">2.1.</span> <span class="nav-text">num_hits vs num_matches</span></a></li></ol></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E5%86%99%E5%9B%9E%E5%88%B0es%E7%B4%A2%E5%BC%95-elastalert-status"><span class="nav-number">3.</span> <span class="nav-text">写回到es索引:elastalert_status</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#starttime-x2F-endtime-x2F-original-time"><span class="nav-number">4.</span> <span class="nav-text">starttime&#x2F;endtime&#x2F;original_time</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#enhancement"><span class="nav-number">5.</span> <span class="nav-text">enhancement</span></a><ol class="nav-child"><li class="nav-item nav-level-4"><a class="nav-link" href="#run-enhancements-first"><span class="nav-number">5.1.</span> <span class="nav-text">run_enhancements_first</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#match-enhancements"><span class="nav-number">5.2.</span> <span class="nav-text">match_enhancements</span></a></li></ol></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E8%87%AA%E5%AE%9A%E4%B9%89%E5%91%8A%E8%AD%A6"><span class="nav-number">6.</span> <span class="nav-text">自定义告警</span></a><ol class="nav-child"><li class="nav-item nav-level-4"><a class="nav-link" href="#%E8%87%AA%E5%AE%9A%E4%B9%89%E9%82%AE%E4%BB%B6%E6%A0%BC%E5%BC%8F"><span class="nav-number">6.1.</span> <span class="nav-text">自定义邮件格式</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#%E5%BE%AE%E4%BF%A1%E6%8A%A5%E8%AD%A6"><span class="nav-number">6.2.</span> <span class="nav-text">微信报警</span></a></li></ol></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E9%97%AE%E9%A2%98"><span class="nav-number">7.</span> <span class="nav-text">问题</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E5%8F%82%E8%80%83%E6%96%87%E7%AB%A0"><span class="nav-number">8.</span> <span class="nav-text">参考文章:</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E8%BD%AC%E8%BD%BD%E8%AF%B7%E6%B3%A8%E6%98%8E%E5%87%BA%E5%A4%84https-izsk-me"><span class="nav-number">9.</span> <span class="nav-text">转载请注明出处https:&#x2F;&#x2F;izsk.me</span></a></li></ol></div>
+            
+
+          </div>
+        </section>
+      <!--/noindex-->
+      
+
+    </div>
+  </aside>
+
+
+        
+      </div>
+    </main>
+
+    <footer id="footer" class="footer">
+      <div class="footer-inner">
+        <div class="copyright" >
+  
+  &copy; 
+  <span itemprop="copyrightYear">2022</span>
+  <span class="with-love">
+    <i class="fa fa-heart"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">Z.S.K.</span>
+</div>
+
+
+<div class="powered-by">
+  Supported by <a class="theme-link" target="_blank" rel="noopener" href="https://hexo.io">Hexo</a>
+</div>
+
+<div class="theme-info">
+  Theme -
+  <a class="theme-link" target="_blank" rel="noopener" href="https://github.com/iissnan/hexo-theme-next">
+    NexT.Mist
+  </a>
+</div>
+
+
+        
+
+        
+      </div>
+    </footer>
+
+    <div class="back-to-top">
+      <i class="fa fa-arrow-up"></i>
+    </div>
+  </div>
+
+  
+
+<script type="text/javascript">
+  if (Object.prototype.toString.call(window.Promise) !== '[object Function]') {
+    window.Promise = null;
+  }
+</script>
+
+
+
+
+
+
+
+
+
+  
+
+
+
+  
+  <script type="text/javascript" src="/lib/jquery/index.js?v=2.1.3"></script>
+
+  
+  <script type="text/javascript" src="/lib/fastclick/lib/fastclick.min.js?v=1.0.6"></script>
+
+  
+  <script type="text/javascript" src="/lib/jquery_lazyload/jquery.lazyload.js?v=1.9.7"></script>
+
+  
+  <script type="text/javascript" src="/lib/velocity/velocity.min.js?v=1.2.1"></script>
+
+  
+  <script type="text/javascript" src="/lib/velocity/velocity.ui.min.js?v=1.2.1"></script>
+
+  
+  <script type="text/javascript" src="/lib/fancybox/source/jquery.fancybox.pack.js?v=2.1.5"></script>
+
+
+  
+
+
+  <script type="text/javascript" src="/js/src/utils.js?v=5.1.0"></script>
+
+  <script type="text/javascript" src="/js/src/motion.js?v=5.1.0"></script>
+
+
+
+  
+  
+
+  
+  <script type="text/javascript" src="/js/src/scrollspy.js?v=5.1.0"></script>
+<script type="text/javascript" src="/js/src/post-details.js?v=5.1.0"></script>
+
+
+
+  
+
+
+  <script type="text/javascript" src="/js/src/bootstrap.js?v=5.1.0"></script>
+
+
+
+  
+
+
+
+  
+
+
+
+
+	
+
+
+
+
+
+  
+
+
+
+
+  
+  
+  <script type="text/javascript">
+    // Popup Window;
+    var isfetched = false;
+    // Search DB path;
+    var search_path = "search.xml";
+    if (search_path.length == 0) {
+      search_path = "search.xml";
+    }
+    var path = "/" + search_path;
+    // monitor main search box;
+
+    function proceedsearch() {
+      $("body").append('<div class="popoverlay">').css('overflow', 'hidden');
+      $('.popup').toggle();
+    }
+    // search function;
+    var searchFunc = function(path, search_id, content_id) {
+      'use strict';
+      $.ajax({
+        url: path,
+        dataType: "xml",
+        async: true,
+        success: function( xmlResponse ) {
+          // get the contents from search data
+          isfetched = true;
+          $('.popup').detach().appendTo('.header-inner');
+          var datas = $( "entry", xmlResponse ).map(function() {
+            return {
+              title: $( "title", this ).text(),
+              content: $("content",this).text(),
+              url: $( "url" , this).text()
+            };
+          }).get();
+          var $input = document.getElementById(search_id);
+          var $resultContent = document.getElementById(content_id);
+          $input.addEventListener('input', function(){
+            var matchcounts = 0;
+            var str='<ul class=\"search-result-list\">';
+            var keywords = this.value.trim().toLowerCase().split(/[\s\-]+/);
+            $resultContent.innerHTML = "";
+            if (this.value.trim().length > 1) {
+              // perform local searching
+              datas.forEach(function(data) {
+                var isMatch = false;
+                var content_index = [];
+                var data_title = data.title.trim().toLowerCase();
+                var data_content = data.content.trim().replace(/<[^>]+>/g,"").toLowerCase();
+                var data_url = decodeURIComponent(data.url);
+                var index_title = -1;
+                var index_content = -1;
+                var first_occur = -1;
+                // only match artiles with not empty titles and contents
+                if(data_title != '') {
+                  keywords.forEach(function(keyword, i) {
+                    index_title = data_title.indexOf(keyword);
+                    index_content = data_content.indexOf(keyword);
+                    if( index_title >= 0 || index_content >= 0 ){
+                      isMatch = true;
+                      if (i == 0) {
+                        first_occur = index_content;
+                      }
+                    }
+
+                  });
+                }
+                // show search results
+                if (isMatch) {
+                  matchcounts += 1;
+                  str += "<li><a href='"+ data_url +"' class='search-result-title'>"+ data_title +"</a>";
+                  var content = data.content.trim().replace(/<[^>]+>/g,"");
+                  if (first_occur >= 0) {
+                    // cut out 100 characters
+                    var start = first_occur - 20;
+                    var end = first_occur + 80;
+                    if(start < 0){
+                      start = 0;
+                    }
+                    if(start == 0){
+                      end = 50;
+                    }
+                    if(end > content.length){
+                      end = content.length;
+                    }
+                    var match_content = content.substring(start, end);
+                    // highlight all keywords
+                    keywords.forEach(function(keyword){
+                      var regS = new RegExp(keyword, "gi");
+                      match_content = match_content.replace(regS, "<b class=\"search-keyword\">"+keyword+"</b>");
+                    });
+
+                    str += "<p class=\"search-result\">" + match_content +"...</p>"
+                  }
+                  str += "</li>";
+                }
+              })};
+            str += "</ul>";
+            if (matchcounts == 0) { str = '<div id="no-result"><i class="fa fa-frown-o fa-5x" /></div>' }
+            if (keywords == "") { str = '<div id="no-result"><i class="fa fa-search fa-5x" /></div>' }
+            $resultContent.innerHTML = str;
+          });
+          proceedsearch();
+        }
+      });}
+
+    // handle and trigger popup window;
+    $('.popup-trigger').click(function(e) {
+      e.stopPropagation();
+      if (isfetched == false) {
+        searchFunc(path, 'local-search-input', 'local-search-result');
+      } else {
+        proceedsearch();
+      };
+    });
+
+    $('.popup-btn-close').click(function(e){
+      $('.popup').hide();
+      $(".popoverlay").remove();
+      $('body').css('overflow', '');
+    });
+    $('.popup').click(function(e){
+      e.stopPropagation();
+    });
+  </script>
+
+
+  
+
+  
+
+  
+
+  
+
+
+</body>
+</html>

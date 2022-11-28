@@ -1,38 +1,1006 @@
-{% extends '_layout.swig' %}
-{% import '_macro/post.swig' as post_template %}
-{% import '_macro/sidebar.swig' as sidebar_template %}
+<!doctype html>
 
 
-{% block title %} {{ page.title }} | {{ config.title }} {% endblock %}
 
-{% block page_class %}page-post-detail{% endblock %}
+  
 
 
-{% block content %}
+<html class="theme-next mist use-motion" lang="zh-Hans">
+<head>
+  <meta charset="UTF-8"/>
+<meta http-equiv="X-UA-Compatible" content="IE=edge" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1"/>
+
+
+
+<meta http-equiv="Cache-Control" content="no-transform" />
+<meta http-equiv="Cache-Control" content="no-siteapp" />
+
+
+
+
+
+
+
+
+
+
+
+
+  
+  
+  <link href="/lib/fancybox/source/jquery.fancybox.css?v=2.1.5" rel="stylesheet" type="text/css" />
+
+
+
+
+  
+  
+  
+  
+
+  
+    
+    
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+    
+    
+    <link href="//fonts.googleapis.com/css?family=Lato:300,300italic,400,400italic,700,700italic&subset=latin,latin-ext" rel="stylesheet" type="text/css">
+  
+
+
+
+
+
+
+<link href="/lib/font-awesome/css/font-awesome.min.css?v=4.6.2" rel="stylesheet" type="text/css" />
+
+<link href="/css/main.css?v=5.1.0" rel="stylesheet" type="text/css" />
+
+
+  <meta name="keywords" content="Kubernetes," />
+
+
+
+
+
+
+
+
+  <link rel="shortcut icon" type="image/x-icon" href="/favicon.ico?v=5.1.0" />
+
+
+
+
+
+
+<meta name="description" content="官方定义An Operator is a method of packaging, deploying and managing a Kubernetes application. 旨在简化复杂有状态应用管理的框架，它是一个感知应用状态的控制器，通过扩展Kubernetes API来自动创建、管理和配置应用实例.">
+<meta property="og:type" content="article">
+<meta property="og:title" content="Kubernetes学习(Operator)">
+<meta property="og:url" content="https://zhoushuke.github.io/2019/04/03/Kubernetes%E5%AD%A6%E4%B9%A0(Operator)/index.html">
+<meta property="og:site_name" content="Z.S.K.&#39;s Records">
+<meta property="og:description" content="官方定义An Operator is a method of packaging, deploying and managing a Kubernetes application. 旨在简化复杂有状态应用管理的框架，它是一个感知应用状态的控制器，通过扩展Kubernetes API来自动创建、管理和配置应用实例.">
+<meta property="og:locale">
+<meta property="og:image" content="http://zskgithubblog.oss-cn-beijing.aliyuncs.com/blogpic/operator-c1-1.png">
+<meta property="og:image" content="http://zskgithubblog.oss-cn-beijing.aliyuncs.com/blogpic/operator-c1-2.png">
+<meta property="og:image" content="http://zskgithubblog.oss-cn-beijing.aliyuncs.com/blogpic/operator-c1-3.PNG">
+<meta property="og:image" content="http://zskgithubblog.oss-cn-beijing.aliyuncs.com/blogpic/operator-c1-4.PNG">
+<meta property="og:image" content="http://zskgithubblog.oss-cn-beijing.aliyuncs.com/blogpic/operator-c1-5.jpg">
+<meta property="og:image" content="http://zskgithubblog.oss-cn-beijing.aliyuncs.com/blogpic/operator-c1-6.PNG">
+<meta property="og:image" content="http://zskgithubblog.oss-cn-beijing.aliyuncs.com/blogpic/operator-c1-7.PNG">
+<meta property="og:image" content="http://zskgithubblog.oss-cn-beijing.aliyuncs.com/blogpic/operator-c1-8.PNG">
+<meta property="og:image" content="http://zskgithubblog.oss-cn-beijing.aliyuncs.com/blogpic/operator-c1-9.jpg">
+<meta property="og:image" content="http://zskgithubblog.oss-cn-beijing.aliyuncs.com/blogpic/operator-c1-10.PNG">
+<meta property="og:image" content="http://zskgithubblog.oss-cn-beijing.aliyuncs.com/blogpic/operator-c1-11.PNG">
+<meta property="og:image" content="http://zskgithubblog.oss-cn-beijing.aliyuncs.com/blogpic/operator-c1-12.PNG">
+<meta property="og:image" content="http://zskgithubblog.oss-cn-beijing.aliyuncs.com/blogpic/operator-c1-13.PNG">
+<meta property="og:image" content="http://zskgithubblog.oss-cn-beijing.aliyuncs.com/blogpic/operator-c1-14.PNG">
+<meta property="og:image" content="http://zskgithubblog.oss-cn-beijing.aliyuncs.com/blogpic/operator-c1-15.PNG">
+<meta property="og:image" content="http://zskgithubblog.oss-cn-beijing.aliyuncs.com/blogpic/operator-c1-16.PNG">
+<meta property="og:image" content="http://zskgithubblog.oss-cn-beijing.aliyuncs.com/blogpic/operator-c1-17.PNG">
+<meta property="article:published_time" content="2019-04-03T10:20:53.000Z">
+<meta property="article:modified_time" content="2022-07-19T03:16:00.951Z">
+<meta property="article:author" content="Z.S.K.">
+<meta property="article:tag" content="Kubernetes">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:image" content="http://zskgithubblog.oss-cn-beijing.aliyuncs.com/blogpic/operator-c1-1.png">
+
+
+
+<script type="text/javascript" id="hexo.configurations">
+  var NexT = window.NexT || {};
+  var CONFIG = {
+    root: '',
+    scheme: 'Mist',
+    sidebar: {"position":"left","display":"post"},
+    fancybox: true,
+    motion: true,
+    duoshuo: {
+      userId: 'undefined',
+      author: '博主'
+    },
+    algolia: {
+      applicationID: '',
+      apiKey: '',
+      indexName: '',
+      hits: {"per_page":10},
+      labels: {"input_placeholder":"Search for Posts","hits_empty":"We didn't find any results for the search: ${query}","hits_stats":"${hits} results found in ${time} ms"}
+    }
+  };
+</script>
+
+
+
+  <link rel="canonical" href="https://zhoushuke.github.io/2019/04/03/Kubernetes学习(Operator)/"/>
+
+
+
+
+
+  <title> Kubernetes学习(Operator) | Z.S.K.'s Records </title>
+<meta name="generator" content="Hexo 6.2.0"></head>
+
+<body itemscope itemtype="http://schema.org/WebPage" lang="zh-Hans">
+
+  
+
+
+
+
+
+
+
+
+
+
+  
+  
+    
+  
+
+  <div class="container one-collumn sidebar-position-left page-post-detail ">
+    <div class="headband"></div>
+
+    <header id="header" class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-meta ">
+  
+
+  <div class="custom-logo-site-title">
+    <a href="/"  class="brand" rel="start">
+      <span class="logo-line-before"><i></i></span>
+      <span class="site-title">Z.S.K.'s Records</span>
+      <span class="logo-line-after"><i></i></span>
+    </a>
+  </div>
+    
+      <p class="site-subtitle"></p>
+    
+</div>
+
+<div class="site-nav-toggle">
+  <button>
+    <span class="btn-bar"></span>
+    <span class="btn-bar"></span>
+    <span class="btn-bar"></span>
+  </button>
+</div>
+
+<nav class="site-nav">
+  
+
+  
+    <ul id="menu" class="menu">
+      
+        
+        <li class="menu-item menu-item-home">
+          <a href="/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-home"></i> <br />
+            
+            首页
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-categories">
+          <a href="/categories" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-th"></i> <br />
+            
+            分类
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-about">
+          <a href="/about/ZSK-Profile.pdf" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-user"></i> <br />
+            
+            简历
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-archives">
+          <a href="/archives" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-archive"></i> <br />
+            
+            归档
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-tags">
+          <a href="/tags" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-tags"></i> <br />
+            
+            标签
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-commonweal">
+          <a href="/404.html" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-heartbeat"></i> <br />
+            
+            公益404
+          </a>
+        </li>
+      
+
+      
+        <li class="menu-item menu-item-search">
+          
+            <a href="javascript:;" class="popup-trigger">
+          
+            
+              <i class="menu-item-icon fa fa-search fa-fw"></i> <br />
+            
+            搜索
+          </a>
+        </li>
+      
+    </ul>
+  
+
+  
+    <div class="site-search">
+      
+  <div class="popup">
+ <span class="search-icon fa fa-search"></span>
+ <input type="text" id="local-search-input">
+ <div id="local-search-result"></div>
+ <span class="popup-btn-close">close</span>
+</div>
+
+
+    </div>
+  
+</nav>
+
+
+
+ </div>
+    </header>
+
+    <main id="main" class="main">
+      <div class="main-inner">
+        <div class="content-wrap">
+          <div id="content" class="content">
+            
 
   <div id="posts" class="posts-expand">
-    {{ post_template.render(page) }}
+    
 
-    <div class="post-spread">
-      {% if theme.jiathis %}
-        {% include '_partials/share/jiathis.swig' %}
-      {% elseif theme.baidushare %}
-        {% include '_partials/share/baidushare.swig' %}
-      {% elseif theme.add_this_id %}
-        {% include '_partials/share/add-this.swig' %}
-      {% elseif theme.duoshuo_shortname and theme.duoshuo_share %}
-        {% include '_partials/share/duoshuo_share.swig' %}
-      {% endif %}
+  
+
+  
+  
+  
+
+  <article class="post post-type-normal " itemscope itemtype="http://schema.org/Article">
+  <link itemprop="mainEntityOfPage" href="https://zhoushuke.github.io/2019/04/03/Kubernetes%E5%AD%A6%E4%B9%A0(Operator)/">
+
+  <span style="display:none" itemprop="author" itemscope itemtype="http://schema.org/Person">
+    <meta itemprop="name" content="">
+    <meta itemprop="description" content="">
+    <meta itemprop="image" content="/images/avatar.gif">
+  </span>
+
+  <span style="display:none" itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+    <meta itemprop="name" content="Z.S.K.'s Records">
+    <span style="display:none" itemprop="logo" itemscope itemtype="http://schema.org/ImageObject">
+      <img style="display:none;" itemprop="url image" alt="Z.S.K.'s Records" src="">
+    </span>
+  </span>
+
+    
+      <header class="post-header">
+
+        
+        
+          <h1 class="post-title" itemprop="name headline">
+            
+            
+              
+                Kubernetes学习(Operator)
+              
+            
+          </h1>
+        
+
+        <div class="post-meta">
+          <span class="post-time">
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">发表于</span>
+              
+              <time title="Post created" itemprop="dateCreated datePublished" datetime="2019-04-03T18:20:53+08:00">
+                2019-04-03
+              </time>
+            
+
+            
+
+            
+          </span>
+
+          
+            <span class="post-category" >
+            
+              <span class="post-meta-divider">|</span>
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-folder-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">分类于</span>
+              
+              
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/Kubernetes/" itemprop="url" rel="index">
+                    <span itemprop="name">Kubernetes</span>
+                  </a>
+                </span>
+
+                
+                
+              
+            </span>
+          
+
+          
+            
+          
+
+          
+
+          
+          
+
+          
+
+          
+
+        </div>
+      </header>
+    
+
+
+    <div class="post-body" itemprop="articleBody">
+
+      
+      
+
+      
+        <h3 id="官方定义"><a href="#官方定义" class="headerlink" title="官方定义"></a><strong>官方定义</strong></h3><p>An Operator is a method of packaging, deploying and managing a Kubernetes application.</p>
+<p>旨在简化复杂有状态应用管理的框架，它是一个感知应用状态的控制器，通过扩展Kubernetes API来自动创建、管理和配置应用实例.</p>
+<span id="more"></span>
+
+<h3 id="车库故事"><a href="#车库故事" class="headerlink" title="车库故事"></a><strong>车库故事</strong></h3><p>诞生于车库, <a target="_blank" rel="noopener" href="https://yq.aliyun.com/articles/685522">Kubernetes API 与 Operator，不为人知的开发者战争</a></p>
+<p><code>operator的初衷是为开发者解决运维工作</code></p>
+<h3 id="先从kubernetes说起"><a href="#先从kubernetes说起" class="headerlink" title="先从kubernetes说起"></a><strong>先从kubernetes说起</strong></h3><p><code>两大重要特性:</code></p>
+<blockquote>
+<ul>
+<li>声明式API: 我们提交一个定义好的API对象来”声明”我所期望的状态是什么样子</li>
+<li>控制器模式: 无条件的, 无限循环的watch每个api对象,确保每个集群的状态与声明的状态一致</li>
+<li>标签选择器: 通过标签确认资源之间的联系</li>
+</ul>
+</blockquote>
+<p>流程可概括如下:</p>
+<p><img src="http://zskgithubblog.oss-cn-beijing.aliyuncs.com/blogpic/operator-c1-1.png" alt="operator-c1-1"></p>
+<p>为什么kubernetes会有ReplicSet, Deployment, statefulSet, Operator等多种api资源?</p>
+<h4 id="应用情景"><a href="#应用情景" class="headerlink" title="应用情景"></a><strong>应用情景</strong></h4><blockquote>
+<ul>
+<li>无状态: </li>
+<li>有状态:  mysq, redis…</li>
+<li>分布式: etcd, zookeeper…</li>
+</ul>
+</blockquote>
+<h4 id="StatefulSet与Operator"><a href="#StatefulSet与Operator" class="headerlink" title="StatefulSet与Operator"></a><strong>StatefulSet与Operator</strong></h4><p>statefulSet为kubernetes运行有状态应用的资源类型, 一般都搭配共享存储来持久化</p>
+<p>StatefulSet 的核心原理,其实是对分布式应用的两种状态进行了保持:</p>
+<blockquote>
+<ul>
+<li>分布式应用的拓扑状态, 或者说,节点之间的启动顺序;</li>
+<li>分布式应用的存储状态, 或者说,每个节点依赖的持久化数据(比如容器 re-scheduler到另一node上,重新加载他的网络存储以及其中的数据)</li>
+</ul>
+</blockquote>
+<p>打个比方:  如果想部署一个3节点的etcd集群</p>
+<blockquote>
+<ul>
+<li>直接使用deployment方式很难维护各节点之间的启动顺序</li>
+<li>使用statefulSet部署一个etcd集群, statefulSet可以保证etcd节点的启动顺序按照yaml期望的方式部署, 但是还是需要指定各节点之间的连接关系</li>
+</ul>
+</blockquote>
+<p>如果使用operator的话, 则只需要告诉operator, 这是一个3节点的etcd集群, etcd的版本是xxxx即可, 其它的工作都交由operator控制器去完成. operator声明的api对象<code>不再是单体应用的描述,而是整个分布式应用集群的动态逻辑</code></p>
+<p>operator是在分布式应用领域发力,使用户自己定义kuberenetes的控制器来完成业务逻辑.</p>
+<p><a target="_blank" rel="noopener" href="https://github.com/operator-framework/awesome-operators?spm=a2c4e.11153940.blogcont685522.11.1e4394133MN7B9">openrator项目列表</a></p>
+<p>那openrator是如何做到对分布式应用如此清晰快捷?</p>
+<h3 id="TPR-x2F-CRD"><a href="#TPR-x2F-CRD" class="headerlink" title="TPR&#x2F;CRD"></a><strong>TPR&#x2F;CRD</strong></h3><p>TPR: Thrid Part Resousrce 第三方资源</p>
+<p>CRD:Custom Resource Definition 资源自定义</p>
+<p>在kubernetes 1.7之后，TPR升级为CRD, 总结来说,<code>用户可自己编写任何的资源类型,同时实现对该资源类型的控制器</code></p>
+<p>本质上,CRD做为kubernetes的特殊资源,它的工作方式如下:</p>
+<h3 id="Operator的工作方式"><a href="#Operator的工作方式" class="headerlink" title="Operator的工作方式"></a><strong>Operator的工作方式</strong></h3><p><img src="http://zskgithubblog.oss-cn-beijing.aliyuncs.com/blogpic/operator-c1-2.png" alt="operator-c1-2"></p>
+<p>一个operator案例应该实现以下特性:</p>
+<blockquote>
+<ul>
+<li>Operator自身以deployment的方式部署</li>
+<li>Operator自动创建一个CRD资源类型,用户可以用该类型创建CR</li>
+<li>Operator利用Kubernetes内置的Serivce&#x2F;ReplicaSet等API管理应用</li>
+<li>Operator应该向后兼容,并且在Operator自身退出或删除时不影响应用的状态</li>
+<li>Operator应该支持应用版本更新</li>
+</ul>
+</blockquote>
+<h3 id="使用Operator部署etcd集群"><a href="#使用Operator部署etcd集群" class="headerlink" title="使用Operator部署etcd集群"></a><strong>使用Operator部署etcd集群</strong></h3><blockquote>
+<ul>
+<li>搭建一个kubernetes集群,这里使用的是kubeadm搭建</li>
+<li>下载官方维护的etcd-operator-git</li>
+<li>创建RBAC规则,主要声明对哪些资源有操作权限</li>
+<li>kubectl apply -f etcd-operator-deployment.yaml</li>
+<li>指定etcd的节点数及版本</li>
+<li>kubectl apply -f example-etcd-cluster.yaml</li>
+</ul>
+</blockquote>
+<p>这样一个 etcd集群就部署完成,这些操作具体发生了什么?</p>
+<figure class="highlight shell"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta prompt_">#</span><span class="language-bash">当执行完etcd-operator-deployment.yaml后,启动一个容器,容器的entrypoing为etcd-operator</span></span><br><span class="line"><span class="meta prompt_">#</span><span class="language-bash">这个容器的作用是声明了一个CRD资源类型,在kubernetes中注册这个CRD,同时该CRD也是控制器,在集群中所有这个的CRD下的对象都将被watch</span></span><br><span class="line"><span class="meta prompt_">#</span><span class="language-bash">该类型名字为etcdclusters.etcd.database.coreos.com,这个名字在源代码的etcd-operator-master\pkg\apis\etcd\v1beta2\register.go中被定义</span></span><br><span class="line"><span class="meta prompt_">#</span><span class="language-bash">再比如,etcd增删改查都写在etcd-operator中etcd-operator-master\pkg\util\etcdutil</span></span><br><span class="line"><span class="meta prompt_">#</span><span class="language-bash">而在example-etcd-cluster.yaml则生成了etcdclusters.etcd.database.coreos.com的实例</span></span><br><span class="line"><span class="meta prompt_">#</span><span class="language-bash">该实例包含size跟version两个属性</span></span><br></pre></td></tr></table></figure>
+
+<p>查看etcd的pod数是不是与预期相符</p>
+<p><img src="http://zskgithubblog.oss-cn-beijing.aliyuncs.com/blogpic/operator-c1-3.PNG" alt="operator-c1-3"></p>
+<p>进容器查看etcd启动状态</p>
+<p><img src="http://zskgithubblog.oss-cn-beijing.aliyuncs.com/blogpic/operator-c1-4.PNG" alt="ceph-c1-4"></p>
+<p>大家一定很好奇,etcd启动命令里为什么不是etcd节点ip, 而且一大串的像域名一样的字符?</p>
+<p>这是因为etcd的启动命令是在pod启动之前就已经生成好的,这个时候pod还没启动,也是没有分配ip,所以使用域名的形式</p>
+<p>这个域名又是如何产生的,通过这个域名又是如何找到pod的呢?</p>
+<p>其实在生成etcd集群的同时etcd-operator会自动生成一个与example-etcd-cluster同名的headless service资源</p>
+<p>service类型的资源会分配一个vip(可指定),访问service时由该vip转到后端某个pod上</p>
+<p>headless service(spec.clusterIP为None)类型资源不会分配vip, 访问该service直接返回所有后端pod列表</p>
+<p><img src="http://zskgithubblog.oss-cn-beijing.aliyuncs.com/blogpic/operator-c1-5.jpg" alt="operator-c1-5"></p>
+<p>查看生成的headless service与endpoints</p>
+<p><img src="http://zskgithubblog.oss-cn-beijing.aliyuncs.com/blogpic/operator-c1-6.PNG" alt="operator-c1-6"></p>
+<p><img src="http://zskgithubblog.oss-cn-beijing.aliyuncs.com/blogpic/operator-c1-7.PNG" alt="operator-c1-7"></p>
+<p><img src="http://zskgithubblog.oss-cn-beijing.aliyuncs.com/blogpic/operator-c1-8.PNG" alt="operator-c1-8"></p>
+<p><code>当创建了一个headless service的资源时,它所代理的所有pod的ip地址都会绑定DNS记录,格式如下</code></p>
+<p>比如: example-etcd-cluster-6n7hb78tkm.example-etcd-cluster.default.svc</p>
+<p>尊崇以下规则 : pod名.service名.namespaces.svc</p>
+<p><code>域名解析由kube-dns负责, endpoints由kube-proxy管理,kube-proxy会订阅所有service的变更从而更新iptalbes规则,endpointscontroller会订阅pod跟service对象的变更,并根据当前集群中的对象生成endpoint对象将service跟pod关联</code></p>
+<p>关于kube-proxy与kube-dns,篇幅有限,可参考这两篇文章:</p>
+<p><a target="_blank" rel="noopener" href="https://blog.csdn.net/iiiiher/article/details/77099059">kube-dns架构图解</a></p>
+<p><a target="_blank" rel="noopener" href="https://cizixs.com/2017/03/30/kubernetes-introduction-service-and-kube-proxy/">service 和 kube-proxy 原理</a></p>
+<p>整个服务发现流程:</p>
+<p><img src="http://zskgithubblog.oss-cn-beijing.aliyuncs.com/blogpic/operator-c1-9.jpg" alt="operator-c1-9"></p>
+<h3 id="etcd-operator常用命令"><a href="#etcd-operator常用命令" class="headerlink" title="etcd-operator常用命令"></a><strong>etcd-operator常用命令</strong></h3><h4 id="扩缩容"><a href="#扩缩容" class="headerlink" title="扩缩容"></a>扩缩容</h4><figure class="highlight shell"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta prompt_">#</span><span class="language-bash">当前的节点数为3, 版本为3.2.13</span></span><br><span class="line"><span class="meta prompt_">#</span><span class="language-bash">3--&gt; 5</span></span><br><span class="line">vim example/example-etcd-cluster.yaml</span><br><span class="line">kubectl apply -f example/example-etcd-cluster.yaml</span><br></pre></td></tr></table></figure>
+
+<p><img src="http://zskgithubblog.oss-cn-beijing.aliyuncs.com/blogpic/operator-c1-10.PNG" alt="operator-c1-10"></p>
+<p><img src="http://zskgithubblog.oss-cn-beijing.aliyuncs.com/blogpic/operator-c1-11.PNG" alt="operator-c1-11"></p>
+<h4 id="版本升级"><a href="#版本升级" class="headerlink" title="版本升级"></a><strong>版本升级</strong></h4><figure class="highlight shell"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta prompt_">#</span><span class="language-bash">版本为3.2.13</span></span><br><span class="line"><span class="meta prompt_">#</span><span class="language-bash">3.2.13 --&gt; 3.1.10</span></span><br><span class="line">vim example/example-etcd-cluster.yaml</span><br><span class="line">kubectl apply -f example/example-etcd-cluster.yaml</span><br><span class="line"><span class="meta prompt_">#</span><span class="language-bash">kubectl describe pod时会发现docker 的启动命令没有改变</span></span><br></pre></td></tr></table></figure>
+
+<p><img src="http://zskgithubblog.oss-cn-beijing.aliyuncs.com/blogpic/operator-c1-12.PNG" alt="operator-c1-12"></p>
+<h4 id="节点宕机"><a href="#节点宕机" class="headerlink" title="节点宕机"></a><strong>节点宕机</strong></h4><figure class="highlight shell"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta prompt_">#</span><span class="language-bash">删除一个etcd pod, 这里删除种子节点</span></span><br><span class="line">kubectl delete pod example-etcd-cluster-k6vklz2frv --now</span><br><span class="line"><span class="meta prompt_">#</span><span class="language-bash">etcd-operator会创建一个新节点出来</span></span><br></pre></td></tr></table></figure>
+
+<p><img src="http://zskgithubblog.oss-cn-beijing.aliyuncs.com/blogpic/operator-c1-13.PNG" alt="operator-c1-13"></p>
+<p>etcd-operator会创建一个新节点出来</p>
+<p><img src="http://zskgithubblog.oss-cn-beijing.aliyuncs.com/blogpic/operator-c1-14.PNG" alt="operator-c1-14"></p>
+<p>在原etcd容器中已无法ping通被删除pod</p>
+<p><img src="http://zskgithubblog.oss-cn-beijing.aliyuncs.com/blogpic/operator-c1-15.PNG" alt="operator-c1-15"></p>
+<p>而新生成的etcd节点的启动命令则不会包含被删除的节点</p>
+<p><img src="http://zskgithubblog.oss-cn-beijing.aliyuncs.com/blogpic/operator-c1-16.PNG" alt="operator-c1-16"></p>
+<p>查看etcd member list, 旧节点已删除,新节点加入</p>
+<p><img src="http://zskgithubblog.oss-cn-beijing.aliyuncs.com/blogpic/operator-c1-17.PNG" alt="operator-c1-17"></p>
+<h4 id="备份还原"><a href="#备份还原" class="headerlink" title="备份还原"></a><strong>备份还原</strong></h4><p>目前官方维护了etcd-backup-operator,支持远程备份到AWS S3&#x2F; Azure Blob Service (ABS)&#x2F;Google Cloud Storage (GCS)</p>
+<p>或者从上述几个远程存储上还原etcd数据,etcd-restore-operator</p>
+<p>同时官方维护了一个<a target="_blank" rel="noopener" href="https://coreos.com/operators/etcd/docs/latest/user/backup_cronjob/README.html">定时备份任务</a></p>
+<h3 id="参考文章"><a href="#参考文章" class="headerlink" title="参考文章:"></a><strong>参考文章:</strong></h3><blockquote>
+<ul>
+<li><a target="_blank" rel="noopener" href="https://www.hi-linux.com/posts/40915.html">etcd入门</a></li>
+<li><a target="_blank" rel="noopener" href="https://coreos.com/operators/etcd/docs/latest/user/walkthrough/backup-operator.html">etcd-backup-operator</a></li>
+<li><a target="_blank" rel="noopener" href="https://github.com/coreos/etcd-operator">etcd-operator-git</a></li>
+<li><a target="_blank" rel="noopener" href="https://yq.aliyun.com/articles/685522">Kubernetes API 与 Operator，不为人知的开发者战争</a></li>
+<li><a target="_blank" rel="noopener" href="https://blog.csdn.net/iiiiher/article/details/77099059">kube-dns架构图解</a></li>
+<li><a target="_blank" rel="noopener" href="https://cizixs.com/2017/03/30/kubernetes-introduction-service-and-kube-proxy/">service 和 kube-proxy 原理</a></li>
+</ul>
+</blockquote>
+<h3 id="转载请注明出处https-izsk-me"><a href="#转载请注明出处https-izsk-me" class="headerlink" title="转载请注明出处https://izsk.me"></a><strong>转载请注明出处<a target="_blank" rel="noopener" href="https://izsk.me/">https://izsk.me</a></strong></h3><hr>
+
+      
+    </div>
+
+    <div>
+      
+        
+<div id="wechat_subscriber" style="display: block; padding: 10px 0; margin: 20px auto; width: 100%; text-align: center">
+    <img id="wechat_subscriber_qcode" src="/images/websitecode250.png" alt=" wechat" style="width: 200px; max-width: 100%;"/>
+    <div>Scan Me To Read on Phone</div>
+</div>
+
+
+      
+    </div>
+
+    <div>
+      
+        
+  <div style="padding: 10px 0; margin: 20px auto; width: 90%; text-align: center;">
+    <div>I know you won't do this,but what if you did?</div>
+    <button id="rewardButton" disable="enable" onclick="var qr = document.getElementById('QR'); if (qr.style.display === 'none') {qr.style.display='block';} else {qr.style.display='none'}">
+      <span>赏</span>
+    </button>
+    <div id="QR" style="display: none;">
+      
+        <div id="wechat" style="display: inline-block">
+          <img id="wechat_qr" src="/images/wechatpayme.png" alt=" WeChat Pay"/>
+          <p>微信打赏</p>
+        </div>
+      
+      
+        <div id="alipay" style="display: inline-block">
+          <img id="alipay_qr" src="/images/alipayme.jpg" alt=" Alipay"/>
+          <p>支付宝打赏</p>
+        </div>
+      
     </div>
   </div>
 
-{% endblock %}
 
-{% block sidebar %}
-  {{ sidebar_template.render(true) }}
-{% endblock %}
+      
+    </div>
 
 
-{% block script_extra %}
-  {% include '_scripts/pages/post-details.swig' %}
-{% endblock %}
+    <footer class="post-footer">
+      
+        <div class="post-tags">
+          
+            <a href="/tags/Kubernetes/" rel="tag"># Kubernetes</a>
+          
+        </div>
+      
+
+      
+        <div class="post-nav">
+          <div class="post-nav-next post-nav-item">
+            
+              <a href="/2019/03/02/%E5%90%88%E5%B9%B6K%E4%B8%AA%E6%9C%89%E5%BA%8F%E6%95%B0%E7%BB%84(python)/" rel="next" title="合并K个有序数组(python)">
+                <i class="fa fa-chevron-left"></i> 合并K个有序数组(python)
+              </a>
+            
+          </div>
+
+          <span class="post-nav-divider"></span>
+
+          <div class="post-nav-prev post-nav-item">
+            
+              <a href="/2019/04/17/python-global-config-object/" rel="prev" title="Python学习(全局配置文件引用问题)">
+                Python学习(全局配置文件引用问题) <i class="fa fa-chevron-right"></i>
+              </a>
+            
+          </div>
+        </div>
+      
+
+      
+      
+    </footer>
+  </article>
+
+
+
+    <div class="post-spread">
+      
+    </div>
+  </div>
+
+
+          </div>
+          
+
+
+          
+  <div class="comments" id="comments">
+    
+  </div>
+
+
+        </div>
+        
+          
+  
+  <div class="sidebar-toggle">
+    <div class="sidebar-toggle-line-wrap">
+      <span class="sidebar-toggle-line sidebar-toggle-line-first"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-middle"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-last"></span>
+    </div>
+  </div>
+
+  <aside id="sidebar" class="sidebar">
+    <div class="sidebar-inner">
+
+      
+
+      
+        <ul class="sidebar-nav motion-element">
+          <li class="sidebar-nav-toc sidebar-nav-active" data-target="post-toc-wrap" >
+            文章目录
+          </li>
+          <li class="sidebar-nav-overview" data-target="site-overview">
+            站点概览
+          </li>
+        </ul>
+      
+
+      <section class="site-overview sidebar-panel">
+        <div class="site-author motion-element" itemprop="author" itemscope itemtype="http://schema.org/Person">
+          <img class="site-author-image" itemprop="image"
+               src="/images/avatar.gif"
+               alt="" />
+          <p class="site-author-name" itemprop="name"></p>
+          <p class="site-description motion-element" itemprop="description"></p>
+        </div>
+        <nav class="site-state motion-element">
+        
+          
+            <div class="site-state-item site-state-posts">
+              <a href="/archives">
+                <span class="site-state-item-count">192</span>
+                <span class="site-state-item-name">日志</span>
+              </a>
+            </div>
+          
+
+          
+            <div class="site-state-item site-state-categories">
+              <a href="/categories">
+                <span class="site-state-item-count">14</span>
+                <span class="site-state-item-name">分类</span>
+              </a>
+            </div>
+          
+
+          
+            <div class="site-state-item site-state-tags">
+              <a href="/tags">
+                <span class="site-state-item-count">14</span>
+                <span class="site-state-item-name">标签</span>
+              </a>
+            </div>
+          
+
+        </nav>
+
+        
+
+        <div class="links-of-author motion-element">
+          
+        </div>
+
+        
+        
+
+        
+        
+
+        
+
+
+      </section>
+
+      
+      <!--noindex-->
+        <section class="post-toc-wrap motion-element sidebar-panel sidebar-panel-active">
+          <div class="post-toc">
+
+            
+              
+            
+
+            
+              <div class="post-toc-content"><ol class="nav"><li class="nav-item nav-level-3"><a class="nav-link" href="#%E5%AE%98%E6%96%B9%E5%AE%9A%E4%B9%89"><span class="nav-number">1.</span> <span class="nav-text">官方定义</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E8%BD%A6%E5%BA%93%E6%95%85%E4%BA%8B"><span class="nav-number">2.</span> <span class="nav-text">车库故事</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E5%85%88%E4%BB%8Ekubernetes%E8%AF%B4%E8%B5%B7"><span class="nav-number">3.</span> <span class="nav-text">先从kubernetes说起</span></a><ol class="nav-child"><li class="nav-item nav-level-4"><a class="nav-link" href="#%E5%BA%94%E7%94%A8%E6%83%85%E6%99%AF"><span class="nav-number">3.1.</span> <span class="nav-text">应用情景</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#StatefulSet%E4%B8%8EOperator"><span class="nav-number">3.2.</span> <span class="nav-text">StatefulSet与Operator</span></a></li></ol></li><li class="nav-item nav-level-3"><a class="nav-link" href="#TPR-x2F-CRD"><span class="nav-number">4.</span> <span class="nav-text">TPR&#x2F;CRD</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#Operator%E7%9A%84%E5%B7%A5%E4%BD%9C%E6%96%B9%E5%BC%8F"><span class="nav-number">5.</span> <span class="nav-text">Operator的工作方式</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E4%BD%BF%E7%94%A8Operator%E9%83%A8%E7%BD%B2etcd%E9%9B%86%E7%BE%A4"><span class="nav-number">6.</span> <span class="nav-text">使用Operator部署etcd集群</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#etcd-operator%E5%B8%B8%E7%94%A8%E5%91%BD%E4%BB%A4"><span class="nav-number">7.</span> <span class="nav-text">etcd-operator常用命令</span></a><ol class="nav-child"><li class="nav-item nav-level-4"><a class="nav-link" href="#%E6%89%A9%E7%BC%A9%E5%AE%B9"><span class="nav-number">7.1.</span> <span class="nav-text">扩缩容</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#%E7%89%88%E6%9C%AC%E5%8D%87%E7%BA%A7"><span class="nav-number">7.2.</span> <span class="nav-text">版本升级</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#%E8%8A%82%E7%82%B9%E5%AE%95%E6%9C%BA"><span class="nav-number">7.3.</span> <span class="nav-text">节点宕机</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#%E5%A4%87%E4%BB%BD%E8%BF%98%E5%8E%9F"><span class="nav-number">7.4.</span> <span class="nav-text">备份还原</span></a></li></ol></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E5%8F%82%E8%80%83%E6%96%87%E7%AB%A0"><span class="nav-number">8.</span> <span class="nav-text">参考文章:</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E8%BD%AC%E8%BD%BD%E8%AF%B7%E6%B3%A8%E6%98%8E%E5%87%BA%E5%A4%84https-izsk-me"><span class="nav-number">9.</span> <span class="nav-text">转载请注明出处https:&#x2F;&#x2F;izsk.me</span></a></li></ol></div>
+            
+
+          </div>
+        </section>
+      <!--/noindex-->
+      
+
+    </div>
+  </aside>
+
+
+        
+      </div>
+    </main>
+
+    <footer id="footer" class="footer">
+      <div class="footer-inner">
+        <div class="copyright" >
+  
+  &copy; 
+  <span itemprop="copyrightYear">2022</span>
+  <span class="with-love">
+    <i class="fa fa-heart"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">Z.S.K.</span>
+</div>
+
+
+<div class="powered-by">
+  Supported by <a class="theme-link" target="_blank" rel="noopener" href="https://hexo.io">Hexo</a>
+</div>
+
+<div class="theme-info">
+  Theme -
+  <a class="theme-link" target="_blank" rel="noopener" href="https://github.com/iissnan/hexo-theme-next">
+    NexT.Mist
+  </a>
+</div>
+
+
+        
+
+        
+      </div>
+    </footer>
+
+    <div class="back-to-top">
+      <i class="fa fa-arrow-up"></i>
+    </div>
+  </div>
+
+  
+
+<script type="text/javascript">
+  if (Object.prototype.toString.call(window.Promise) !== '[object Function]') {
+    window.Promise = null;
+  }
+</script>
+
+
+
+
+
+
+
+
+
+  
+
+
+
+  
+  <script type="text/javascript" src="/lib/jquery/index.js?v=2.1.3"></script>
+
+  
+  <script type="text/javascript" src="/lib/fastclick/lib/fastclick.min.js?v=1.0.6"></script>
+
+  
+  <script type="text/javascript" src="/lib/jquery_lazyload/jquery.lazyload.js?v=1.9.7"></script>
+
+  
+  <script type="text/javascript" src="/lib/velocity/velocity.min.js?v=1.2.1"></script>
+
+  
+  <script type="text/javascript" src="/lib/velocity/velocity.ui.min.js?v=1.2.1"></script>
+
+  
+  <script type="text/javascript" src="/lib/fancybox/source/jquery.fancybox.pack.js?v=2.1.5"></script>
+
+
+  
+
+
+  <script type="text/javascript" src="/js/src/utils.js?v=5.1.0"></script>
+
+  <script type="text/javascript" src="/js/src/motion.js?v=5.1.0"></script>
+
+
+
+  
+  
+
+  
+  <script type="text/javascript" src="/js/src/scrollspy.js?v=5.1.0"></script>
+<script type="text/javascript" src="/js/src/post-details.js?v=5.1.0"></script>
+
+
+
+  
+
+
+  <script type="text/javascript" src="/js/src/bootstrap.js?v=5.1.0"></script>
+
+
+
+  
+
+
+
+  
+
+
+
+
+	
+
+
+
+
+
+  
+
+
+
+
+  
+  
+  <script type="text/javascript">
+    // Popup Window;
+    var isfetched = false;
+    // Search DB path;
+    var search_path = "search.xml";
+    if (search_path.length == 0) {
+      search_path = "search.xml";
+    }
+    var path = "/" + search_path;
+    // monitor main search box;
+
+    function proceedsearch() {
+      $("body").append('<div class="popoverlay">').css('overflow', 'hidden');
+      $('.popup').toggle();
+    }
+    // search function;
+    var searchFunc = function(path, search_id, content_id) {
+      'use strict';
+      $.ajax({
+        url: path,
+        dataType: "xml",
+        async: true,
+        success: function( xmlResponse ) {
+          // get the contents from search data
+          isfetched = true;
+          $('.popup').detach().appendTo('.header-inner');
+          var datas = $( "entry", xmlResponse ).map(function() {
+            return {
+              title: $( "title", this ).text(),
+              content: $("content",this).text(),
+              url: $( "url" , this).text()
+            };
+          }).get();
+          var $input = document.getElementById(search_id);
+          var $resultContent = document.getElementById(content_id);
+          $input.addEventListener('input', function(){
+            var matchcounts = 0;
+            var str='<ul class=\"search-result-list\">';
+            var keywords = this.value.trim().toLowerCase().split(/[\s\-]+/);
+            $resultContent.innerHTML = "";
+            if (this.value.trim().length > 1) {
+              // perform local searching
+              datas.forEach(function(data) {
+                var isMatch = false;
+                var content_index = [];
+                var data_title = data.title.trim().toLowerCase();
+                var data_content = data.content.trim().replace(/<[^>]+>/g,"").toLowerCase();
+                var data_url = decodeURIComponent(data.url);
+                var index_title = -1;
+                var index_content = -1;
+                var first_occur = -1;
+                // only match artiles with not empty titles and contents
+                if(data_title != '') {
+                  keywords.forEach(function(keyword, i) {
+                    index_title = data_title.indexOf(keyword);
+                    index_content = data_content.indexOf(keyword);
+                    if( index_title >= 0 || index_content >= 0 ){
+                      isMatch = true;
+                      if (i == 0) {
+                        first_occur = index_content;
+                      }
+                    }
+
+                  });
+                }
+                // show search results
+                if (isMatch) {
+                  matchcounts += 1;
+                  str += "<li><a href='"+ data_url +"' class='search-result-title'>"+ data_title +"</a>";
+                  var content = data.content.trim().replace(/<[^>]+>/g,"");
+                  if (first_occur >= 0) {
+                    // cut out 100 characters
+                    var start = first_occur - 20;
+                    var end = first_occur + 80;
+                    if(start < 0){
+                      start = 0;
+                    }
+                    if(start == 0){
+                      end = 50;
+                    }
+                    if(end > content.length){
+                      end = content.length;
+                    }
+                    var match_content = content.substring(start, end);
+                    // highlight all keywords
+                    keywords.forEach(function(keyword){
+                      var regS = new RegExp(keyword, "gi");
+                      match_content = match_content.replace(regS, "<b class=\"search-keyword\">"+keyword+"</b>");
+                    });
+
+                    str += "<p class=\"search-result\">" + match_content +"...</p>"
+                  }
+                  str += "</li>";
+                }
+              })};
+            str += "</ul>";
+            if (matchcounts == 0) { str = '<div id="no-result"><i class="fa fa-frown-o fa-5x" /></div>' }
+            if (keywords == "") { str = '<div id="no-result"><i class="fa fa-search fa-5x" /></div>' }
+            $resultContent.innerHTML = str;
+          });
+          proceedsearch();
+        }
+      });}
+
+    // handle and trigger popup window;
+    $('.popup-trigger').click(function(e) {
+      e.stopPropagation();
+      if (isfetched == false) {
+        searchFunc(path, 'local-search-input', 'local-search-result');
+      } else {
+        proceedsearch();
+      };
+    });
+
+    $('.popup-btn-close').click(function(e){
+      $('.popup').hide();
+      $(".popoverlay").remove();
+      $('body').css('overflow', '');
+    });
+    $('.popup').click(function(e){
+      e.stopPropagation();
+    });
+  </script>
+
+
+  
+
+  
+
+  
+
+  
+
+
+</body>
+</html>

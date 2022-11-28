@@ -1,38 +1,925 @@
-{% extends '_layout.swig' %}
-{% import '_macro/post.swig' as post_template %}
-{% import '_macro/sidebar.swig' as sidebar_template %}
+<!doctype html>
 
 
-{% block title %} {{ page.title }} | {{ config.title }} {% endblock %}
 
-{% block page_class %}page-post-detail{% endblock %}
+  
 
 
-{% block content %}
+<html class="theme-next mist use-motion" lang="zh-Hans">
+<head>
+  <meta charset="UTF-8"/>
+<meta http-equiv="X-UA-Compatible" content="IE=edge" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1"/>
+
+
+
+<meta http-equiv="Cache-Control" content="no-transform" />
+<meta http-equiv="Cache-Control" content="no-siteapp" />
+
+
+
+
+
+
+
+
+
+
+
+
+  
+  
+  <link href="/lib/fancybox/source/jquery.fancybox.css?v=2.1.5" rel="stylesheet" type="text/css" />
+
+
+
+
+  
+  
+  
+  
+
+  
+    
+    
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+    
+    
+    <link href="//fonts.googleapis.com/css?family=Lato:300,300italic,400,400italic,700,700italic&subset=latin,latin-ext" rel="stylesheet" type="text/css">
+  
+
+
+
+
+
+
+<link href="/lib/font-awesome/css/font-awesome.min.css?v=4.6.2" rel="stylesheet" type="text/css" />
+
+<link href="/css/main.css?v=5.1.0" rel="stylesheet" type="text/css" />
+
+
+  <meta name="keywords" content="Python," />
+
+
+
+
+
+
+
+
+  <link rel="shortcut icon" type="image/x-icon" href="/favicon.ico?v=5.1.0" />
+
+
+
+
+
+
+<meta name="description" content="现在很多主流的浏览器都直接支持把html转换成pdf,比如谷歌大神器,Ctrl+P就能直接完美的转换,再复杂的css样式都没毛病,但我们不能奢求所有客户都使用谷歌浏览器,也不是所有客户都知道可以Ctrl+P,所以不得不在项目中提供一个[另存为PDF]的功能,而且还需要能自动转换为PDF文件,这对于定期生成报表功能尤其重要.">
+<meta property="og:type" content="article">
+<meta property="og:title" content="用python将html页面转换成pdf文件,顺便解决中文乱码">
+<meta property="og:url" content="https://zhoushuke.github.io/2017/09/13/%E7%94%A8python%E5%B0%86html%E9%A1%B5%E9%9D%A2%E8%BD%AC%E6%8D%A2%E6%88%90pdf%E6%96%87%E4%BB%B6,%E9%A1%BA%E4%BE%BF%E8%A7%A3%E5%86%B3%E4%B8%AD%E6%96%87%E4%B9%B1%E7%A0%81/index.html">
+<meta property="og:site_name" content="Z.S.K.&#39;s Records">
+<meta property="og:description" content="现在很多主流的浏览器都直接支持把html转换成pdf,比如谷歌大神器,Ctrl+P就能直接完美的转换,再复杂的css样式都没毛病,但我们不能奢求所有客户都使用谷歌浏览器,也不是所有客户都知道可以Ctrl+P,所以不得不在项目中提供一个[另存为PDF]的功能,而且还需要能自动转换为PDF文件,这对于定期生成报表功能尤其重要.">
+<meta property="og:locale">
+<meta property="article:published_time" content="2017-09-13T02:42:53.000Z">
+<meta property="article:modified_time" content="2022-07-19T03:16:00.981Z">
+<meta property="article:author" content="Z.S.K.">
+<meta property="article:tag" content="Python">
+<meta name="twitter:card" content="summary">
+
+
+
+<script type="text/javascript" id="hexo.configurations">
+  var NexT = window.NexT || {};
+  var CONFIG = {
+    root: '',
+    scheme: 'Mist',
+    sidebar: {"position":"left","display":"post"},
+    fancybox: true,
+    motion: true,
+    duoshuo: {
+      userId: 'undefined',
+      author: '博主'
+    },
+    algolia: {
+      applicationID: '',
+      apiKey: '',
+      indexName: '',
+      hits: {"per_page":10},
+      labels: {"input_placeholder":"Search for Posts","hits_empty":"We didn't find any results for the search: ${query}","hits_stats":"${hits} results found in ${time} ms"}
+    }
+  };
+</script>
+
+
+
+  <link rel="canonical" href="https://zhoushuke.github.io/2017/09/13/用python将html页面转换成pdf文件,顺便解决中文乱码/"/>
+
+
+
+
+
+  <title> 用python将html页面转换成pdf文件,顺便解决中文乱码 | Z.S.K.'s Records </title>
+<meta name="generator" content="Hexo 6.2.0"></head>
+
+<body itemscope itemtype="http://schema.org/WebPage" lang="zh-Hans">
+
+  
+
+
+
+
+
+
+
+
+
+
+  
+  
+    
+  
+
+  <div class="container one-collumn sidebar-position-left page-post-detail ">
+    <div class="headband"></div>
+
+    <header id="header" class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-meta ">
+  
+
+  <div class="custom-logo-site-title">
+    <a href="/"  class="brand" rel="start">
+      <span class="logo-line-before"><i></i></span>
+      <span class="site-title">Z.S.K.'s Records</span>
+      <span class="logo-line-after"><i></i></span>
+    </a>
+  </div>
+    
+      <p class="site-subtitle"></p>
+    
+</div>
+
+<div class="site-nav-toggle">
+  <button>
+    <span class="btn-bar"></span>
+    <span class="btn-bar"></span>
+    <span class="btn-bar"></span>
+  </button>
+</div>
+
+<nav class="site-nav">
+  
+
+  
+    <ul id="menu" class="menu">
+      
+        
+        <li class="menu-item menu-item-home">
+          <a href="/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-home"></i> <br />
+            
+            首页
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-categories">
+          <a href="/categories" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-th"></i> <br />
+            
+            分类
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-about">
+          <a href="/about/ZSK-Profile.pdf" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-user"></i> <br />
+            
+            简历
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-archives">
+          <a href="/archives" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-archive"></i> <br />
+            
+            归档
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-tags">
+          <a href="/tags" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-tags"></i> <br />
+            
+            标签
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-commonweal">
+          <a href="/404.html" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-heartbeat"></i> <br />
+            
+            公益404
+          </a>
+        </li>
+      
+
+      
+        <li class="menu-item menu-item-search">
+          
+            <a href="javascript:;" class="popup-trigger">
+          
+            
+              <i class="menu-item-icon fa fa-search fa-fw"></i> <br />
+            
+            搜索
+          </a>
+        </li>
+      
+    </ul>
+  
+
+  
+    <div class="site-search">
+      
+  <div class="popup">
+ <span class="search-icon fa fa-search"></span>
+ <input type="text" id="local-search-input">
+ <div id="local-search-result"></div>
+ <span class="popup-btn-close">close</span>
+</div>
+
+
+    </div>
+  
+</nav>
+
+
+
+ </div>
+    </header>
+
+    <main id="main" class="main">
+      <div class="main-inner">
+        <div class="content-wrap">
+          <div id="content" class="content">
+            
 
   <div id="posts" class="posts-expand">
-    {{ post_template.render(page) }}
+    
 
-    <div class="post-spread">
-      {% if theme.jiathis %}
-        {% include '_partials/share/jiathis.swig' %}
-      {% elseif theme.baidushare %}
-        {% include '_partials/share/baidushare.swig' %}
-      {% elseif theme.add_this_id %}
-        {% include '_partials/share/add-this.swig' %}
-      {% elseif theme.duoshuo_shortname and theme.duoshuo_share %}
-        {% include '_partials/share/duoshuo_share.swig' %}
-      {% endif %}
+  
+
+  
+  
+  
+
+  <article class="post post-type-normal " itemscope itemtype="http://schema.org/Article">
+  <link itemprop="mainEntityOfPage" href="https://zhoushuke.github.io/2017/09/13/%E7%94%A8python%E5%B0%86html%E9%A1%B5%E9%9D%A2%E8%BD%AC%E6%8D%A2%E6%88%90pdf%E6%96%87%E4%BB%B6,%E9%A1%BA%E4%BE%BF%E8%A7%A3%E5%86%B3%E4%B8%AD%E6%96%87%E4%B9%B1%E7%A0%81/">
+
+  <span style="display:none" itemprop="author" itemscope itemtype="http://schema.org/Person">
+    <meta itemprop="name" content="">
+    <meta itemprop="description" content="">
+    <meta itemprop="image" content="/images/avatar.gif">
+  </span>
+
+  <span style="display:none" itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+    <meta itemprop="name" content="Z.S.K.'s Records">
+    <span style="display:none" itemprop="logo" itemscope itemtype="http://schema.org/ImageObject">
+      <img style="display:none;" itemprop="url image" alt="Z.S.K.'s Records" src="">
+    </span>
+  </span>
+
+    
+      <header class="post-header">
+
+        
+        
+          <h1 class="post-title" itemprop="name headline">
+            
+            
+              
+                用python将html页面转换成pdf文件,顺便解决中文乱码
+              
+            
+          </h1>
+        
+
+        <div class="post-meta">
+          <span class="post-time">
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">发表于</span>
+              
+              <time title="Post created" itemprop="dateCreated datePublished" datetime="2017-09-13T10:42:53+08:00">
+                2017-09-13
+              </time>
+            
+
+            
+
+            
+          </span>
+
+          
+            <span class="post-category" >
+            
+              <span class="post-meta-divider">|</span>
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-folder-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">分类于</span>
+              
+              
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/Python/" itemprop="url" rel="index">
+                    <span itemprop="name">Python</span>
+                  </a>
+                </span>
+
+                
+                
+              
+            </span>
+          
+
+          
+            
+          
+
+          
+
+          
+          
+
+          
+
+          
+
+        </div>
+      </header>
+    
+
+
+    <div class="post-body" itemprop="articleBody">
+
+      
+      
+
+      
+        <p>现在很多主流的浏览器都直接支持把html转换成pdf,比如谷歌大神器,Ctrl+P就能直接完美的转换,再复杂的css样式都没毛病,但我们不能奢求所有客户都使用谷歌浏览器,也不是所有客户都知道可以Ctrl+P,所以不得不在项目中提供一个[另存为PDF]的功能,而且还需要能自动转换为PDF文件,这对于定期生成报表功能尤其重要.</p>
+<span id="more"></span>
+
+<p>python环境下, 对于将html转换成pdf,比较常用的有以下几个开源库:</p>
+<blockquote>
+<ul>
+<li>reportlab</li>
+<li>xhtml2pdf</li>
+<li>weasyprint</li>
+<li>pdfkit</li>
+<li>wkhtmltopdf</li>
+</ul>
+</blockquote>
+<p>在实现这个需求之前也网上对比了这几个库,个人感觉weasyprint是最理想的方案,而且该项目的开发者非常活跃,但由于当时在机器上其它原因导致weasyprint依赖包没有装上,也花了点时间reportlab研究了它的API,因为已经有了报表的html模板,感觉没有必使用它的API从头到尾再生成一个了,所有放弃了,再来说说xhmt2pdf,查看xhtml2pdf的源码,里面引用了reportlab库,而且xhtml2pdf貌似没怎么更新,2017年也偶尔有几个github的push,最后使用xhmt2pdf的原因一方面是xhtml2pdf可以t很直接地实现我需要的功能,另一方面很大程度上是因为当时网上查看方案的时候看的最多的就是xhtml2pdf的例子,所以选定了xhtml2pdf.更多深入的探究大家可以上各项目的github摸索下吧.</p>
+<h3 id="环境"><a href="#环境" class="headerlink" title="环境"></a><strong>环境</strong></h3><blockquote>
+<ul>
+<li>flask</li>
+<li>python3.4</li>
+<li>windows</li>
+</ul>
+</blockquote>
+<h3 id="问题"><a href="#问题" class="headerlink" title="问题"></a><strong>问题</strong></h3><p>html2pdf转换成pdf,主要碰到以下几个问题:</p>
+<blockquote>
+<ol>
+<li>中文转换后乱码问题</li>
+<li>中文的自动换行问题</li>
+<li>BytesIO&#x2F;StringIO问题</li>
+<li>资源引用路径问题</li>
+</ol>
+</blockquote>
+<h3 id="解决"><a href="#解决" class="headerlink" title="解决"></a><strong>解决</strong></h3><p><strong>第一个问题</strong>一般都是默认的引用字体不支持中文,故可在模板文件中直接引用对应的支持中文的字体文件,这里使用微软雅黑字体,去网上下一个,把该字体文体放到reportlab库的安装路径下&#x2F;font文件夹下,然后在模板文件中如下引用即可:</p>
+<figure class="highlight html"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line">@font-face &#123;</span><br><span class="line">   font-family: msyh;</span><br><span class="line">   src: url(&quot;msyh.ttf&quot;);</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>当然上面也可以不把字体文件放到font目录下,反正只需要上面代码src.url里能找到字体文件即可</p>
+<p><strong>第二个问题</strong>中文的自动换行问题,网上通用的做法是在.py文件中引用以下几句代码:</p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">from</span> reportlab.pdfbase <span class="keyword">import</span> pdfmetrics</span><br><span class="line"><span class="keyword">from</span> reportlab.pdfbase.ttfonts <span class="keyword">import</span> TTFont </span><br><span class="line">pdfmetrics.registerFont(TTFont(<span class="string">&#x27;msyh&#x27;</span>, <span class="string">&#x27;msyh.ttf&#x27;</span>))</span><br><span class="line"><span class="keyword">import</span> reportlab.lib.styles</span><br><span class="line">reportlab.lib.styles.ParagraphStyle.defaults[<span class="string">&#x27;wordWrap&#x27;</span>] = <span class="string">&#x27;CJK&#x27;</span></span><br></pre></td></tr></table></figure>
+
+<p>最重要的是最后一句话,CJK指的是中日韩文字,这句话的意思是按照中文韩文字的规则进行换行判断,查看reportlab_paragraph.py源码:</p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">if</span> style.wordWrap == <span class="string">&#x27;CJK&#x27;</span>:</span><br><span class="line">            <span class="comment">#use Asian text wrap algorithm to break characters</span></span><br><span class="line">            blPara = self.breakLinesCJK([first_line_width, later_widths])</span><br><span class="line">        <span class="keyword">else</span>:</span><br><span class="line">            blPara = self.breakLines([first_line_width, later_widths])</span><br><span class="line">        self.blPara = blPara</span><br><span class="line">        autoLeading = <span class="built_in">getattr</span>(self, <span class="string">&#x27;autoLeading&#x27;</span>, <span class="built_in">getattr</span>(style, <span class="string">&#x27;autoLeading&#x27;</span>, <span class="string">&#x27;&#x27;</span>))</span><br><span class="line">        leading = style.leading</span><br><span class="line">        <span class="keyword">if</span> blPara.kind == <span class="number">1</span> <span class="keyword">and</span> autoLeading <span class="keyword">not</span> <span class="keyword">in</span> (<span class="string">&#x27;&#x27;</span>, <span class="string">&#x27;off&#x27;</span>):</span><br><span class="line">            height = <span class="number">0</span></span><br><span class="line">            <span class="keyword">if</span> autoLeading == <span class="string">&#x27;max&#x27;</span>:</span><br><span class="line">                <span class="keyword">for</span> l <span class="keyword">in</span> blPara.lines:</span><br><span class="line">                    height += <span class="built_in">max</span>(l.ascent - l.descent, leading)</span><br><span class="line">            <span class="keyword">elif</span> autoLeading == <span class="string">&#x27;min&#x27;</span>:</span><br><span class="line">                <span class="keyword">for</span> l <span class="keyword">in</span> blPara.lines:</span><br><span class="line">                    height += l.ascent - l.descent</span><br><span class="line">            <span class="keyword">else</span>:</span><br><span class="line">                <span class="keyword">raise</span> ValueError(<span class="string">&#x27;invalid autoLeading value %r&#x27;</span> % autoLeading)</span><br><span class="line">        <span class="keyword">else</span>:</span><br><span class="line">            <span class="keyword">if</span> autoLeading == <span class="string">&#x27;max&#x27;</span>:</span><br><span class="line">                leading = <span class="built_in">max</span>(leading, LEADING_FACTOR * style.fontSize)</span><br><span class="line">            <span class="keyword">elif</span> autoLeading == <span class="string">&#x27;min&#x27;</span>:</span><br><span class="line">                leading = LEADING_FACTOR * style.fontSize</span><br><span class="line">            height = <span class="built_in">len</span>(blPara.lines) * leading</span><br><span class="line">        self.height = height</span><br></pre></td></tr></table></figure>
+
+<p>但是很可惜,本人各种尝试之后追了源码之后也没有实现中文自动换行,后来没有办法只能使用手工br的方式,好在模板html文件不是很大,工作量不是很大也就忍了</p>
+<p><strong>第三个问题</strong>其实是版本的问题,网上很多教程都是基于python2.x环境下,python2.x环境下,StringIO是from cStringIO import StringIO,而在python3.x下,StringIO在io下了,要from io import StringIO,还有就是pisa.CreatePDF(StringIO(pdf_data.encode(‘utf-8’)), pdf)在python3.x下StringIO无法使用,只能使用BytesIO,查看源码document.py里也改成了out &#x3D; io.BytesIO(),故应该改成</p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">pdf = pisa.CreatePDF(BytesIO(html.encode(<span class="string">&#x27;utf8&#x27;</span>)),result,encoding=<span class="string">&#x27;utf8&#x27;</span>,link_callback=fetch_resources)</span><br></pre></td></tr></table></figure>
+<p><strong>第四个问题</strong>则是flask运行,默认的根目录为app.py所有目录,如果模板中使用了资源引用,如</p>
+<figure class="highlight html"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line"><span class="tag">&lt;<span class="name">img</span> <span class="attr">src</span>=<span class="string">&quot;&#123;&#123; url_for(&#x27;static&#x27;,filename=&#x27;img/pdf/0.png&#x27;) &#125;&#125;&quot;</span> /&gt;</span></span><br></pre></td></tr></table></figure>
+
+<p>则生成pdf的时候应用会提示 **”need a valid filename”**错误,其它就是找不到该资源,因为它需要按绝对路径去引用,所以需要pisa.CreatePDF指定link_callback函数,</p>
+<p>flask环境如下:</p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">def</span> <span class="title function_">fetch_resources</span>(<span class="params">uri,rel</span>):</span><br><span class="line">    path = os.getcwd() + uri</span><br><span class="line">    <span class="keyword">return</span> path</span><br></pre></td></tr></table></figure>
+
+<p>而如果是Djang则如下:</p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">def</span> <span class="title function_">link_callback</span>(<span class="params">uri, rel</span>):</span><br><span class="line">    <span class="string">&quot;&quot;&quot;</span></span><br><span class="line"><span class="string">    Convert HTML URIs to absolute system paths so xhtml2pdf can access those</span></span><br><span class="line"><span class="string">    resources</span></span><br><span class="line"><span class="string">    &quot;&quot;&quot;</span></span><br><span class="line">    <span class="comment"># use short variable names</span></span><br><span class="line">    sUrl = settings.STATIC_URL      <span class="comment"># Typically /static/</span></span><br><span class="line">    sRoot = settings.STATIC_ROOT    <span class="comment"># Typically /home/userX/project_static/</span></span><br><span class="line">    mUrl = settings.MEDIA_URL       <span class="comment"># Typically /static/media/</span></span><br><span class="line">    mRoot = settings.MEDIA_ROOT     <span class="comment"># Typically /home/userX/project_static/media/</span></span><br><span class="line"></span><br><span class="line">    <span class="comment"># convert URIs to absolute system paths</span></span><br><span class="line">    <span class="keyword">if</span> uri.startswith(mUrl):</span><br><span class="line">        path = os.path.join(mRoot, uri.replace(mUrl, <span class="string">&quot;&quot;</span>))</span><br><span class="line">    <span class="keyword">elif</span> uri.startswith(sUrl):</span><br><span class="line">        path = os.path.join(sRoot, uri.replace(sUrl, <span class="string">&quot;&quot;</span>))</span><br><span class="line">    <span class="keyword">else</span>:</span><br><span class="line">        <span class="keyword">return</span> uri  <span class="comment"># handle absolute uri (ie: http://some.tld/foo.png)</span></span><br><span class="line"></span><br><span class="line">    <span class="comment"># make sure that file exists</span></span><br><span class="line">    <span class="keyword">if</span> <span class="keyword">not</span> os.path.isfile(path):</span><br><span class="line">            <span class="keyword">raise</span> Exception(</span><br><span class="line">                <span class="string">&#x27;media URI must start with %s or %s&#x27;</span> % (sUrl, mUrl)</span><br><span class="line">            )</span><br><span class="line">    <span class="keyword">return</span> path</span><br></pre></td></tr></table></figure>
+<p>生成PDF代码如下,这里当把PDF当做附件,下载的时候浏览器会提示另存为下载框:</p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">#生成pdf</span></span><br><span class="line"><span class="meta">@app.route(<span class="params"><span class="string">&#x27;/pdfdownload/&#x27;</span>, methods=[<span class="string">&#x27;GET&#x27;</span>,<span class="string">&#x27;POST&#x27;</span>]</span>)</span></span><br><span class="line"><span class="keyword">def</span> <span class="title function_">pdfdownload</span>():</span><br><span class="line">    <span class="comment">#其它业务代码</span></span><br><span class="line">    <span class="comment">#填充pdf模板文件</span></span><br><span class="line">    html = render_template(<span class="string">&#x27;pdfdownload.html&#x27;</span>)</span><br><span class="line">    result = BytesIO()</span><br><span class="line">    <span class="comment">#生成pdf</span></span><br><span class="line">    pdf = pisa.CreatePDF(BytesIO(html.encode(<span class="string">&#x27;utf-8&#x27;</span>)),result,encoding=<span class="string">&#x27;utf-8&#x27;</span>,link_callback=fetch_resources)</span><br><span class="line">    resp = make_response(result.getvalue())</span><br><span class="line">    result.close()</span><br><span class="line">    resp.headers[<span class="string">&quot;Content-Disposition&quot;</span>] = (<span class="string">&quot;attachment; filename=&#x27;&#123;0&#125;&#x27;&quot;</span>.<span class="built_in">format</span>(<span class="string">&#x27;skxt-jkxj.pdf&#x27;</span>))</span><br><span class="line">    resp.headers[<span class="string">&#x27;Content-Type&#x27;</span>] = <span class="string">&#x27;application/pdf&#x27;</span></span><br><span class="line">    <span class="keyword">return</span> resp</span><br></pre></td></tr></table></figure>
+
+<p>如果是自动生成PDF文件,官方代码如下:</p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">from</span> xhtml2pdf <span class="keyword">import</span> pisa</span><br><span class="line"></span><br><span class="line"><span class="comment"># Define your data</span></span><br><span class="line">sourceHtml = <span class="string">&quot;&lt;html&gt;&lt;body&gt;&lt;p&gt;To PDF or not to PDF&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;&quot;</span></span><br><span class="line">outputFilename = <span class="string">&quot;test.pdf&quot;</span></span><br><span class="line"></span><br><span class="line"><span class="comment"># Utility function</span></span><br><span class="line"><span class="keyword">def</span> <span class="title function_">convertHtmlToPdf</span>(<span class="params">sourceHtml, outputFilename</span>):</span><br><span class="line">    <span class="comment"># open output file for writing (truncated binary)</span></span><br><span class="line">    resultFile = <span class="built_in">open</span>(outputFilename, <span class="string">&quot;w+b&quot;</span>)</span><br><span class="line"></span><br><span class="line">    <span class="comment"># convert HTML to PDF</span></span><br><span class="line">    pisaStatus = pisa.CreatePDF(</span><br><span class="line">            sourceHtml,                <span class="comment"># the HTML to convert</span></span><br><span class="line">            dest=resultFile)           <span class="comment"># file handle to recieve result</span></span><br><span class="line"></span><br><span class="line">    <span class="comment"># close output file</span></span><br><span class="line">    resultFile.close()                 <span class="comment"># close output file</span></span><br><span class="line"></span><br><span class="line">    <span class="comment"># return True on success and False on errors</span></span><br><span class="line">    <span class="keyword">return</span> pisaStatus.err</span><br><span class="line"></span><br><span class="line"><span class="comment"># Main program</span></span><br><span class="line"><span class="keyword">if</span> __name__ == <span class="string">&quot;__main__&quot;</span>:</span><br><span class="line">    pisa.showLogging()</span><br><span class="line">    convertHtmlToPdf(sourceHtml, outputFilename)</span><br></pre></td></tr></table></figure>
+
+<p>官方的usage.rst其它很有用,还有些example也很值得借鉴,有时候遇到问题不防也看看issue,你碰到的问题,其它人肯定也碰到过.</p>
+<h3 id="参考文章"><a href="#参考文章" class="headerlink" title="参考文章:"></a><strong>参考文章:</strong></h3><blockquote>
+<ul>
+<li><a target="_blank" rel="noopener" href="https://github.com/xhtml2pdf">xhtml2pdf项目github</a></li>
+</ul>
+</blockquote>
+<h3 id="转载请注明出处https-izsk-me"><a href="#转载请注明出处https-izsk-me" class="headerlink" title="转载请注明出处https://izsk.me"></a><strong>转载请注明出处<a target="_blank" rel="noopener" href="https://izsk.me/">https://izsk.me</a></strong></h3><hr>
+
+      
+    </div>
+
+    <div>
+      
+        
+<div id="wechat_subscriber" style="display: block; padding: 10px 0; margin: 20px auto; width: 100%; text-align: center">
+    <img id="wechat_subscriber_qcode" src="/images/websitecode250.png" alt=" wechat" style="width: 200px; max-width: 100%;"/>
+    <div>Scan Me To Read on Phone</div>
+</div>
+
+
+      
+    </div>
+
+    <div>
+      
+        
+  <div style="padding: 10px 0; margin: 20px auto; width: 90%; text-align: center;">
+    <div>I know you won't do this,but what if you did?</div>
+    <button id="rewardButton" disable="enable" onclick="var qr = document.getElementById('QR'); if (qr.style.display === 'none') {qr.style.display='block';} else {qr.style.display='none'}">
+      <span>赏</span>
+    </button>
+    <div id="QR" style="display: none;">
+      
+        <div id="wechat" style="display: inline-block">
+          <img id="wechat_qr" src="/images/wechatpayme.png" alt=" WeChat Pay"/>
+          <p>微信打赏</p>
+        </div>
+      
+      
+        <div id="alipay" style="display: inline-block">
+          <img id="alipay_qr" src="/images/alipayme.jpg" alt=" Alipay"/>
+          <p>支付宝打赏</p>
+        </div>
+      
     </div>
   </div>
 
-{% endblock %}
 
-{% block sidebar %}
-  {{ sidebar_template.render(true) }}
-{% endblock %}
+      
+    </div>
 
 
-{% block script_extra %}
-  {% include '_scripts/pages/post-details.swig' %}
-{% endblock %}
+    <footer class="post-footer">
+      
+        <div class="post-tags">
+          
+            <a href="/tags/Python/" rel="tag"># Python</a>
+          
+        </div>
+      
+
+      
+        <div class="post-nav">
+          <div class="post-nav-next post-nav-item">
+            
+              <a href="/2017/09/02/mysql%E5%AD%A6%E4%B9%A0%E4%B8%80(mysql%E5%9F%BA%E7%A1%80%E6%9E%B6%E6%9E%84)/" rel="next" title="mysql学习(mysql基础架构)">
+                <i class="fa fa-chevron-left"></i> mysql学习(mysql基础架构)
+              </a>
+            
+          </div>
+
+          <span class="post-nav-divider"></span>
+
+          <div class="post-nav-prev post-nav-item">
+            
+              <a href="/2017/09/17/highcharts%E4%B8%AD%E7%9A%84svg%E5%9C%A8%E6%9C%8D%E5%8A%A1%E5%99%A8%E7%AB%AF%E8%87%AA%E5%8A%A8%E8%BD%AC%E5%8C%96%E6%88%90%E5%9B%BE%E7%89%87/" rel="prev" title="highcharts中的svg在服务器端自动转化成图片">
+                highcharts中的svg在服务器端自动转化成图片 <i class="fa fa-chevron-right"></i>
+              </a>
+            
+          </div>
+        </div>
+      
+
+      
+      
+    </footer>
+  </article>
+
+
+
+    <div class="post-spread">
+      
+    </div>
+  </div>
+
+
+          </div>
+          
+
+
+          
+  <div class="comments" id="comments">
+    
+  </div>
+
+
+        </div>
+        
+          
+  
+  <div class="sidebar-toggle">
+    <div class="sidebar-toggle-line-wrap">
+      <span class="sidebar-toggle-line sidebar-toggle-line-first"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-middle"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-last"></span>
+    </div>
+  </div>
+
+  <aside id="sidebar" class="sidebar">
+    <div class="sidebar-inner">
+
+      
+
+      
+        <ul class="sidebar-nav motion-element">
+          <li class="sidebar-nav-toc sidebar-nav-active" data-target="post-toc-wrap" >
+            文章目录
+          </li>
+          <li class="sidebar-nav-overview" data-target="site-overview">
+            站点概览
+          </li>
+        </ul>
+      
+
+      <section class="site-overview sidebar-panel">
+        <div class="site-author motion-element" itemprop="author" itemscope itemtype="http://schema.org/Person">
+          <img class="site-author-image" itemprop="image"
+               src="/images/avatar.gif"
+               alt="" />
+          <p class="site-author-name" itemprop="name"></p>
+          <p class="site-description motion-element" itemprop="description"></p>
+        </div>
+        <nav class="site-state motion-element">
+        
+          
+            <div class="site-state-item site-state-posts">
+              <a href="/archives">
+                <span class="site-state-item-count">192</span>
+                <span class="site-state-item-name">日志</span>
+              </a>
+            </div>
+          
+
+          
+            <div class="site-state-item site-state-categories">
+              <a href="/categories">
+                <span class="site-state-item-count">14</span>
+                <span class="site-state-item-name">分类</span>
+              </a>
+            </div>
+          
+
+          
+            <div class="site-state-item site-state-tags">
+              <a href="/tags">
+                <span class="site-state-item-count">14</span>
+                <span class="site-state-item-name">标签</span>
+              </a>
+            </div>
+          
+
+        </nav>
+
+        
+
+        <div class="links-of-author motion-element">
+          
+        </div>
+
+        
+        
+
+        
+        
+
+        
+
+
+      </section>
+
+      
+      <!--noindex-->
+        <section class="post-toc-wrap motion-element sidebar-panel sidebar-panel-active">
+          <div class="post-toc">
+
+            
+              
+            
+
+            
+              <div class="post-toc-content"><ol class="nav"><li class="nav-item nav-level-3"><a class="nav-link" href="#%E7%8E%AF%E5%A2%83"><span class="nav-number">1.</span> <span class="nav-text">环境</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E9%97%AE%E9%A2%98"><span class="nav-number">2.</span> <span class="nav-text">问题</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E8%A7%A3%E5%86%B3"><span class="nav-number">3.</span> <span class="nav-text">解决</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E5%8F%82%E8%80%83%E6%96%87%E7%AB%A0"><span class="nav-number">4.</span> <span class="nav-text">参考文章:</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E8%BD%AC%E8%BD%BD%E8%AF%B7%E6%B3%A8%E6%98%8E%E5%87%BA%E5%A4%84https-izsk-me"><span class="nav-number">5.</span> <span class="nav-text">转载请注明出处https:&#x2F;&#x2F;izsk.me</span></a></li></ol></div>
+            
+
+          </div>
+        </section>
+      <!--/noindex-->
+      
+
+    </div>
+  </aside>
+
+
+        
+      </div>
+    </main>
+
+    <footer id="footer" class="footer">
+      <div class="footer-inner">
+        <div class="copyright" >
+  
+  &copy; 
+  <span itemprop="copyrightYear">2022</span>
+  <span class="with-love">
+    <i class="fa fa-heart"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">Z.S.K.</span>
+</div>
+
+
+<div class="powered-by">
+  Supported by <a class="theme-link" target="_blank" rel="noopener" href="https://hexo.io">Hexo</a>
+</div>
+
+<div class="theme-info">
+  Theme -
+  <a class="theme-link" target="_blank" rel="noopener" href="https://github.com/iissnan/hexo-theme-next">
+    NexT.Mist
+  </a>
+</div>
+
+
+        
+
+        
+      </div>
+    </footer>
+
+    <div class="back-to-top">
+      <i class="fa fa-arrow-up"></i>
+    </div>
+  </div>
+
+  
+
+<script type="text/javascript">
+  if (Object.prototype.toString.call(window.Promise) !== '[object Function]') {
+    window.Promise = null;
+  }
+</script>
+
+
+
+
+
+
+
+
+
+  
+
+
+
+  
+  <script type="text/javascript" src="/lib/jquery/index.js?v=2.1.3"></script>
+
+  
+  <script type="text/javascript" src="/lib/fastclick/lib/fastclick.min.js?v=1.0.6"></script>
+
+  
+  <script type="text/javascript" src="/lib/jquery_lazyload/jquery.lazyload.js?v=1.9.7"></script>
+
+  
+  <script type="text/javascript" src="/lib/velocity/velocity.min.js?v=1.2.1"></script>
+
+  
+  <script type="text/javascript" src="/lib/velocity/velocity.ui.min.js?v=1.2.1"></script>
+
+  
+  <script type="text/javascript" src="/lib/fancybox/source/jquery.fancybox.pack.js?v=2.1.5"></script>
+
+
+  
+
+
+  <script type="text/javascript" src="/js/src/utils.js?v=5.1.0"></script>
+
+  <script type="text/javascript" src="/js/src/motion.js?v=5.1.0"></script>
+
+
+
+  
+  
+
+  
+  <script type="text/javascript" src="/js/src/scrollspy.js?v=5.1.0"></script>
+<script type="text/javascript" src="/js/src/post-details.js?v=5.1.0"></script>
+
+
+
+  
+
+
+  <script type="text/javascript" src="/js/src/bootstrap.js?v=5.1.0"></script>
+
+
+
+  
+
+
+
+  
+
+
+
+
+	
+
+
+
+
+
+  
+
+
+
+
+  
+  
+  <script type="text/javascript">
+    // Popup Window;
+    var isfetched = false;
+    // Search DB path;
+    var search_path = "search.xml";
+    if (search_path.length == 0) {
+      search_path = "search.xml";
+    }
+    var path = "/" + search_path;
+    // monitor main search box;
+
+    function proceedsearch() {
+      $("body").append('<div class="popoverlay">').css('overflow', 'hidden');
+      $('.popup').toggle();
+    }
+    // search function;
+    var searchFunc = function(path, search_id, content_id) {
+      'use strict';
+      $.ajax({
+        url: path,
+        dataType: "xml",
+        async: true,
+        success: function( xmlResponse ) {
+          // get the contents from search data
+          isfetched = true;
+          $('.popup').detach().appendTo('.header-inner');
+          var datas = $( "entry", xmlResponse ).map(function() {
+            return {
+              title: $( "title", this ).text(),
+              content: $("content",this).text(),
+              url: $( "url" , this).text()
+            };
+          }).get();
+          var $input = document.getElementById(search_id);
+          var $resultContent = document.getElementById(content_id);
+          $input.addEventListener('input', function(){
+            var matchcounts = 0;
+            var str='<ul class=\"search-result-list\">';
+            var keywords = this.value.trim().toLowerCase().split(/[\s\-]+/);
+            $resultContent.innerHTML = "";
+            if (this.value.trim().length > 1) {
+              // perform local searching
+              datas.forEach(function(data) {
+                var isMatch = false;
+                var content_index = [];
+                var data_title = data.title.trim().toLowerCase();
+                var data_content = data.content.trim().replace(/<[^>]+>/g,"").toLowerCase();
+                var data_url = decodeURIComponent(data.url);
+                var index_title = -1;
+                var index_content = -1;
+                var first_occur = -1;
+                // only match artiles with not empty titles and contents
+                if(data_title != '') {
+                  keywords.forEach(function(keyword, i) {
+                    index_title = data_title.indexOf(keyword);
+                    index_content = data_content.indexOf(keyword);
+                    if( index_title >= 0 || index_content >= 0 ){
+                      isMatch = true;
+                      if (i == 0) {
+                        first_occur = index_content;
+                      }
+                    }
+
+                  });
+                }
+                // show search results
+                if (isMatch) {
+                  matchcounts += 1;
+                  str += "<li><a href='"+ data_url +"' class='search-result-title'>"+ data_title +"</a>";
+                  var content = data.content.trim().replace(/<[^>]+>/g,"");
+                  if (first_occur >= 0) {
+                    // cut out 100 characters
+                    var start = first_occur - 20;
+                    var end = first_occur + 80;
+                    if(start < 0){
+                      start = 0;
+                    }
+                    if(start == 0){
+                      end = 50;
+                    }
+                    if(end > content.length){
+                      end = content.length;
+                    }
+                    var match_content = content.substring(start, end);
+                    // highlight all keywords
+                    keywords.forEach(function(keyword){
+                      var regS = new RegExp(keyword, "gi");
+                      match_content = match_content.replace(regS, "<b class=\"search-keyword\">"+keyword+"</b>");
+                    });
+
+                    str += "<p class=\"search-result\">" + match_content +"...</p>"
+                  }
+                  str += "</li>";
+                }
+              })};
+            str += "</ul>";
+            if (matchcounts == 0) { str = '<div id="no-result"><i class="fa fa-frown-o fa-5x" /></div>' }
+            if (keywords == "") { str = '<div id="no-result"><i class="fa fa-search fa-5x" /></div>' }
+            $resultContent.innerHTML = str;
+          });
+          proceedsearch();
+        }
+      });}
+
+    // handle and trigger popup window;
+    $('.popup-trigger').click(function(e) {
+      e.stopPropagation();
+      if (isfetched == false) {
+        searchFunc(path, 'local-search-input', 'local-search-result');
+      } else {
+        proceedsearch();
+      };
+    });
+
+    $('.popup-btn-close').click(function(e){
+      $('.popup').hide();
+      $(".popoverlay").remove();
+      $('body').css('overflow', '');
+    });
+    $('.popup').click(function(e){
+      e.stopPropagation();
+    });
+  </script>
+
+
+  
+
+  
+
+  
+
+  
+
+
+</body>
+</html>

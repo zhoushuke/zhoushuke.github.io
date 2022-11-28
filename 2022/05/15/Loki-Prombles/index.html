@@ -1,38 +1,927 @@
-{% extends '_layout.swig' %}
-{% import '_macro/post.swig' as post_template %}
-{% import '_macro/sidebar.swig' as sidebar_template %}
+<!doctype html>
 
 
-{% block title %} {{ page.title }} | {{ config.title }} {% endblock %}
 
-{% block page_class %}page-post-detail{% endblock %}
+  
 
 
-{% block content %}
+<html class="theme-next mist use-motion" lang="zh-Hans">
+<head>
+  <meta charset="UTF-8"/>
+<meta http-equiv="X-UA-Compatible" content="IE=edge" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1"/>
+
+
+
+<meta http-equiv="Cache-Control" content="no-transform" />
+<meta http-equiv="Cache-Control" content="no-siteapp" />
+
+
+
+
+
+
+
+
+
+
+
+
+  
+  
+  <link href="/lib/fancybox/source/jquery.fancybox.css?v=2.1.5" rel="stylesheet" type="text/css" />
+
+
+
+
+  
+  
+  
+  
+
+  
+    
+    
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+    
+    
+    <link href="//fonts.googleapis.com/css?family=Lato:300,300italic,400,400italic,700,700italic&subset=latin,latin-ext" rel="stylesheet" type="text/css">
+  
+
+
+
+
+
+
+<link href="/lib/font-awesome/css/font-awesome.min.css?v=4.6.2" rel="stylesheet" type="text/css" />
+
+<link href="/css/main.css?v=5.1.0" rel="stylesheet" type="text/css" />
+
+
+  <meta name="keywords" content="CloudNavi," />
+
+
+
+
+
+
+
+
+  <link rel="shortcut icon" type="image/x-icon" href="/favicon.ico?v=5.1.0" />
+
+
+
+
+
+
+<meta name="description" content="grafana出品的loki日志框架完美地与kubernetes的label理念结合，相对于EFK来说更加轻量级，非常适合不需要日志聚合的场景.目前新上集群考虑都彩loki做为基础工具, 直接在grafana中展示 在这里记录下使用Loki踩过的坑, 不定期更新">
+<meta property="og:type" content="article">
+<meta property="og:title" content="Grafana学习(Loki踩坑记)">
+<meta property="og:url" content="https://zhoushuke.github.io/2022/05/15/Loki-Prombles/index.html">
+<meta property="og:site_name" content="Z.S.K.&#39;s Records">
+<meta property="og:description" content="grafana出品的loki日志框架完美地与kubernetes的label理念结合，相对于EFK来说更加轻量级，非常适合不需要日志聚合的场景.目前新上集群考虑都彩loki做为基础工具, 直接在grafana中展示 在这里记录下使用Loki踩过的坑, 不定期更新">
+<meta property="og:locale">
+<meta property="og:image" content="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20220607165538.png">
+<meta property="og:image" content="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20220513132435.png">
+<meta property="og:image" content="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20211102143833.png">
+<meta property="og:image" content="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20210607142742.png">
+<meta property="og:image" content="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20210312182643.png">
+<meta property="og:image" content="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20210219121747.png">
+<meta property="og:image" content="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20201110195022.png">
+<meta property="og:image" content="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20200909190248.png">
+<meta property="og:image" content="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20200909200457.png">
+<meta property="article:published_time" content="2022-05-15T06:30:53.000Z">
+<meta property="article:modified_time" content="2022-07-19T03:16:00.972Z">
+<meta property="article:author" content="Z.S.K.">
+<meta property="article:tag" content="CloudNavi">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:image" content="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20220607165538.png">
+
+
+
+<script type="text/javascript" id="hexo.configurations">
+  var NexT = window.NexT || {};
+  var CONFIG = {
+    root: '',
+    scheme: 'Mist',
+    sidebar: {"position":"left","display":"post"},
+    fancybox: true,
+    motion: true,
+    duoshuo: {
+      userId: 'undefined',
+      author: '博主'
+    },
+    algolia: {
+      applicationID: '',
+      apiKey: '',
+      indexName: '',
+      hits: {"per_page":10},
+      labels: {"input_placeholder":"Search for Posts","hits_empty":"We didn't find any results for the search: ${query}","hits_stats":"${hits} results found in ${time} ms"}
+    }
+  };
+</script>
+
+
+
+  <link rel="canonical" href="https://zhoushuke.github.io/2022/05/15/Loki-Prombles/"/>
+
+
+
+
+
+  <title> Grafana学习(Loki踩坑记) | Z.S.K.'s Records </title>
+<meta name="generator" content="Hexo 6.2.0"></head>
+
+<body itemscope itemtype="http://schema.org/WebPage" lang="zh-Hans">
+
+  
+
+
+
+
+
+
+
+
+
+
+  
+  
+    
+  
+
+  <div class="container one-collumn sidebar-position-left page-post-detail ">
+    <div class="headband"></div>
+
+    <header id="header" class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-meta ">
+  
+
+  <div class="custom-logo-site-title">
+    <a href="/"  class="brand" rel="start">
+      <span class="logo-line-before"><i></i></span>
+      <span class="site-title">Z.S.K.'s Records</span>
+      <span class="logo-line-after"><i></i></span>
+    </a>
+  </div>
+    
+      <p class="site-subtitle"></p>
+    
+</div>
+
+<div class="site-nav-toggle">
+  <button>
+    <span class="btn-bar"></span>
+    <span class="btn-bar"></span>
+    <span class="btn-bar"></span>
+  </button>
+</div>
+
+<nav class="site-nav">
+  
+
+  
+    <ul id="menu" class="menu">
+      
+        
+        <li class="menu-item menu-item-home">
+          <a href="/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-home"></i> <br />
+            
+            首页
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-categories">
+          <a href="/categories" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-th"></i> <br />
+            
+            分类
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-about">
+          <a href="/about/ZSK-Profile.pdf" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-user"></i> <br />
+            
+            简历
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-archives">
+          <a href="/archives" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-archive"></i> <br />
+            
+            归档
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-tags">
+          <a href="/tags" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-tags"></i> <br />
+            
+            标签
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-commonweal">
+          <a href="/404.html" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-heartbeat"></i> <br />
+            
+            公益404
+          </a>
+        </li>
+      
+
+      
+        <li class="menu-item menu-item-search">
+          
+            <a href="javascript:;" class="popup-trigger">
+          
+            
+              <i class="menu-item-icon fa fa-search fa-fw"></i> <br />
+            
+            搜索
+          </a>
+        </li>
+      
+    </ul>
+  
+
+  
+    <div class="site-search">
+      
+  <div class="popup">
+ <span class="search-icon fa fa-search"></span>
+ <input type="text" id="local-search-input">
+ <div id="local-search-result"></div>
+ <span class="popup-btn-close">close</span>
+</div>
+
+
+    </div>
+  
+</nav>
+
+
+
+ </div>
+    </header>
+
+    <main id="main" class="main">
+      <div class="main-inner">
+        <div class="content-wrap">
+          <div id="content" class="content">
+            
 
   <div id="posts" class="posts-expand">
-    {{ post_template.render(page) }}
+    
 
-    <div class="post-spread">
-      {% if theme.jiathis %}
-        {% include '_partials/share/jiathis.swig' %}
-      {% elseif theme.baidushare %}
-        {% include '_partials/share/baidushare.swig' %}
-      {% elseif theme.add_this_id %}
-        {% include '_partials/share/add-this.swig' %}
-      {% elseif theme.duoshuo_shortname and theme.duoshuo_share %}
-        {% include '_partials/share/duoshuo_share.swig' %}
-      {% endif %}
+  
+
+  
+  
+  
+
+  <article class="post post-type-normal " itemscope itemtype="http://schema.org/Article">
+  <link itemprop="mainEntityOfPage" href="https://zhoushuke.github.io/2022/05/15/Loki-Prombles/">
+
+  <span style="display:none" itemprop="author" itemscope itemtype="http://schema.org/Person">
+    <meta itemprop="name" content="">
+    <meta itemprop="description" content="">
+    <meta itemprop="image" content="/images/avatar.gif">
+  </span>
+
+  <span style="display:none" itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+    <meta itemprop="name" content="Z.S.K.'s Records">
+    <span style="display:none" itemprop="logo" itemscope itemtype="http://schema.org/ImageObject">
+      <img style="display:none;" itemprop="url image" alt="Z.S.K.'s Records" src="">
+    </span>
+  </span>
+
+    
+      <header class="post-header">
+
+        
+        
+          <h1 class="post-title" itemprop="name headline">
+            
+            
+              
+                Grafana学习(Loki踩坑记)
+              
+            
+          </h1>
+        
+
+        <div class="post-meta">
+          <span class="post-time">
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">发表于</span>
+              
+              <time title="Post created" itemprop="dateCreated datePublished" datetime="2022-05-15T14:30:53+08:00">
+                2022-05-15
+              </time>
+            
+
+            
+
+            
+          </span>
+
+          
+            <span class="post-category" >
+            
+              <span class="post-meta-divider">|</span>
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-folder-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">分类于</span>
+              
+              
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/CloudNavi/" itemprop="url" rel="index">
+                    <span itemprop="name">CloudNavi</span>
+                  </a>
+                </span>
+
+                
+                
+              
+            </span>
+          
+
+          
+            
+          
+
+          
+
+          
+          
+
+          
+
+          
+
+        </div>
+      </header>
+    
+
+
+    <div class="post-body" itemprop="articleBody">
+
+      
+      
+
+      
+        <p>grafana出品的loki日志框架完美地与kubernetes的label理念结合，相对于EFK来说更加轻量级，非常适合不需要日志聚合的场景.目前新上集群考虑都彩loki做为基础工具, 直接在grafana中展示</p>
+<p><strong>在这里记录下使用Loki踩过的坑, 不定期更新</strong></p>
+<span id="more"></span>
+
+
+
+<h3 id="LOKI启动时提示-panic-invalid-page-type-11-10"><a href="#LOKI启动时提示-panic-invalid-page-type-11-10" class="headerlink" title="LOKI启动时提示 panic: invalid page type: 11: 10"></a>LOKI启动时提示 panic: invalid page type: 11: 10</h3><p><img src="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20220607165538.png"></p>
+<p>原因: 对应的index table文件已经损坏</p>
+<p>解决: 删除相应的index文件即可解决</p>
+<h3 id="日志的label不对"><a href="#日志的label不对" class="headerlink" title="日志的label不对"></a>日志的label不对</h3><p><img src="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20220513132435.png"></p>
+<p>原因: promtail中的scrape_config存在问题.</p>
+<p>参考: <a target="_blank" rel="noopener" href="https://izsk.me/2022/05/15/Loki-log-with-wrong-labels/">https://izsk.me/2022/05/15/Loki-log-with-wrong-labels/</a></p>
+<h3 id="grafana中开启实时日志时提示Query-error"><a href="#grafana中开启实时日志时提示Query-error" class="headerlink" title="grafana中开启实时日志时提示Query error"></a>grafana中开启实时日志时提示Query error</h3><p><img src="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20211102143833.png"></p>
+<p>原因: 官方的解释是Note that live tailing relies on two websocket connections: one between the browser and the Grafana server, and another between the Grafana server and the Loki server. If you run any reverse proxies, please configure them accordingly.</p>
+<p>也就是说，如果在web与grafana,grafana与loki之间存在如nginx类的proxy,则需要开启websocket特性，洽洽作者的grafana是在nginx后的</p>
+<p>解决: nginx添加websocket配置,<a target="_blank" rel="noopener" href="https://www.nginx.com/blog/websocket-nginx/">详见</a></p>
+<p>参考: <a target="_blank" rel="noopener" href="https://github.com/grafana/grafana/blob/b5d8cb25e18fc73f37b3546246363464c9298684/docs/sources/features/datasources/loki.md">https://github.com/grafana/grafana/blob/b5d8cb25e18fc73f37b3546246363464c9298684/docs/sources/features/datasources/loki.md</a></p>
+<h3 id="Loki-file-size-too-small-nerror-creating-index-client"><a href="#Loki-file-size-too-small-nerror-creating-index-client" class="headerlink" title="Loki: file size too small\nerror creating index client"></a>Loki: file size too small\nerror creating index client</h3><p>解决: 删除loki的持久化目录下的boltdb-shipper-active&#x2F;index_18xxx目录 </p>
+<p>参考: <a target="_blank" rel="noopener" href="https://github.com/grafana/loki/issues/3219">https://github.com/grafana/loki/issues/3219</a></p>
+<h3 id="protail-context-deadline-exceeded"><a href="#protail-context-deadline-exceeded" class="headerlink" title="protail: context deadline exceeded"></a>protail: context deadline exceeded</h3><p><img src="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20210607142742.png"></p>
+<p>原因: promtail无法连接loki所致</p>
+<h3 id="promtail-cpu使用过高"><a href="#promtail-cpu使用过高" class="headerlink" title="promtail cpu使用过高"></a>promtail cpu使用过高</h3><p>原因: 由于集群中存在大量的job类pod，这会对loki的服务发现会有很大的压力，需要调整promtail的配置，查看官方的issue，后续可能会将ds由promtail转到服务端来做，promtail需要调整的配置主要为</p>
+<figure class="highlight yaml"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line"><span class="attr">target_config:</span></span><br><span class="line">  <span class="attr">sync_period:</span> <span class="string">30s</span></span><br><span class="line"><span class="attr">positions:</span></span><br><span class="line">  <span class="attr">filename:</span> <span class="string">/run/promtail/positions.yaml</span></span><br><span class="line">  <span class="attr">sync_period:</span> <span class="string">30s</span></span><br></pre></td></tr></table></figure>
+
+<p>将 sync_period由默认的10s换成30s</p>
+<p>可以使用以下的命令获取到pprof文件分析性能</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">curl localhost:3100/debug/pprof/profile\?seconds\=20</span><br></pre></td></tr></table></figure>
+
+<p>参考: <a target="_blank" rel="noopener" href="https://github.com/grafana/loki/issues/1315">https://github.com/grafana/loki/issues/1315</a></p>
+<h3 id="Maximum-active-stream-limit-exceeded"><a href="#Maximum-active-stream-limit-exceeded" class="headerlink" title="Maximum active stream limit exceeded"></a>Maximum active stream limit exceeded</h3><p><img src="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20210312182643.png"></p>
+<p>原因： 同下，需要调整limit config中的max_streams_per_user， 设置为0即可</p>
+<h3 id="server-returned-HTTP-status-429-Too-Many-Requests"><a href="#server-returned-HTTP-status-429-Too-Many-Requests" class="headerlink" title="server returned HTTP status 429 Too Many Requests"></a>server returned HTTP status 429 Too Many Requests</h3><p><img src="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20210219121747.png"></p>
+<p>原因: limit config中的参数: <code>ingestion_burst_size </code>默认值太小，调整即可</p>
+<p>参考: <a target="_blank" rel="noopener" href="https://github.com/grafana/loki/issues/1923">https://github.com/grafana/loki/issues/1923</a></p>
+<h3 id="Please-verify-permissions"><a href="#Please-verify-permissions" class="headerlink" title="Please verify permissions"></a>Please verify permissions</h3><p><img src="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20201110195022.png"></p>
+<p>原因: 这条其实是warn,不影响promtail的正常工作，如果调整过日志的路径的话要确认promtail挂载的路径是否正常</p>
+<h3 id="loki-invalid-schema-config"><a href="#loki-invalid-schema-config" class="headerlink" title="loki: invalid schema config"></a>loki: invalid schema config</h3><p>原因: loki的配置文件格式错误.</p>
+<h3 id="promtail-too-many-open-files"><a href="#promtail-too-many-open-files" class="headerlink" title="promtail: too many open files"></a>promtail: too many open files</h3><p><img src="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20200909190248.png"></p>
+<p>原因: &#x2F;var&#x2F;log&#x2F;pods下面的文件数量太多，导致超过内核参数(fs.inotify.max_user_instances)设置配置.</p>
+<p>解决：</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># 先查看当前机器设置的配置</span></span><br><span class="line"><span class="built_in">cat</span> /proc/sys/fs/inotify/max_user_instances</span><br><span class="line"><span class="comment"># 再查看promtail启动时watch的文件数</span></span><br><span class="line"><span class="built_in">cat</span> /run/promtail/positions.yaml | <span class="built_in">wc</span> -l</span><br><span class="line"><span class="comment"># 如果这个值比max_user_instances要大，则会出现上面的错误，可以通过修改内核参数进行调整</span></span><br><span class="line">sysctl -w fs.inotify.max_user_instances=1024</span><br><span class="line"><span class="comment"># 生效</span></span><br><span class="line">sysctl -p</span><br></pre></td></tr></table></figure>
+
+<p>参考: <a target="_blank" rel="noopener" href="https://github.com/grafana/loki/issues/1153">https://github.com/grafana/loki/issues/1153</a></p>
+<h3 id="promtail-no-such-file-ro-directory"><a href="#promtail-no-such-file-ro-directory" class="headerlink" title="promtail: no such file ro directory"></a>promtail: no such file ro directory</h3><p><img src="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20200909200457.png"></p>
+<p>原因： promtail daemonset启动时会自动挂载好几个hostpath,如果docker containers的配置调整过，则需要volume跟volumemount都需要对应上.</p>
+<h3 id="未完待续"><a href="#未完待续" class="headerlink" title="未完待续"></a>未完待续</h3><h3 id="参考文章"><a href="#参考文章" class="headerlink" title="参考文章:"></a><strong>参考文章:</strong></h3><blockquote>
+<ul>
+<li><a target="_blank" rel="noopener" href="https://github.com/grafana/loki/issues/429">https://github.com/grafana/loki/issues/429</a></li>
+<li><a target="_blank" rel="noopener" href="https://github.com/grafana/loki/issues/3219">https://github.com/grafana/loki/issues/3219</a></li>
+<li><a target="_blank" rel="noopener" href="https://github.com/grafana/loki/issues/1153">https://github.com/grafana/loki/issues/1153</a></li>
+<li><a target="_blank" rel="noopener" href="https://github.com/grafana/loki/issues/1923">https://github.com/grafana/loki/issues/1923</a></li>
+<li><a target="_blank" rel="noopener" href="https://blog.csdn.net/weixin_44997607/article/details/108419144">https://blog.csdn.net/weixin_44997607/article/details/108419144</a></li>
+<li><a target="_blank" rel="noopener" href="https://github.com/grafana/loki/issues/1315">https://github.com/grafana/loki/issues/1315</a></li>
+<li><a target="_blank" rel="noopener" href="https://www.nginx.com/blog/websocket-nginx/">https://www.nginx.com/blog/websocket-nginx/</a></li>
+</ul>
+</blockquote>
+<h3 id="转载请注明出处https-izsk-me"><a href="#转载请注明出处https-izsk-me" class="headerlink" title="转载请注明出处https://izsk.me"></a><strong>转载请注明出处<a target="_blank" rel="noopener" href="https://izsk.me/">https://izsk.me</a></strong></h3>
+      
+    </div>
+
+    <div>
+      
+        
+<div id="wechat_subscriber" style="display: block; padding: 10px 0; margin: 20px auto; width: 100%; text-align: center">
+    <img id="wechat_subscriber_qcode" src="/images/websitecode250.png" alt=" wechat" style="width: 200px; max-width: 100%;"/>
+    <div>Scan Me To Read on Phone</div>
+</div>
+
+
+      
+    </div>
+
+    <div>
+      
+        
+  <div style="padding: 10px 0; margin: 20px auto; width: 90%; text-align: center;">
+    <div>I know you won't do this,but what if you did?</div>
+    <button id="rewardButton" disable="enable" onclick="var qr = document.getElementById('QR'); if (qr.style.display === 'none') {qr.style.display='block';} else {qr.style.display='none'}">
+      <span>赏</span>
+    </button>
+    <div id="QR" style="display: none;">
+      
+        <div id="wechat" style="display: inline-block">
+          <img id="wechat_qr" src="/images/wechatpayme.png" alt=" WeChat Pay"/>
+          <p>微信打赏</p>
+        </div>
+      
+      
+        <div id="alipay" style="display: inline-block">
+          <img id="alipay_qr" src="/images/alipayme.jpg" alt=" Alipay"/>
+          <p>支付宝打赏</p>
+        </div>
+      
     </div>
   </div>
 
-{% endblock %}
 
-{% block sidebar %}
-  {{ sidebar_template.render(true) }}
-{% endblock %}
+      
+    </div>
 
 
-{% block script_extra %}
-  {% include '_scripts/pages/post-details.swig' %}
-{% endblock %}
+    <footer class="post-footer">
+      
+        <div class="post-tags">
+          
+            <a href="/tags/CloudNavi/" rel="tag"># CloudNavi</a>
+          
+        </div>
+      
+
+      
+        <div class="post-nav">
+          <div class="post-nav-next post-nav-item">
+            
+              <a href="/2022/04/20/MPI-Structure/" rel="next" title="MPI框架学习一(架构组件)">
+                <i class="fa fa-chevron-left"></i> MPI框架学习一(架构组件)
+              </a>
+            
+          </div>
+
+          <span class="post-nav-divider"></span>
+
+          <div class="post-nav-prev post-nav-item">
+            
+              <a href="/2022/05/15/Loki-log-with-wrong-labels/" rel="prev" title="Grafana学习(loki日志存在错误的label)">
+                Grafana学习(loki日志存在错误的label) <i class="fa fa-chevron-right"></i>
+              </a>
+            
+          </div>
+        </div>
+      
+
+      
+      
+    </footer>
+  </article>
+
+
+
+    <div class="post-spread">
+      
+    </div>
+  </div>
+
+
+          </div>
+          
+
+
+          
+  <div class="comments" id="comments">
+    
+  </div>
+
+
+        </div>
+        
+          
+  
+  <div class="sidebar-toggle">
+    <div class="sidebar-toggle-line-wrap">
+      <span class="sidebar-toggle-line sidebar-toggle-line-first"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-middle"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-last"></span>
+    </div>
+  </div>
+
+  <aside id="sidebar" class="sidebar">
+    <div class="sidebar-inner">
+
+      
+
+      
+        <ul class="sidebar-nav motion-element">
+          <li class="sidebar-nav-toc sidebar-nav-active" data-target="post-toc-wrap" >
+            文章目录
+          </li>
+          <li class="sidebar-nav-overview" data-target="site-overview">
+            站点概览
+          </li>
+        </ul>
+      
+
+      <section class="site-overview sidebar-panel">
+        <div class="site-author motion-element" itemprop="author" itemscope itemtype="http://schema.org/Person">
+          <img class="site-author-image" itemprop="image"
+               src="/images/avatar.gif"
+               alt="" />
+          <p class="site-author-name" itemprop="name"></p>
+          <p class="site-description motion-element" itemprop="description"></p>
+        </div>
+        <nav class="site-state motion-element">
+        
+          
+            <div class="site-state-item site-state-posts">
+              <a href="/archives">
+                <span class="site-state-item-count">192</span>
+                <span class="site-state-item-name">日志</span>
+              </a>
+            </div>
+          
+
+          
+            <div class="site-state-item site-state-categories">
+              <a href="/categories">
+                <span class="site-state-item-count">14</span>
+                <span class="site-state-item-name">分类</span>
+              </a>
+            </div>
+          
+
+          
+            <div class="site-state-item site-state-tags">
+              <a href="/tags">
+                <span class="site-state-item-count">14</span>
+                <span class="site-state-item-name">标签</span>
+              </a>
+            </div>
+          
+
+        </nav>
+
+        
+
+        <div class="links-of-author motion-element">
+          
+        </div>
+
+        
+        
+
+        
+        
+
+        
+
+
+      </section>
+
+      
+      <!--noindex-->
+        <section class="post-toc-wrap motion-element sidebar-panel sidebar-panel-active">
+          <div class="post-toc">
+
+            
+              
+            
+
+            
+              <div class="post-toc-content"><ol class="nav"><li class="nav-item nav-level-3"><a class="nav-link" href="#LOKI%E5%90%AF%E5%8A%A8%E6%97%B6%E6%8F%90%E7%A4%BA-panic-invalid-page-type-11-10"><span class="nav-number">1.</span> <span class="nav-text">LOKI启动时提示 panic: invalid page type: 11: 10</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E6%97%A5%E5%BF%97%E7%9A%84label%E4%B8%8D%E5%AF%B9"><span class="nav-number">2.</span> <span class="nav-text">日志的label不对</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#grafana%E4%B8%AD%E5%BC%80%E5%90%AF%E5%AE%9E%E6%97%B6%E6%97%A5%E5%BF%97%E6%97%B6%E6%8F%90%E7%A4%BAQuery-error"><span class="nav-number">3.</span> <span class="nav-text">grafana中开启实时日志时提示Query error</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#Loki-file-size-too-small-nerror-creating-index-client"><span class="nav-number">4.</span> <span class="nav-text">Loki: file size too small\nerror creating index client</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#protail-context-deadline-exceeded"><span class="nav-number">5.</span> <span class="nav-text">protail: context deadline exceeded</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#promtail-cpu%E4%BD%BF%E7%94%A8%E8%BF%87%E9%AB%98"><span class="nav-number">6.</span> <span class="nav-text">promtail cpu使用过高</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#Maximum-active-stream-limit-exceeded"><span class="nav-number">7.</span> <span class="nav-text">Maximum active stream limit exceeded</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#server-returned-HTTP-status-429-Too-Many-Requests"><span class="nav-number">8.</span> <span class="nav-text">server returned HTTP status 429 Too Many Requests</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#Please-verify-permissions"><span class="nav-number">9.</span> <span class="nav-text">Please verify permissions</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#loki-invalid-schema-config"><span class="nav-number">10.</span> <span class="nav-text">loki: invalid schema config</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#promtail-too-many-open-files"><span class="nav-number">11.</span> <span class="nav-text">promtail: too many open files</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#promtail-no-such-file-ro-directory"><span class="nav-number">12.</span> <span class="nav-text">promtail: no such file ro directory</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E6%9C%AA%E5%AE%8C%E5%BE%85%E7%BB%AD"><span class="nav-number">13.</span> <span class="nav-text">未完待续</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E5%8F%82%E8%80%83%E6%96%87%E7%AB%A0"><span class="nav-number">14.</span> <span class="nav-text">参考文章:</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E8%BD%AC%E8%BD%BD%E8%AF%B7%E6%B3%A8%E6%98%8E%E5%87%BA%E5%A4%84https-izsk-me"><span class="nav-number">15.</span> <span class="nav-text">转载请注明出处https:&#x2F;&#x2F;izsk.me</span></a></li></ol></div>
+            
+
+          </div>
+        </section>
+      <!--/noindex-->
+      
+
+    </div>
+  </aside>
+
+
+        
+      </div>
+    </main>
+
+    <footer id="footer" class="footer">
+      <div class="footer-inner">
+        <div class="copyright" >
+  
+  &copy; 
+  <span itemprop="copyrightYear">2022</span>
+  <span class="with-love">
+    <i class="fa fa-heart"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">Z.S.K.</span>
+</div>
+
+
+<div class="powered-by">
+  Supported by <a class="theme-link" target="_blank" rel="noopener" href="https://hexo.io">Hexo</a>
+</div>
+
+<div class="theme-info">
+  Theme -
+  <a class="theme-link" target="_blank" rel="noopener" href="https://github.com/iissnan/hexo-theme-next">
+    NexT.Mist
+  </a>
+</div>
+
+
+        
+
+        
+      </div>
+    </footer>
+
+    <div class="back-to-top">
+      <i class="fa fa-arrow-up"></i>
+    </div>
+  </div>
+
+  
+
+<script type="text/javascript">
+  if (Object.prototype.toString.call(window.Promise) !== '[object Function]') {
+    window.Promise = null;
+  }
+</script>
+
+
+
+
+
+
+
+
+
+  
+
+
+
+  
+  <script type="text/javascript" src="/lib/jquery/index.js?v=2.1.3"></script>
+
+  
+  <script type="text/javascript" src="/lib/fastclick/lib/fastclick.min.js?v=1.0.6"></script>
+
+  
+  <script type="text/javascript" src="/lib/jquery_lazyload/jquery.lazyload.js?v=1.9.7"></script>
+
+  
+  <script type="text/javascript" src="/lib/velocity/velocity.min.js?v=1.2.1"></script>
+
+  
+  <script type="text/javascript" src="/lib/velocity/velocity.ui.min.js?v=1.2.1"></script>
+
+  
+  <script type="text/javascript" src="/lib/fancybox/source/jquery.fancybox.pack.js?v=2.1.5"></script>
+
+
+  
+
+
+  <script type="text/javascript" src="/js/src/utils.js?v=5.1.0"></script>
+
+  <script type="text/javascript" src="/js/src/motion.js?v=5.1.0"></script>
+
+
+
+  
+  
+
+  
+  <script type="text/javascript" src="/js/src/scrollspy.js?v=5.1.0"></script>
+<script type="text/javascript" src="/js/src/post-details.js?v=5.1.0"></script>
+
+
+
+  
+
+
+  <script type="text/javascript" src="/js/src/bootstrap.js?v=5.1.0"></script>
+
+
+
+  
+
+
+
+  
+
+
+
+
+	
+
+
+
+
+
+  
+
+
+
+
+  
+  
+  <script type="text/javascript">
+    // Popup Window;
+    var isfetched = false;
+    // Search DB path;
+    var search_path = "search.xml";
+    if (search_path.length == 0) {
+      search_path = "search.xml";
+    }
+    var path = "/" + search_path;
+    // monitor main search box;
+
+    function proceedsearch() {
+      $("body").append('<div class="popoverlay">').css('overflow', 'hidden');
+      $('.popup').toggle();
+    }
+    // search function;
+    var searchFunc = function(path, search_id, content_id) {
+      'use strict';
+      $.ajax({
+        url: path,
+        dataType: "xml",
+        async: true,
+        success: function( xmlResponse ) {
+          // get the contents from search data
+          isfetched = true;
+          $('.popup').detach().appendTo('.header-inner');
+          var datas = $( "entry", xmlResponse ).map(function() {
+            return {
+              title: $( "title", this ).text(),
+              content: $("content",this).text(),
+              url: $( "url" , this).text()
+            };
+          }).get();
+          var $input = document.getElementById(search_id);
+          var $resultContent = document.getElementById(content_id);
+          $input.addEventListener('input', function(){
+            var matchcounts = 0;
+            var str='<ul class=\"search-result-list\">';
+            var keywords = this.value.trim().toLowerCase().split(/[\s\-]+/);
+            $resultContent.innerHTML = "";
+            if (this.value.trim().length > 1) {
+              // perform local searching
+              datas.forEach(function(data) {
+                var isMatch = false;
+                var content_index = [];
+                var data_title = data.title.trim().toLowerCase();
+                var data_content = data.content.trim().replace(/<[^>]+>/g,"").toLowerCase();
+                var data_url = decodeURIComponent(data.url);
+                var index_title = -1;
+                var index_content = -1;
+                var first_occur = -1;
+                // only match artiles with not empty titles and contents
+                if(data_title != '') {
+                  keywords.forEach(function(keyword, i) {
+                    index_title = data_title.indexOf(keyword);
+                    index_content = data_content.indexOf(keyword);
+                    if( index_title >= 0 || index_content >= 0 ){
+                      isMatch = true;
+                      if (i == 0) {
+                        first_occur = index_content;
+                      }
+                    }
+
+                  });
+                }
+                // show search results
+                if (isMatch) {
+                  matchcounts += 1;
+                  str += "<li><a href='"+ data_url +"' class='search-result-title'>"+ data_title +"</a>";
+                  var content = data.content.trim().replace(/<[^>]+>/g,"");
+                  if (first_occur >= 0) {
+                    // cut out 100 characters
+                    var start = first_occur - 20;
+                    var end = first_occur + 80;
+                    if(start < 0){
+                      start = 0;
+                    }
+                    if(start == 0){
+                      end = 50;
+                    }
+                    if(end > content.length){
+                      end = content.length;
+                    }
+                    var match_content = content.substring(start, end);
+                    // highlight all keywords
+                    keywords.forEach(function(keyword){
+                      var regS = new RegExp(keyword, "gi");
+                      match_content = match_content.replace(regS, "<b class=\"search-keyword\">"+keyword+"</b>");
+                    });
+
+                    str += "<p class=\"search-result\">" + match_content +"...</p>"
+                  }
+                  str += "</li>";
+                }
+              })};
+            str += "</ul>";
+            if (matchcounts == 0) { str = '<div id="no-result"><i class="fa fa-frown-o fa-5x" /></div>' }
+            if (keywords == "") { str = '<div id="no-result"><i class="fa fa-search fa-5x" /></div>' }
+            $resultContent.innerHTML = str;
+          });
+          proceedsearch();
+        }
+      });}
+
+    // handle and trigger popup window;
+    $('.popup-trigger').click(function(e) {
+      e.stopPropagation();
+      if (isfetched == false) {
+        searchFunc(path, 'local-search-input', 'local-search-result');
+      } else {
+        proceedsearch();
+      };
+    });
+
+    $('.popup-btn-close').click(function(e){
+      $('.popup').hide();
+      $(".popoverlay").remove();
+      $('body').css('overflow', '');
+    });
+    $('.popup').click(function(e){
+      e.stopPropagation();
+    });
+  </script>
+
+
+  
+
+  
+
+  
+
+  
+
+
+</body>
+</html>

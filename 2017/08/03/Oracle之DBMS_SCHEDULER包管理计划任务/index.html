@@ -1,38 +1,984 @@
-{% extends '_layout.swig' %}
-{% import '_macro/post.swig' as post_template %}
-{% import '_macro/sidebar.swig' as sidebar_template %}
+<!doctype html>
 
 
-{% block title %} {{ page.title }} | {{ config.title }} {% endblock %}
 
-{% block page_class %}page-post-detail{% endblock %}
+  
 
 
-{% block content %}
+<html class="theme-next mist use-motion" lang="zh-Hans">
+<head>
+  <meta charset="UTF-8"/>
+<meta http-equiv="X-UA-Compatible" content="IE=edge" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1"/>
+
+
+
+<meta http-equiv="Cache-Control" content="no-transform" />
+<meta http-equiv="Cache-Control" content="no-siteapp" />
+
+
+
+
+
+
+
+
+
+
+
+
+  
+  
+  <link href="/lib/fancybox/source/jquery.fancybox.css?v=2.1.5" rel="stylesheet" type="text/css" />
+
+
+
+
+  
+  
+  
+  
+
+  
+    
+    
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+    
+    
+    <link href="//fonts.googleapis.com/css?family=Lato:300,300italic,400,400italic,700,700italic&subset=latin,latin-ext" rel="stylesheet" type="text/css">
+  
+
+
+
+
+
+
+<link href="/lib/font-awesome/css/font-awesome.min.css?v=4.6.2" rel="stylesheet" type="text/css" />
+
+<link href="/css/main.css?v=5.1.0" rel="stylesheet" type="text/css" />
+
+
+  <meta name="keywords" content="分布式架构," />
+
+
+
+
+
+
+
+
+  <link rel="shortcut icon" type="image/x-icon" href="/favicon.ico?v=5.1.0" />
+
+
+
+
+
+
+<meta name="description" content="最近在分析oracle9i的statspack报告,statspack默认是不安装的,需要自己安装且要添加snapshot的定时生成计划,刚好有用到的job,schedule,还是比较强大,稍微记录下DBMS_SCHEDULER包的简单使用及参数说明.">
+<meta property="og:type" content="article">
+<meta property="og:title" content="Oracle之DBMS_SCHEDULER包管理计划任务">
+<meta property="og:url" content="https://zhoushuke.github.io/2017/08/03/Oracle%E4%B9%8BDBMS_SCHEDULER%E5%8C%85%E7%AE%A1%E7%90%86%E8%AE%A1%E5%88%92%E4%BB%BB%E5%8A%A1/index.html">
+<meta property="og:site_name" content="Z.S.K.&#39;s Records">
+<meta property="og:description" content="最近在分析oracle9i的statspack报告,statspack默认是不安装的,需要自己安装且要添加snapshot的定时生成计划,刚好有用到的job,schedule,还是比较强大,稍微记录下DBMS_SCHEDULER包的简单使用及参数说明.">
+<meta property="og:locale">
+<meta property="article:published_time" content="2017-08-03T13:13:24.000Z">
+<meta property="article:modified_time" content="2022-07-19T03:16:00.940Z">
+<meta property="article:author" content="Z.S.K.">
+<meta property="article:tag" content="分布式架构">
+<meta name="twitter:card" content="summary">
+
+
+
+<script type="text/javascript" id="hexo.configurations">
+  var NexT = window.NexT || {};
+  var CONFIG = {
+    root: '',
+    scheme: 'Mist',
+    sidebar: {"position":"left","display":"post"},
+    fancybox: true,
+    motion: true,
+    duoshuo: {
+      userId: 'undefined',
+      author: '博主'
+    },
+    algolia: {
+      applicationID: '',
+      apiKey: '',
+      indexName: '',
+      hits: {"per_page":10},
+      labels: {"input_placeholder":"Search for Posts","hits_empty":"We didn't find any results for the search: ${query}","hits_stats":"${hits} results found in ${time} ms"}
+    }
+  };
+</script>
+
+
+
+  <link rel="canonical" href="https://zhoushuke.github.io/2017/08/03/Oracle之DBMS_SCHEDULER包管理计划任务/"/>
+
+
+
+
+
+  <title> Oracle之DBMS_SCHEDULER包管理计划任务 | Z.S.K.'s Records </title>
+<meta name="generator" content="Hexo 6.2.0"></head>
+
+<body itemscope itemtype="http://schema.org/WebPage" lang="zh-Hans">
+
+  
+
+
+
+
+
+
+
+
+
+
+  
+  
+    
+  
+
+  <div class="container one-collumn sidebar-position-left page-post-detail ">
+    <div class="headband"></div>
+
+    <header id="header" class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-meta ">
+  
+
+  <div class="custom-logo-site-title">
+    <a href="/"  class="brand" rel="start">
+      <span class="logo-line-before"><i></i></span>
+      <span class="site-title">Z.S.K.'s Records</span>
+      <span class="logo-line-after"><i></i></span>
+    </a>
+  </div>
+    
+      <p class="site-subtitle"></p>
+    
+</div>
+
+<div class="site-nav-toggle">
+  <button>
+    <span class="btn-bar"></span>
+    <span class="btn-bar"></span>
+    <span class="btn-bar"></span>
+  </button>
+</div>
+
+<nav class="site-nav">
+  
+
+  
+    <ul id="menu" class="menu">
+      
+        
+        <li class="menu-item menu-item-home">
+          <a href="/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-home"></i> <br />
+            
+            首页
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-categories">
+          <a href="/categories" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-th"></i> <br />
+            
+            分类
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-about">
+          <a href="/about/ZSK-Profile.pdf" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-user"></i> <br />
+            
+            简历
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-archives">
+          <a href="/archives" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-archive"></i> <br />
+            
+            归档
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-tags">
+          <a href="/tags" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-tags"></i> <br />
+            
+            标签
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-commonweal">
+          <a href="/404.html" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-heartbeat"></i> <br />
+            
+            公益404
+          </a>
+        </li>
+      
+
+      
+        <li class="menu-item menu-item-search">
+          
+            <a href="javascript:;" class="popup-trigger">
+          
+            
+              <i class="menu-item-icon fa fa-search fa-fw"></i> <br />
+            
+            搜索
+          </a>
+        </li>
+      
+    </ul>
+  
+
+  
+    <div class="site-search">
+      
+  <div class="popup">
+ <span class="search-icon fa fa-search"></span>
+ <input type="text" id="local-search-input">
+ <div id="local-search-result"></div>
+ <span class="popup-btn-close">close</span>
+</div>
+
+
+    </div>
+  
+</nav>
+
+
+
+ </div>
+    </header>
+
+    <main id="main" class="main">
+      <div class="main-inner">
+        <div class="content-wrap">
+          <div id="content" class="content">
+            
 
   <div id="posts" class="posts-expand">
-    {{ post_template.render(page) }}
+    
 
-    <div class="post-spread">
-      {% if theme.jiathis %}
-        {% include '_partials/share/jiathis.swig' %}
-      {% elseif theme.baidushare %}
-        {% include '_partials/share/baidushare.swig' %}
-      {% elseif theme.add_this_id %}
-        {% include '_partials/share/add-this.swig' %}
-      {% elseif theme.duoshuo_shortname and theme.duoshuo_share %}
-        {% include '_partials/share/duoshuo_share.swig' %}
-      {% endif %}
+  
+
+  
+  
+  
+
+  <article class="post post-type-normal " itemscope itemtype="http://schema.org/Article">
+  <link itemprop="mainEntityOfPage" href="https://zhoushuke.github.io/2017/08/03/Oracle%E4%B9%8BDBMS_SCHEDULER%E5%8C%85%E7%AE%A1%E7%90%86%E8%AE%A1%E5%88%92%E4%BB%BB%E5%8A%A1/">
+
+  <span style="display:none" itemprop="author" itemscope itemtype="http://schema.org/Person">
+    <meta itemprop="name" content="">
+    <meta itemprop="description" content="">
+    <meta itemprop="image" content="/images/avatar.gif">
+  </span>
+
+  <span style="display:none" itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+    <meta itemprop="name" content="Z.S.K.'s Records">
+    <span style="display:none" itemprop="logo" itemscope itemtype="http://schema.org/ImageObject">
+      <img style="display:none;" itemprop="url image" alt="Z.S.K.'s Records" src="">
+    </span>
+  </span>
+
+    
+      <header class="post-header">
+
+        
+        
+          <h1 class="post-title" itemprop="name headline">
+            
+            
+              
+                Oracle之DBMS_SCHEDULER包管理计划任务
+              
+            
+          </h1>
+        
+
+        <div class="post-meta">
+          <span class="post-time">
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">发表于</span>
+              
+              <time title="Post created" itemprop="dateCreated datePublished" datetime="2017-08-03T21:13:24+08:00">
+                2017-08-03
+              </time>
+            
+
+            
+
+            
+          </span>
+
+          
+            <span class="post-category" >
+            
+              <span class="post-meta-divider">|</span>
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-folder-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">分类于</span>
+              
+              
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/%E5%88%86%E5%B8%83%E5%BC%8F%E6%9E%B6%E6%9E%84/" itemprop="url" rel="index">
+                    <span itemprop="name">分布式架构</span>
+                  </a>
+                </span>
+
+                
+                
+              
+            </span>
+          
+
+          
+            
+          
+
+          
+
+          
+          
+
+          
+
+          
+
+        </div>
+      </header>
+    
+
+
+    <div class="post-body" itemprop="articleBody">
+
+      
+      
+
+      
+        <p>最近在分析oracle9i的statspack报告,statspack默认是不安装的,需要自己安装且要添加snapshot的定时生成计划,刚好有用到的job,schedule,还是比较强大,稍微记录下DBMS_SCHEDULER包的简单使用及参数说明.</p>
+<span id="more"></span>
+
+<h3 id="DBMS-SCHDULER"><a href="#DBMS-SCHDULER" class="headerlink" title="DBMS_SCHDULER"></a><strong>DBMS_SCHDULER</strong></h3><p>首先,DBMS_SCHDULER(<strong>Oracle10g引入 的新功能,10g之前则可以使用DBMS_JOB包创建任务,见下文</strong>)可以创建两种任务,但也可以说是有三种,当中指的‘任务’可以是<strong>存储过程,可以是匿名PL&#x2F;SQL语句块,还可以是操作系统层面的命令</strong>,在oracle10g之后,对操作系统层面的命令的支持更加完善.</p>
+<blockquote>
+<ul>
+<li>DBMS_SCHDULER.CREATE_JOB</li>
+<li>DBMS_SCHDULER.CREATE_SCHEDULE</li>
+<li>DBMS_SCHDULER.CREATE_CREATE_PROGRAM</li>
+</ul>
+</blockquote>
+<h4 id="DBMS-SCHDULER-CREATE-JOB"><a href="#DBMS-SCHDULER-CREATE-JOB" class="headerlink" title="DBMS_SCHDULER.CREATE_JOB"></a><strong>DBMS_SCHDULER.CREATE_JOB</strong></h4><p>这里以定时执行某一存储过程为例:</p>
+<figure class="highlight sql"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">BEGIN</span></span><br><span class="line">DBMS_SCHEDULER.CREATE_JOB (</span><br><span class="line">job_name <span class="operator">=</span><span class="operator">&gt;</span> <span class="string">&#x27;job_proc&#x27;</span>,</span><br><span class="line">job_type <span class="operator">=</span><span class="operator">&gt;</span> <span class="string">&#x27;STORED_PROCEDURE&#x27;</span>,</span><br><span class="line">job_action <span class="operator">=</span><span class="operator">&gt;</span> <span class="string">&#x27;proc_name&#x27;</span>,</span><br><span class="line"><span class="comment">-- start_date =&gt; null</span></span><br><span class="line"><span class="comment">-- end_date =&gt; null </span></span><br><span class="line">repeat_interval <span class="operator">=</span><span class="operator">&gt;</span> <span class="string">&#x27;FREQ=HOURLY; BYHOUR=9,12,15; BYMINUTE=5,15&#x27;</span>,</span><br><span class="line">auto_drop <span class="operator">=</span><span class="operator">&gt;</span> <span class="literal">FALSE</span>,</span><br><span class="line">enabled <span class="operator">=</span><span class="operator">&gt;</span> <span class="literal">TRUE</span>,</span><br><span class="line">comments <span class="operator">=</span><span class="operator">&gt;</span> <span class="string">&#x27;proc automated exec&#x27;</span>);</span><br><span class="line"><span class="keyword">END</span>;</span><br><span class="line"><span class="operator">/</span></span><br></pre></td></tr></table></figure>
+
+<p>说明:</p>
+<blockquote>
+<ul>
+<li><p>DBMS_SCHEDULER.CREATE_JOB:创建一个scheduler的job,创建job至少需要create_job这个系统权限.</p>
+</li>
+<li><p>job_name: 给job指定一个名字</p>
+</li>
+<li><p>job_type: job的类型,在3种值</p>
+<blockquote>
+<ol>
+<li>PL&#x2F;SQL块: PLSQL_BLOCK</li>
+<li>存储过程: STORED_PROCEDURE</li>
+<li>外部程序: EXECUTABLE (外部程序可以是一个shell脚本,也可以是操作系统级别的指令),需要create external job 权限</li>
+</ol>
+</blockquote>
+</li>
+<li><p>job_action: 对应要执行的命令</p>
+</li>
+<li><p>start_date&#x2F;end_date: 开始执行与结束执行的时间,如果不指定或者指定为null,则表示立即执行,参数start_date和end_date都是TIMESTAMP 类型，在输入的時候要遵循它们的格式</p>
+</li>
+<li><p><strong>repeat_interval: 重复执行的频率,支持两种写法</strong></p>
+<blockquote>
+<ol>
+<li><p>兼容老版本的PL&#x2F;SQL方式:例如SYSDATE+1, SYSDATE + 30&#x2F;24*60,见下文DBMS_JOB部分</p>
+</li>
+<li><p>日历的表达方式: 分为三部分: 第一部分是频率,也就是”FREQ”这个关键字,它是必须指定的; 第二部分是时间间隔,也就是”INTERVAL”这个关键字，取值范围是1-999. 它是可选的参数; 最后一部分是附加的参数,可用于<br>精确地指定日期和时间,它也是可选的参数,例如下面这些值都是合的:</p>
+<p>BYMONTH,BYWEEKNO,BYYEARDAY,BYMONTHDAY,BYDAY<br>BYHOUR,BYMINUTE,BYSECOND</p>
+<blockquote>
+<ul>
+<li>repeat_interval &#x3D;&gt; ‘FREQ&#x3D;HOURLY; INTERVAL&#x3D;2’: 每隔2小时运行一次job</li>
+<li>repeat_interval &#x3D;&gt; ‘FREQ&#x3D;DAILY’: 每天运行一次job</li>
+<li>repeat_interval &#x3D;&gt; ‘FREQ&#x3D;WEEKLY; BYDAY&#x3D;MON,WED,FRI”: 每周的1,3,5运行job</li>
+<li>repeat_interval &#x3D;&gt; ‘FREQ&#x3D;HOURLY; BYHOUR&#x3D;9,12,15; BYMINUTE&#x3D;5,15’: 每天的9:05, 9:15, 12:05, 12:15, 15:05 and 15:15运行job</li>
+<li>FREQ&#x3D;MONTHLY;BYMONTHDAY&#x3D;1,5,-1: 每月的1号,5号,该月的最后一天执行,<strong>-1表示最后的意思</strong></li>
+</ul>
+</blockquote>
+</li>
+</ol>
+</blockquote>
+</li>
+<li><p>auto_drop: 任务执行完之后是否drop掉</p>
+</li>
+<li><p><strong>enable: 默认创建的job是不会自动执行的,需要手动执行一次后才能自动执行,如果需要创建完就自动执行,则必须指定enable: true</strong></p>
+</li>
+<li><p>comment: 添加注释&#x2F;备注</p>
+</li>
+</ul>
+</blockquote>
+<h4 id="DBMS-SCHDULER-CREATE-SCHDULER"><a href="#DBMS-SCHDULER-CREATE-SCHDULER" class="headerlink" title="DBMS_SCHDULER.CREATE_SCHDULER"></a><strong>DBMS_SCHDULER.CREATE_SCHDULER</strong></h4><p>我们可以只定义一个schdule,然后再创建一个Job,这个job指向schdule,相当于schdule是定义,job是执行实体</p>
+<figure class="highlight sql"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">-- Create the schedule.</span></span><br><span class="line"><span class="keyword">BEGIN</span></span><br><span class="line">  DBMS_SCHEDULER.create_schedule (</span><br><span class="line">    schedule_name   <span class="operator">=</span><span class="operator">&gt;</span> <span class="string">&#x27;test_hourly_schedule&#x27;</span>,</span><br><span class="line">    start_date      <span class="operator">=</span><span class="operator">&gt;</span> SYSTIMESTAMP,</span><br><span class="line">    repeat_interval <span class="operator">=</span><span class="operator">&gt;</span> <span class="string">&#x27;freq=hourly; byminute=0&#x27;</span>,</span><br><span class="line">    end_date        <span class="operator">=</span><span class="operator">&gt;</span> <span class="keyword">NULL</span>,</span><br><span class="line">    comments        <span class="operator">=</span><span class="operator">&gt;</span> <span class="string">&#x27;Repeats hourly, on the hour, for ever.&#x27;</span>);</span><br><span class="line"><span class="keyword">END</span>;</span><br><span class="line"><span class="operator">/</span></span><br></pre></td></tr></table></figure>
+
+<p>上面我们只是定义了一个schdule,可以看到这里并没有指定具体要执行的是什么,具体执行实体可放在job中</p>
+<figure class="highlight sql"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">-- Job defined by an existing program and schedule.</span></span><br><span class="line"><span class="keyword">BEGIN</span></span><br><span class="line">  DBMS_SCHEDULER.create_job (</span><br><span class="line">    job_name      <span class="operator">=</span><span class="operator">&gt;</span> <span class="string">&#x27;test_prog_sched_job_definition&#x27;</span>,</span><br><span class="line">    program_name  <span class="operator">=</span><span class="operator">&gt;</span> <span class="string">&#x27;test_plsql_block_prog&#x27;</span>,</span><br><span class="line">    schedule_name <span class="operator">=</span><span class="operator">&gt;</span> <span class="string">&#x27;test_hourly_schedule&#x27;</span>,</span><br><span class="line">    enabled       <span class="operator">=</span><span class="operator">&gt;</span> <span class="literal">TRUE</span>,</span><br><span class="line">    comments      <span class="operator">=</span><span class="operator">&gt;</span> <span class="string">&#x27;Job defined by an existing program and schedule.&#x27;</span>);</span><br><span class="line"><span class="keyword">END</span>;</span><br><span class="line"><span class="operator">/</span></span><br></pre></td></tr></table></figure>
+
+<p>上面的schedule_name即是指向schedule定义的内容(同样适用于program)</p>
+<p>当然,可以完全像文章开头介绍DBMS_SCHDULER.CREATE_JOB一样在创建job里就指定执行实体,这样一步到位</p>
+<h4 id="DBMS-SCHDULER-CREATE-PROGRAM"><a href="#DBMS-SCHDULER-CREATE-PROGRAM" class="headerlink" title="DBMS_SCHDULER.CREATE_PROGRAM"></a><strong>DBMS_SCHDULER.CREATE_PROGRAM</strong></h4><figure class="highlight sql"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">begin</span></span><br><span class="line">dbms_scheduler.create_program(</span><br><span class="line">program_name<span class="operator">=</span><span class="operator">&gt;</span> <span class="string">&#x27;DAILY_BACKUP_SH&#x27;</span>,</span><br><span class="line">program_type<span class="operator">=</span><span class="operator">&gt;</span> <span class="string">&#x27;EXECUTABLE&#x27;</span>,</span><br><span class="line">program_action<span class="operator">=</span><span class="operator">&gt;</span> <span class="string">&#x27;/home/oracle/script/daily_backup.sh&#x27;</span>);</span><br><span class="line"><span class="keyword">end</span>;</span><br><span class="line"><span class="operator">/</span></span><br></pre></td></tr></table></figure>
+
+<p>参数跟上面类似,在此就不详述</p>
+<p>大家可能已经注意到了,上面三个东西大体相似,一个就可以,为何要出这么多包体呢？</p>
+<p><strong>program与job区别:</strong></p>
+<blockquote>
+<ul>
+<li>program可以与job分离开来,且program可以被共用,而job是属于具体用户的</li>
+<li>从上面的create_program定义可以看出,里面是不包含开始&#x2F;结束、执行重复频率的,这也就说明program可以被用户很自由地选择特定的程序在特定的时间段运行,以及自由的配置程序执行时的参数</li>
+<li>一个计划里可以没有program,对于计划来说它是可选的,但是一个计划必须要有一个job</li>
+</ul>
+</blockquote>
+<h4 id="DBMS-SCHEDULER其它相关函数"><a href="#DBMS-SCHEDULER其它相关函数" class="headerlink" title="DBMS_SCHEDULER其它相关函数"></a><strong>DBMS_SCHEDULER其它相关函数</strong></h4><figure class="highlight sql"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">-- 手工执行</span></span><br><span class="line"><span class="comment">-- SQL&gt; EXEC DBMS_SCHEDULER.RUN_JOB(&#x27;DB_BACKUP&#x27;);</span></span><br><span class="line"><span class="comment">-- 默认情况下任务是不启用的,除非创建计划时设置了(enabled=&gt;true),so 如果计划没有启用,首先启用它:</span></span><br><span class="line"><span class="comment">-- EXEC dbms_scheduler.enable(&#x27;DB_BACKUP&#x27;);</span></span><br><span class="line"><span class="comment">-- 删除job</span></span><br><span class="line"><span class="comment">-- SQL&gt; exec dbms_scheduler.drop_job(&#x27;DB_BACKUP&#x27;);</span></span><br><span class="line"><span class="comment">-- 删除schedule</span></span><br><span class="line"><span class="comment">-- SQL&gt; exec dbms_scheduler.drop_schedule(&#x27;DB_BACKUP&#x27;);</span></span><br><span class="line"><span class="comment">-- 停止job</span></span><br><span class="line"><span class="comment">-- SQL&gt; exec dbms_scheduler.stop_job(&#x27;DB_BACKUP&#x27;);</span></span><br></pre></td></tr></table></figure>
+
+
+
+<h3 id="DBMS-JOB"><a href="#DBMS-JOB" class="headerlink" title="DBMS_JOB"></a><strong>DBMS_JOB</strong></h3><h4 id="DBMS-JOB-submit"><a href="#DBMS-JOB-submit" class="headerlink" title="DBMS_JOB.submit"></a><strong>DBMS_JOB.submit</strong></h4><p>这里以oracle9i定时生成statspack报告为例:</p>
+<figure class="highlight sql"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">declare</span> </span><br><span class="line">	id_job number; </span><br><span class="line"><span class="keyword">begin</span> </span><br><span class="line">	dbms_job.submit(</span><br><span class="line">		job <span class="operator">=</span><span class="operator">&gt;</span> id_job, <span class="comment">-- OUT; the job ID number that will be generated,</span></span><br><span class="line">		what <span class="operator">=</span><span class="operator">&gt;</span> <span class="string">&#x27;schema_name.procedure_name;&#x27;</span>, <span class="comment">-- IN; the name of the job you wish to run,</span></span><br><span class="line">		next_date <span class="operator">=</span><span class="operator">&gt;</span> trunc(sysdate)<span class="operator">+</span><span class="number">1</span><span class="operator">/</span><span class="number">24</span>,  <span class="comment">-- IN; the first time the job will be run,</span></span><br><span class="line">		<span class="type">interval</span> <span class="operator">=</span><span class="operator">&gt;</span> <span class="string">&#x27;trunc(sysdate)+1+4/24&#x27;</span> <span class="comment">-- IN; the interval the job will be repeated,</span></span><br><span class="line">        no_parse <span class="operator">=</span><span class="operator">&gt;</span> <span class="literal">True</span> <span class="comment">--IN BOOLEAN DEFAULT FALSE,</span></span><br><span class="line">        instance <span class="operator">=</span><span class="operator">&gt;</span> <span class="number">0</span> <span class="comment">--IN BINARY_INTEGER DEFAULT ANY_INSTANCE,</span></span><br><span class="line">        force <span class="operator">=</span><span class="operator">&gt;</span> <span class="literal">False</span> <span class="comment">--IN BOOLEAN DEFAULT FALSE</span></span><br><span class="line">	); </span><br><span class="line"><span class="keyword">end</span>; </span><br></pre></td></tr></table></figure>
+
+<p>说明:</p>
+<blockquote>
+<ul>
+<li>job: 是该job的返回值,代表该job的id号,在修改或者是删除时会用到</li>
+<li>what: 对应要执行的命令</li>
+<li>next_date: 开始执行命令的时间</li>
+<li>interval: 执行的频率,<strong>interval后面的最大字符长度不能超过200个字符</strong></li>
+<li>no_parse: 默认为false,如下情景时需要设置为true,如果想job在还没有创建相关的表或者是存储过程之前运行</li>
+<li>instance: 默认为0,表示任何实例都能运行job,如果只想某一实例运行的话,这里需要指定实例号,如果指定的是非法的数字或者为null,则会报ora-23319错误</li>
+<li>force: 与instance相关,默认为false,表示instance指定的实例必须处于running状态,否则会报ora-23428错误,如果设置为true,则instance可接受任一数字作为job的实例</li>
+</ul>
+</blockquote>
+<p>dbms_job功能上不如dbms_schduler强大,但也相对比较简单,下面是interval常用的examples:</p>
+<p><strong>其中trunc(sysdate)+1跟trunc(sysdate+1)是相等的,sysdate表示当前的时间,sysdate+1,这里的单位是天,也就是第二天的当前时间,SYSDATE+1&#x2F;24则表示当前时间的下一个小时,1天24小时,所以1&#x2F;24表示一个小时,同理1&#x2F;24*60则表示1分钟等等</strong></p>
+<figure class="highlight sql"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br></pre></td><td class="code"><pre><span class="line">VARIABLE  jobno   NUMBER;</span><br><span class="line">VARIABLE  instno  NUMBER;</span><br><span class="line"><span class="keyword">BEGIN</span></span><br><span class="line">    <span class="keyword">select</span> instance_number <span class="keyword">into</span> :instno <span class="keyword">from</span> v$instance;</span><br><span class="line">    <span class="comment">-- ------------------------------------------------------------</span></span><br><span class="line">    <span class="comment">-- Submit job to begin at 0600 and run every hour.</span></span><br><span class="line">    <span class="comment">-- ------------------------------------------------------------</span></span><br><span class="line">    DBMS_JOB.SUBMIT (</span><br><span class="line">        :jobno</span><br><span class="line">      , <span class="string">&#x27;statspack.snap;&#x27;</span></span><br><span class="line">      , TRUNC(sysdate<span class="operator">+</span><span class="number">1</span>)<span class="operator">+</span><span class="number">6</span><span class="operator">/</span><span class="number">24</span></span><br><span class="line">      , <span class="string">&#x27;TRUNC(SYSDATE+1/24,&#x27;&#x27;HH&#x27;&#x27;)&#x27;</span></span><br><span class="line">      , <span class="literal">TRUE</span></span><br><span class="line">      , :instno);</span><br><span class="line">    <span class="comment">-- ------------------------------------------------------------</span></span><br><span class="line">    <span class="comment">-- Submit job to begin at 0900 and run 12 hours later</span></span><br><span class="line">    <span class="comment">-- ------------------------------------------------------------</span></span><br><span class="line">    DBMS_JOB.SUBMIT (</span><br><span class="line">        :jobno</span><br><span class="line">      , <span class="string">&#x27;statspack.snap;&#x27;</span></span><br><span class="line">      , TRUNC(sysdate<span class="operator">+</span><span class="number">1</span>)<span class="operator">+</span><span class="number">9</span><span class="operator">/</span><span class="number">24</span></span><br><span class="line">      , <span class="string">&#x27;TRUNC(SYSDATE+12/24,&#x27;&#x27;HH&#x27;&#x27;)&#x27;</span></span><br><span class="line">      , <span class="literal">TRUE</span></span><br><span class="line">      , :instno);</span><br><span class="line">    <span class="comment">-- ------------------------------------------------------------</span></span><br><span class="line">    <span class="comment">-- Submit job to begin at 0600 and run every 10 minutes</span></span><br><span class="line">    <span class="comment">-- ------------------------------------------------------------</span></span><br><span class="line">    DBMS_JOB.SUBMIT (</span><br><span class="line">        :jobno</span><br><span class="line">      , <span class="string">&#x27;statspack.snap;&#x27;</span></span><br><span class="line">      , TRUNC(sysdate<span class="operator">+</span><span class="number">1</span>)<span class="operator">+</span><span class="number">6</span><span class="operator">/</span><span class="number">24</span></span><br><span class="line">      , <span class="string">&#x27;TRUNC(sysdate+10/1440,&#x27;&#x27;MI&#x27;&#x27;)&#x27;</span></span><br><span class="line">      , <span class="literal">TRUE</span></span><br><span class="line">      , :instno);</span><br><span class="line">    <span class="comment">-- ----------------------------------------------------------------</span></span><br><span class="line">    <span class="comment">-- Submit job to begin at 0600 and run every hour, Monday - Friday</span></span><br><span class="line">    <span class="comment">-- ----------------------------------------------------------------</span></span><br><span class="line">    DBMS_JOB.SUBMIT (</span><br><span class="line">        :jobno</span><br><span class="line">      , <span class="string">&#x27;statspack.snap;&#x27;</span></span><br><span class="line">      , TRUNC(sysdate<span class="operator">+</span><span class="number">1</span>)<span class="operator">+</span><span class="number">6</span><span class="operator">/</span><span class="number">24</span></span><br><span class="line">      , <span class="string">&#x27;TRUNC(</span></span><br><span class="line"><span class="string">             LEAST(</span></span><br><span class="line"><span class="string">                 NEXT_DAY(sysdate,&#x27;&#x27;MONDAY&#x27;&#x27;)</span></span><br><span class="line"><span class="string">               , NEXT_DAY(sysdate,&#x27;&#x27;TUESDAY&#x27;&#x27;)</span></span><br><span class="line"><span class="string">               , NEXT_DAY(sysdate,&#x27;&#x27;WEDNESDAY&#x27;&#x27;)</span></span><br><span class="line"><span class="string">               , NEXT_DAY(sysdate,&#x27;&#x27;THURSDAY&#x27;&#x27;)</span></span><br><span class="line"><span class="string">               , NEXT_DAY(sysdate,&#x27;&#x27;FRIDAY&#x27;&#x27;)</span></span><br><span class="line"><span class="string">             ) + 1/24</span></span><br><span class="line"><span class="string">        , &#x27;&#x27;HH&#x27;&#x27;)&#x27;</span></span><br><span class="line">      , <span class="literal">TRUE</span></span><br><span class="line">      , :instno);</span><br><span class="line">    <span class="keyword">COMMIT</span>;</span><br><span class="line"><span class="keyword">END</span>;</span><br><span class="line"><span class="operator">/</span></span><br></pre></td></tr></table></figure>
+
+<p>从上面的例子我们可以看出,对于这样的需求从早上8点开始到下午17点结束,dbms_job就不如dbms_scheduler直观,</p>
+<p>这里需要使用CASE子句</p>
+<figure class="highlight sql"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">--oracle9i,每天早上8:00am到下午5:00pm这段高峰期,每隔一个小时生成一次snapshot</span></span><br><span class="line">VARIABLE id_job number;</span><br><span class="line">VARIABLE inst_num number;</span><br><span class="line"><span class="keyword">begin</span></span><br><span class="line">    <span class="keyword">SELECT</span> instance_number <span class="keyword">INTO</span> :inst_num <span class="keyword">FROM</span> v$instance;</span><br><span class="line">	dbms_job.submit(</span><br><span class="line">		job <span class="operator">=</span><span class="operator">&gt;</span> id_job, <span class="comment">-- OUT; </span></span><br><span class="line">		what <span class="operator">=</span><span class="operator">&gt;</span> <span class="string">&#x27;statspack.snap;&#x27;</span>, </span><br><span class="line">        next_date <span class="operator">=</span><span class="operator">&gt;</span> TRUNC(SYSDATE<span class="operator">+</span><span class="number">1</span><span class="operator">/</span><span class="number">24</span>)</span><br><span class="line">        inverval <span class="operator">=</span><span class="operator">&gt;</span> <span class="string">&#x27;case when to_char(SYSDATE, &#x27;&#x27;hh24:mi&#x27;&#x27;) between &#x27;&#x27;08:00&#x27;&#x27; and &#x27;&#x27;17:00&#x27;&#x27; then TRUNC(SYSDATE+1/24,&#x27;&#x27;HH&#x27;&#x27;) else trunc(SYSDATE+1)+(8/24) end&#x27;</span></span><br><span class="line">        instance <span class="operator">=</span><span class="operator">&gt;</span> :inst_num</span><br><span class="line">      );</span><br><span class="line"><span class="keyword">commit</span>;</span><br><span class="line"><span class="keyword">end</span>;</span><br><span class="line"><span class="operator">/</span></span><br></pre></td></tr></table></figure>
+
+<h4 id="DBMS-JOB其它相关函数"><a href="#DBMS-JOB其它相关函数" class="headerlink" title="DBMS_JOB其它相关函数"></a><strong>DBMS_JOB其它相关函数</strong></h4><figure class="highlight sql"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">--dbms_job.run(job_id): job_id为dbms_job.submit()函数返回的job id号</span></span><br><span class="line"><span class="comment">--dbms_job.remove(job_id): 移除job</span></span><br><span class="line"><span class="comment">--dbms_job.change(...): 修改一个已经存在的job的所有属性</span></span><br><span class="line"><span class="comment">--dbms_job.what(job_id,what对应的命令):只修改指定job中执行的命令</span></span><br></pre></td></tr></table></figure>
+
+
+
+<h3 id="参考文章"><a href="#参考文章" class="headerlink" title="参考文章:"></a><strong>参考文章:</strong></h3><blockquote>
+<ul>
+<li><a target="_blank" rel="noopener" href="http://dev-notes.com/code.php?q=109">Scheduling Jobs with Oracle 9i DBMS_JOB Package</a></li>
+<li><a target="_blank" rel="noopener" href="http://www.idevelopment.info/data/Oracle/DBA_tips/SQL/SQL_4.shtml">DBA Tips Archive for Oracle</a></li>
+<li><a target="_blank" rel="noopener" href="https://oracle-base.com/articles/10g/scheduler-10g">DBMS_SCHEDULER in Oracle Database 10g</a></li>
+<li><a target="_blank" rel="noopener" href="https://docs.oracle.com/cd/B10501_01/appdev.920/a96612/d_job.htm">DBMS_JOB官方文档</a></li>
+<li><a target="_blank" rel="noopener" href="https://docs.oracle.com/cd/A97630_01/server.920/a96521/jobq.htm">DBMS_JOB官方文档2</a></li>
+</ul>
+</blockquote>
+<h3 id="转载请注明出处https-izsk-me"><a href="#转载请注明出处https-izsk-me" class="headerlink" title="转载请注明出处https://izsk.me"></a><strong>转载请注明出处<a target="_blank" rel="noopener" href="https://izsk.me/">https://izsk.me</a></strong></h3><hr>
+
+      
+    </div>
+
+    <div>
+      
+        
+<div id="wechat_subscriber" style="display: block; padding: 10px 0; margin: 20px auto; width: 100%; text-align: center">
+    <img id="wechat_subscriber_qcode" src="/images/websitecode250.png" alt=" wechat" style="width: 200px; max-width: 100%;"/>
+    <div>Scan Me To Read on Phone</div>
+</div>
+
+
+      
+    </div>
+
+    <div>
+      
+        
+  <div style="padding: 10px 0; margin: 20px auto; width: 90%; text-align: center;">
+    <div>I know you won't do this,but what if you did?</div>
+    <button id="rewardButton" disable="enable" onclick="var qr = document.getElementById('QR'); if (qr.style.display === 'none') {qr.style.display='block';} else {qr.style.display='none'}">
+      <span>赏</span>
+    </button>
+    <div id="QR" style="display: none;">
+      
+        <div id="wechat" style="display: inline-block">
+          <img id="wechat_qr" src="/images/wechatpayme.png" alt=" WeChat Pay"/>
+          <p>微信打赏</p>
+        </div>
+      
+      
+        <div id="alipay" style="display: inline-block">
+          <img id="alipay_qr" src="/images/alipayme.jpg" alt=" Alipay"/>
+          <p>支付宝打赏</p>
+        </div>
+      
     </div>
   </div>
 
-{% endblock %}
 
-{% block sidebar %}
-  {{ sidebar_template.render(true) }}
-{% endblock %}
+      
+    </div>
 
 
-{% block script_extra %}
-  {% include '_scripts/pages/post-details.swig' %}
-{% endblock %}
+    <footer class="post-footer">
+      
+        <div class="post-tags">
+          
+            <a href="/tags/%E5%88%86%E5%B8%83%E5%BC%8F%E6%9E%B6%E6%9E%84/" rel="tag"># 分布式架构</a>
+          
+        </div>
+      
+
+      
+        <div class="post-nav">
+          <div class="post-nav-next post-nav-item">
+            
+              <a href="/2017/07/31/python%E4%B9%8Bfileinput%E4%BD%BF%E7%94%A8/" rel="next" title="python之fileinput使用">
+                <i class="fa fa-chevron-left"></i> python之fileinput使用
+              </a>
+            
+          </div>
+
+          <span class="post-nav-divider"></span>
+
+          <div class="post-nav-prev post-nav-item">
+            
+              <a href="/2017/08/04/flask%E5%AD%A6%E4%B9%A0%E4%B8%80(flask%E4%BB%8B%E7%BB%8D)/" rel="prev" title="Flask学习(flask介绍)">
+                Flask学习(flask介绍) <i class="fa fa-chevron-right"></i>
+              </a>
+            
+          </div>
+        </div>
+      
+
+      
+      
+    </footer>
+  </article>
+
+
+
+    <div class="post-spread">
+      
+    </div>
+  </div>
+
+
+          </div>
+          
+
+
+          
+  <div class="comments" id="comments">
+    
+  </div>
+
+
+        </div>
+        
+          
+  
+  <div class="sidebar-toggle">
+    <div class="sidebar-toggle-line-wrap">
+      <span class="sidebar-toggle-line sidebar-toggle-line-first"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-middle"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-last"></span>
+    </div>
+  </div>
+
+  <aside id="sidebar" class="sidebar">
+    <div class="sidebar-inner">
+
+      
+
+      
+        <ul class="sidebar-nav motion-element">
+          <li class="sidebar-nav-toc sidebar-nav-active" data-target="post-toc-wrap" >
+            文章目录
+          </li>
+          <li class="sidebar-nav-overview" data-target="site-overview">
+            站点概览
+          </li>
+        </ul>
+      
+
+      <section class="site-overview sidebar-panel">
+        <div class="site-author motion-element" itemprop="author" itemscope itemtype="http://schema.org/Person">
+          <img class="site-author-image" itemprop="image"
+               src="/images/avatar.gif"
+               alt="" />
+          <p class="site-author-name" itemprop="name"></p>
+          <p class="site-description motion-element" itemprop="description"></p>
+        </div>
+        <nav class="site-state motion-element">
+        
+          
+            <div class="site-state-item site-state-posts">
+              <a href="/archives">
+                <span class="site-state-item-count">192</span>
+                <span class="site-state-item-name">日志</span>
+              </a>
+            </div>
+          
+
+          
+            <div class="site-state-item site-state-categories">
+              <a href="/categories">
+                <span class="site-state-item-count">14</span>
+                <span class="site-state-item-name">分类</span>
+              </a>
+            </div>
+          
+
+          
+            <div class="site-state-item site-state-tags">
+              <a href="/tags">
+                <span class="site-state-item-count">14</span>
+                <span class="site-state-item-name">标签</span>
+              </a>
+            </div>
+          
+
+        </nav>
+
+        
+
+        <div class="links-of-author motion-element">
+          
+        </div>
+
+        
+        
+
+        
+        
+
+        
+
+
+      </section>
+
+      
+      <!--noindex-->
+        <section class="post-toc-wrap motion-element sidebar-panel sidebar-panel-active">
+          <div class="post-toc">
+
+            
+              
+            
+
+            
+              <div class="post-toc-content"><ol class="nav"><li class="nav-item nav-level-3"><a class="nav-link" href="#DBMS-SCHDULER"><span class="nav-number">1.</span> <span class="nav-text">DBMS_SCHDULER</span></a><ol class="nav-child"><li class="nav-item nav-level-4"><a class="nav-link" href="#DBMS-SCHDULER-CREATE-JOB"><span class="nav-number">1.1.</span> <span class="nav-text">DBMS_SCHDULER.CREATE_JOB</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#DBMS-SCHDULER-CREATE-SCHDULER"><span class="nav-number">1.2.</span> <span class="nav-text">DBMS_SCHDULER.CREATE_SCHDULER</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#DBMS-SCHDULER-CREATE-PROGRAM"><span class="nav-number">1.3.</span> <span class="nav-text">DBMS_SCHDULER.CREATE_PROGRAM</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#DBMS-SCHEDULER%E5%85%B6%E5%AE%83%E7%9B%B8%E5%85%B3%E5%87%BD%E6%95%B0"><span class="nav-number">1.4.</span> <span class="nav-text">DBMS_SCHEDULER其它相关函数</span></a></li></ol></li><li class="nav-item nav-level-3"><a class="nav-link" href="#DBMS-JOB"><span class="nav-number">2.</span> <span class="nav-text">DBMS_JOB</span></a><ol class="nav-child"><li class="nav-item nav-level-4"><a class="nav-link" href="#DBMS-JOB-submit"><span class="nav-number">2.1.</span> <span class="nav-text">DBMS_JOB.submit</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#DBMS-JOB%E5%85%B6%E5%AE%83%E7%9B%B8%E5%85%B3%E5%87%BD%E6%95%B0"><span class="nav-number">2.2.</span> <span class="nav-text">DBMS_JOB其它相关函数</span></a></li></ol></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E5%8F%82%E8%80%83%E6%96%87%E7%AB%A0"><span class="nav-number">3.</span> <span class="nav-text">参考文章:</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E8%BD%AC%E8%BD%BD%E8%AF%B7%E6%B3%A8%E6%98%8E%E5%87%BA%E5%A4%84https-izsk-me"><span class="nav-number">4.</span> <span class="nav-text">转载请注明出处https:&#x2F;&#x2F;izsk.me</span></a></li></ol></div>
+            
+
+          </div>
+        </section>
+      <!--/noindex-->
+      
+
+    </div>
+  </aside>
+
+
+        
+      </div>
+    </main>
+
+    <footer id="footer" class="footer">
+      <div class="footer-inner">
+        <div class="copyright" >
+  
+  &copy; 
+  <span itemprop="copyrightYear">2022</span>
+  <span class="with-love">
+    <i class="fa fa-heart"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">Z.S.K.</span>
+</div>
+
+
+<div class="powered-by">
+  Supported by <a class="theme-link" target="_blank" rel="noopener" href="https://hexo.io">Hexo</a>
+</div>
+
+<div class="theme-info">
+  Theme -
+  <a class="theme-link" target="_blank" rel="noopener" href="https://github.com/iissnan/hexo-theme-next">
+    NexT.Mist
+  </a>
+</div>
+
+
+        
+
+        
+      </div>
+    </footer>
+
+    <div class="back-to-top">
+      <i class="fa fa-arrow-up"></i>
+    </div>
+  </div>
+
+  
+
+<script type="text/javascript">
+  if (Object.prototype.toString.call(window.Promise) !== '[object Function]') {
+    window.Promise = null;
+  }
+</script>
+
+
+
+
+
+
+
+
+
+  
+
+
+
+  
+  <script type="text/javascript" src="/lib/jquery/index.js?v=2.1.3"></script>
+
+  
+  <script type="text/javascript" src="/lib/fastclick/lib/fastclick.min.js?v=1.0.6"></script>
+
+  
+  <script type="text/javascript" src="/lib/jquery_lazyload/jquery.lazyload.js?v=1.9.7"></script>
+
+  
+  <script type="text/javascript" src="/lib/velocity/velocity.min.js?v=1.2.1"></script>
+
+  
+  <script type="text/javascript" src="/lib/velocity/velocity.ui.min.js?v=1.2.1"></script>
+
+  
+  <script type="text/javascript" src="/lib/fancybox/source/jquery.fancybox.pack.js?v=2.1.5"></script>
+
+
+  
+
+
+  <script type="text/javascript" src="/js/src/utils.js?v=5.1.0"></script>
+
+  <script type="text/javascript" src="/js/src/motion.js?v=5.1.0"></script>
+
+
+
+  
+  
+
+  
+  <script type="text/javascript" src="/js/src/scrollspy.js?v=5.1.0"></script>
+<script type="text/javascript" src="/js/src/post-details.js?v=5.1.0"></script>
+
+
+
+  
+
+
+  <script type="text/javascript" src="/js/src/bootstrap.js?v=5.1.0"></script>
+
+
+
+  
+
+
+
+  
+
+
+
+
+	
+
+
+
+
+
+  
+
+
+
+
+  
+  
+  <script type="text/javascript">
+    // Popup Window;
+    var isfetched = false;
+    // Search DB path;
+    var search_path = "search.xml";
+    if (search_path.length == 0) {
+      search_path = "search.xml";
+    }
+    var path = "/" + search_path;
+    // monitor main search box;
+
+    function proceedsearch() {
+      $("body").append('<div class="popoverlay">').css('overflow', 'hidden');
+      $('.popup').toggle();
+    }
+    // search function;
+    var searchFunc = function(path, search_id, content_id) {
+      'use strict';
+      $.ajax({
+        url: path,
+        dataType: "xml",
+        async: true,
+        success: function( xmlResponse ) {
+          // get the contents from search data
+          isfetched = true;
+          $('.popup').detach().appendTo('.header-inner');
+          var datas = $( "entry", xmlResponse ).map(function() {
+            return {
+              title: $( "title", this ).text(),
+              content: $("content",this).text(),
+              url: $( "url" , this).text()
+            };
+          }).get();
+          var $input = document.getElementById(search_id);
+          var $resultContent = document.getElementById(content_id);
+          $input.addEventListener('input', function(){
+            var matchcounts = 0;
+            var str='<ul class=\"search-result-list\">';
+            var keywords = this.value.trim().toLowerCase().split(/[\s\-]+/);
+            $resultContent.innerHTML = "";
+            if (this.value.trim().length > 1) {
+              // perform local searching
+              datas.forEach(function(data) {
+                var isMatch = false;
+                var content_index = [];
+                var data_title = data.title.trim().toLowerCase();
+                var data_content = data.content.trim().replace(/<[^>]+>/g,"").toLowerCase();
+                var data_url = decodeURIComponent(data.url);
+                var index_title = -1;
+                var index_content = -1;
+                var first_occur = -1;
+                // only match artiles with not empty titles and contents
+                if(data_title != '') {
+                  keywords.forEach(function(keyword, i) {
+                    index_title = data_title.indexOf(keyword);
+                    index_content = data_content.indexOf(keyword);
+                    if( index_title >= 0 || index_content >= 0 ){
+                      isMatch = true;
+                      if (i == 0) {
+                        first_occur = index_content;
+                      }
+                    }
+
+                  });
+                }
+                // show search results
+                if (isMatch) {
+                  matchcounts += 1;
+                  str += "<li><a href='"+ data_url +"' class='search-result-title'>"+ data_title +"</a>";
+                  var content = data.content.trim().replace(/<[^>]+>/g,"");
+                  if (first_occur >= 0) {
+                    // cut out 100 characters
+                    var start = first_occur - 20;
+                    var end = first_occur + 80;
+                    if(start < 0){
+                      start = 0;
+                    }
+                    if(start == 0){
+                      end = 50;
+                    }
+                    if(end > content.length){
+                      end = content.length;
+                    }
+                    var match_content = content.substring(start, end);
+                    // highlight all keywords
+                    keywords.forEach(function(keyword){
+                      var regS = new RegExp(keyword, "gi");
+                      match_content = match_content.replace(regS, "<b class=\"search-keyword\">"+keyword+"</b>");
+                    });
+
+                    str += "<p class=\"search-result\">" + match_content +"...</p>"
+                  }
+                  str += "</li>";
+                }
+              })};
+            str += "</ul>";
+            if (matchcounts == 0) { str = '<div id="no-result"><i class="fa fa-frown-o fa-5x" /></div>' }
+            if (keywords == "") { str = '<div id="no-result"><i class="fa fa-search fa-5x" /></div>' }
+            $resultContent.innerHTML = str;
+          });
+          proceedsearch();
+        }
+      });}
+
+    // handle and trigger popup window;
+    $('.popup-trigger').click(function(e) {
+      e.stopPropagation();
+      if (isfetched == false) {
+        searchFunc(path, 'local-search-input', 'local-search-result');
+      } else {
+        proceedsearch();
+      };
+    });
+
+    $('.popup-btn-close').click(function(e){
+      $('.popup').hide();
+      $(".popoverlay").remove();
+      $('body').css('overflow', '');
+    });
+    $('.popup').click(function(e){
+      e.stopPropagation();
+    });
+  </script>
+
+
+  
+
+  
+
+  
+
+  
+
+
+</body>
+</html>

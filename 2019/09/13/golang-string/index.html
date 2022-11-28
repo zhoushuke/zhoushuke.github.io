@@ -1,38 +1,901 @@
-{% extends '_layout.swig' %}
-{% import '_macro/post.swig' as post_template %}
-{% import '_macro/sidebar.swig' as sidebar_template %}
+<!doctype html>
 
 
-{% block title %} {{ page.title }} | {{ config.title }} {% endblock %}
 
-{% block page_class %}page-post-detail{% endblock %}
+  
 
 
-{% block content %}
+<html class="theme-next mist use-motion" lang="zh-Hans">
+<head>
+  <meta charset="UTF-8"/>
+<meta http-equiv="X-UA-Compatible" content="IE=edge" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1"/>
+
+
+
+<meta http-equiv="Cache-Control" content="no-transform" />
+<meta http-equiv="Cache-Control" content="no-siteapp" />
+
+
+
+
+
+
+
+
+
+
+
+
+  
+  
+  <link href="/lib/fancybox/source/jquery.fancybox.css?v=2.1.5" rel="stylesheet" type="text/css" />
+
+
+
+
+  
+  
+  
+  
+
+  
+    
+    
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+    
+    
+    <link href="//fonts.googleapis.com/css?family=Lato:300,300italic,400,400italic,700,700italic&subset=latin,latin-ext" rel="stylesheet" type="text/css">
+  
+
+
+
+
+
+
+<link href="/lib/font-awesome/css/font-awesome.min.css?v=4.6.2" rel="stylesheet" type="text/css" />
+
+<link href="/css/main.css?v=5.1.0" rel="stylesheet" type="text/css" />
+
+
+  <meta name="keywords" content="Golang," />
+
+
+
+
+
+
+
+
+  <link rel="shortcut icon" type="image/x-icon" href="/favicon.ico?v=5.1.0" />
+
+
+
+
+
+
+<meta name="description" content="字符串在所有语言中可以说是用的最频繁的一种数据结构, 在golang中当然也存在.虽然字符串往往被看做一个整体，但是实际上字符串是一片连续的内存空间，我们也可以将它理解成一个由字符组成的数组">
+<meta property="og:type" content="article">
+<meta property="og:title" content="golang学习(string)">
+<meta property="og:url" content="https://zhoushuke.github.io/2019/09/13/golang-string/index.html">
+<meta property="og:site_name" content="Z.S.K.&#39;s Records">
+<meta property="og:description" content="字符串在所有语言中可以说是用的最频繁的一种数据结构, 在golang中当然也存在.虽然字符串往往被看做一个整体，但是实际上字符串是一片连续的内存空间，我们也可以将它理解成一个由字符组成的数组">
+<meta property="og:locale">
+<meta property="article:published_time" content="2019-09-13T09:30:53.000Z">
+<meta property="article:modified_time" content="2022-07-19T03:16:00.977Z">
+<meta property="article:author" content="Z.S.K.">
+<meta property="article:tag" content="Golang">
+<meta name="twitter:card" content="summary">
+
+
+
+<script type="text/javascript" id="hexo.configurations">
+  var NexT = window.NexT || {};
+  var CONFIG = {
+    root: '',
+    scheme: 'Mist',
+    sidebar: {"position":"left","display":"post"},
+    fancybox: true,
+    motion: true,
+    duoshuo: {
+      userId: 'undefined',
+      author: '博主'
+    },
+    algolia: {
+      applicationID: '',
+      apiKey: '',
+      indexName: '',
+      hits: {"per_page":10},
+      labels: {"input_placeholder":"Search for Posts","hits_empty":"We didn't find any results for the search: ${query}","hits_stats":"${hits} results found in ${time} ms"}
+    }
+  };
+</script>
+
+
+
+  <link rel="canonical" href="https://zhoushuke.github.io/2019/09/13/golang-string/"/>
+
+
+
+
+
+  <title> golang学习(string) | Z.S.K.'s Records </title>
+<meta name="generator" content="Hexo 6.2.0"></head>
+
+<body itemscope itemtype="http://schema.org/WebPage" lang="zh-Hans">
+
+  
+
+
+
+
+
+
+
+
+
+
+  
+  
+    
+  
+
+  <div class="container one-collumn sidebar-position-left page-post-detail ">
+    <div class="headband"></div>
+
+    <header id="header" class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-meta ">
+  
+
+  <div class="custom-logo-site-title">
+    <a href="/"  class="brand" rel="start">
+      <span class="logo-line-before"><i></i></span>
+      <span class="site-title">Z.S.K.'s Records</span>
+      <span class="logo-line-after"><i></i></span>
+    </a>
+  </div>
+    
+      <p class="site-subtitle"></p>
+    
+</div>
+
+<div class="site-nav-toggle">
+  <button>
+    <span class="btn-bar"></span>
+    <span class="btn-bar"></span>
+    <span class="btn-bar"></span>
+  </button>
+</div>
+
+<nav class="site-nav">
+  
+
+  
+    <ul id="menu" class="menu">
+      
+        
+        <li class="menu-item menu-item-home">
+          <a href="/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-home"></i> <br />
+            
+            首页
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-categories">
+          <a href="/categories" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-th"></i> <br />
+            
+            分类
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-about">
+          <a href="/about/ZSK-Profile.pdf" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-user"></i> <br />
+            
+            简历
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-archives">
+          <a href="/archives" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-archive"></i> <br />
+            
+            归档
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-tags">
+          <a href="/tags" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-tags"></i> <br />
+            
+            标签
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-commonweal">
+          <a href="/404.html" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-heartbeat"></i> <br />
+            
+            公益404
+          </a>
+        </li>
+      
+
+      
+        <li class="menu-item menu-item-search">
+          
+            <a href="javascript:;" class="popup-trigger">
+          
+            
+              <i class="menu-item-icon fa fa-search fa-fw"></i> <br />
+            
+            搜索
+          </a>
+        </li>
+      
+    </ul>
+  
+
+  
+    <div class="site-search">
+      
+  <div class="popup">
+ <span class="search-icon fa fa-search"></span>
+ <input type="text" id="local-search-input">
+ <div id="local-search-result"></div>
+ <span class="popup-btn-close">close</span>
+</div>
+
+
+    </div>
+  
+</nav>
+
+
+
+ </div>
+    </header>
+
+    <main id="main" class="main">
+      <div class="main-inner">
+        <div class="content-wrap">
+          <div id="content" class="content">
+            
 
   <div id="posts" class="posts-expand">
-    {{ post_template.render(page) }}
+    
 
-    <div class="post-spread">
-      {% if theme.jiathis %}
-        {% include '_partials/share/jiathis.swig' %}
-      {% elseif theme.baidushare %}
-        {% include '_partials/share/baidushare.swig' %}
-      {% elseif theme.add_this_id %}
-        {% include '_partials/share/add-this.swig' %}
-      {% elseif theme.duoshuo_shortname and theme.duoshuo_share %}
-        {% include '_partials/share/duoshuo_share.swig' %}
-      {% endif %}
+  
+
+  
+  
+  
+
+  <article class="post post-type-normal " itemscope itemtype="http://schema.org/Article">
+  <link itemprop="mainEntityOfPage" href="https://zhoushuke.github.io/2019/09/13/golang-string/">
+
+  <span style="display:none" itemprop="author" itemscope itemtype="http://schema.org/Person">
+    <meta itemprop="name" content="">
+    <meta itemprop="description" content="">
+    <meta itemprop="image" content="/images/avatar.gif">
+  </span>
+
+  <span style="display:none" itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+    <meta itemprop="name" content="Z.S.K.'s Records">
+    <span style="display:none" itemprop="logo" itemscope itemtype="http://schema.org/ImageObject">
+      <img style="display:none;" itemprop="url image" alt="Z.S.K.'s Records" src="">
+    </span>
+  </span>
+
+    
+      <header class="post-header">
+
+        
+        
+          <h1 class="post-title" itemprop="name headline">
+            
+            
+              
+                golang学习(string)
+              
+            
+          </h1>
+        
+
+        <div class="post-meta">
+          <span class="post-time">
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">发表于</span>
+              
+              <time title="Post created" itemprop="dateCreated datePublished" datetime="2019-09-13T17:30:53+08:00">
+                2019-09-13
+              </time>
+            
+
+            
+
+            
+          </span>
+
+          
+            <span class="post-category" >
+            
+              <span class="post-meta-divider">|</span>
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-folder-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">分类于</span>
+              
+              
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/Golang/" itemprop="url" rel="index">
+                    <span itemprop="name">Golang</span>
+                  </a>
+                </span>
+
+                
+                
+              
+            </span>
+          
+
+          
+            
+          
+
+          
+
+          
+          
+
+          
+
+          
+
+        </div>
+      </header>
+    
+
+
+    <div class="post-body" itemprop="articleBody">
+
+      
+      
+
+      
+        <p>字符串在所有语言中可以说是用的最频繁的一种数据结构, 在golang中当然也存在.虽然字符串往往被看做一个整体，但是实际上字符串是一片连续的内存空间，我们也可以将它理解成一个由字符组成的数组</p>
+<span id="more"></span>
+
+
+
+<p>golang中的字符串是个只读的, 它实际上是由字符组成的数组，会占用一片连续的内存空间， 这里的只读是说无法直接改变字符串, 在运行时我们其实还是可以将这段内存拷贝到堆或者栈上，将变量的类型转换成 <code>[]byte</code> 之后就可以进行，修改后通过类型转换就可以变回 <code>string</code>，Go 语言只是不支持直接修改 <code>string</code> 类型变量的内存空间</p>
+<h3 id="数据结构"><a href="#数据结构" class="headerlink" title="数据结构"></a>数据结构</h3><figure class="highlight go"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">type</span> StringHeader <span class="keyword">struct</span> &#123;</span><br><span class="line">	Data <span class="type">uintptr</span></span><br><span class="line">	Len  <span class="type">int</span></span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+
+
+<h3 id="字符串定义"><a href="#字符串定义" class="headerlink" title="字符串定义"></a>字符串定义</h3><figure class="highlight go"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">// 使用&quot;&quot;, 如果字符串内部出现双引号，需要使用 \ 符号转义</span></span><br><span class="line">aString := <span class="string">&quot;我\&quot;是\&quot;中国人&quot;</span></span><br><span class="line">cString := <span class="string">&quot;我\n是中国人&quot;</span> <span class="comment">// 使用显式的换行也是可以的</span></span><br><span class="line">dString := <span class="string">&quot;我</span></span><br><span class="line"><span class="string">是中国人&quot;</span> <span class="comment">// 这样是不行的</span></span><br><span class="line"></span><br><span class="line"><span class="comment">// 使用``, 可以由多行组成，但不支持转义，并且可以包含除了反引号外其他所有字符</span></span><br><span class="line">bString := <span class="string">`我</span></span><br><span class="line"><span class="string">是</span></span><br><span class="line"><span class="string">中国人</span></span><br><span class="line"><span class="string">！@</span></span><br><span class="line"><span class="string">`</span></span><br><span class="line">fmt.Println(aString, <span class="string">&quot;\n&quot;</span>, bString)</span><br><span class="line">fmt.Println(bString[<span class="number">1</span>]) <span class="comment">// 136 这里输出的是unicode码</span></span><br></pre></td></tr></table></figure>
+
+
+
+<h3 id="常用操作"><a href="#常用操作" class="headerlink" title="常用操作"></a>常用操作</h3><figure class="highlight go"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">// 访问</span></span><br><span class="line"><span class="comment">// 由于字符串的底层是个字节数组, 因此也是通过下标进行访问, 如果下标越界会提示index out of range</span></span><br><span class="line">aString[<span class="number">1</span>]</span><br><span class="line"><span class="comment">// 如果强制去修改字符串的元素会提示 cannot assign to xxx</span></span><br><span class="line"></span><br><span class="line"><span class="comment">// 求长度</span></span><br><span class="line"><span class="comment">// 直接使用len(bString)即可求得长度</span></span><br><span class="line"><span class="comment">// 字符串是 UTF-8 字符的一个序列（当字符为 ASCII 码时则占用 1 个字节，其它字符根据需要占用 2-4 个字节）</span></span><br><span class="line"></span><br><span class="line">bString := <span class="string">&quot;我是中国人&quot;</span>  <span class="comment">// 长度15, 一个汉字占3个字节</span></span><br><span class="line">cString := <span class="string">&quot;我是\n中国人&quot;</span> <span class="comment">// 长度16, \n是可以用ascii表示, 因此只占用一个字节</span></span><br><span class="line">fString := <span class="string">&quot;youareme&quot;</span>    <span class="comment">// 长度8</span></span><br><span class="line"></span><br><span class="line"><span class="comment">// 拼接</span></span><br><span class="line">dString := aString + bString</span><br><span class="line">dString += aString <span class="comment">// == dString = dString + aString</span></span><br><span class="line"></span><br><span class="line"><span class="comment">// 拷贝</span></span><br><span class="line">eString := aString</span><br><span class="line"><span class="comment">// 但是在正常情况下，运行时会调用 copy 将输入的多个字符串拷贝到目标字符串所在的内存空间中，新的字符串是一片新的内存空间，与原来的字符串也没有任何关联，一旦需要拼接的字符串非常大，拷贝带来的性能损失就是无法忽略的</span></span><br><span class="line"></span><br><span class="line"><span class="comment">// 切片</span></span><br><span class="line"><span class="comment">// 由于字符串底组是字节数组, 因此也支持切片操作</span></span><br><span class="line"><span class="comment">// gString跟eString指向的底层数组为同一个</span></span><br><span class="line">gString := eString[<span class="number">2</span>:<span class="number">3</span>]</span><br></pre></td></tr></table></figure>
+
+
+
+<h3 id="类型转换"><a href="#类型转换" class="headerlink" title="类型转换"></a>类型转换</h3><figure class="highlight go"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br></pre></td><td class="code"><pre><span class="line">bString := <span class="string">&quot;abc我是中国人&quot;</span></span><br><span class="line"><span class="keyword">for</span> i, v := <span class="keyword">range</span> bString &#123;</span><br><span class="line">		fmt.Printf(<span class="string">&quot;(%d, %x) &quot;</span>, i, v)</span><br><span class="line">	&#125;</span><br><span class="line">	fmt.Println()</span><br><span class="line"><span class="comment">// (0, 61) (1, 62) (2, 63) (3, 6211) (6, 662f) (9, 4e2d) (12, 56fd) (15, 4eba) </span></span><br><span class="line"><span class="comment">// 遍历bString,取出的是Unicode码，可以看到“我”这个汉字的Unicode是 6211，它是从第3个开始的</span></span><br><span class="line"></span><br><span class="line"><span class="keyword">for</span> i, v := <span class="keyword">range</span> []<span class="type">byte</span>(bString) &#123;</span><br><span class="line">		fmt.Printf(<span class="string">&quot;(%d, %x) &quot;</span>, i, v)</span><br><span class="line">	&#125;</span><br><span class="line">	fmt.Println()</span><br><span class="line"><span class="comment">// (0, 61) (1, 62) (2, 63) (3, e6) (4, 88) (5, 91) (6, e6) (7, 98) (8, af) (9, e4) (10, b8) (11, ad) (12, e5) (13, 9b) (14, bd) (15, e4) (16, ba) (17, ba) </span></span><br><span class="line"><span class="comment">// 把字符串转为[]bype数组，打印出utf-8的字节，可以看到“我”这个汉字占了e6 88 91三个16进制字节。看到一个汉字占3个字节，一个英文字母占1个字节，utf-8是可变宽度</span></span><br><span class="line"></span><br><span class="line"><span class="keyword">for</span> i, v := <span class="keyword">range</span> []<span class="type">rune</span>(bString) &#123;</span><br><span class="line">		fmt.Printf(<span class="string">&quot;(%d, %c) &quot;</span>, i, v)</span><br><span class="line">	&#125;</span><br><span class="line">	fmt.Println()</span><br><span class="line"><span class="comment">// (0, a) (1, b) (2, c) (3, 我) (4, 是) (5, 中) (6, 国) (7, 人)</span></span><br><span class="line"><span class="comment">// 将字符串转为[]rune 也就是int32的别名，占4个字节。打印出了abc好好学习。</span></span><br></pre></td></tr></table></figure>
+
+
+
+<h3 id="strings包的使用"><a href="#strings包的使用" class="headerlink" title="strings包的使用"></a>strings包的使用</h3><p>strings包中包含非常多的实用函数, 这里挑几个比较常用的记录一下</p>
+<figure class="highlight go"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">// 判断给定字符串s中是否包含子串substr, 找到返回true, 找不到返回false</span></span><br><span class="line">fmt.Println(<span class="string">&quot;包含子串返回：&quot;</span>, strings.Contains(<span class="string">&quot;oldboy&quot;</span>, <span class="string">&quot;boy&quot;</span>)) <span class="comment">// true</span></span><br><span class="line"></span><br><span class="line"><span class="comment">// 在字符串s中查找sep所在的位置, 返回位置值, 找不到返回-1, 如果存在多个, 只返回第一个匹对的位置</span></span><br><span class="line">fmt.Println(<span class="string">&quot;存在返回第一个匹配字符的位置：&quot;</span>, strings.Index(<span class="string">&quot;heloboyboy&quot;</span>, <span class="string">&quot;boy&quot;</span>))  <span class="comment">// 4</span></span><br><span class="line"></span><br><span class="line"><span class="comment">// 统计给定子串sep的出现次数, sep为空时, 返回字符串的长度 + 1</span></span><br><span class="line">fmt.Println(<span class="string">&quot;子字符串出现次数：&quot;</span>, strings.Count(<span class="string">&quot;hello world&quot;</span>, <span class="string">&quot;o&quot;</span>)) <span class="comment">// 2</span></span><br><span class="line">fmt.Println(<span class="string">&quot;子字符串为空时, 返回：&quot;</span>, strings.Count(<span class="string">&quot;hello&quot;</span>, <span class="string">&quot;&quot;</span>)) <span class="comment">// 6</span></span><br><span class="line"></span><br><span class="line"><span class="comment">// 重复s字符串count次, 最后返回新生成的重复的字符串</span></span><br><span class="line">fmt.Println(strings.Repeat(<span class="string">&quot;嘀嗒&quot;</span>, <span class="number">4</span>), <span class="string">&quot;时针它不停在转动&quot;</span>)</span><br><span class="line"></span><br><span class="line"><span class="comment">// 在s字符串中, 把old字符串替换为new字符串，n表示替换的次数，如果n&lt;0会替换所有old子串</span></span><br><span class="line">fmt.Println(strings.Replace(<span class="string">&quot;hel hel hel&quot;</span>, <span class="string">&quot;l&quot;</span>, <span class="string">&quot;llo&quot;</span>, <span class="number">2</span>)) <span class="comment">// hello hello hel</span></span><br><span class="line">fmt.Println(strings.Replace(<span class="string">&quot;hel hel hel&quot;</span>, <span class="string">&quot;l&quot;</span>, <span class="string">&quot;llo&quot;</span>, <span class="number">-1</span>)) <span class="comment">// hello hello hello</span></span><br><span class="line"></span><br><span class="line"><span class="comment">// 删除在s字符串的头部和尾部中由cutset指定的字符, 并返回删除后的字符串</span></span><br><span class="line">fmt.Println(strings.Trim(<span class="string">&quot;   hello   &quot;</span>, <span class="string">&quot; &quot;</span>)) <span class="comment">// hello</span></span><br><span class="line"></span><br><span class="line"><span class="comment">// 给定字符串转换为英文标题的首字母大写的格式(不能正确处理unicode标点)</span></span><br><span class="line">fmt.Println(strings.Title(<span class="string">&quot;It is never too late to learn.&quot;</span>)) </span><br><span class="line"><span class="comment">// 返回将所有字母都转为对应的小写版本的拷贝</span></span><br><span class="line">fmt.Println(strings.ToLower(<span class="string">&quot;It Is Never Too Late To Learn.&quot;</span>)) </span><br><span class="line"><span class="comment">// 返回将所有字母都转为对应的大写版本的拷贝</span></span><br><span class="line">fmt.Println(strings.ToUpper(<span class="string">&quot;It is never too late to learn.&quot;</span>)) </span><br><span class="line"><span class="comment">// It Is Never Too Late To Learn.</span></span><br><span class="line"><span class="comment">// it is never too late to learn.</span></span><br><span class="line"><span class="comment">// IT IS NEVER TOO LATE TO LEARN.</span></span><br><span class="line"></span><br><span class="line"><span class="comment">// 判断字符串是否包含前缀prefix，大小写敏感</span></span><br><span class="line">fmt.Println(<span class="string">&quot;前缀是以hello开头的：&quot;</span>, strings.HasPrefix(<span class="string">&quot;helloworld&quot;</span>, <span class="string">&quot;hello&quot;</span>)) <span class="comment">// true</span></span><br><span class="line"></span><br><span class="line"><span class="comment">// 判断s是否有后缀字符串suffix，大小写敏感</span></span><br><span class="line">fmt.Println(<span class="string">&quot;后缀是以world开头的：&quot;</span>, strings.HasSuffix(<span class="string">&quot;helloworld&quot;</span>, <span class="string">&quot;world&quot;</span>)) <span class="comment">// true</span></span><br><span class="line"></span><br><span class="line"><span class="comment">// 用去掉s中出现的sep的方式进行分割，会分割到结尾，并返回生成的所有片段组成的切片（每一个sep都会进行一次切割，即使两个sep相邻，也会进行两次切割）。如果sep为空字符，Split会将s切分成每一个unicode码值一个字符串。</span></span><br><span class="line">fmt.Printf(<span class="string">&quot;%q\n&quot;</span>, strings.Split(<span class="string">&quot;a mountain a temple&quot;</span>, <span class="string">&quot;a &quot;</span>)) <span class="comment">// [&quot;&quot; &quot;mountain &quot; &quot;temple&quot;]</span></span><br><span class="line"></span><br><span class="line"><span class="comment">// 返回将字符串按照空白（unicode.IsSpace确定，可以是一到多个连续的空白字符）分割的多个字符串。如果字符串全部是空白或者是空字符串的话，会返回空切片。</span></span><br><span class="line">fmt.Printf(<span class="string">&quot;Fields are: %q\n&quot;</span>, strings.Fields(<span class="string">&quot; Linux Python Golang  Java &quot;</span>))</span><br><span class="line"><span class="comment">// [&quot;Linux&quot; &quot;Python&quot; &quot;Golang&quot; &quot;Java&quot;]</span></span><br><span class="line"></span><br></pre></td></tr></table></figure>
+
+
+
+<h3 id="注意点"><a href="#注意点" class="headerlink" title="注意点"></a>注意点</h3><ul>
+<li>字符串是不可变值类型，内部⽤指针指向 UTF-8 字节数组。</li>
+<li>默认值是空字符串 “”。</li>
+<li>⽤索引号访问某字节，如 s[i], 取出的是字节，不是字符</li>
+<li><strong>由于字符串是只读的, 因此不能⽤序号获取字节元素指针， &amp;s[i] ⾮法, 提示cannot take the address of xxx,原因在于如果支持取地址操作,则就可以使用指针对改地址指向的值进行修改, 这就违背了字符串只读的前提</strong>。</li>
+<li>不可变类型，⽆法修改字节数组。使用[]rune进行修改是重新分配内存，并复制字节数组</li>
+<li>字符串可以用&#x3D;&#x3D;和&lt;进行比较</li>
+</ul>
+<h3 id="参考文章"><a href="#参考文章" class="headerlink" title="参考文章:"></a><strong>参考文章:</strong></h3><blockquote>
+<ul>
+<li><a target="_blank" rel="noopener" href="https://draveness.me/golang/docs/part2-foundation/ch03-datastructure/golang-string/">https://draveness.me/golang/docs/part2-foundation/ch03-datastructure/golang-string/</a></li>
+</ul>
+</blockquote>
+<h3 id="转载请注明出处https-izsk-me"><a href="#转载请注明出处https-izsk-me" class="headerlink" title="转载请注明出处https://izsk.me"></a><strong>转载请注明出处<a target="_blank" rel="noopener" href="https://izsk.me/">https://izsk.me</a></strong></h3>
+      
+    </div>
+
+    <div>
+      
+        
+<div id="wechat_subscriber" style="display: block; padding: 10px 0; margin: 20px auto; width: 100%; text-align: center">
+    <img id="wechat_subscriber_qcode" src="/images/websitecode250.png" alt=" wechat" style="width: 200px; max-width: 100%;"/>
+    <div>Scan Me To Read on Phone</div>
+</div>
+
+
+      
+    </div>
+
+    <div>
+      
+        
+  <div style="padding: 10px 0; margin: 20px auto; width: 90%; text-align: center;">
+    <div>I know you won't do this,but what if you did?</div>
+    <button id="rewardButton" disable="enable" onclick="var qr = document.getElementById('QR'); if (qr.style.display === 'none') {qr.style.display='block';} else {qr.style.display='none'}">
+      <span>赏</span>
+    </button>
+    <div id="QR" style="display: none;">
+      
+        <div id="wechat" style="display: inline-block">
+          <img id="wechat_qr" src="/images/wechatpayme.png" alt=" WeChat Pay"/>
+          <p>微信打赏</p>
+        </div>
+      
+      
+        <div id="alipay" style="display: inline-block">
+          <img id="alipay_qr" src="/images/alipayme.jpg" alt=" Alipay"/>
+          <p>支付宝打赏</p>
+        </div>
+      
     </div>
   </div>
 
-{% endblock %}
 
-{% block sidebar %}
-  {{ sidebar_template.render(true) }}
-{% endblock %}
+      
+    </div>
 
 
-{% block script_extra %}
-  {% include '_scripts/pages/post-details.swig' %}
-{% endblock %}
+    <footer class="post-footer">
+      
+        <div class="post-tags">
+          
+            <a href="/tags/Golang/" rel="tag"># Golang</a>
+          
+        </div>
+      
+
+      
+        <div class="post-nav">
+          <div class="post-nav-next post-nav-item">
+            
+              <a href="/2019/09/10/supervisor-alert-mail-template-customize/" rel="next" title="supervisor使用自定义邮件报警模板">
+                <i class="fa fa-chevron-left"></i> supervisor使用自定义邮件报警模板
+              </a>
+            
+          </div>
+
+          <span class="post-nav-divider"></span>
+
+          <div class="post-nav-prev post-nav-item">
+            
+              <a href="/2019/09/20/prometheus-service-discovery-on-k8s/" rel="prev" title="Prometheus学习(Prometheus基于kubernetes做服务发现)">
+                Prometheus学习(Prometheus基于kubernetes做服务发现) <i class="fa fa-chevron-right"></i>
+              </a>
+            
+          </div>
+        </div>
+      
+
+      
+      
+    </footer>
+  </article>
+
+
+
+    <div class="post-spread">
+      
+    </div>
+  </div>
+
+
+          </div>
+          
+
+
+          
+  <div class="comments" id="comments">
+    
+  </div>
+
+
+        </div>
+        
+          
+  
+  <div class="sidebar-toggle">
+    <div class="sidebar-toggle-line-wrap">
+      <span class="sidebar-toggle-line sidebar-toggle-line-first"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-middle"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-last"></span>
+    </div>
+  </div>
+
+  <aside id="sidebar" class="sidebar">
+    <div class="sidebar-inner">
+
+      
+
+      
+        <ul class="sidebar-nav motion-element">
+          <li class="sidebar-nav-toc sidebar-nav-active" data-target="post-toc-wrap" >
+            文章目录
+          </li>
+          <li class="sidebar-nav-overview" data-target="site-overview">
+            站点概览
+          </li>
+        </ul>
+      
+
+      <section class="site-overview sidebar-panel">
+        <div class="site-author motion-element" itemprop="author" itemscope itemtype="http://schema.org/Person">
+          <img class="site-author-image" itemprop="image"
+               src="/images/avatar.gif"
+               alt="" />
+          <p class="site-author-name" itemprop="name"></p>
+          <p class="site-description motion-element" itemprop="description"></p>
+        </div>
+        <nav class="site-state motion-element">
+        
+          
+            <div class="site-state-item site-state-posts">
+              <a href="/archives">
+                <span class="site-state-item-count">192</span>
+                <span class="site-state-item-name">日志</span>
+              </a>
+            </div>
+          
+
+          
+            <div class="site-state-item site-state-categories">
+              <a href="/categories">
+                <span class="site-state-item-count">14</span>
+                <span class="site-state-item-name">分类</span>
+              </a>
+            </div>
+          
+
+          
+            <div class="site-state-item site-state-tags">
+              <a href="/tags">
+                <span class="site-state-item-count">14</span>
+                <span class="site-state-item-name">标签</span>
+              </a>
+            </div>
+          
+
+        </nav>
+
+        
+
+        <div class="links-of-author motion-element">
+          
+        </div>
+
+        
+        
+
+        
+        
+
+        
+
+
+      </section>
+
+      
+      <!--noindex-->
+        <section class="post-toc-wrap motion-element sidebar-panel sidebar-panel-active">
+          <div class="post-toc">
+
+            
+              
+            
+
+            
+              <div class="post-toc-content"><ol class="nav"><li class="nav-item nav-level-3"><a class="nav-link" href="#%E6%95%B0%E6%8D%AE%E7%BB%93%E6%9E%84"><span class="nav-number">1.</span> <span class="nav-text">数据结构</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E5%AD%97%E7%AC%A6%E4%B8%B2%E5%AE%9A%E4%B9%89"><span class="nav-number">2.</span> <span class="nav-text">字符串定义</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E5%B8%B8%E7%94%A8%E6%93%8D%E4%BD%9C"><span class="nav-number">3.</span> <span class="nav-text">常用操作</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E7%B1%BB%E5%9E%8B%E8%BD%AC%E6%8D%A2"><span class="nav-number">4.</span> <span class="nav-text">类型转换</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#strings%E5%8C%85%E7%9A%84%E4%BD%BF%E7%94%A8"><span class="nav-number">5.</span> <span class="nav-text">strings包的使用</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E6%B3%A8%E6%84%8F%E7%82%B9"><span class="nav-number">6.</span> <span class="nav-text">注意点</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E5%8F%82%E8%80%83%E6%96%87%E7%AB%A0"><span class="nav-number">7.</span> <span class="nav-text">参考文章:</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E8%BD%AC%E8%BD%BD%E8%AF%B7%E6%B3%A8%E6%98%8E%E5%87%BA%E5%A4%84https-izsk-me"><span class="nav-number">8.</span> <span class="nav-text">转载请注明出处https:&#x2F;&#x2F;izsk.me</span></a></li></ol></div>
+            
+
+          </div>
+        </section>
+      <!--/noindex-->
+      
+
+    </div>
+  </aside>
+
+
+        
+      </div>
+    </main>
+
+    <footer id="footer" class="footer">
+      <div class="footer-inner">
+        <div class="copyright" >
+  
+  &copy; 
+  <span itemprop="copyrightYear">2022</span>
+  <span class="with-love">
+    <i class="fa fa-heart"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">Z.S.K.</span>
+</div>
+
+
+<div class="powered-by">
+  Supported by <a class="theme-link" target="_blank" rel="noopener" href="https://hexo.io">Hexo</a>
+</div>
+
+<div class="theme-info">
+  Theme -
+  <a class="theme-link" target="_blank" rel="noopener" href="https://github.com/iissnan/hexo-theme-next">
+    NexT.Mist
+  </a>
+</div>
+
+
+        
+
+        
+      </div>
+    </footer>
+
+    <div class="back-to-top">
+      <i class="fa fa-arrow-up"></i>
+    </div>
+  </div>
+
+  
+
+<script type="text/javascript">
+  if (Object.prototype.toString.call(window.Promise) !== '[object Function]') {
+    window.Promise = null;
+  }
+</script>
+
+
+
+
+
+
+
+
+
+  
+
+
+
+  
+  <script type="text/javascript" src="/lib/jquery/index.js?v=2.1.3"></script>
+
+  
+  <script type="text/javascript" src="/lib/fastclick/lib/fastclick.min.js?v=1.0.6"></script>
+
+  
+  <script type="text/javascript" src="/lib/jquery_lazyload/jquery.lazyload.js?v=1.9.7"></script>
+
+  
+  <script type="text/javascript" src="/lib/velocity/velocity.min.js?v=1.2.1"></script>
+
+  
+  <script type="text/javascript" src="/lib/velocity/velocity.ui.min.js?v=1.2.1"></script>
+
+  
+  <script type="text/javascript" src="/lib/fancybox/source/jquery.fancybox.pack.js?v=2.1.5"></script>
+
+
+  
+
+
+  <script type="text/javascript" src="/js/src/utils.js?v=5.1.0"></script>
+
+  <script type="text/javascript" src="/js/src/motion.js?v=5.1.0"></script>
+
+
+
+  
+  
+
+  
+  <script type="text/javascript" src="/js/src/scrollspy.js?v=5.1.0"></script>
+<script type="text/javascript" src="/js/src/post-details.js?v=5.1.0"></script>
+
+
+
+  
+
+
+  <script type="text/javascript" src="/js/src/bootstrap.js?v=5.1.0"></script>
+
+
+
+  
+
+
+
+  
+
+
+
+
+	
+
+
+
+
+
+  
+
+
+
+
+  
+  
+  <script type="text/javascript">
+    // Popup Window;
+    var isfetched = false;
+    // Search DB path;
+    var search_path = "search.xml";
+    if (search_path.length == 0) {
+      search_path = "search.xml";
+    }
+    var path = "/" + search_path;
+    // monitor main search box;
+
+    function proceedsearch() {
+      $("body").append('<div class="popoverlay">').css('overflow', 'hidden');
+      $('.popup').toggle();
+    }
+    // search function;
+    var searchFunc = function(path, search_id, content_id) {
+      'use strict';
+      $.ajax({
+        url: path,
+        dataType: "xml",
+        async: true,
+        success: function( xmlResponse ) {
+          // get the contents from search data
+          isfetched = true;
+          $('.popup').detach().appendTo('.header-inner');
+          var datas = $( "entry", xmlResponse ).map(function() {
+            return {
+              title: $( "title", this ).text(),
+              content: $("content",this).text(),
+              url: $( "url" , this).text()
+            };
+          }).get();
+          var $input = document.getElementById(search_id);
+          var $resultContent = document.getElementById(content_id);
+          $input.addEventListener('input', function(){
+            var matchcounts = 0;
+            var str='<ul class=\"search-result-list\">';
+            var keywords = this.value.trim().toLowerCase().split(/[\s\-]+/);
+            $resultContent.innerHTML = "";
+            if (this.value.trim().length > 1) {
+              // perform local searching
+              datas.forEach(function(data) {
+                var isMatch = false;
+                var content_index = [];
+                var data_title = data.title.trim().toLowerCase();
+                var data_content = data.content.trim().replace(/<[^>]+>/g,"").toLowerCase();
+                var data_url = decodeURIComponent(data.url);
+                var index_title = -1;
+                var index_content = -1;
+                var first_occur = -1;
+                // only match artiles with not empty titles and contents
+                if(data_title != '') {
+                  keywords.forEach(function(keyword, i) {
+                    index_title = data_title.indexOf(keyword);
+                    index_content = data_content.indexOf(keyword);
+                    if( index_title >= 0 || index_content >= 0 ){
+                      isMatch = true;
+                      if (i == 0) {
+                        first_occur = index_content;
+                      }
+                    }
+
+                  });
+                }
+                // show search results
+                if (isMatch) {
+                  matchcounts += 1;
+                  str += "<li><a href='"+ data_url +"' class='search-result-title'>"+ data_title +"</a>";
+                  var content = data.content.trim().replace(/<[^>]+>/g,"");
+                  if (first_occur >= 0) {
+                    // cut out 100 characters
+                    var start = first_occur - 20;
+                    var end = first_occur + 80;
+                    if(start < 0){
+                      start = 0;
+                    }
+                    if(start == 0){
+                      end = 50;
+                    }
+                    if(end > content.length){
+                      end = content.length;
+                    }
+                    var match_content = content.substring(start, end);
+                    // highlight all keywords
+                    keywords.forEach(function(keyword){
+                      var regS = new RegExp(keyword, "gi");
+                      match_content = match_content.replace(regS, "<b class=\"search-keyword\">"+keyword+"</b>");
+                    });
+
+                    str += "<p class=\"search-result\">" + match_content +"...</p>"
+                  }
+                  str += "</li>";
+                }
+              })};
+            str += "</ul>";
+            if (matchcounts == 0) { str = '<div id="no-result"><i class="fa fa-frown-o fa-5x" /></div>' }
+            if (keywords == "") { str = '<div id="no-result"><i class="fa fa-search fa-5x" /></div>' }
+            $resultContent.innerHTML = str;
+          });
+          proceedsearch();
+        }
+      });}
+
+    // handle and trigger popup window;
+    $('.popup-trigger').click(function(e) {
+      e.stopPropagation();
+      if (isfetched == false) {
+        searchFunc(path, 'local-search-input', 'local-search-result');
+      } else {
+        proceedsearch();
+      };
+    });
+
+    $('.popup-btn-close').click(function(e){
+      $('.popup').hide();
+      $(".popoverlay").remove();
+      $('body').css('overflow', '');
+    });
+    $('.popup').click(function(e){
+      e.stopPropagation();
+    });
+  </script>
+
+
+  
+
+  
+
+  
+
+  
+
+
+</body>
+</html>

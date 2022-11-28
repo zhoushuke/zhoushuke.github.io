@@ -1,38 +1,969 @@
-{% extends '_layout.swig' %}
-{% import '_macro/post.swig' as post_template %}
-{% import '_macro/sidebar.swig' as sidebar_template %}
+<!doctype html>
 
 
-{% block title %} {{ page.title }} | {{ config.title }} {% endblock %}
 
-{% block page_class %}page-post-detail{% endblock %}
+  
 
 
-{% block content %}
+<html class="theme-next mist use-motion" lang="zh-Hans">
+<head>
+  <meta charset="UTF-8"/>
+<meta http-equiv="X-UA-Compatible" content="IE=edge" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1"/>
+
+
+
+<meta http-equiv="Cache-Control" content="no-transform" />
+<meta http-equiv="Cache-Control" content="no-siteapp" />
+
+
+
+
+
+
+
+
+
+
+
+
+  
+  
+  <link href="/lib/fancybox/source/jquery.fancybox.css?v=2.1.5" rel="stylesheet" type="text/css" />
+
+
+
+
+  
+  
+  
+  
+
+  
+    
+    
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+    
+    
+    <link href="//fonts.googleapis.com/css?family=Lato:300,300italic,400,400italic,700,700italic&subset=latin,latin-ext" rel="stylesheet" type="text/css">
+  
+
+
+
+
+
+
+<link href="/lib/font-awesome/css/font-awesome.min.css?v=4.6.2" rel="stylesheet" type="text/css" />
+
+<link href="/css/main.css?v=5.1.0" rel="stylesheet" type="text/css" />
+
+
+  <meta name="keywords" content="CloudNavi," />
+
+
+
+
+
+
+
+
+  <link rel="shortcut icon" type="image/x-icon" href="/favicon.ico?v=5.1.0" />
+
+
+
+
+
+
+<meta name="description" content="最近由于业务需要，在做一些关于国产化相关的事情，需要将平台从x86架构迁移到arm64上run起来，最重要的环节则在于镜像都需要rebuild一遍，在这个过程中还是碰到一些问题，拿出来分享一下，希望对其他人会有所帮助.">
+<meta property="og:type" content="article">
+<meta property="og:title" content="Docker之交叉编译">
+<meta property="og:url" content="https://zhoushuke.github.io/2021/04/05/Docker-buildx/index.html">
+<meta property="og:site_name" content="Z.S.K.&#39;s Records">
+<meta property="og:description" content="最近由于业务需要，在做一些关于国产化相关的事情，需要将平台从x86架构迁移到arm64上run起来，最重要的环节则在于镜像都需要rebuild一遍，在这个过程中还是碰到一些问题，拿出来分享一下，希望对其他人会有所帮助.">
+<meta property="og:locale">
+<meta property="og:image" content="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20210408224334.png">
+<meta property="article:published_time" content="2021-04-05T15:30:53.000Z">
+<meta property="article:modified_time" content="2022-07-19T03:16:00.959Z">
+<meta property="article:author" content="Z.S.K.">
+<meta property="article:tag" content="CloudNavi">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:image" content="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20210408224334.png">
+
+
+
+<script type="text/javascript" id="hexo.configurations">
+  var NexT = window.NexT || {};
+  var CONFIG = {
+    root: '',
+    scheme: 'Mist',
+    sidebar: {"position":"left","display":"post"},
+    fancybox: true,
+    motion: true,
+    duoshuo: {
+      userId: 'undefined',
+      author: '博主'
+    },
+    algolia: {
+      applicationID: '',
+      apiKey: '',
+      indexName: '',
+      hits: {"per_page":10},
+      labels: {"input_placeholder":"Search for Posts","hits_empty":"We didn't find any results for the search: ${query}","hits_stats":"${hits} results found in ${time} ms"}
+    }
+  };
+</script>
+
+
+
+  <link rel="canonical" href="https://zhoushuke.github.io/2021/04/05/Docker-buildx/"/>
+
+
+
+
+
+  <title> Docker之交叉编译 | Z.S.K.'s Records </title>
+<meta name="generator" content="Hexo 6.2.0"></head>
+
+<body itemscope itemtype="http://schema.org/WebPage" lang="zh-Hans">
+
+  
+
+
+
+
+
+
+
+
+
+
+  
+  
+    
+  
+
+  <div class="container one-collumn sidebar-position-left page-post-detail ">
+    <div class="headband"></div>
+
+    <header id="header" class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-meta ">
+  
+
+  <div class="custom-logo-site-title">
+    <a href="/"  class="brand" rel="start">
+      <span class="logo-line-before"><i></i></span>
+      <span class="site-title">Z.S.K.'s Records</span>
+      <span class="logo-line-after"><i></i></span>
+    </a>
+  </div>
+    
+      <p class="site-subtitle"></p>
+    
+</div>
+
+<div class="site-nav-toggle">
+  <button>
+    <span class="btn-bar"></span>
+    <span class="btn-bar"></span>
+    <span class="btn-bar"></span>
+  </button>
+</div>
+
+<nav class="site-nav">
+  
+
+  
+    <ul id="menu" class="menu">
+      
+        
+        <li class="menu-item menu-item-home">
+          <a href="/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-home"></i> <br />
+            
+            首页
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-categories">
+          <a href="/categories" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-th"></i> <br />
+            
+            分类
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-about">
+          <a href="/about/ZSK-Profile.pdf" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-user"></i> <br />
+            
+            简历
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-archives">
+          <a href="/archives" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-archive"></i> <br />
+            
+            归档
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-tags">
+          <a href="/tags" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-tags"></i> <br />
+            
+            标签
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-commonweal">
+          <a href="/404.html" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-heartbeat"></i> <br />
+            
+            公益404
+          </a>
+        </li>
+      
+
+      
+        <li class="menu-item menu-item-search">
+          
+            <a href="javascript:;" class="popup-trigger">
+          
+            
+              <i class="menu-item-icon fa fa-search fa-fw"></i> <br />
+            
+            搜索
+          </a>
+        </li>
+      
+    </ul>
+  
+
+  
+    <div class="site-search">
+      
+  <div class="popup">
+ <span class="search-icon fa fa-search"></span>
+ <input type="text" id="local-search-input">
+ <div id="local-search-result"></div>
+ <span class="popup-btn-close">close</span>
+</div>
+
+
+    </div>
+  
+</nav>
+
+
+
+ </div>
+    </header>
+
+    <main id="main" class="main">
+      <div class="main-inner">
+        <div class="content-wrap">
+          <div id="content" class="content">
+            
 
   <div id="posts" class="posts-expand">
-    {{ post_template.render(page) }}
+    
 
-    <div class="post-spread">
-      {% if theme.jiathis %}
-        {% include '_partials/share/jiathis.swig' %}
-      {% elseif theme.baidushare %}
-        {% include '_partials/share/baidushare.swig' %}
-      {% elseif theme.add_this_id %}
-        {% include '_partials/share/add-this.swig' %}
-      {% elseif theme.duoshuo_shortname and theme.duoshuo_share %}
-        {% include '_partials/share/duoshuo_share.swig' %}
-      {% endif %}
+  
+
+  
+  
+  
+
+  <article class="post post-type-normal " itemscope itemtype="http://schema.org/Article">
+  <link itemprop="mainEntityOfPage" href="https://zhoushuke.github.io/2021/04/05/Docker-buildx/">
+
+  <span style="display:none" itemprop="author" itemscope itemtype="http://schema.org/Person">
+    <meta itemprop="name" content="">
+    <meta itemprop="description" content="">
+    <meta itemprop="image" content="/images/avatar.gif">
+  </span>
+
+  <span style="display:none" itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+    <meta itemprop="name" content="Z.S.K.'s Records">
+    <span style="display:none" itemprop="logo" itemscope itemtype="http://schema.org/ImageObject">
+      <img style="display:none;" itemprop="url image" alt="Z.S.K.'s Records" src="">
+    </span>
+  </span>
+
+    
+      <header class="post-header">
+
+        
+        
+          <h1 class="post-title" itemprop="name headline">
+            
+            
+              
+                Docker之交叉编译
+              
+            
+          </h1>
+        
+
+        <div class="post-meta">
+          <span class="post-time">
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">发表于</span>
+              
+              <time title="Post created" itemprop="dateCreated datePublished" datetime="2021-04-05T23:30:53+08:00">
+                2021-04-05
+              </time>
+            
+
+            
+
+            
+          </span>
+
+          
+            <span class="post-category" >
+            
+              <span class="post-meta-divider">|</span>
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-folder-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">分类于</span>
+              
+              
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/CloudNavi/" itemprop="url" rel="index">
+                    <span itemprop="name">CloudNavi</span>
+                  </a>
+                </span>
+
+                
+                
+              
+            </span>
+          
+
+          
+            
+          
+
+          
+
+          
+          
+
+          
+
+          
+
+        </div>
+      </header>
+    
+
+
+    <div class="post-body" itemprop="articleBody">
+
+      
+      
+
+      
+        <p>最近由于业务需要，在做一些关于国产化相关的事情，需要将平台从x86架构迁移到arm64上run起来，最重要的环节则在于镜像都需要rebuild一遍，在这个过程中还是碰到一些问题，拿出来分享一下，希望对其他人会有所帮助.</p>
+<span id="more"></span>
+
+
+
+<p>把所有的镜像都rebuild，这是个很辛苦且枯燥的事情，还好日常工作中都会良好的版本管理，每个应用的版本都对应有相应的commit号，这个可以直接使用稳定的版本进行rebuild,可以省去联调的工作</p>
+<p>先简单介绍下binfmt_misc，后面docker交叉编译会用上.</p>
+<h3 id="binfmt-misc"><a href="#binfmt-misc" class="headerlink" title="binfmt_misc"></a>binfmt_misc</h3><p>binfmt_misc(Miscellaneous Binary Format)是Linux内核从很早开始就引入的机制，可以通过要打开文件的特性来选择到底使用哪个程序来打开它，不光可以通过文件的扩展名来判断的，还可以通过文件开始位置的特殊的字节（Magic Byte）来判断</p>
+<p>这里不过多介绍，简单来说说是通过注册一个“解释器”和一个文件识别方式，以达到运行文件的时候调用自定义解释器的目的，docker buildx即是通过这种方式</p>
+<p>启用binfmt_misc也比较简单，可以使用现成的docker直接启动:</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">docker run --<span class="built_in">rm</span> --privileged docker/binfmt:66f9012c56a8316f9244ffd7622d7c21c1f6f28d</span><br></pre></td></tr></table></figure>
+
+<p>检查是否开启:</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line"><span class="built_in">ls</span> -al /proc/sys/fs/binfmt_misc/</span><br><span class="line">-rw-r--r-- 1 root root 0 11月 18 00:12 qemu-aarch64</span><br><span class="line">-rw-r--r-- 1 root root 0 11月 18 00:12 qemu-arm</span><br><span class="line">-rw-r--r-- 1 root root 0 11月 18 00:12 qemu-ppc64le</span><br><span class="line">-rw-r--r-- 1 root root 0 11月 18 00:12 qemu-s390x</span><br><span class="line">--w------- 1 root root 0 11月 18 00:09 register</span><br><span class="line">-rw-r--r-- 1 root root 0 11月 18 00:12 status</span><br></pre></td></tr></table></figure>
+
+<p>注意: 如果是centos的话，建议升级内核到4+以上</p>
+<h3 id="编译方法"><a href="#编译方法" class="headerlink" title="编译方法"></a>编译方法</h3><p>大致有3种编译方法:</p>
+<ol>
+<li>直接在对应架构的机器上进行</li>
+<li>通过模拟器的方式，最常用的模拟器是开源的 <a target="_blank" rel="noopener" href="https://www.wikiwand.com/zh-hans/QEMU">QEMU</a></li>
+<li>通过binfmt_misc模拟目标硬件的用户空间</li>
+<li>通过交叉编译，像andriod程序，一般就是通过交叉编译而来，还有如go语言等，本身就有交叉编译器</li>
+</ol>
+<p>这里要重点说的是docker的交叉编译</p>
+<h3 id="docker-buildx"><a href="#docker-buildx" class="headerlink" title="docker buildx"></a>docker buildx</h3><p>docker 在19.03的版本支持了一个实验性的功能 - - buildx，大大地减少了编译工作，但也还是有些坑，慢慢道来</p>
+<p>利用 Docker 19.03 引入的插件 <a target="_blank" rel="noopener" href="https://github.com/docker/buildx">buildx</a>，可以很轻松地构建多平台 Docker 镜像。buildx 是 <code>docker build ...</code> 命令的下一代替代品，它利用 <a target="_blank" rel="noopener" href="https://github.com/moby/buildkit">BuildKit</a> 的全部功能扩展了 <code>docker build</code> 的功能</p>
+<p>这里不详细介绍该如此开启buildx了，大家可参考官方的handbook，这里假设开启了”experimental”: true</p>
+<p>使用以下命令确认开启了:</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">docker info | grep -i exp</span><br><span class="line">Experimental: <span class="literal">true</span>  </span><br></pre></td></tr></table></figure>
+
+<p>Docker buildx需要开启binfmt_misc， 开启方法如下</p>
+<p>验证是否启用了相应的处理器：</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line">cat /proc/sys/fs/binfmt_misc/qemu-aarch64</span><br><span class="line">enabled</span><br><span class="line">interpreter /usr/bin/qemu-aarch64</span><br><span class="line">flags: OCF</span><br><span class="line">offset 0</span><br><span class="line">magic 7f454c460201010000000000000000000200b7mask </span><br><span class="line">ffffffffffffff00fffffffffffffffffeffff</span><br></pre></td></tr></table></figure>
+
+<p>Docker 默认会使用不支持多 CPU 架构的构建器，我们需要手动切换。</p>
+<p>先创建一个新的构建器：</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># 新建构建器</span></span><br><span class="line">docker buildx create --use --name mybuilder </span><br><span class="line"><span class="comment"># 启动构建器</span></span><br><span class="line">docker buildx inspect mybuilder --bootstrap</span><br></pre></td></tr></table></figure>
+
+<p>准备工作就绪后，下面以例子来说明，既然是交叉编译，那就得先有一个初始的x86 的Dockerfile，然后将其编译出arm64的镜像</p>
+<p><strong>下文说到的体系架构指的就是x86跟arm64</strong>.</p>
+<h3 id="Docker-Manifests"><a href="#Docker-Manifests" class="headerlink" title="Docker Manifests"></a>Docker Manifests</h3><p>这里先解释下docker的manifests特性，因为下面会用到</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">FROM golang:alpine AS builder</span><br></pre></td></tr></table></figure>
+
+<p>相信大家在编写Dockerfile的时候会经常这么用，正常来说，这么写的镜像都是从docker hub拉取的镜像，docker hub上的镜像支持docker的manifests特性，简单来说就是一个镜像地址，当我们docker pull的时候，它会根据当前机器体系架构来拉取对应于这个体系架构的镜像，比如你是x86的，则给你拉取的是x86的镜像，是arm64的机器拉取的则是arm64的，原理就在于每个镜像都维护着一个manifest(清单),这个清单上记录着每个体系架构对应用镜像层，在docker pull的时候，docker这时做为一个client端，与docker hub的服务端通信的时候，会先看这个镜像存不存在manifests，如果存在则拉取匹配当前机器体系架构的镜像，如果不存在，则就直接拉取.</p>
+<p>了解这个对下面的实践很重要</p>
+<h3 id="实践"><a href="#实践" class="headerlink" title="实践"></a>实践</h3><p>这里以go语言的应用为例，直接在<strong>x86的CentOS</strong>机器上，如果不做特别说明，以下的所有操作都是在该机器上执行</p>
+<p>dockerfile如下:</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br></pre></td><td class="code"><pre><span class="line">FROM golang:alpine AS builder</span><br><span class="line">RUN <span class="built_in">mkdir</span> /app</span><br><span class="line">ADD . /app/</span><br><span class="line">WORKDIR /app</span><br><span class="line">RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -o hello .  <span class="comment"># 注意这里</span></span><br><span class="line"></span><br><span class="line">FROM alpine</span><br><span class="line">RUN <span class="built_in">mkdir</span> /app</span><br><span class="line">WORKDIR /app</span><br><span class="line">COPY --from=builder /app/hello .</span><br><span class="line">CMD [<span class="string">&quot;./hello&quot;</span>]</span><br></pre></td></tr></table></figure>
+
+<p>这里要注意go build命令，</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -o hello .</span><br></pre></td></tr></table></figure>
+
+<p>简单说一下go的交叉编译:</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build main.go .</span><br><span class="line">CGO_ENABLED=0 GOOS=linux GOARCH=arm64 go build main.go .</span><br></pre></td></tr></table></figure>
+
+<p>GOOS指定的是目标机器的操作系统</p>
+<p>GOARCH指定的是体系架构（i386、amd64、arm64）等</p>
+<p><strong>由于go是编译型语言，编译出来的都是二进制文件，这个二进制文件的运行环境一定是要跟编译时指的是编译参数一致，就好比，windows下的exe文件无法在linux上执行一样，如果指定了go编译的参数为amd64，则它就不能在arm64上运行,反过来同理</strong></p>
+<h4 id="X86机器编译X86镜像"><a href="#X86机器编译X86镜像" class="headerlink" title="X86机器编译X86镜像"></a>X86机器编译X86镜像</h4><p>所以，x86正常编译的build命令为:</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">docker build -t xxx/yyy/zzz:latest .</span><br></pre></td></tr></table></figure>
+
+<p>由于是直接在x86的linux机器上，不存在交叉编译，所以可以直接使用build命令，最终产生的镜像就是一个可以运行在X86的机器上，如果运行在arm64的机器上，则会提示以下错误:</p>
+<p><img src="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20210408224334.png"></p>
+<p>以上的错误基本都是运行的镜像与体系架构不匹配导致的</p>
+<h4 id="X86机器上编译arm64镜像"><a href="#X86机器上编译arm64镜像" class="headerlink" title="X86机器上编译arm64镜像"></a>X86机器上编译arm64镜像</h4><p>编译x86非常方便，也是我们最常规的操作，如果将上面的Dockerfile使用交叉编译编译出arm64的镜像呢</p>
+<p>这里要注意的是，由于go本身就支持交叉编译，因此基础镜像是可以不用调整的,修改如下:</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br></pre></td><td class="code"><pre><span class="line">FROM golang:alpine AS builder <span class="comment"># 注意这里</span></span><br><span class="line">RUN <span class="built_in">mkdir</span> /app</span><br><span class="line">ADD . /app/</span><br><span class="line">WORKDIR /app</span><br><span class="line">RUN CGO_ENABLED=0 GOOS=linux GOARCH=arm64 go build -o hello .  <span class="comment"># 修改的这里</span></span><br><span class="line"></span><br><span class="line">FROM alpine  <span class="comment"># 注意这里</span></span><br><span class="line">RUN <span class="built_in">mkdir</span> /app</span><br><span class="line">WORKDIR /app</span><br><span class="line">COPY --from=builder /app/hello .</span><br><span class="line">CMD [<span class="string">&quot;./hello&quot;</span>]</span><br></pre></td></tr></table></figure>
+
+<p>使用以下的命令编译出来的镜像就是arm64的了</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">docker buildx build -t xxx/yyy/zzz:latest --platform=linux/arm64 . --push</span><br></pre></td></tr></table></figure>
+
+<p>–push 表示构建之后直接将该镜像推送到镜像仓库中</p>
+<p>可以看到，Dockerfile文件修改只修改了1行，已经在注释中标注出来了</p>
+<p>二个From 为何都不需要改呢? 这个放到下文解析–platform中再说</p>
+<p><code>go build</code>那行的命令GOARCH已经修改为arm64了，表明目标体系架构为arm64，那最终生成的二进制在arm64是可以运行的.</p>
+<p>这里要重点说一下<code>docker buildx --platform</code>这个参数, 顺便解释一下为何两个From的基础镜像都不需要修改的原因</p>
+<p>首先–platform这个参数决定了Dockerfile文件中所有From后面的镜像的体系架构以及最终生成的镜像的体系架构，像上面那样，直接是</p>
+<p><code>FROM golang:alpine AS builder</code> 相当于<code>FROM --platform=arm64 golang:alpine AS builder</code>，而</p>
+<p><code>FROM alpine 相当于</code>FROM –platform&#x3D;arm64 alpine&#96;, 拉取下来的就是arm64的镜像，因此上面是可以不用修改的</p>
+<p>这里说的是From中没有指定<code>--platform</code>的情况则会自动添加上<code>docker buildx --platform</code>中的参数，如果本身就存在的话，则是以From本身的<code>--platform决定</code></p>
+<p><strong>但是一定要确保，最后一个From的镜像体系架构一定要跟目标体系架构保持一致</strong>，也就是说，如果上面的例子中最后一个From改成</p>
+<p><code>From alpine-amd64</code> (不一定有这个镜像，这里只是形象说明),docker buildx不会报错，会正常编译通过，在docker run 这个镜像的时候就会出现<code>exec format error</code></p>
+<p>这里可能有人会问: 那为什么arm64的镜像可以在x86上run起来呢?</p>
+<p><strong>这个其实就是binfmt_misc在起作用，模拟了目标体系架构</strong></p>
+<p>但这有一个问题:</p>
+<p>很多时候，由于各种不可明说的原因，我们并不会每次都直接去docker hub上拉取镜像，而是将镜像推送到公司内的镜像仓库，如果恰好镜像仓库还不支持manifest这个特性的话(比如我司)，那上面的例子就有坑了，因此，必须要这么写</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br></pre></td><td class="code"><pre><span class="line">FROM xxx/yyy/golang:alpine AS builder <span class="comment"># 注意这里</span></span><br><span class="line">RUN <span class="built_in">mkdir</span> /app</span><br><span class="line">ADD . /app/</span><br><span class="line">WORKDIR /app</span><br><span class="line">RUN CGO_ENABLED=0 GOOS=linux GOARCH=arm64 go build -o hello .  <span class="comment"># 注意这里</span></span><br><span class="line"></span><br><span class="line">FROM xxx/yyy/alpine-arm64  <span class="comment"># 注意这里</span></span><br><span class="line">RUN <span class="built_in">mkdir</span> /app</span><br><span class="line">WORKDIR /app</span><br><span class="line">COPY --from=builder /app/hello .</span><br><span class="line">CMD [<span class="string">&quot;./hello&quot;</span>]</span><br></pre></td></tr></table></figure>
+
+<p>最后的一个FROM一定要是arm64的，由于是在x86的机器上使用交叉编译，如果镜像仓库又不支持manifest，则只能显示地指定使用arm64的镜像，这样打出来的镜像还会是arm64的</p>
+<p>那为什么第一个FROM没有修改呢? 因为go本身是支持交叉编译的，虽然拉下来的是x86的镜像， 但go build出来的是arm64的，最后塞到alpine-arm64镜像里去的也是arm64的，这个是不冲突的，当然，第一个FROM换成arm64的golang:alpine也是没问题的</p>
+<h4 id="arm64机器编译arm64镜像"><a href="#arm64机器编译arm64镜像" class="headerlink" title="arm64机器编译arm64镜像"></a>arm64机器编译arm64镜像</h4><p>目标体系架构跟机器一致，这个就更没什么好说的了，直接使用最开始的Dockerfile就行</p>
+<h3 id="总结"><a href="#总结" class="headerlink" title="总结"></a>总结</h3><p>这个例子中使用的是go，由于go本身就支持交叉编译，因此还算是方便</p>
+<p>对于一些前端js的编译，也比较方便，因为js编译出来的都是一堆js文件，跟机器体系架构关系不大，</p>
+<p>java的也是如此，天然的是通过java虚拟机的方式，屏蔽了底层的差异，跟机器体系架构关系不大</p>
+<p>因此总结来说</p>
+<p><strong>对于交叉编译来说，保证最后一个FROM的镜像跟目标体系架构的一致即可</strong></p>
+<p>另外，docker buildx还有很多其它的选项，值得深入研究一番，有时间下次更</p>
+<h3 id="参考文章"><a href="#参考文章" class="headerlink" title="参考文章:"></a><strong>参考文章:</strong></h3><blockquote>
+<ul>
+<li><a target="_blank" rel="noopener" href="https://blog.lyle.ac.cn/2020/04/14/transparently-running-binaries-from-any-architecture-in-linux-with-qemu-and-binfmt-misc/">https://blog.lyle.ac.cn/2020/04/14/transparently-running-binaries-from-any-architecture-in-linux-with-qemu-and-binfmt-misc/</a></li>
+<li><a target="_blank" rel="noopener" href="https://www.w3xue.com/exp/article/201912/66543.html">https://www.w3xue.com/exp/article/201912/66543.html</a></li>
+<li><a target="_blank" rel="noopener" href="https://engineering.docker.com/2019/04/multi-arch-images/">Building Multi-Arch Images for Arm and x86 with Docker Desktop</a></li>
+<li><a target="_blank" rel="noopener" href="https://gitee.com/windforce1981/buildx?_from=gitee_search#/windforce1981/buildx/blob/master/docs/reference/buildx_build.md">https://gitee.com/windforce1981/buildx?_from=gitee_search#/windforce1981/buildx/blob/master/docs/reference/buildx_build.md</a></li>
+<li><a target="_blank" rel="noopener" href="https://gitee.com/windforce1981/buildx/blob/master/docs/reference/buildx_build.md">https://gitee.com/windforce1981/buildx/blob/master/docs/reference/buildx_build.md</a></li>
+</ul>
+</blockquote>
+<h3 id="转载请注明出处https-izsk-me"><a href="#转载请注明出处https-izsk-me" class="headerlink" title="转载请注明出处https://izsk.me"></a><strong>转载请注明出处<a target="_blank" rel="noopener" href="https://izsk.me/">https://izsk.me</a></strong></h3>
+      
+    </div>
+
+    <div>
+      
+        
+<div id="wechat_subscriber" style="display: block; padding: 10px 0; margin: 20px auto; width: 100%; text-align: center">
+    <img id="wechat_subscriber_qcode" src="/images/websitecode250.png" alt=" wechat" style="width: 200px; max-width: 100%;"/>
+    <div>Scan Me To Read on Phone</div>
+</div>
+
+
+      
+    </div>
+
+    <div>
+      
+        
+  <div style="padding: 10px 0; margin: 20px auto; width: 90%; text-align: center;">
+    <div>I know you won't do this,but what if you did?</div>
+    <button id="rewardButton" disable="enable" onclick="var qr = document.getElementById('QR'); if (qr.style.display === 'none') {qr.style.display='block';} else {qr.style.display='none'}">
+      <span>赏</span>
+    </button>
+    <div id="QR" style="display: none;">
+      
+        <div id="wechat" style="display: inline-block">
+          <img id="wechat_qr" src="/images/wechatpayme.png" alt=" WeChat Pay"/>
+          <p>微信打赏</p>
+        </div>
+      
+      
+        <div id="alipay" style="display: inline-block">
+          <img id="alipay_qr" src="/images/alipayme.jpg" alt=" Alipay"/>
+          <p>支付宝打赏</p>
+        </div>
+      
     </div>
   </div>
 
-{% endblock %}
 
-{% block sidebar %}
-  {{ sidebar_template.render(true) }}
-{% endblock %}
+      
+    </div>
 
 
-{% block script_extra %}
-  {% include '_scripts/pages/post-details.swig' %}
-{% endblock %}
+    <footer class="post-footer">
+      
+        <div class="post-tags">
+          
+            <a href="/tags/CloudNavi/" rel="tag"># CloudNavi</a>
+          
+        </div>
+      
+
+      
+        <div class="post-nav">
+          <div class="post-nav-next post-nav-item">
+            
+              <a href="/2021/04/02/argoCD-how-to-bind-resource/" rel="next" title="argoCD学习(argocd是如何绑定资源的)">
+                <i class="fa fa-chevron-left"></i> argoCD学习(argocd是如何绑定资源的)
+              </a>
+            
+          </div>
+
+          <span class="post-nav-divider"></span>
+
+          <div class="post-nav-prev post-nav-item">
+            
+              <a href="/2021/05/15/Kong-grpc-proxy-multi/" rel="prev" title="Kong学习(代理多grpc后端)">
+                Kong学习(代理多grpc后端) <i class="fa fa-chevron-right"></i>
+              </a>
+            
+          </div>
+        </div>
+      
+
+      
+      
+    </footer>
+  </article>
+
+
+
+    <div class="post-spread">
+      
+    </div>
+  </div>
+
+
+          </div>
+          
+
+
+          
+  <div class="comments" id="comments">
+    
+  </div>
+
+
+        </div>
+        
+          
+  
+  <div class="sidebar-toggle">
+    <div class="sidebar-toggle-line-wrap">
+      <span class="sidebar-toggle-line sidebar-toggle-line-first"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-middle"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-last"></span>
+    </div>
+  </div>
+
+  <aside id="sidebar" class="sidebar">
+    <div class="sidebar-inner">
+
+      
+
+      
+        <ul class="sidebar-nav motion-element">
+          <li class="sidebar-nav-toc sidebar-nav-active" data-target="post-toc-wrap" >
+            文章目录
+          </li>
+          <li class="sidebar-nav-overview" data-target="site-overview">
+            站点概览
+          </li>
+        </ul>
+      
+
+      <section class="site-overview sidebar-panel">
+        <div class="site-author motion-element" itemprop="author" itemscope itemtype="http://schema.org/Person">
+          <img class="site-author-image" itemprop="image"
+               src="/images/avatar.gif"
+               alt="" />
+          <p class="site-author-name" itemprop="name"></p>
+          <p class="site-description motion-element" itemprop="description"></p>
+        </div>
+        <nav class="site-state motion-element">
+        
+          
+            <div class="site-state-item site-state-posts">
+              <a href="/archives">
+                <span class="site-state-item-count">192</span>
+                <span class="site-state-item-name">日志</span>
+              </a>
+            </div>
+          
+
+          
+            <div class="site-state-item site-state-categories">
+              <a href="/categories">
+                <span class="site-state-item-count">14</span>
+                <span class="site-state-item-name">分类</span>
+              </a>
+            </div>
+          
+
+          
+            <div class="site-state-item site-state-tags">
+              <a href="/tags">
+                <span class="site-state-item-count">14</span>
+                <span class="site-state-item-name">标签</span>
+              </a>
+            </div>
+          
+
+        </nav>
+
+        
+
+        <div class="links-of-author motion-element">
+          
+        </div>
+
+        
+        
+
+        
+        
+
+        
+
+
+      </section>
+
+      
+      <!--noindex-->
+        <section class="post-toc-wrap motion-element sidebar-panel sidebar-panel-active">
+          <div class="post-toc">
+
+            
+              
+            
+
+            
+              <div class="post-toc-content"><ol class="nav"><li class="nav-item nav-level-3"><a class="nav-link" href="#binfmt-misc"><span class="nav-number">1.</span> <span class="nav-text">binfmt_misc</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E7%BC%96%E8%AF%91%E6%96%B9%E6%B3%95"><span class="nav-number">2.</span> <span class="nav-text">编译方法</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#docker-buildx"><span class="nav-number">3.</span> <span class="nav-text">docker buildx</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#Docker-Manifests"><span class="nav-number">4.</span> <span class="nav-text">Docker Manifests</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E5%AE%9E%E8%B7%B5"><span class="nav-number">5.</span> <span class="nav-text">实践</span></a><ol class="nav-child"><li class="nav-item nav-level-4"><a class="nav-link" href="#X86%E6%9C%BA%E5%99%A8%E7%BC%96%E8%AF%91X86%E9%95%9C%E5%83%8F"><span class="nav-number">5.1.</span> <span class="nav-text">X86机器编译X86镜像</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#X86%E6%9C%BA%E5%99%A8%E4%B8%8A%E7%BC%96%E8%AF%91arm64%E9%95%9C%E5%83%8F"><span class="nav-number">5.2.</span> <span class="nav-text">X86机器上编译arm64镜像</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#arm64%E6%9C%BA%E5%99%A8%E7%BC%96%E8%AF%91arm64%E9%95%9C%E5%83%8F"><span class="nav-number">5.3.</span> <span class="nav-text">arm64机器编译arm64镜像</span></a></li></ol></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E6%80%BB%E7%BB%93"><span class="nav-number">6.</span> <span class="nav-text">总结</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E5%8F%82%E8%80%83%E6%96%87%E7%AB%A0"><span class="nav-number">7.</span> <span class="nav-text">参考文章:</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E8%BD%AC%E8%BD%BD%E8%AF%B7%E6%B3%A8%E6%98%8E%E5%87%BA%E5%A4%84https-izsk-me"><span class="nav-number">8.</span> <span class="nav-text">转载请注明出处https:&#x2F;&#x2F;izsk.me</span></a></li></ol></div>
+            
+
+          </div>
+        </section>
+      <!--/noindex-->
+      
+
+    </div>
+  </aside>
+
+
+        
+      </div>
+    </main>
+
+    <footer id="footer" class="footer">
+      <div class="footer-inner">
+        <div class="copyright" >
+  
+  &copy; 
+  <span itemprop="copyrightYear">2022</span>
+  <span class="with-love">
+    <i class="fa fa-heart"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">Z.S.K.</span>
+</div>
+
+
+<div class="powered-by">
+  Supported by <a class="theme-link" target="_blank" rel="noopener" href="https://hexo.io">Hexo</a>
+</div>
+
+<div class="theme-info">
+  Theme -
+  <a class="theme-link" target="_blank" rel="noopener" href="https://github.com/iissnan/hexo-theme-next">
+    NexT.Mist
+  </a>
+</div>
+
+
+        
+
+        
+      </div>
+    </footer>
+
+    <div class="back-to-top">
+      <i class="fa fa-arrow-up"></i>
+    </div>
+  </div>
+
+  
+
+<script type="text/javascript">
+  if (Object.prototype.toString.call(window.Promise) !== '[object Function]') {
+    window.Promise = null;
+  }
+</script>
+
+
+
+
+
+
+
+
+
+  
+
+
+
+  
+  <script type="text/javascript" src="/lib/jquery/index.js?v=2.1.3"></script>
+
+  
+  <script type="text/javascript" src="/lib/fastclick/lib/fastclick.min.js?v=1.0.6"></script>
+
+  
+  <script type="text/javascript" src="/lib/jquery_lazyload/jquery.lazyload.js?v=1.9.7"></script>
+
+  
+  <script type="text/javascript" src="/lib/velocity/velocity.min.js?v=1.2.1"></script>
+
+  
+  <script type="text/javascript" src="/lib/velocity/velocity.ui.min.js?v=1.2.1"></script>
+
+  
+  <script type="text/javascript" src="/lib/fancybox/source/jquery.fancybox.pack.js?v=2.1.5"></script>
+
+
+  
+
+
+  <script type="text/javascript" src="/js/src/utils.js?v=5.1.0"></script>
+
+  <script type="text/javascript" src="/js/src/motion.js?v=5.1.0"></script>
+
+
+
+  
+  
+
+  
+  <script type="text/javascript" src="/js/src/scrollspy.js?v=5.1.0"></script>
+<script type="text/javascript" src="/js/src/post-details.js?v=5.1.0"></script>
+
+
+
+  
+
+
+  <script type="text/javascript" src="/js/src/bootstrap.js?v=5.1.0"></script>
+
+
+
+  
+
+
+
+  
+
+
+
+
+	
+
+
+
+
+
+  
+
+
+
+
+  
+  
+  <script type="text/javascript">
+    // Popup Window;
+    var isfetched = false;
+    // Search DB path;
+    var search_path = "search.xml";
+    if (search_path.length == 0) {
+      search_path = "search.xml";
+    }
+    var path = "/" + search_path;
+    // monitor main search box;
+
+    function proceedsearch() {
+      $("body").append('<div class="popoverlay">').css('overflow', 'hidden');
+      $('.popup').toggle();
+    }
+    // search function;
+    var searchFunc = function(path, search_id, content_id) {
+      'use strict';
+      $.ajax({
+        url: path,
+        dataType: "xml",
+        async: true,
+        success: function( xmlResponse ) {
+          // get the contents from search data
+          isfetched = true;
+          $('.popup').detach().appendTo('.header-inner');
+          var datas = $( "entry", xmlResponse ).map(function() {
+            return {
+              title: $( "title", this ).text(),
+              content: $("content",this).text(),
+              url: $( "url" , this).text()
+            };
+          }).get();
+          var $input = document.getElementById(search_id);
+          var $resultContent = document.getElementById(content_id);
+          $input.addEventListener('input', function(){
+            var matchcounts = 0;
+            var str='<ul class=\"search-result-list\">';
+            var keywords = this.value.trim().toLowerCase().split(/[\s\-]+/);
+            $resultContent.innerHTML = "";
+            if (this.value.trim().length > 1) {
+              // perform local searching
+              datas.forEach(function(data) {
+                var isMatch = false;
+                var content_index = [];
+                var data_title = data.title.trim().toLowerCase();
+                var data_content = data.content.trim().replace(/<[^>]+>/g,"").toLowerCase();
+                var data_url = decodeURIComponent(data.url);
+                var index_title = -1;
+                var index_content = -1;
+                var first_occur = -1;
+                // only match artiles with not empty titles and contents
+                if(data_title != '') {
+                  keywords.forEach(function(keyword, i) {
+                    index_title = data_title.indexOf(keyword);
+                    index_content = data_content.indexOf(keyword);
+                    if( index_title >= 0 || index_content >= 0 ){
+                      isMatch = true;
+                      if (i == 0) {
+                        first_occur = index_content;
+                      }
+                    }
+
+                  });
+                }
+                // show search results
+                if (isMatch) {
+                  matchcounts += 1;
+                  str += "<li><a href='"+ data_url +"' class='search-result-title'>"+ data_title +"</a>";
+                  var content = data.content.trim().replace(/<[^>]+>/g,"");
+                  if (first_occur >= 0) {
+                    // cut out 100 characters
+                    var start = first_occur - 20;
+                    var end = first_occur + 80;
+                    if(start < 0){
+                      start = 0;
+                    }
+                    if(start == 0){
+                      end = 50;
+                    }
+                    if(end > content.length){
+                      end = content.length;
+                    }
+                    var match_content = content.substring(start, end);
+                    // highlight all keywords
+                    keywords.forEach(function(keyword){
+                      var regS = new RegExp(keyword, "gi");
+                      match_content = match_content.replace(regS, "<b class=\"search-keyword\">"+keyword+"</b>");
+                    });
+
+                    str += "<p class=\"search-result\">" + match_content +"...</p>"
+                  }
+                  str += "</li>";
+                }
+              })};
+            str += "</ul>";
+            if (matchcounts == 0) { str = '<div id="no-result"><i class="fa fa-frown-o fa-5x" /></div>' }
+            if (keywords == "") { str = '<div id="no-result"><i class="fa fa-search fa-5x" /></div>' }
+            $resultContent.innerHTML = str;
+          });
+          proceedsearch();
+        }
+      });}
+
+    // handle and trigger popup window;
+    $('.popup-trigger').click(function(e) {
+      e.stopPropagation();
+      if (isfetched == false) {
+        searchFunc(path, 'local-search-input', 'local-search-result');
+      } else {
+        proceedsearch();
+      };
+    });
+
+    $('.popup-btn-close').click(function(e){
+      $('.popup').hide();
+      $(".popoverlay").remove();
+      $('body').css('overflow', '');
+    });
+    $('.popup').click(function(e){
+      e.stopPropagation();
+    });
+  </script>
+
+
+  
+
+  
+
+  
+
+  
+
+
+</body>
+</html>

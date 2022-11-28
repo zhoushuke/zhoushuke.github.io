@@ -1,38 +1,985 @@
-{% extends '_layout.swig' %}
-{% import '_macro/post.swig' as post_template %}
-{% import '_macro/sidebar.swig' as sidebar_template %}
+<!doctype html>
 
 
-{% block title %} {{ page.title }} | {{ config.title }} {% endblock %}
 
-{% block page_class %}page-post-detail{% endblock %}
+  
 
 
-{% block content %}
+<html class="theme-next mist use-motion" lang="zh-Hans">
+<head>
+  <meta charset="UTF-8"/>
+<meta http-equiv="X-UA-Compatible" content="IE=edge" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1"/>
+
+
+
+<meta http-equiv="Cache-Control" content="no-transform" />
+<meta http-equiv="Cache-Control" content="no-siteapp" />
+
+
+
+
+
+
+
+
+
+
+
+
+  
+  
+  <link href="/lib/fancybox/source/jquery.fancybox.css?v=2.1.5" rel="stylesheet" type="text/css" />
+
+
+
+
+  
+  
+  
+  
+
+  
+    
+    
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+    
+    
+    <link href="//fonts.googleapis.com/css?family=Lato:300,300italic,400,400italic,700,700italic&subset=latin,latin-ext" rel="stylesheet" type="text/css">
+  
+
+
+
+
+
+
+<link href="/lib/font-awesome/css/font-awesome.min.css?v=4.6.2" rel="stylesheet" type="text/css" />
+
+<link href="/css/main.css?v=5.1.0" rel="stylesheet" type="text/css" />
+
+
+  <meta name="keywords" content="ServiceMesh," />
+
+
+
+
+
+
+
+
+  <link rel="shortcut icon" type="image/x-icon" href="/favicon.ico?v=5.1.0" />
+
+
+
+
+
+
+<meta name="description" content="经过之前的对Istio的学习，大致明白了istio的机制,而要体会istio对流量的神奇魔法,自然离不开 virtualservice 与 destinationrule这两个对象了.">
+<meta property="og:type" content="article">
+<meta property="og:title" content="Istio学习(VirtualService and DestinationRule流量管理)">
+<meta property="og:url" content="https://zhoushuke.github.io/2020/02/29/Istio-VirtualService-DestinationRule/index.html">
+<meta property="og:site_name" content="Z.S.K.&#39;s Records">
+<meta property="og:description" content="经过之前的对Istio的学习，大致明白了istio的机制,而要体会istio对流量的神奇魔法,自然离不开 virtualservice 与 destinationrule这两个对象了.">
+<meta property="og:locale">
+<meta property="og:image" content="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/architecture_v2.png">
+<meta property="og:image" content="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20200224175906.png">
+<meta property="og:image" content="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20200224183640.png">
+<meta property="og:image" content="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/image-20200226171926125.png">
+<meta property="og:image" content="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/image-20200226172121466.png">
+<meta property="og:image" content="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/image-20200227120016154.png">
+<meta property="og:image" content="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/image-20200227121217432.png">
+<meta property="og:image" content="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/image-20200227120836722.png">
+<meta property="og:image" content="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/image-20200226161851384.png">
+<meta property="og:image" content="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/image-20200226162402855.png">
+<meta property="og:image" content="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/image-20200226162612642.png">
+<meta property="og:image" content="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/image-20200226163310584.png">
+<meta property="article:published_time" content="2020-02-29T12:10:53.000Z">
+<meta property="article:modified_time" content="2022-07-19T03:16:00.941Z">
+<meta property="article:author" content="Z.S.K.">
+<meta property="article:tag" content="ServiceMesh">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:image" content="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/architecture_v2.png">
+
+
+
+<script type="text/javascript" id="hexo.configurations">
+  var NexT = window.NexT || {};
+  var CONFIG = {
+    root: '',
+    scheme: 'Mist',
+    sidebar: {"position":"left","display":"post"},
+    fancybox: true,
+    motion: true,
+    duoshuo: {
+      userId: 'undefined',
+      author: '博主'
+    },
+    algolia: {
+      applicationID: '',
+      apiKey: '',
+      indexName: '',
+      hits: {"per_page":10},
+      labels: {"input_placeholder":"Search for Posts","hits_empty":"We didn't find any results for the search: ${query}","hits_stats":"${hits} results found in ${time} ms"}
+    }
+  };
+</script>
+
+
+
+  <link rel="canonical" href="https://zhoushuke.github.io/2020/02/29/Istio-VirtualService-DestinationRule/"/>
+
+
+
+
+
+  <title> Istio学习(VirtualService and DestinationRule流量管理) | Z.S.K.'s Records </title>
+<meta name="generator" content="Hexo 6.2.0"></head>
+
+<body itemscope itemtype="http://schema.org/WebPage" lang="zh-Hans">
+
+  
+
+
+
+
+
+
+
+
+
+
+  
+  
+    
+  
+
+  <div class="container one-collumn sidebar-position-left page-post-detail ">
+    <div class="headband"></div>
+
+    <header id="header" class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-meta ">
+  
+
+  <div class="custom-logo-site-title">
+    <a href="/"  class="brand" rel="start">
+      <span class="logo-line-before"><i></i></span>
+      <span class="site-title">Z.S.K.'s Records</span>
+      <span class="logo-line-after"><i></i></span>
+    </a>
+  </div>
+    
+      <p class="site-subtitle"></p>
+    
+</div>
+
+<div class="site-nav-toggle">
+  <button>
+    <span class="btn-bar"></span>
+    <span class="btn-bar"></span>
+    <span class="btn-bar"></span>
+  </button>
+</div>
+
+<nav class="site-nav">
+  
+
+  
+    <ul id="menu" class="menu">
+      
+        
+        <li class="menu-item menu-item-home">
+          <a href="/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-home"></i> <br />
+            
+            首页
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-categories">
+          <a href="/categories" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-th"></i> <br />
+            
+            分类
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-about">
+          <a href="/about/ZSK-Profile.pdf" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-user"></i> <br />
+            
+            简历
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-archives">
+          <a href="/archives" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-archive"></i> <br />
+            
+            归档
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-tags">
+          <a href="/tags" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-tags"></i> <br />
+            
+            标签
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-commonweal">
+          <a href="/404.html" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-heartbeat"></i> <br />
+            
+            公益404
+          </a>
+        </li>
+      
+
+      
+        <li class="menu-item menu-item-search">
+          
+            <a href="javascript:;" class="popup-trigger">
+          
+            
+              <i class="menu-item-icon fa fa-search fa-fw"></i> <br />
+            
+            搜索
+          </a>
+        </li>
+      
+    </ul>
+  
+
+  
+    <div class="site-search">
+      
+  <div class="popup">
+ <span class="search-icon fa fa-search"></span>
+ <input type="text" id="local-search-input">
+ <div id="local-search-result"></div>
+ <span class="popup-btn-close">close</span>
+</div>
+
+
+    </div>
+  
+</nav>
+
+
+
+ </div>
+    </header>
+
+    <main id="main" class="main">
+      <div class="main-inner">
+        <div class="content-wrap">
+          <div id="content" class="content">
+            
 
   <div id="posts" class="posts-expand">
-    {{ post_template.render(page) }}
+    
 
-    <div class="post-spread">
-      {% if theme.jiathis %}
-        {% include '_partials/share/jiathis.swig' %}
-      {% elseif theme.baidushare %}
-        {% include '_partials/share/baidushare.swig' %}
-      {% elseif theme.add_this_id %}
-        {% include '_partials/share/add-this.swig' %}
-      {% elseif theme.duoshuo_shortname and theme.duoshuo_share %}
-        {% include '_partials/share/duoshuo_share.swig' %}
-      {% endif %}
+  
+
+  
+  
+  
+
+  <article class="post post-type-normal " itemscope itemtype="http://schema.org/Article">
+  <link itemprop="mainEntityOfPage" href="https://zhoushuke.github.io/2020/02/29/Istio-VirtualService-DestinationRule/">
+
+  <span style="display:none" itemprop="author" itemscope itemtype="http://schema.org/Person">
+    <meta itemprop="name" content="">
+    <meta itemprop="description" content="">
+    <meta itemprop="image" content="/images/avatar.gif">
+  </span>
+
+  <span style="display:none" itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+    <meta itemprop="name" content="Z.S.K.'s Records">
+    <span style="display:none" itemprop="logo" itemscope itemtype="http://schema.org/ImageObject">
+      <img style="display:none;" itemprop="url image" alt="Z.S.K.'s Records" src="">
+    </span>
+  </span>
+
+    
+      <header class="post-header">
+
+        
+        
+          <h1 class="post-title" itemprop="name headline">
+            
+            
+              
+                Istio学习(VirtualService and DestinationRule流量管理)
+              
+            
+          </h1>
+        
+
+        <div class="post-meta">
+          <span class="post-time">
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">发表于</span>
+              
+              <time title="Post created" itemprop="dateCreated datePublished" datetime="2020-02-29T20:10:53+08:00">
+                2020-02-29
+              </time>
+            
+
+            
+
+            
+          </span>
+
+          
+            <span class="post-category" >
+            
+              <span class="post-meta-divider">|</span>
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-folder-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">分类于</span>
+              
+              
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/ServiceMesh/" itemprop="url" rel="index">
+                    <span itemprop="name">ServiceMesh</span>
+                  </a>
+                </span>
+
+                
+                
+              
+            </span>
+          
+
+          
+            
+          
+
+          
+
+          
+          
+
+          
+
+          
+
+        </div>
+      </header>
+    
+
+
+    <div class="post-body" itemprop="articleBody">
+
+      
+      
+
+      
+        <p>经过之前的对Istio的学习，大致明白了istio的机制,而要体会istio对流量的神奇魔法,自然离不开 virtualservice 与 destinationrule这两个对象了.</p>
+<span id="more"></span>
+
+
+
+<p>首先，再次说明下两个istio与kubernetes不同的地方：</p>
+<ol>
+<li>在kuberntes中, 服务与服务之间是通过clusterIP(kube-proxy)进行通信的， 而在istio中，对于<strong>网格间的两个服务</strong>，得益于xDS机制，通过CDS可直接得到EDS,  因此服务与服务之间不再经过clusterIP，而是直接到达对方的一个端点上(PortIP + Port)</li>
+<li>在istio中，<strong>对于网格间的服务需要访问网格外的服务</strong>，仍然通过 ClusterIP 进行通信，但有一点需要注意：<strong>这里并没有 <code>kube-proxy</code> 的参与！</strong>Envoy 自己实现了一套流量转发机制，当你访问 ClusterIP 时，Envoy 就把流量转发到具体的 Pod 上去，<strong>不需要借助 kube-proxy 的 <code>iptables</code> 或 <code>ipvs</code> 规则</strong></li>
+<li>对于入口流量管理，您可能会问： 为什么不直接使用 Kubernetes Ingress API ？ 原因是 Ingress API 无法表达 Istio 的路由需求。 Ingress 试图在不同的 HTTP 代理之间取一个公共的交集，因此只能支持最基本的 HTTP 路由，最终导致需要将代理的其他高级功能放入到注解（annotation）中，而注解的方式在多个代理之间是不兼容的，无法移植。Istio Gateway 通过将L4-L6配置与L7配置分离的方式克服了 Ingress 的这些缺点。 Gateway 只用于配置L4-L6功能（例如，对外公开的端口，TLS 配置），所有主流的L7代理均以统一的方式实现了这些功能。 然后，通过在 Gateway 上绑定 VirtualService 的方式，可以使用标准的 Istio 规则来控制进入 Gateway 的 HTTP 和 TCP 流量</li>
+</ol>
+<p>要理解virtualservice与DestinationRule，先划个重点: <strong>在Istio所提供的基本连接和发现基础上，通过virtualservice，能够将请求路由到Istio网格中的特定服务。每个virtualservice由一组DestinationRule组成，这些DestinationRule使Istio能够将virtualservice的每个给定请求匹配到网格内特定的目标服务(或目标服务子集)</strong></p>
+<p>通俗来讲就是，virtualservice定义了服务请求满足什么条件应该转发到哪里，而DestinationRule则定义了这些请求具体的路由规则,比如请求目标服务的什么版本, 负载均衡策略，连接限制等. </p>
+<p>以下所有的操作都是基于这个<a target="_blank" rel="noopener" href="https://github.com/zhoushuke/distributed-opentracing-on-kubernetes-and-istio">demo</a></p>
+<h3 id="VirtualService"><a href="#VirtualService" class="headerlink" title="VirtualService"></a>VirtualService</h3><p>一个简单的virtualservice的yaml文件格式如下.</p>
+<figure class="highlight yaml"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br></pre></td><td class="code"><pre><span class="line"><span class="attr">apiVersion:</span> <span class="string">networking.istio.io/v1alpha3</span></span><br><span class="line"><span class="attr">kind:</span> <span class="string">VirtualService</span></span><br><span class="line"><span class="attr">metadata:</span></span><br><span class="line">  <span class="attr">name:</span> <span class="string">service-b</span></span><br><span class="line"><span class="attr">spec:</span></span><br><span class="line">  <span class="attr">hosts:</span></span><br><span class="line">  <span class="bullet">-</span> <span class="string">service-b</span>  <span class="comment">#客户端访问服务的地址，扩展为 service-b.default.svc.cluster.local</span></span><br><span class="line">  <span class="attr">http:</span></span><br><span class="line">  <span class="bullet">-</span> <span class="attr">route:</span></span><br><span class="line">    <span class="bullet">-</span> <span class="attr">destination:</span>         <span class="comment"># 目标服务，这里不一定是service-b服务，也就是说, 虽然客户端访问service-b，但不一定就需要转到service-b，转发到其它服务也是支持的.</span></span><br><span class="line">        <span class="attr">host:</span> <span class="string">service-b</span>      <span class="comment">#扩展为 service-b.default.svc.cluster.local</span></span><br><span class="line">        <span class="attr">subset:</span> <span class="string">v1</span>           <span class="comment">#subset 会在destinationRule中使用</span></span><br></pre></td></tr></table></figure>
+
+<p><strong>VirtualService 映射的就是 Envoy 中的 Http Route Table</strong></p>
+<p>需要注意上面hosts字段对应的为kubernetes的service name, 不过这里进行了省略, 在实际使用时会被扩展为FQDN形式的域名.</p>
+<h3 id="DestinationRule"><a href="#DestinationRule" class="headerlink" title="DestinationRule"></a>DestinationRule</h3><p>对于上面新建的virtualservice,如果没有对应的destinationrule, 则请求service-b会被返回404(BlackHoleCluster), 因为现在还没有v1版本的service-b,路由不可达</p>
+<figure class="highlight yaml"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br></pre></td><td class="code"><pre><span class="line"><span class="attr">apiVersion:</span> <span class="string">networking.istio.io/v1alpha3</span></span><br><span class="line"><span class="attr">kind:</span> <span class="string">DestinationRule</span></span><br><span class="line"><span class="attr">metadata:</span></span><br><span class="line">  <span class="attr">name:</span> <span class="string">service-b</span></span><br><span class="line"><span class="attr">spec:</span></span><br><span class="line">  <span class="attr">host:</span> <span class="string">service-b</span>  <span class="comment">#这里的名字需要跟virtualservice中定义的一致</span></span><br><span class="line">  <span class="attr">trafficPolicy:</span></span><br><span class="line">    <span class="attr">loadBalancer:</span></span><br><span class="line">      <span class="attr">simple:</span> <span class="string">RANDOM</span></span><br><span class="line">  <span class="attr">subsets:</span></span><br><span class="line">  <span class="bullet">-</span> <span class="attr">name:</span> <span class="string">v1</span> <span class="comment">#这里的名字需要跟virtualservice中定义的一致</span></span><br><span class="line">    <span class="attr">labels:</span></span><br><span class="line">      <span class="attr">version:</span> <span class="string">v1</span></span><br><span class="line">  <span class="bullet">-</span> <span class="attr">name:</span> <span class="string">v2</span></span><br><span class="line">    <span class="attr">labels:</span></span><br><span class="line">      <span class="attr">version:</span> <span class="string">v2</span></span><br></pre></td></tr></table></figure>
+
+<p><strong>DestinationRule映射到 Envoy 的配置文件中就是 Cluster</strong></p>
+<p>这样，virtualservice创建的路由即可达了, subset机制类似kubernetes中给对应的pod打label</p>
+<p>上面虽然定义了subset存在v2的版本, 但是在virtualservice中并没有指定v2，因此100%的流量转向v1.</p>
+<p>当然virtualservice与destinatiorule结合支持非常多的属性, 比如流量分配、熔断机制、 错误注入等机制.</p>
+<p>总结: DestinationRule 经常和 VirtualService 结合使用，VirtualService 用到的服务子集 subset 在 DestinationRule 上也有定义。同时，在 VirtualService 上定义了一些规则，在 DestinationRule 上也定义了一些规则。那么，DestinationRule 和 VirtualService 都是用于流量治理的，为什么有些定义在 VirtualService 上，有些定义在 DestinationRule 上呢？<br>VirtualService 是一个虚拟 Service，描述的是满足什么条件的流量被哪个后端处理。可以对于这样一个 Restful 服务，每个路由规则都对应其中 Resource 中的资源匹配表达式。只是在 VirtualService 中，这个匹配条件不仅仅是路径方法的匹配，还是更开放的 Match 条件。而 DestinationRule 描述的是这个请求到达某个后端后怎么去处理，即所谓目标的规则，类似以上 Restful 服务到达的目的后端。<br>理解了这两个对象的定义，就不难理解其规则上的设计原理，从而理解负<strong>载均衡和熔断等策略为什么被定义在 DestinationRule 上</strong>。DestinationRule 定义了满足路由规则的流量到达后端后的访问策略。在 istio 中可以配置目标服务的负载均衡策略、连接池大小、异常实例驱逐规则等功能</p>
+<h3 id="实操"><a href="#实操" class="headerlink" title="实操"></a>实操</h3><p>服务模型如下:</p>
+<p><img src="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/architecture_v2.png"></p>
+<p>其中, service-b为3个实例， 分为blue，与green两个版本, github地址在<a target="_blank" rel="noopener" href="https://github.com/zhoushuke/distributed-opentracing-on-kubernetes-and-istio">这里</a></p>
+<h4 id="流量分配"><a href="#流量分配" class="headerlink" title="流量分配"></a>流量分配</h4><p><code>service-a访问service-b时, 20%的流量转到版本v-blue， 80%的流量转到版本v-green</code></p>
+<p>注意: <strong>subset指定的字段需要在pod上存在对应的label, istio不会自动给pod打上标签. 如果所有的pod上都没有该标签, 则路由不可达</strong></p>
+<figure class="highlight yaml"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br></pre></td><td class="code"><pre><span class="line"><span class="attr">apiVersion:</span> <span class="string">networking.istio.io/v1alpha3</span></span><br><span class="line"><span class="attr">kind:</span> <span class="string">VirtualService</span></span><br><span class="line"><span class="attr">metadata:</span></span><br><span class="line">  <span class="attr">name:</span> <span class="string">service-b-20</span></span><br><span class="line"><span class="attr">spec:</span></span><br><span class="line">  <span class="attr">hosts:</span></span><br><span class="line">  <span class="bullet">-</span> <span class="string">service-b</span></span><br><span class="line">  <span class="attr">http:</span></span><br><span class="line">  <span class="bullet">-</span> <span class="attr">route:</span></span><br><span class="line">    <span class="bullet">-</span> <span class="attr">destination:</span></span><br><span class="line">        <span class="attr">host:</span> <span class="string">service-b</span></span><br><span class="line">        <span class="attr">subset:</span> <span class="string">v-blue</span></span><br><span class="line">      <span class="attr">weight:</span> <span class="number">20</span></span><br><span class="line">    <span class="bullet">-</span> <span class="attr">destination:</span></span><br><span class="line">        <span class="attr">host:</span> <span class="string">service-b</span></span><br><span class="line">        <span class="attr">subset:</span> <span class="string">v-green</span></span><br><span class="line">      <span class="attr">weight:</span> <span class="number">80</span></span><br><span class="line"><span class="meta">---</span></span><br><span class="line"><span class="attr">apiVersion:</span> <span class="string">networking.istio.io/v1alpha3</span></span><br><span class="line"><span class="attr">kind:</span> <span class="string">DestinationRule</span></span><br><span class="line"><span class="attr">metadata:</span></span><br><span class="line">  <span class="attr">name:</span> <span class="string">service-b-20</span></span><br><span class="line"><span class="attr">spec:</span></span><br><span class="line">  <span class="attr">host:</span> <span class="string">service-b</span></span><br><span class="line">  <span class="attr">trafficPolicy:</span></span><br><span class="line">    <span class="attr">loadBalancer:</span></span><br><span class="line">      <span class="attr">simple:</span> <span class="string">ROUND_ROBIN</span></span><br><span class="line">  <span class="attr">subsets:</span></span><br><span class="line">  <span class="bullet">-</span> <span class="attr">name:</span> <span class="string">v-blue</span></span><br><span class="line">    <span class="attr">labels:</span></span><br><span class="line">      <span class="attr">version:</span> <span class="string">v-blue</span></span><br><span class="line">  <span class="bullet">-</span> <span class="attr">name:</span> <span class="string">v-green</span></span><br><span class="line">    <span class="attr">labels:</span></span><br><span class="line">      <span class="attr">version:</span> <span class="string">v-green</span></span><br></pre></td></tr></table></figure>
+
+<p>kubernetes apply  -f servicea-to-serviceb-20-80.yaml</p>
+<p>生成的pod如下, 可以看到，总共6个pod, 其中有3个pod有label为version&#x3D;1.5.2，这3个pod是无法响应请求的，</p>
+<p>只有verion&#x3D;v-blue或者v-green的可接受请求.</p>
+<p><img src="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20200224175906.png"></p>
+<p>从kiali上看效果可以看到, 流量的分配大致维持在2&#x2F;8的比例:</p>
+<p><img src="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20200224183640.png"></p>
+<h4 id="超时重试"><a href="#超时重试" class="headerlink" title="超时重试"></a>超时重试</h4><p><code>请求service-b的v-green版本时，出现5xx、connect-failure时进行重试,最大重试5次, 重试超时时间3s,整个请求超时7s</code></p>
+<p><strong>并不是所有的http code值都能够进行重试, 不能说指定200进行重试, 这个是做不到的</strong>, 重试的更多参数可参考<a target="_blank" rel="noopener" href="https://www.envoyproxy.io/docs/envoy/latest/configuration/http/http_filters/router_filter#x-envoy-retry-on">这里</a></p>
+<figure class="highlight yaml"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br></pre></td><td class="code"><pre><span class="line"><span class="attr">apiVersion:</span> <span class="string">networking.istio.io/v1alpha3</span></span><br><span class="line"><span class="attr">kind:</span> <span class="string">VirtualService</span></span><br><span class="line"><span class="attr">metadata:</span></span><br><span class="line">  <span class="attr">name:</span> <span class="string">service-b-timeout</span></span><br><span class="line"><span class="attr">spec:</span></span><br><span class="line">  <span class="attr">hosts:</span></span><br><span class="line">  <span class="bullet">-</span> <span class="string">service-b</span></span><br><span class="line">  <span class="attr">http:</span></span><br><span class="line">  <span class="bullet">-</span> <span class="attr">route:</span></span><br><span class="line">    <span class="bullet">-</span> <span class="attr">destination:</span></span><br><span class="line">        <span class="attr">host:</span> <span class="string">service-b</span></span><br><span class="line">        <span class="attr">subset:</span> <span class="string">v-blue</span></span><br><span class="line">      <span class="attr">weight:</span> <span class="number">20</span></span><br><span class="line">    <span class="bullet">-</span> <span class="attr">destination:</span></span><br><span class="line">        <span class="attr">host:</span> <span class="string">service-b</span></span><br><span class="line">        <span class="attr">subset:</span> <span class="string">v-green</span></span><br><span class="line">      <span class="attr">weight:</span> <span class="number">80</span></span><br><span class="line">    <span class="attr">retries:</span></span><br><span class="line">      <span class="attr">attempts:</span> <span class="number">5</span></span><br><span class="line">      <span class="attr">perTryTimeout:</span> <span class="string">3s</span></span><br><span class="line">      <span class="attr">retryOn:</span> <span class="string">5xx,connect-failure</span></span><br><span class="line">    <span class="attr">timeout:</span> <span class="string">7s</span></span><br><span class="line"><span class="meta">---</span></span><br><span class="line"><span class="attr">apiVersion:</span> <span class="string">networking.istio.io/v1alpha3</span></span><br><span class="line"><span class="attr">kind:</span> <span class="string">DestinationRule</span></span><br><span class="line"><span class="attr">metadata:</span></span><br><span class="line">  <span class="attr">name:</span> <span class="string">service-b-timeout</span></span><br><span class="line"><span class="attr">spec:</span></span><br><span class="line">  <span class="attr">host:</span> <span class="string">service-b</span></span><br><span class="line">  <span class="attr">subsets:</span></span><br><span class="line">  <span class="bullet">-</span> <span class="attr">name:</span> <span class="string">v-green</span></span><br><span class="line">    <span class="attr">labels:</span></span><br><span class="line">      <span class="attr">version:</span> <span class="string">v-green</span></span><br><span class="line">  <span class="bullet">-</span> <span class="attr">name:</span> <span class="string">v-blue</span></span><br><span class="line">    <span class="attr">labels:</span></span><br><span class="line">      <span class="attr">version:</span> <span class="string">v-blue</span></span><br></pre></td></tr></table></figure>
+
+<p>由于使用的这个例子已经打好的镜像, 不想再重新折腾了, 就不演示模拟5xx的场景了.</p>
+<h4 id="错误注入"><a href="#错误注入" class="headerlink" title="错误注入"></a>错误注入</h4><p><code>从 service-a访问 service-b的version: v-green的所有流量请求延迟5秒钟，并把流量的100%返回400错误</code></p>
+<figure class="highlight yaml"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br></pre></td><td class="code"><pre><span class="line"><span class="attr">apiVersion:</span> <span class="string">networking.istio.io/v1alpha3</span></span><br><span class="line"><span class="attr">kind:</span> <span class="string">VirtualService</span></span><br><span class="line"><span class="attr">metadata:</span></span><br><span class="line">  <span class="attr">name:</span> <span class="string">service-b-fault</span></span><br><span class="line"><span class="attr">spec:</span></span><br><span class="line">  <span class="attr">hosts:</span></span><br><span class="line">  <span class="bullet">-</span> <span class="string">service-b</span></span><br><span class="line">  <span class="attr">http:</span></span><br><span class="line">  <span class="bullet">-</span> <span class="attr">fault:</span></span><br><span class="line">      <span class="attr">delay:</span></span><br><span class="line">        <span class="attr">fixedDelay:</span> <span class="string">5s</span></span><br><span class="line">        <span class="attr">percentage:</span>    <span class="comment">#如果未指定，则所有的请求都将 延时5s</span></span><br><span class="line">          <span class="attr">value:</span> <span class="number">100</span></span><br><span class="line">      <span class="attr">abort:</span></span><br><span class="line">        <span class="attr">httpStatus:</span> <span class="number">400</span></span><br><span class="line">        <span class="attr">percentage:</span>    <span class="comment">#如果未指定，则所有的请求都将被返回400</span></span><br><span class="line">          <span class="attr">value:</span> <span class="number">100</span></span><br><span class="line">    <span class="attr">route:</span></span><br><span class="line">    <span class="bullet">-</span> <span class="attr">destination:</span></span><br><span class="line">        <span class="attr">host:</span> <span class="string">service-b</span></span><br><span class="line">        <span class="attr">subset:</span> <span class="string">v-green</span></span><br><span class="line"><span class="meta">---</span></span><br><span class="line"><span class="attr">apiVersion:</span> <span class="string">networking.istio.io/v1alpha3</span></span><br><span class="line"><span class="attr">kind:</span> <span class="string">DestinationRule</span></span><br><span class="line"><span class="attr">metadata:</span></span><br><span class="line">  <span class="attr">name:</span> <span class="string">service-b-fault</span></span><br><span class="line"><span class="attr">spec:</span></span><br><span class="line">  <span class="attr">host:</span> <span class="string">service-b</span></span><br><span class="line">  <span class="attr">subsets:</span></span><br><span class="line">  <span class="bullet">-</span> <span class="attr">name:</span> <span class="string">v-green</span></span><br><span class="line">    <span class="attr">labels:</span></span><br><span class="line">      <span class="attr">version:</span> <span class="string">v-green</span></span><br></pre></td></tr></table></figure>
+
+<p>效果:</p>
+<p><img src="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/image-20200226171926125.png"></p>
+<p>从请求时间可以看到, 请求被延迟5s之后直接返回了错误<strong>fault filter abort</strong>,故障注入起到了效果.</p>
+<p><img src="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/image-20200226172121466.png"></p>
+<p>需要注意的是: fault字段的故障注入是有先后顺序的, 如果把http错误跟时延顺序对调一下, 则效果又将不同.</p>
+<h4 id="请求熔断"><a href="#请求熔断" class="headerlink" title="请求熔断"></a>请求熔断</h4><p>熔断机制是作用在DestinationRule上的，这个很好理解, DistinationRule控制着流量转发的具体对象. 一个典型的例子如下:</p>
+<p><code>对于service-b的v-green版本的请求, 只允许最大一个连接</code></p>
+<p>部署以下规则<code>kubectl apply -f servicea-to-serviceb-circuit-breaker.yaml</code></p>
+<figure class="highlight yaml"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br></pre></td><td class="code"><pre><span class="line"><span class="attr">apiVersion:</span> <span class="string">networking.istio.io/v1alpha3</span></span><br><span class="line"><span class="attr">kind:</span> <span class="string">VirtualService</span></span><br><span class="line"><span class="attr">metadata:</span></span><br><span class="line">  <span class="attr">name:</span> <span class="string">service-b-20</span></span><br><span class="line"><span class="attr">spec:</span></span><br><span class="line">  <span class="attr">hosts:</span></span><br><span class="line">  <span class="bullet">-</span> <span class="string">service-b</span></span><br><span class="line">  <span class="attr">http:</span></span><br><span class="line">  <span class="bullet">-</span> <span class="attr">route:</span></span><br><span class="line">    <span class="bullet">-</span> <span class="attr">destination:</span></span><br><span class="line">        <span class="attr">host:</span> <span class="string">service-b</span></span><br><span class="line">        <span class="attr">subset:</span> <span class="string">v-blue</span></span><br><span class="line">      <span class="attr">weight:</span> <span class="number">20</span></span><br><span class="line">    <span class="bullet">-</span> <span class="attr">destination:</span></span><br><span class="line">        <span class="attr">host:</span> <span class="string">service-b</span></span><br><span class="line">        <span class="attr">subset:</span> <span class="string">v-green</span></span><br><span class="line">      <span class="attr">weight:</span> <span class="number">80</span></span><br><span class="line"><span class="meta">---</span></span><br><span class="line"><span class="attr">apiVersion:</span> <span class="string">networking.istio.io/v1alpha3</span></span><br><span class="line"><span class="attr">kind:</span> <span class="string">DestinationRule</span></span><br><span class="line"><span class="attr">metadata:</span></span><br><span class="line">  <span class="attr">name:</span> <span class="string">service-b-cb</span></span><br><span class="line"><span class="attr">spec:</span></span><br><span class="line">  <span class="attr">host:</span> <span class="string">service-b</span></span><br><span class="line">  <span class="attr">subsets:</span></span><br><span class="line">    <span class="bullet">-</span> <span class="attr">name:</span> <span class="string">service-b-blue</span></span><br><span class="line">      <span class="attr">labels:</span></span><br><span class="line">        <span class="attr">version:</span> <span class="string">v-blue</span></span><br><span class="line">    <span class="bullet">-</span> <span class="attr">name:</span> <span class="string">service-b-green</span></span><br><span class="line">      <span class="attr">labels:</span></span><br><span class="line">        <span class="attr">version:</span> <span class="string">v-green</span></span><br><span class="line">      <span class="attr">trafficPolicy:</span></span><br><span class="line">        <span class="attr">connectionPool:</span></span><br><span class="line">          <span class="attr">http:</span></span><br><span class="line">            <span class="attr">http1MaxPendingRequests:</span> <span class="number">1</span></span><br><span class="line">            <span class="attr">maxRequestsPerConnection:</span> <span class="number">1</span></span><br><span class="line">          <span class="attr">tcp:</span></span><br><span class="line">            <span class="attr">maxConnections:</span> <span class="number">1</span></span><br><span class="line">        <span class="attr">outlierDetection:</span></span><br><span class="line">            <span class="attr">baseEjectionTime:</span> <span class="string">10s</span></span><br><span class="line">            <span class="attr">consecutiveErrors:</span> <span class="number">1</span></span><br><span class="line">            <span class="attr">interval:</span> <span class="string">10s</span></span><br><span class="line">            <span class="attr">maxEjectionPercent:</span> <span class="number">100</span></span><br><span class="line"></span><br></pre></td></tr></table></figure>
+
+<p>关于trafficPolicy的更多参数说明, 可参考<a target="_blank" rel="noopener" href="https://www.servicemesher.com/istio-handbook/traffic-management/circuit-breaking-and-outlier-detection-in-istio.html">这里</a></p>
+<p>为了测试效果，需要安装一个测试工具, <a target="_blank" rel="noopener" href="https://github.com/istio/fortio">fortio</a>,这个工具在istio官方的httpbin目录下也存在, 可直接部署</p>
+<figure class="highlight yaml"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line"><span class="string">kubectl</span> <span class="string">apply</span> <span class="string">-f</span> <span class="string">samples/httpbin/sample-client/fortio-deploy.yaml</span></span><br></pre></td></tr></table></figure>
+
+<p>效果: </p>
+<p><strong>先测试一个连接的情况</strong>:</p>
+<p><code>kubectl exec -it fortio-deploy-7cb865f87f-vkkhz -c fortio /usr/bin/fortio -- load -c 1 -qps 0 -n 2 -loglevel Warning http://10.244.0.97:8088/api/v1/greeting</code></p>
+<p><img src="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/image-20200227120016154.png"></p>
+<p>一个连接的情况,发送的两个请求都正常返回</p>
+<p><strong>测试三个连接的情况:</strong></p>
+<p><code>kubectl exec -it fortio-deploy-7cb865f87f-vkkhz -c fortio /usr/bin/fortio -- load -c 3 -qps 0 -n 30 -loglevel Warning http://10.244.0.97:8088/api/v1/greeting</code></p>
+<p><img src="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/image-20200227121217432.png"></p>
+<p>上图中显示code -1为100%, service-a有如下红框标出的报错, 说明限制的连接数起到了熔断的作用.</p>
+<p>service-a前三条有正常日志,是因为service-a调用的链路里除了调用service-b,还调用了service-c, service-c这条跟没有限制.</p>
+<p><img src="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/image-20200227120836722.png"></p>
+<p>当然还有一些如HTTP Redirect，HTTP Rewrite等操作都能在Istio实现, 但一般来讲都会选择在入口处实现, 具体的可参考<a target="_blank" rel="noopener" href="https://istio.io/docs/reference/config/networking/virtual-service/">这里</a></p>
+<h3 id="错误"><a href="#错误" class="headerlink" title="错误"></a>错误</h3><p>在使用kiali的过程中, 或多或少会遇到istio的warning提示, 官方的kiali的错误说明<a target="_blank" rel="noopener" href="https://kiali.io/documentation/validations/">列表</a></p>
+<h4 id="More-than-one-Virtual-Service-for-same-host"><a href="#More-than-one-Virtual-Service-for-same-host" class="headerlink" title="More than one Virtual Service for same host"></a><a target="_blank" rel="noopener" href="https://kiali.io/documentation/validations/#_more_than_one_virtual_service_for_same_host">More than one Virtual Service for same host</a></h4><p> <img src="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/image-20200226161851384.png"></p>
+<p>出这个warning提示不影响istio的功能，原因在于存在多个virtualservice作用在service-b这个host上, 虽然Istio将合并配置，但istio建议不要在多个虚拟服务定义中定义相同的部分</p>
+<p>这里是因为存在另一个virtualservice，host一列中定义了”*“， 自然包含了service-b这个host，因此重合了</p>
+<p><img src="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/image-20200226162402855.png"></p>
+<h4 id="More-than-one-Gateway-for-the-same-host-port-combination"><a href="#More-than-one-Gateway-for-the-same-host-port-combination" class="headerlink" title="More than one Gateway for the same host port combination"></a><a target="_blank" rel="noopener" href="https://kiali.io/documentation/validations/#_more_than_one_gateway_for_the_same_host_port_combination">More than one Gateway for the same host port combination</a></h4><p><img src="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/image-20200226162612642.png"></p>
+<p>这个warning提示原因同上, 也因存在多个gateway作用于同一个hosts.</p>
+<p><strong>通过上面两个提示可以看出, 只要存在一个gateway或者virtualservice，使用了 hosts为”*“的定义，就能出现这个报错.</strong></p>
+<h4 id="mTLS-settings-of-a-non-local-Destination-Rule-are-overridden"><a href="#mTLS-settings-of-a-non-local-Destination-Rule-are-overridden" class="headerlink" title="mTLS settings of a non-local Destination Rule are overridden"></a><a target="_blank" rel="noopener" href="https://kiali.io/documentation/validations/#_mtls_settings_of_a_non_local_destination_rule_are_overridden">mTLS settings of a non-local Destination Rule are overridden</a></h4><p><img src="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/image-20200226163310584.png"></p>
+<p>原因在于不存在mtls配置</p>
+<p>可在spec指定即可.</p>
+<figure class="highlight yaml"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line"><span class="attr">spec:</span></span><br><span class="line">  <span class="attr">host:</span> <span class="string">service-b</span></span><br><span class="line">  <span class="attr">trafficPolicy:</span></span><br><span class="line">    <span class="attr">tls:</span></span><br><span class="line">      <span class="attr">mode:</span> <span class="string">SIMPLE</span></span><br></pre></td></tr></table></figure>
+
+
+
+<h4 id="ingressgateway-使用-NodePort暴露服务"><a href="#ingressgateway-使用-NodePort暴露服务" class="headerlink" title="ingressgateway 使用 NodePort暴露服务."></a>ingressgateway 使用 NodePort暴露服务.</h4><p>如果在测试的时候使用的nodeport的方式暴露服务(不是loadbalance), 在gateway&#x2F;virtualservice需要自定义域名的时候, 比如官方的bookinfo的例子，如果想通过bookinfo.local:30732&#x2F;productpage访问 productpage服务, hosts字段必须为”*“, 写bookinfo.local是行不通的,参考官方<a target="_blank" rel="noopener" href="https://istio.io/docs/tasks/traffic-management/ingress/ingress-control/#accessing-ingress-services-using-a-browser">说明</a></p>
+<p>这是因为当使用浏览器访问bookinfo.local:30732&#x2F;productpage时(&#x2F;etc&#x2F;hosts中指定了域名解析)，通过浏览器的debug可以看到请求中的host为Host: bookinfo.local:30732， 到达gateway时发现host中的域名(没有端口)跟请求中的域名比不对，导致404，同时, gateway中不支持域名:端口的形式，会报错, 因此, 这种情况下只能使用”*“</p>
+<p>当然，在生产环境中不太可能使用Nodeport的形式暴露服务.同时也会有DNS解析服务, 因此也不太可能有上述问题.我当时测试时没想通耽误了一些时间，因此记录一下.</p>
+<h4 id="只定义gateway-没有virtualservice"><a href="#只定义gateway-没有virtualservice" class="headerlink" title="只定义gateway, 没有virtualservice"></a>只定义gateway, 没有virtualservice</h4><p>最后, virtualservice还可以与gateway结合使用, 通过gateway向外暴露istio服务网格内的服务, 但当只定义了gateway而没有virtualservice时，请求会被转发到blackhole, 返回404, <a target="_blank" rel="noopener" href="https://izsk.me/2020/02/16/Istio-Gateway/">Istio-Gsteway</a></p>
+<figure class="highlight yaml"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br></pre></td><td class="code"><pre><span class="line"><span class="string">$</span>  <span class="string">istioctl</span> <span class="string">proxy-config</span> <span class="string">route</span> <span class="string">$INGRESS_POD</span> <span class="string">-o</span> <span class="string">json</span>  <span class="string">-n</span> <span class="string">istio-system</span></span><br><span class="line"> [</span><br><span class="line">     &#123;</span><br><span class="line">         <span class="attr">&quot;name&quot;:</span> <span class="string">&quot;http.80&quot;</span>,</span><br><span class="line">         <span class="attr">&quot;virtualHosts&quot;:</span> [</span><br><span class="line">             &#123;</span><br><span class="line">                 <span class="attr">&quot;name&quot;:</span> <span class="string">&quot;blackhole:80&quot;</span>,</span><br><span class="line">                 <span class="attr">&quot;domains&quot;:</span> [</span><br><span class="line">                     <span class="string">&quot;*&quot;</span></span><br><span class="line">                 ],</span><br><span class="line">                 <span class="attr">&quot;routes&quot;:</span> [</span><br><span class="line">                     &#123;</span><br><span class="line">                         <span class="attr">&quot;match&quot;:</span> &#123;</span><br><span class="line">                             <span class="attr">&quot;prefix&quot;:</span> <span class="string">&quot;/&quot;</span></span><br><span class="line">                         &#125;,</span><br><span class="line">                         <span class="attr">&quot;directResponse&quot;:</span> &#123;</span><br><span class="line">                             <span class="attr">&quot;status&quot;:</span> <span class="number">404</span></span><br><span class="line">                         &#125;,</span><br><span class="line">                         <span class="attr">&quot;perFilterConfig&quot;:</span> &#123;</span><br><span class="line">                             <span class="attr">&quot;mixer&quot;:</span> &#123;&#125;</span><br><span class="line">                         &#125;</span><br><span class="line">                     &#125;</span><br><span class="line">                 ]</span><br><span class="line">             &#125;</span><br><span class="line">         ],</span><br><span class="line">         <span class="attr">&quot;validateClusters&quot;:</span> <span class="literal">false</span></span><br><span class="line">     &#125;</span><br><span class="line"> ]</span><br></pre></td></tr></table></figure>
+
+
+
+
+
+<h3 id="参考文章"><a href="#参考文章" class="headerlink" title="参考文章:"></a><strong>参考文章:</strong></h3><blockquote>
+<ul>
+<li><a target="_blank" rel="noopener" href="https://mp.weixin.qq.com/s?__biz=MzU1MzY4NzQ1OA==&amp;mid=2247483799&amp;idx=1&amp;sn=482cf48661eafcdb072450286cd8bc97&amp;chksm=fbee415acc99c84c7a7ef3f2da726815203097f62bb8409102c619a1a1c6e7e3ea85c0154e76&amp;scene=21#wechat_redirect">https://mp.weixin.qq.com/s?__biz=MzU1MzY4NzQ1OA==&amp;mid=2247483799&amp;idx=1&amp;sn=482cf48661eafcdb072450286cd8bc97&amp;chksm=fbee415acc99c84c7a7ef3f2da726815203097f62bb8409102c619a1a1c6e7e3ea85c0154e76&amp;scene=21#wechat_redirect</a></li>
+<li><a target="_blank" rel="noopener" href="https://jimmysong.io/posts/envoy-sidecar-injection-in-istio-service-mesh-deep-dive/">https://jimmysong.io/posts/envoy-sidecar-injection-in-istio-service-mesh-deep-dive/</a></li>
+<li><a target="_blank" rel="noopener" href="https://kubernetes.io/docs/reference/access-authn-authz/admission-controllers/">https://kubernetes.io/docs/reference/access-authn-authz/admission-controllers/</a></li>
+<li><a target="_blank" rel="noopener" href="https://jimmysong.io/posts/istio-traffic-management-basic-concepts/">https://jimmysong.io/posts/istio-traffic-management-basic-concepts/</a></li>
+<li><a target="_blank" rel="noopener" href="https://zhaohuabing.com/post/2018-09-25-istio-traffic-management-impl-intro/">https://zhaohuabing.com/post/2018-09-25-istio-traffic-management-impl-intro/</a></li>
+<li><a target="_blank" rel="noopener" href="https://kiali.io/documentation/validations/#_more_than_one_gateway_for_the_same_host_port_combination">https://kiali.io/documentation/validations/#_more_than_one_gateway_for_the_same_host_port_combination</a></li>
+<li><a target="_blank" rel="noopener" href="https://www.envoyproxy.io/docs/envoy/latest/configuration/http/http_filters/router_filter#x-envoy-retry-on">https://www.envoyproxy.io/docs/envoy/latest/configuration/http/http_filters/router_filter#x-envoy-retry-on</a></li>
+<li><a target="_blank" rel="noopener" href="https://octopus.com/blog/istio/istio-virtualservice">https://octopus.com/blog/istio/istio-virtualservice</a></li>
+</ul>
+</blockquote>
+<h3 id="转载请注明出处https-izsk-me"><a href="#转载请注明出处https-izsk-me" class="headerlink" title="转载请注明出处https://izsk.me"></a><strong>转载请注明出处<a target="_blank" rel="noopener" href="https://izsk.me/">https://izsk.me</a></strong></h3>
+      
+    </div>
+
+    <div>
+      
+        
+<div id="wechat_subscriber" style="display: block; padding: 10px 0; margin: 20px auto; width: 100%; text-align: center">
+    <img id="wechat_subscriber_qcode" src="/images/websitecode250.png" alt=" wechat" style="width: 200px; max-width: 100%;"/>
+    <div>Scan Me To Read on Phone</div>
+</div>
+
+
+      
+    </div>
+
+    <div>
+      
+        
+  <div style="padding: 10px 0; margin: 20px auto; width: 90%; text-align: center;">
+    <div>I know you won't do this,but what if you did?</div>
+    <button id="rewardButton" disable="enable" onclick="var qr = document.getElementById('QR'); if (qr.style.display === 'none') {qr.style.display='block';} else {qr.style.display='none'}">
+      <span>赏</span>
+    </button>
+    <div id="QR" style="display: none;">
+      
+        <div id="wechat" style="display: inline-block">
+          <img id="wechat_qr" src="/images/wechatpayme.png" alt=" WeChat Pay"/>
+          <p>微信打赏</p>
+        </div>
+      
+      
+        <div id="alipay" style="display: inline-block">
+          <img id="alipay_qr" src="/images/alipayme.jpg" alt=" Alipay"/>
+          <p>支付宝打赏</p>
+        </div>
+      
     </div>
   </div>
 
-{% endblock %}
 
-{% block sidebar %}
-  {{ sidebar_template.render(true) }}
-{% endblock %}
+      
+    </div>
 
 
-{% block script_extra %}
-  {% include '_scripts/pages/post-details.swig' %}
-{% endblock %}
+    <footer class="post-footer">
+      
+        <div class="post-tags">
+          
+            <a href="/tags/ServiceMesh/" rel="tag"># ServiceMesh</a>
+          
+        </div>
+      
+
+      
+        <div class="post-nav">
+          <div class="post-nav-next post-nav-item">
+            
+              <a href="/2020/02/21/grpc-gateway-with-opentracing/" rel="next" title="Istio学习(使用jaeger实现grpc-gateway全链路追踪)">
+                <i class="fa fa-chevron-left"></i> Istio学习(使用jaeger实现grpc-gateway全链路追踪)
+              </a>
+            
+          </div>
+
+          <span class="post-nav-divider"></span>
+
+          <div class="post-nav-prev post-nav-item">
+            
+              <a href="/2020/03/02/Kubernetes-what-happend-when-curl-internet-inside-pod/" rel="prev" title="Kubernetes学习(当在kubernetes集群内的某个pod中访问google.com时到底发生了什么)">
+                Kubernetes学习(当在kubernetes集群内的某个pod中访问google.com时到底发生了什么) <i class="fa fa-chevron-right"></i>
+              </a>
+            
+          </div>
+        </div>
+      
+
+      
+      
+    </footer>
+  </article>
+
+
+
+    <div class="post-spread">
+      
+    </div>
+  </div>
+
+
+          </div>
+          
+
+
+          
+  <div class="comments" id="comments">
+    
+  </div>
+
+
+        </div>
+        
+          
+  
+  <div class="sidebar-toggle">
+    <div class="sidebar-toggle-line-wrap">
+      <span class="sidebar-toggle-line sidebar-toggle-line-first"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-middle"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-last"></span>
+    </div>
+  </div>
+
+  <aside id="sidebar" class="sidebar">
+    <div class="sidebar-inner">
+
+      
+
+      
+        <ul class="sidebar-nav motion-element">
+          <li class="sidebar-nav-toc sidebar-nav-active" data-target="post-toc-wrap" >
+            文章目录
+          </li>
+          <li class="sidebar-nav-overview" data-target="site-overview">
+            站点概览
+          </li>
+        </ul>
+      
+
+      <section class="site-overview sidebar-panel">
+        <div class="site-author motion-element" itemprop="author" itemscope itemtype="http://schema.org/Person">
+          <img class="site-author-image" itemprop="image"
+               src="/images/avatar.gif"
+               alt="" />
+          <p class="site-author-name" itemprop="name"></p>
+          <p class="site-description motion-element" itemprop="description"></p>
+        </div>
+        <nav class="site-state motion-element">
+        
+          
+            <div class="site-state-item site-state-posts">
+              <a href="/archives">
+                <span class="site-state-item-count">192</span>
+                <span class="site-state-item-name">日志</span>
+              </a>
+            </div>
+          
+
+          
+            <div class="site-state-item site-state-categories">
+              <a href="/categories">
+                <span class="site-state-item-count">14</span>
+                <span class="site-state-item-name">分类</span>
+              </a>
+            </div>
+          
+
+          
+            <div class="site-state-item site-state-tags">
+              <a href="/tags">
+                <span class="site-state-item-count">14</span>
+                <span class="site-state-item-name">标签</span>
+              </a>
+            </div>
+          
+
+        </nav>
+
+        
+
+        <div class="links-of-author motion-element">
+          
+        </div>
+
+        
+        
+
+        
+        
+
+        
+
+
+      </section>
+
+      
+      <!--noindex-->
+        <section class="post-toc-wrap motion-element sidebar-panel sidebar-panel-active">
+          <div class="post-toc">
+
+            
+              
+            
+
+            
+              <div class="post-toc-content"><ol class="nav"><li class="nav-item nav-level-3"><a class="nav-link" href="#VirtualService"><span class="nav-number">1.</span> <span class="nav-text">VirtualService</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#DestinationRule"><span class="nav-number">2.</span> <span class="nav-text">DestinationRule</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E5%AE%9E%E6%93%8D"><span class="nav-number">3.</span> <span class="nav-text">实操</span></a><ol class="nav-child"><li class="nav-item nav-level-4"><a class="nav-link" href="#%E6%B5%81%E9%87%8F%E5%88%86%E9%85%8D"><span class="nav-number">3.1.</span> <span class="nav-text">流量分配</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#%E8%B6%85%E6%97%B6%E9%87%8D%E8%AF%95"><span class="nav-number">3.2.</span> <span class="nav-text">超时重试</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#%E9%94%99%E8%AF%AF%E6%B3%A8%E5%85%A5"><span class="nav-number">3.3.</span> <span class="nav-text">错误注入</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#%E8%AF%B7%E6%B1%82%E7%86%94%E6%96%AD"><span class="nav-number">3.4.</span> <span class="nav-text">请求熔断</span></a></li></ol></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E9%94%99%E8%AF%AF"><span class="nav-number">4.</span> <span class="nav-text">错误</span></a><ol class="nav-child"><li class="nav-item nav-level-4"><a class="nav-link" href="#More-than-one-Virtual-Service-for-same-host"><span class="nav-number">4.1.</span> <span class="nav-text">More than one Virtual Service for same host</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#More-than-one-Gateway-for-the-same-host-port-combination"><span class="nav-number">4.2.</span> <span class="nav-text">More than one Gateway for the same host port combination</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#mTLS-settings-of-a-non-local-Destination-Rule-are-overridden"><span class="nav-number">4.3.</span> <span class="nav-text">mTLS settings of a non-local Destination Rule are overridden</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#ingressgateway-%E4%BD%BF%E7%94%A8-NodePort%E6%9A%B4%E9%9C%B2%E6%9C%8D%E5%8A%A1"><span class="nav-number">4.4.</span> <span class="nav-text">ingressgateway 使用 NodePort暴露服务.</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#%E5%8F%AA%E5%AE%9A%E4%B9%89gateway-%E6%B2%A1%E6%9C%89virtualservice"><span class="nav-number">4.5.</span> <span class="nav-text">只定义gateway, 没有virtualservice</span></a></li></ol></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E5%8F%82%E8%80%83%E6%96%87%E7%AB%A0"><span class="nav-number">5.</span> <span class="nav-text">参考文章:</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E8%BD%AC%E8%BD%BD%E8%AF%B7%E6%B3%A8%E6%98%8E%E5%87%BA%E5%A4%84https-izsk-me"><span class="nav-number">6.</span> <span class="nav-text">转载请注明出处https:&#x2F;&#x2F;izsk.me</span></a></li></ol></div>
+            
+
+          </div>
+        </section>
+      <!--/noindex-->
+      
+
+    </div>
+  </aside>
+
+
+        
+      </div>
+    </main>
+
+    <footer id="footer" class="footer">
+      <div class="footer-inner">
+        <div class="copyright" >
+  
+  &copy; 
+  <span itemprop="copyrightYear">2022</span>
+  <span class="with-love">
+    <i class="fa fa-heart"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">Z.S.K.</span>
+</div>
+
+
+<div class="powered-by">
+  Supported by <a class="theme-link" target="_blank" rel="noopener" href="https://hexo.io">Hexo</a>
+</div>
+
+<div class="theme-info">
+  Theme -
+  <a class="theme-link" target="_blank" rel="noopener" href="https://github.com/iissnan/hexo-theme-next">
+    NexT.Mist
+  </a>
+</div>
+
+
+        
+
+        
+      </div>
+    </footer>
+
+    <div class="back-to-top">
+      <i class="fa fa-arrow-up"></i>
+    </div>
+  </div>
+
+  
+
+<script type="text/javascript">
+  if (Object.prototype.toString.call(window.Promise) !== '[object Function]') {
+    window.Promise = null;
+  }
+</script>
+
+
+
+
+
+
+
+
+
+  
+
+
+
+  
+  <script type="text/javascript" src="/lib/jquery/index.js?v=2.1.3"></script>
+
+  
+  <script type="text/javascript" src="/lib/fastclick/lib/fastclick.min.js?v=1.0.6"></script>
+
+  
+  <script type="text/javascript" src="/lib/jquery_lazyload/jquery.lazyload.js?v=1.9.7"></script>
+
+  
+  <script type="text/javascript" src="/lib/velocity/velocity.min.js?v=1.2.1"></script>
+
+  
+  <script type="text/javascript" src="/lib/velocity/velocity.ui.min.js?v=1.2.1"></script>
+
+  
+  <script type="text/javascript" src="/lib/fancybox/source/jquery.fancybox.pack.js?v=2.1.5"></script>
+
+
+  
+
+
+  <script type="text/javascript" src="/js/src/utils.js?v=5.1.0"></script>
+
+  <script type="text/javascript" src="/js/src/motion.js?v=5.1.0"></script>
+
+
+
+  
+  
+
+  
+  <script type="text/javascript" src="/js/src/scrollspy.js?v=5.1.0"></script>
+<script type="text/javascript" src="/js/src/post-details.js?v=5.1.0"></script>
+
+
+
+  
+
+
+  <script type="text/javascript" src="/js/src/bootstrap.js?v=5.1.0"></script>
+
+
+
+  
+
+
+
+  
+
+
+
+
+	
+
+
+
+
+
+  
+
+
+
+
+  
+  
+  <script type="text/javascript">
+    // Popup Window;
+    var isfetched = false;
+    // Search DB path;
+    var search_path = "search.xml";
+    if (search_path.length == 0) {
+      search_path = "search.xml";
+    }
+    var path = "/" + search_path;
+    // monitor main search box;
+
+    function proceedsearch() {
+      $("body").append('<div class="popoverlay">').css('overflow', 'hidden');
+      $('.popup').toggle();
+    }
+    // search function;
+    var searchFunc = function(path, search_id, content_id) {
+      'use strict';
+      $.ajax({
+        url: path,
+        dataType: "xml",
+        async: true,
+        success: function( xmlResponse ) {
+          // get the contents from search data
+          isfetched = true;
+          $('.popup').detach().appendTo('.header-inner');
+          var datas = $( "entry", xmlResponse ).map(function() {
+            return {
+              title: $( "title", this ).text(),
+              content: $("content",this).text(),
+              url: $( "url" , this).text()
+            };
+          }).get();
+          var $input = document.getElementById(search_id);
+          var $resultContent = document.getElementById(content_id);
+          $input.addEventListener('input', function(){
+            var matchcounts = 0;
+            var str='<ul class=\"search-result-list\">';
+            var keywords = this.value.trim().toLowerCase().split(/[\s\-]+/);
+            $resultContent.innerHTML = "";
+            if (this.value.trim().length > 1) {
+              // perform local searching
+              datas.forEach(function(data) {
+                var isMatch = false;
+                var content_index = [];
+                var data_title = data.title.trim().toLowerCase();
+                var data_content = data.content.trim().replace(/<[^>]+>/g,"").toLowerCase();
+                var data_url = decodeURIComponent(data.url);
+                var index_title = -1;
+                var index_content = -1;
+                var first_occur = -1;
+                // only match artiles with not empty titles and contents
+                if(data_title != '') {
+                  keywords.forEach(function(keyword, i) {
+                    index_title = data_title.indexOf(keyword);
+                    index_content = data_content.indexOf(keyword);
+                    if( index_title >= 0 || index_content >= 0 ){
+                      isMatch = true;
+                      if (i == 0) {
+                        first_occur = index_content;
+                      }
+                    }
+
+                  });
+                }
+                // show search results
+                if (isMatch) {
+                  matchcounts += 1;
+                  str += "<li><a href='"+ data_url +"' class='search-result-title'>"+ data_title +"</a>";
+                  var content = data.content.trim().replace(/<[^>]+>/g,"");
+                  if (first_occur >= 0) {
+                    // cut out 100 characters
+                    var start = first_occur - 20;
+                    var end = first_occur + 80;
+                    if(start < 0){
+                      start = 0;
+                    }
+                    if(start == 0){
+                      end = 50;
+                    }
+                    if(end > content.length){
+                      end = content.length;
+                    }
+                    var match_content = content.substring(start, end);
+                    // highlight all keywords
+                    keywords.forEach(function(keyword){
+                      var regS = new RegExp(keyword, "gi");
+                      match_content = match_content.replace(regS, "<b class=\"search-keyword\">"+keyword+"</b>");
+                    });
+
+                    str += "<p class=\"search-result\">" + match_content +"...</p>"
+                  }
+                  str += "</li>";
+                }
+              })};
+            str += "</ul>";
+            if (matchcounts == 0) { str = '<div id="no-result"><i class="fa fa-frown-o fa-5x" /></div>' }
+            if (keywords == "") { str = '<div id="no-result"><i class="fa fa-search fa-5x" /></div>' }
+            $resultContent.innerHTML = str;
+          });
+          proceedsearch();
+        }
+      });}
+
+    // handle and trigger popup window;
+    $('.popup-trigger').click(function(e) {
+      e.stopPropagation();
+      if (isfetched == false) {
+        searchFunc(path, 'local-search-input', 'local-search-result');
+      } else {
+        proceedsearch();
+      };
+    });
+
+    $('.popup-btn-close').click(function(e){
+      $('.popup').hide();
+      $(".popoverlay").remove();
+      $('body').css('overflow', '');
+    });
+    $('.popup').click(function(e){
+      e.stopPropagation();
+    });
+  </script>
+
+
+  
+
+  
+
+  
+
+  
+
+
+</body>
+</html>

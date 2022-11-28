@@ -1,38 +1,999 @@
-{% extends '_layout.swig' %}
-{% import '_macro/post.swig' as post_template %}
-{% import '_macro/sidebar.swig' as sidebar_template %}
+<!doctype html>
 
 
-{% block title %} {{ page.title }} | {{ config.title }} {% endblock %}
 
-{% block page_class %}page-post-detail{% endblock %}
+  
 
 
-{% block content %}
+<html class="theme-next mist use-motion" lang="zh-Hans">
+<head>
+  <meta charset="UTF-8"/>
+<meta http-equiv="X-UA-Compatible" content="IE=edge" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1"/>
+
+
+
+<meta http-equiv="Cache-Control" content="no-transform" />
+<meta http-equiv="Cache-Control" content="no-siteapp" />
+
+
+
+
+
+
+
+
+
+
+
+
+  
+  
+  <link href="/lib/fancybox/source/jquery.fancybox.css?v=2.1.5" rel="stylesheet" type="text/css" />
+
+
+
+
+  
+  
+  
+  
+
+  
+    
+    
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+    
+    
+    <link href="//fonts.googleapis.com/css?family=Lato:300,300italic,400,400italic,700,700italic&subset=latin,latin-ext" rel="stylesheet" type="text/css">
+  
+
+
+
+
+
+
+<link href="/lib/font-awesome/css/font-awesome.min.css?v=4.6.2" rel="stylesheet" type="text/css" />
+
+<link href="/css/main.css?v=5.1.0" rel="stylesheet" type="text/css" />
+
+
+  <meta name="keywords" content="Kubernetes," />
+
+
+
+
+
+
+
+
+  <link rel="shortcut icon" type="image/x-icon" href="/favicon.ico?v=5.1.0" />
+
+
+
+
+
+
+<meta name="description" content="看到一篇关于kubectl运行的机制，觉得写得非常不错，图文并茂很形象，就翻译成了中文记录一下，原文地址: https:&#x2F;&#x2F;erkanerol.github.io&#x2F;post&#x2F;how-kubectl-exec-works&#x2F;">
+<meta property="og:type" content="article">
+<meta property="og:title" content="Kubernetes学习(kubectl的工作机制分析)">
+<meta property="og:url" content="https://zhoushuke.github.io/2021/01/10/Kubernetes-how-does-kubectl-work/index.html">
+<meta property="og:site_name" content="Z.S.K.&#39;s Records">
+<meta property="og:description" content="看到一篇关于kubectl运行的机制，觉得写得非常不错，图文并茂很形象，就翻译成了中文记录一下，原文地址: https:&#x2F;&#x2F;erkanerol.github.io&#x2F;post&#x2F;how-kubectl-exec-works&#x2F;">
+<meta property="og:locale">
+<meta property="og:image" content="https://erkanerol.github.io/img/kubectl-exec/components.png">
+<meta property="og:image" content="https://erkanerol.github.io/img/kubectl-exec/rest-request.png">
+<meta property="og:image" content="https://erkanerol.github.io/img/kubectl-exec/api-server-to-kubelet.png">
+<meta property="og:image" content="https://erkanerol.github.io/img/kubectl-exec/kubelet-to-container-runtime.png">
+<meta property="og:image" content="https://erkanerol.github.io/img/kubectl-exec/container-runtime-to-kernel.png">
+<meta property="og:image" content="https://erkanerol.github.io/img/kubectl-exec/kernel-puts.png">
+<meta property="article:published_time" content="2021-01-10T06:30:53.000Z">
+<meta property="article:modified_time" content="2022-07-19T03:16:00.966Z">
+<meta property="article:author" content="Z.S.K.">
+<meta property="article:tag" content="Kubernetes">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:image" content="https://erkanerol.github.io/img/kubectl-exec/components.png">
+
+
+
+<script type="text/javascript" id="hexo.configurations">
+  var NexT = window.NexT || {};
+  var CONFIG = {
+    root: '',
+    scheme: 'Mist',
+    sidebar: {"position":"left","display":"post"},
+    fancybox: true,
+    motion: true,
+    duoshuo: {
+      userId: 'undefined',
+      author: '博主'
+    },
+    algolia: {
+      applicationID: '',
+      apiKey: '',
+      indexName: '',
+      hits: {"per_page":10},
+      labels: {"input_placeholder":"Search for Posts","hits_empty":"We didn't find any results for the search: ${query}","hits_stats":"${hits} results found in ${time} ms"}
+    }
+  };
+</script>
+
+
+
+  <link rel="canonical" href="https://zhoushuke.github.io/2021/01/10/Kubernetes-how-does-kubectl-work/"/>
+
+
+
+
+
+  <title> Kubernetes学习(kubectl的工作机制分析) | Z.S.K.'s Records </title>
+<meta name="generator" content="Hexo 6.2.0"></head>
+
+<body itemscope itemtype="http://schema.org/WebPage" lang="zh-Hans">
+
+  
+
+
+
+
+
+
+
+
+
+
+  
+  
+    
+  
+
+  <div class="container one-collumn sidebar-position-left page-post-detail ">
+    <div class="headband"></div>
+
+    <header id="header" class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-meta ">
+  
+
+  <div class="custom-logo-site-title">
+    <a href="/"  class="brand" rel="start">
+      <span class="logo-line-before"><i></i></span>
+      <span class="site-title">Z.S.K.'s Records</span>
+      <span class="logo-line-after"><i></i></span>
+    </a>
+  </div>
+    
+      <p class="site-subtitle"></p>
+    
+</div>
+
+<div class="site-nav-toggle">
+  <button>
+    <span class="btn-bar"></span>
+    <span class="btn-bar"></span>
+    <span class="btn-bar"></span>
+  </button>
+</div>
+
+<nav class="site-nav">
+  
+
+  
+    <ul id="menu" class="menu">
+      
+        
+        <li class="menu-item menu-item-home">
+          <a href="/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-home"></i> <br />
+            
+            首页
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-categories">
+          <a href="/categories" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-th"></i> <br />
+            
+            分类
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-about">
+          <a href="/about/ZSK-Profile.pdf" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-user"></i> <br />
+            
+            简历
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-archives">
+          <a href="/archives" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-archive"></i> <br />
+            
+            归档
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-tags">
+          <a href="/tags" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-tags"></i> <br />
+            
+            标签
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-commonweal">
+          <a href="/404.html" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-heartbeat"></i> <br />
+            
+            公益404
+          </a>
+        </li>
+      
+
+      
+        <li class="menu-item menu-item-search">
+          
+            <a href="javascript:;" class="popup-trigger">
+          
+            
+              <i class="menu-item-icon fa fa-search fa-fw"></i> <br />
+            
+            搜索
+          </a>
+        </li>
+      
+    </ul>
+  
+
+  
+    <div class="site-search">
+      
+  <div class="popup">
+ <span class="search-icon fa fa-search"></span>
+ <input type="text" id="local-search-input">
+ <div id="local-search-result"></div>
+ <span class="popup-btn-close">close</span>
+</div>
+
+
+    </div>
+  
+</nav>
+
+
+
+ </div>
+    </header>
+
+    <main id="main" class="main">
+      <div class="main-inner">
+        <div class="content-wrap">
+          <div id="content" class="content">
+            
 
   <div id="posts" class="posts-expand">
-    {{ post_template.render(page) }}
+    
 
-    <div class="post-spread">
-      {% if theme.jiathis %}
-        {% include '_partials/share/jiathis.swig' %}
-      {% elseif theme.baidushare %}
-        {% include '_partials/share/baidushare.swig' %}
-      {% elseif theme.add_this_id %}
-        {% include '_partials/share/add-this.swig' %}
-      {% elseif theme.duoshuo_shortname and theme.duoshuo_share %}
-        {% include '_partials/share/duoshuo_share.swig' %}
-      {% endif %}
+  
+
+  
+  
+  
+
+  <article class="post post-type-normal " itemscope itemtype="http://schema.org/Article">
+  <link itemprop="mainEntityOfPage" href="https://zhoushuke.github.io/2021/01/10/Kubernetes-how-does-kubectl-work/">
+
+  <span style="display:none" itemprop="author" itemscope itemtype="http://schema.org/Person">
+    <meta itemprop="name" content="">
+    <meta itemprop="description" content="">
+    <meta itemprop="image" content="/images/avatar.gif">
+  </span>
+
+  <span style="display:none" itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+    <meta itemprop="name" content="Z.S.K.'s Records">
+    <span style="display:none" itemprop="logo" itemscope itemtype="http://schema.org/ImageObject">
+      <img style="display:none;" itemprop="url image" alt="Z.S.K.'s Records" src="">
+    </span>
+  </span>
+
+    
+      <header class="post-header">
+
+        
+        
+          <h1 class="post-title" itemprop="name headline">
+            
+            
+              
+                Kubernetes学习(kubectl的工作机制分析)
+              
+            
+          </h1>
+        
+
+        <div class="post-meta">
+          <span class="post-time">
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">发表于</span>
+              
+              <time title="Post created" itemprop="dateCreated datePublished" datetime="2021-01-10T14:30:53+08:00">
+                2021-01-10
+              </time>
+            
+
+            
+
+            
+          </span>
+
+          
+            <span class="post-category" >
+            
+              <span class="post-meta-divider">|</span>
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-folder-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">分类于</span>
+              
+              
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/Kubernetes/" itemprop="url" rel="index">
+                    <span itemprop="name">Kubernetes</span>
+                  </a>
+                </span>
+
+                
+                
+              
+            </span>
+          
+
+          
+            
+          
+
+          
+
+          
+          
+
+          
+
+          
+
+        </div>
+      </header>
+    
+
+
+    <div class="post-body" itemprop="articleBody">
+
+      
+      
+
+      
+        <p>看到一篇关于kubectl运行的机制，觉得写得非常不错，图文并茂很形象，就翻译成了中文记录一下，原文地址: <a target="_blank" rel="noopener" href="https://erkanerol.github.io/post/how-kubectl-exec-works/">https://erkanerol.github.io/post/how-kubectl-exec-works/</a></p>
+<span id="more"></span>
+
+
+
+<p>上周五，我的一位同事问了一个有关如何使用go-client在pod中执行命令的问题。我不知道答案，我注意到我从未想过“ kubectl exec”中的机制。我有一些想法，但是我不100％确定。我需要通过实践来找到答案，在阅读了一些博客，文档和源代码后，我学到了很多东西。在这篇博客中，我将分享我的理解和发现。</p>
+<p>如果出现问题，可在以下频道找到我 :<a target="_blank" rel="noopener" href="https://twitter.com/erkan_erol">https://twitter.com/erkan_erol</a>_</p>
+<h2 id="Setup"><a href="#Setup" class="headerlink" title="Setup"></a>Setup</h2><p>我克隆了<a target="_blank" rel="noopener" href="https://github.com/ecomm-integration-ballerina/kubernetes-cluster%EF%BC%8C%E4%BB%A5%E4%BE%BF%E5%9C%A8MacBook%E4%B8%AD%E5%88%9B%E5%BB%BAk8s%E9%9B%86%E7%BE%A4%E3%80%82%E6%88%91%E4%BF%AE%E6%94%B9kubelet%E9%85%8D%E7%BD%AE%E4%B8%AD%E8%8A%82%E7%82%B9%E7%9A%84IP%E5%9C%B0%E5%9D%80%EF%BC%8C%E5%9B%A0%E4%B8%BA%E9%BB%98%E8%AE%A4%E9%85%8D%E7%BD%AE%E4%B8%8D%E5%85%81%E8%AE%B8%E6%88%91%E8%BF%90%E8%A1%8C%60kubectl">https://github.com/ecomm-integration-ballerina/kubernetes-cluster，以便在MacBook中创建k8s集群。我修改kubelet配置中节点的IP地址，因为默认配置不允许我运行`kubectl</a> exec&#96;。您可以在<a target="_blank" rel="noopener" href="https://medium.com/@joatmon08/playing-with-kubeadm-in-vagrant-machines-part-2-bac431095706">这里</a>找到根本原因。</p>
+<p>下文提到的关于机器的对应关系如下:</p>
+<ul>
+<li>any machine &#x3D; MacBook</li>
+<li>master IP &#x3D; 192.168.205.10</li>
+<li>work IP &#x3D; 192.168.205.11</li>
+<li>API server端口 &#x3D; 6443</li>
+</ul>
+<h2 id="Component"><a href="#Component" class="headerlink" title="Component"></a>Component</h2><p><img src="https://erkanerol.github.io/img/kubectl-exec/components.png" alt="组件"></p>
+<ul>
+<li>kubectl exec：当我们在机器上运行“ kubectl exec…”时，可以在任何有权限访问k8s api服务器上运行。</li>
+<li><a target="_blank" rel="noopener" href="https://kubernetes.io/docs/concepts/overview/components/#kube-apiserver">api server</a>：<a target="_blank" rel="noopener" href="https://kubernetes.io/docs/concepts/overview/components/#kube-apiserver">api server</a>上的组件，用于公开Kubernetes API。它是Kubernetes控制平面的前端。</li>
+<li><a target="_blank" rel="noopener" href="https://kubernetes.io/docs/concepts/overview/components/#kubelet">kubelet</a>：在集群中每个节点上运行的代理。确保容器在容器中运行。</li>
+<li><a target="_blank" rel="noopener" href="https://kubernetes.io/docs/concepts/overview/components/#container-runtime">container runtime</a>：负责运行容器的软件。例如：docker，cri-o，containerd…</li>
+<li>kernel：工作节点中操作系统的内核，负责管理进程。</li>
+<li>target container：作为Pod的一部分并在其中一个工作程序节点上运行的容器。</li>
+</ul>
+<h2 id="Findings"><a href="#Findings" class="headerlink" title="Findings"></a>Findings</h2><h3 id="1-Client端"><a href="#1-Client端" class="headerlink" title="1. Client端"></a>1. Client端</h3><ul>
+<li><p>在默认名称空间中创建容器</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">// any machine</span><br><span class="line">$ kubectl run exec-test-nginx --image=nginx</span><br></pre></td></tr></table></figure>
+</li>
+<li><p>然后运行exec命令并<code>sleep 5000</code>进行观察</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">// any machine</span><br><span class="line">$ kubectl exec -it exec-test-nginx-6558988d5-fgxgg -- sh</span><br><span class="line"># sleep 5000</span><br></pre></td></tr></table></figure>
+</li>
+<li><p>我们可以观察到kubectl过程（在这种情况下为pid &#x3D; 8507）</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">// any machine</span><br><span class="line">$ ps -ef |grep kubectl</span><br><span class="line">501  8507  8409   0  7:19PM ttys000    0:00.13 kubectl exec -it exec-test-nginx-6558988d5-fgxgg -- sh</span><br></pre></td></tr></table></figure>
+</li>
+<li><p>当我们检查该进程的网络活动时，我们可以看到它与api-server（192.168.205.10.6443）有连接</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line">// any machine</span><br><span class="line">$ netstat -atnv |grep 8507</span><br><span class="line">tcp4       0      0  192.168.205.1.51673    192.168.205.10.6443    ESTABLISHED 131072 131768   8507      0 0x0102 0x00000020</span><br><span class="line">tcp4       0      0  192.168.205.1.51672    192.168.205.10.6443    ESTABLISHED 131072 131768   8507      0 0x0102 0x00000028</span><br></pre></td></tr></table></figure>
+</li>
+<li><p>让我们检查一下代码。kubectl使用子资源创建一个POST请求,<code>exec</code>并发送一个rest请求。</p>
+</li>
+</ul>
+<p><img src="https://erkanerol.github.io/img/kubectl-exec/rest-request.png" alt="休息请求"></p>
+<h3 id="2-apiserver端"><a href="#2-apiserver端" class="headerlink" title="2. apiserver端"></a>2. apiserver端</h3><ul>
+<li><p>我们可以在api服务器端观察请求。</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">handler.go:143] kube-apiserver: POST &quot;/api/v1/namespaces/default/pods/exec-test-nginx-6558988d5-fgxgg/exec&quot; satisfied by gorestful with webservice /api/v1</span><br><span class="line">upgradeaware.go:261] Connecting to backend proxy (intercepting redirects) https://192.168.205.11:10250/exec/default/exec-test-nginx-6558988d5-fgxgg/exec-test-nginx?command=sh&amp;input=1&amp;output=1&amp;tty=1</span><br><span class="line">Headers: map[Connection:[Upgrade] Content-Length:[0] Upgrade:[SPDY/3.1] User-Agent:[kubectl/v1.12.10 (darwin/amd64) kubernetes/e3c1340] X-Forwarded-For:[192.168.205.1] X-Stream-Protocol-Version:[v4.channel.k8s.io v3.channel.k8s.io v2.channel.k8s.io channel.k8s.io]]</span><br></pre></td></tr></table></figure>
+
+<blockquote>
+<p>请注意，http请求包括协议升级请求。<a target="_blank" rel="noopener" href="https://www.wikiwand.com/en/SPDY">SPDY</a>允许将单独的stdin &#x2F; stdout &#x2F; stderr &#x2F; spdy-error流通过单个TCP连接进行多路复用。</p>
+</blockquote>
+</li>
+<li><p>Api服务器收到请求并将其绑定到 <code>PodExecOptions</code></p>
+</li>
+<li><p>为了能够采取必要的措施，api-server需要知道应该请求哪个node。</p>
+<p>当然，端点是从节点信息派生的。</p>
+<p>发现了，KUBELET具有可<code>node.Status.DaemonEndpoints.KubeletEndpoint.Port</code>连接API服务器的端口。</p>
+<blockquote>
+<p><a target="_blank" rel="noopener" href="https://kubernetes.io/docs/concepts/architecture/master-node-communication/#apiserver-to-kubelet">master&#x2F;node之间的通信&gt; master集群通信 &gt; apiserver到kubelet</a></p>
+<p>这些连接在kubelet的HTTPS端点处终止。默认情况下，API服务器不验证kubelet的服务证书，这使得连接容易遭受中间人攻击，不安全的公共网络。</p>
+</blockquote>
+</li>
+<li><p>现在，api服务器知道了端点并打开了连接。</p>
+</li>
+<li><p>让我们检查master上发生了什么。</p>
+</li>
+</ul>
+<p>首先，得到worker节点的ip。正是<code>192.168.205.11</code>在这种情况下。</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line">// any machine</span><br><span class="line">$ kubectl get nodes k8s-node-1 -o wide</span><br><span class="line">NAME         STATUS   ROLES    AGE   VERSION   INTERNAL-IP      EXTERNAL-IP   OS-IMAGE             KERNEL-VERSION      CONTAINER-RUNTIME</span><br><span class="line">k8s-node-1   Ready    &lt;none&gt;   9h    v1.15.3   192.168.205.11   &lt;none&gt;        Ubuntu 16.04.6 LTS   4.4.0-159-generic   docker://17.3.3</span><br></pre></td></tr></table></figure>
+
+<p>然后获取kubelet端口。在这个例子中是<code>10250</code>。</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">// any machine</span><br><span class="line">$ kubectl get nodes k8s-node-1 -o jsonpath=&#x27;&#123;.status.daemonEndpoints.kubeletEndpoint&#125;&#x27;</span><br><span class="line">map[Port:10250]</span><br></pre></td></tr></table></figure>
+
+<p>然后检查网络。是否存在到工作节点（192.168.205.11）的连接？可以看到，当我杀死exec进程时，它消失了，所以我知道它正是由于exec命令而由api-server设置的</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line">// master node</span><br><span class="line">$ netstat -atn |grep 192.168.205.11</span><br><span class="line">tcp        0      0 192.168.205.10:37870    192.168.205.11:10250    ESTABLISHED</span><br><span class="line">...</span><br></pre></td></tr></table></figure>
+
+<p><img src="https://erkanerol.github.io/img/kubectl-exec/api-server-to-kubelet.png" alt="api服务器到kubelet"></p>
+<ul>
+<li>现在，kubectl和api-server之间的连接仍然打开，并且api-server和kubelet之间还有另一个连接。</li>
+</ul>
+<h3 id="3-work节点"><a href="#3-work节点" class="headerlink" title="3. work节点"></a>3. work节点</h3><ul>
+<li>让我们通过连接到work节点并检查正在发生的事情。</li>
+</ul>
+<p>首先，我们也可以在此处观察连接。第二行。<code>192.168.205.10</code>是master的IP。</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line">// worker node</span><br><span class="line">$ netstat -atn |grep 10250</span><br><span class="line">tcp6       0      0 :::10250                :::*                    LISTEN</span><br><span class="line">tcp6       0      0 192.168.205.11:10250    192.168.205.10:37870    ESTABLISHED</span><br></pre></td></tr></table></figure>
+
+<p>那我们的sleep命令呢？可以通过ps命令找到！！！</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line">// worker node</span><br><span class="line">$ ps -afx</span><br><span class="line">...</span><br><span class="line">31463 ?        Sl     0:00      \_ docker-containerd-shim 7d974065bbb3107074ce31c51f5ef40aea8dcd535ae11a7b8f2dd180b8ed583a /var/run/docker/libcontainerd/7d974065bbb3107074ce31c51</span><br><span class="line">31478 pts/0    Ss     0:00          \_ sh</span><br><span class="line">31485 pts/0    S+     0:00              \_ sleep 5000</span><br><span class="line">...</span><br></pre></td></tr></table></figure>
+
+<ul>
+<li>kubelet如何做到的？</li>
+<li>kubelet有一个守护程序，该守护程序通过10250端口与api server通信。</li>
+<li>kubelet计算执行请求的响应端点。</li>
+</ul>
+<p>不要混淆。它不返回命令的结果。它返回一个通信端点。</p>
+<p>kubelet实现的<code>RuntimeServiceClient</code>接口是Container Runtime Interface的一部分。</p>
+<p>它仅使用gRPC通过Container Runtime Interface调用方法。</p>
+<p>container runtime 负责实施 <code>RuntimeServiceServer</code></p>
+<p><img src="https://erkanerol.github.io/img/kubectl-exec/kubelet-to-container-runtime.png" alt="Kubelet到容器的运行时"></p>
+<ul>
+<li>如果是这样，我们需要观察kubelet与容器运行时之间的联系。对？让我们检查。</li>
+</ul>
+<p>在运行exec命令之前和之后运行此命令，并检查diff。</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line">// worker node</span><br><span class="line">$ ss -a -p |grep kubelet</span><br><span class="line">...</span><br><span class="line">u_str  ESTAB      0      0       * 157937                * 157387                users:((&quot;kubelet&quot;,pid=5714,fd=33))</span><br><span class="line">...</span><br></pre></td></tr></table></figure>
+
+<p>嗯 在kubelet（pid &#x3D; 5714）与某个组件通过UNIX套接字建立了新连接。正是DOCKER（pid &#x3D; 1186）。</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line">// worker node</span><br><span class="line">$ ss -a -p |grep 157387</span><br><span class="line">...</span><br><span class="line">u_str  ESTAB      0      0       * 157937                * 157387                users:((&quot;kubelet&quot;,pid=5714,fd=33))</span><br><span class="line">u_str  ESTAB      0      0      /var/run/docker.sock 157387                * 157937                users:((&quot;dockerd&quot;,pid=1186,fd=14))</span><br><span class="line">...</span><br></pre></td></tr></table></figure>
+
+<p>这是运行我们的命令的docker守护进程（pid &#x3D; 1186）。</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line">// worker node.</span><br><span class="line">$ ps -afx</span><br><span class="line">...</span><br><span class="line"> 1186 ?        Ssl    0:55 /usr/bin/dockerd -H fd://</span><br><span class="line">17784 ?        Sl     0:00      \_ docker-containerd-shim 53a0a08547b2f95986402d7f3b3e78702516244df049ba6c5aa012e81264aa3c /var/run/docker/libcontainerd/53a0a08547b2f95986402d7f3</span><br><span class="line">17801 pts/2    Ss     0:00          \_ sh</span><br><span class="line">17827 pts/2    S+     0:00              \_ sleep 5000</span><br><span class="line">...</span><br></pre></td></tr></table></figure>
+
+<h3 id="4-Docker-runtime"><a href="#4-Docker-runtime" class="headerlink" title="4. Docker runtime"></a>4. Docker runtime</h3><ul>
+<li>让我们检查cri-o的源代码以了解它如何发生。逻辑在docker中相似。</li>
+</ul>
+<p>它具有一个实现RuntimeServiceServer的服务器。</p>
+<p>在链的最后, container runtime在work 节点中执行命令。</p>
+<p><img src="https://erkanerol.github.io/img/kubectl-exec/container-runtime-to-kernel.png" alt="容器运行时到内核"></p>
+<p>最后，kernel执行命令</p>
+<p><img src="https://erkanerol.github.io/img/kubectl-exec/kernel-puts.png" alt="内核输入"></p>
+<h2 id="注意事项"><a href="#注意事项" class="headerlink" title="注意事项"></a>注意事项</h2><ul>
+<li>api-server也可以初始化与kubelet的连接。</li>
+<li>这些连接将一直持续到交互式执行程序结束。<ul>
+<li>kubectl和api server之间的连接</li>
+<li>api server和kubelet之间的连接</li>
+<li>kubelet与container runtime之间的连接</li>
+</ul>
+</li>
+<li>kubectl或api-server无法在work节点中运行任何内容。kubelet可以运行，但也可以与container runtime时交互以进行此类操作。</li>
+</ul>
+<h2 id="参考"><a href="#参考" class="headerlink" title="参考"></a>参考</h2><ul>
+<li><a target="_blank" rel="noopener" href="https://groups.google.com/forum/#!topic/kubernetes-dev/Cjia36v39vM">https://groups.google.com/forum/#!topic/kubernetes-dev/Cjia36v39vM</a></li>
+<li><a target="_blank" rel="noopener" href="https://medium.com/@joatmon08/playing-with-kubeadm-in-vagrant-machines-part-2-bac431095706">https://medium.com/@joatmon08/playing-with-kubeadm-in-vagrant-machines-part-2-bac431095706</a></li>
+<li><a target="_blank" rel="noopener" href="https://serverfault.com/questions/252723/how-to-find-other-end-of-unix-socket-connection">https://serverfault.com/questions/252723/how-to-find-other-end-of-unix-socket-connection</a></li>
+</ul>
+
+      
+    </div>
+
+    <div>
+      
+        
+<div id="wechat_subscriber" style="display: block; padding: 10px 0; margin: 20px auto; width: 100%; text-align: center">
+    <img id="wechat_subscriber_qcode" src="/images/websitecode250.png" alt=" wechat" style="width: 200px; max-width: 100%;"/>
+    <div>Scan Me To Read on Phone</div>
+</div>
+
+
+      
+    </div>
+
+    <div>
+      
+        
+  <div style="padding: 10px 0; margin: 20px auto; width: 90%; text-align: center;">
+    <div>I know you won't do this,but what if you did?</div>
+    <button id="rewardButton" disable="enable" onclick="var qr = document.getElementById('QR'); if (qr.style.display === 'none') {qr.style.display='block';} else {qr.style.display='none'}">
+      <span>赏</span>
+    </button>
+    <div id="QR" style="display: none;">
+      
+        <div id="wechat" style="display: inline-block">
+          <img id="wechat_qr" src="/images/wechatpayme.png" alt=" WeChat Pay"/>
+          <p>微信打赏</p>
+        </div>
+      
+      
+        <div id="alipay" style="display: inline-block">
+          <img id="alipay_qr" src="/images/alipayme.jpg" alt=" Alipay"/>
+          <p>支付宝打赏</p>
+        </div>
+      
     </div>
   </div>
 
-{% endblock %}
 
-{% block sidebar %}
-  {{ sidebar_template.render(true) }}
-{% endblock %}
+      
+    </div>
 
 
-{% block script_extra %}
-  {% include '_scripts/pages/post-details.swig' %}
-{% endblock %}
+    <footer class="post-footer">
+      
+        <div class="post-tags">
+          
+            <a href="/tags/Kubernetes/" rel="tag"># Kubernetes</a>
+          
+        </div>
+      
+
+      
+        <div class="post-nav">
+          <div class="post-nav-next post-nav-item">
+            
+              <a href="/2021/01/09/argoCD-ResourceHook-Notifications/" rel="next" title="ArgoCD学习(argoCD之ResourceCheck及Notifications机制)">
+                <i class="fa fa-chevron-left"></i> ArgoCD学习(argoCD之ResourceCheck及Notifications机制)
+              </a>
+            
+          </div>
+
+          <span class="post-nav-divider"></span>
+
+          <div class="post-nav-prev post-nav-item">
+            
+              <a href="/2021/01/20/Kubernetes-x509-not-ip/" rel="prev" title="Kubernetes学习(解决x509 certificate is valid for xxx, not yyy)">
+                Kubernetes学习(解决x509 certificate is valid for xxx, not yyy) <i class="fa fa-chevron-right"></i>
+              </a>
+            
+          </div>
+        </div>
+      
+
+      
+      
+    </footer>
+  </article>
+
+
+
+    <div class="post-spread">
+      
+    </div>
+  </div>
+
+
+          </div>
+          
+
+
+          
+  <div class="comments" id="comments">
+    
+  </div>
+
+
+        </div>
+        
+          
+  
+  <div class="sidebar-toggle">
+    <div class="sidebar-toggle-line-wrap">
+      <span class="sidebar-toggle-line sidebar-toggle-line-first"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-middle"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-last"></span>
+    </div>
+  </div>
+
+  <aside id="sidebar" class="sidebar">
+    <div class="sidebar-inner">
+
+      
+
+      
+        <ul class="sidebar-nav motion-element">
+          <li class="sidebar-nav-toc sidebar-nav-active" data-target="post-toc-wrap" >
+            文章目录
+          </li>
+          <li class="sidebar-nav-overview" data-target="site-overview">
+            站点概览
+          </li>
+        </ul>
+      
+
+      <section class="site-overview sidebar-panel">
+        <div class="site-author motion-element" itemprop="author" itemscope itemtype="http://schema.org/Person">
+          <img class="site-author-image" itemprop="image"
+               src="/images/avatar.gif"
+               alt="" />
+          <p class="site-author-name" itemprop="name"></p>
+          <p class="site-description motion-element" itemprop="description"></p>
+        </div>
+        <nav class="site-state motion-element">
+        
+          
+            <div class="site-state-item site-state-posts">
+              <a href="/archives">
+                <span class="site-state-item-count">192</span>
+                <span class="site-state-item-name">日志</span>
+              </a>
+            </div>
+          
+
+          
+            <div class="site-state-item site-state-categories">
+              <a href="/categories">
+                <span class="site-state-item-count">14</span>
+                <span class="site-state-item-name">分类</span>
+              </a>
+            </div>
+          
+
+          
+            <div class="site-state-item site-state-tags">
+              <a href="/tags">
+                <span class="site-state-item-count">14</span>
+                <span class="site-state-item-name">标签</span>
+              </a>
+            </div>
+          
+
+        </nav>
+
+        
+
+        <div class="links-of-author motion-element">
+          
+        </div>
+
+        
+        
+
+        
+        
+
+        
+
+
+      </section>
+
+      
+      <!--noindex-->
+        <section class="post-toc-wrap motion-element sidebar-panel sidebar-panel-active">
+          <div class="post-toc">
+
+            
+              
+            
+
+            
+              <div class="post-toc-content"><ol class="nav"><li class="nav-item nav-level-2"><a class="nav-link" href="#Setup"><span class="nav-number">1.</span> <span class="nav-text">Setup</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#Component"><span class="nav-number">2.</span> <span class="nav-text">Component</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#Findings"><span class="nav-number">3.</span> <span class="nav-text">Findings</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#1-Client%E7%AB%AF"><span class="nav-number">3.1.</span> <span class="nav-text">1. Client端</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#2-apiserver%E7%AB%AF"><span class="nav-number">3.2.</span> <span class="nav-text">2. apiserver端</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#3-work%E8%8A%82%E7%82%B9"><span class="nav-number">3.3.</span> <span class="nav-text">3. work节点</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#4-Docker-runtime"><span class="nav-number">3.4.</span> <span class="nav-text">4. Docker runtime</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E6%B3%A8%E6%84%8F%E4%BA%8B%E9%A1%B9"><span class="nav-number">4.</span> <span class="nav-text">注意事项</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%8F%82%E8%80%83"><span class="nav-number">5.</span> <span class="nav-text">参考</span></a></li></ol></div>
+            
+
+          </div>
+        </section>
+      <!--/noindex-->
+      
+
+    </div>
+  </aside>
+
+
+        
+      </div>
+    </main>
+
+    <footer id="footer" class="footer">
+      <div class="footer-inner">
+        <div class="copyright" >
+  
+  &copy; 
+  <span itemprop="copyrightYear">2022</span>
+  <span class="with-love">
+    <i class="fa fa-heart"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">Z.S.K.</span>
+</div>
+
+
+<div class="powered-by">
+  Supported by <a class="theme-link" target="_blank" rel="noopener" href="https://hexo.io">Hexo</a>
+</div>
+
+<div class="theme-info">
+  Theme -
+  <a class="theme-link" target="_blank" rel="noopener" href="https://github.com/iissnan/hexo-theme-next">
+    NexT.Mist
+  </a>
+</div>
+
+
+        
+
+        
+      </div>
+    </footer>
+
+    <div class="back-to-top">
+      <i class="fa fa-arrow-up"></i>
+    </div>
+  </div>
+
+  
+
+<script type="text/javascript">
+  if (Object.prototype.toString.call(window.Promise) !== '[object Function]') {
+    window.Promise = null;
+  }
+</script>
+
+
+
+
+
+
+
+
+
+  
+
+
+
+  
+  <script type="text/javascript" src="/lib/jquery/index.js?v=2.1.3"></script>
+
+  
+  <script type="text/javascript" src="/lib/fastclick/lib/fastclick.min.js?v=1.0.6"></script>
+
+  
+  <script type="text/javascript" src="/lib/jquery_lazyload/jquery.lazyload.js?v=1.9.7"></script>
+
+  
+  <script type="text/javascript" src="/lib/velocity/velocity.min.js?v=1.2.1"></script>
+
+  
+  <script type="text/javascript" src="/lib/velocity/velocity.ui.min.js?v=1.2.1"></script>
+
+  
+  <script type="text/javascript" src="/lib/fancybox/source/jquery.fancybox.pack.js?v=2.1.5"></script>
+
+
+  
+
+
+  <script type="text/javascript" src="/js/src/utils.js?v=5.1.0"></script>
+
+  <script type="text/javascript" src="/js/src/motion.js?v=5.1.0"></script>
+
+
+
+  
+  
+
+  
+  <script type="text/javascript" src="/js/src/scrollspy.js?v=5.1.0"></script>
+<script type="text/javascript" src="/js/src/post-details.js?v=5.1.0"></script>
+
+
+
+  
+
+
+  <script type="text/javascript" src="/js/src/bootstrap.js?v=5.1.0"></script>
+
+
+
+  
+
+
+
+  
+
+
+
+
+	
+
+
+
+
+
+  
+
+
+
+
+  
+  
+  <script type="text/javascript">
+    // Popup Window;
+    var isfetched = false;
+    // Search DB path;
+    var search_path = "search.xml";
+    if (search_path.length == 0) {
+      search_path = "search.xml";
+    }
+    var path = "/" + search_path;
+    // monitor main search box;
+
+    function proceedsearch() {
+      $("body").append('<div class="popoverlay">').css('overflow', 'hidden');
+      $('.popup').toggle();
+    }
+    // search function;
+    var searchFunc = function(path, search_id, content_id) {
+      'use strict';
+      $.ajax({
+        url: path,
+        dataType: "xml",
+        async: true,
+        success: function( xmlResponse ) {
+          // get the contents from search data
+          isfetched = true;
+          $('.popup').detach().appendTo('.header-inner');
+          var datas = $( "entry", xmlResponse ).map(function() {
+            return {
+              title: $( "title", this ).text(),
+              content: $("content",this).text(),
+              url: $( "url" , this).text()
+            };
+          }).get();
+          var $input = document.getElementById(search_id);
+          var $resultContent = document.getElementById(content_id);
+          $input.addEventListener('input', function(){
+            var matchcounts = 0;
+            var str='<ul class=\"search-result-list\">';
+            var keywords = this.value.trim().toLowerCase().split(/[\s\-]+/);
+            $resultContent.innerHTML = "";
+            if (this.value.trim().length > 1) {
+              // perform local searching
+              datas.forEach(function(data) {
+                var isMatch = false;
+                var content_index = [];
+                var data_title = data.title.trim().toLowerCase();
+                var data_content = data.content.trim().replace(/<[^>]+>/g,"").toLowerCase();
+                var data_url = decodeURIComponent(data.url);
+                var index_title = -1;
+                var index_content = -1;
+                var first_occur = -1;
+                // only match artiles with not empty titles and contents
+                if(data_title != '') {
+                  keywords.forEach(function(keyword, i) {
+                    index_title = data_title.indexOf(keyword);
+                    index_content = data_content.indexOf(keyword);
+                    if( index_title >= 0 || index_content >= 0 ){
+                      isMatch = true;
+                      if (i == 0) {
+                        first_occur = index_content;
+                      }
+                    }
+
+                  });
+                }
+                // show search results
+                if (isMatch) {
+                  matchcounts += 1;
+                  str += "<li><a href='"+ data_url +"' class='search-result-title'>"+ data_title +"</a>";
+                  var content = data.content.trim().replace(/<[^>]+>/g,"");
+                  if (first_occur >= 0) {
+                    // cut out 100 characters
+                    var start = first_occur - 20;
+                    var end = first_occur + 80;
+                    if(start < 0){
+                      start = 0;
+                    }
+                    if(start == 0){
+                      end = 50;
+                    }
+                    if(end > content.length){
+                      end = content.length;
+                    }
+                    var match_content = content.substring(start, end);
+                    // highlight all keywords
+                    keywords.forEach(function(keyword){
+                      var regS = new RegExp(keyword, "gi");
+                      match_content = match_content.replace(regS, "<b class=\"search-keyword\">"+keyword+"</b>");
+                    });
+
+                    str += "<p class=\"search-result\">" + match_content +"...</p>"
+                  }
+                  str += "</li>";
+                }
+              })};
+            str += "</ul>";
+            if (matchcounts == 0) { str = '<div id="no-result"><i class="fa fa-frown-o fa-5x" /></div>' }
+            if (keywords == "") { str = '<div id="no-result"><i class="fa fa-search fa-5x" /></div>' }
+            $resultContent.innerHTML = str;
+          });
+          proceedsearch();
+        }
+      });}
+
+    // handle and trigger popup window;
+    $('.popup-trigger').click(function(e) {
+      e.stopPropagation();
+      if (isfetched == false) {
+        searchFunc(path, 'local-search-input', 'local-search-result');
+      } else {
+        proceedsearch();
+      };
+    });
+
+    $('.popup-btn-close').click(function(e){
+      $('.popup').hide();
+      $(".popoverlay").remove();
+      $('body').css('overflow', '');
+    });
+    $('.popup').click(function(e){
+      e.stopPropagation();
+    });
+  </script>
+
+
+  
+
+  
+
+  
+
+  
+
+
+</body>
+</html>

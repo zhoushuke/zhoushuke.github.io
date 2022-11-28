@@ -1,38 +1,906 @@
-{% extends '_layout.swig' %}
-{% import '_macro/post.swig' as post_template %}
-{% import '_macro/sidebar.swig' as sidebar_template %}
+<!doctype html>
 
 
-{% block title %} {{ page.title }} | {{ config.title }} {% endblock %}
 
-{% block page_class %}page-post-detail{% endblock %}
+  
 
 
-{% block content %}
+<html class="theme-next mist use-motion" lang="zh-Hans">
+<head>
+  <meta charset="UTF-8"/>
+<meta http-equiv="X-UA-Compatible" content="IE=edge" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1"/>
+
+
+
+<meta http-equiv="Cache-Control" content="no-transform" />
+<meta http-equiv="Cache-Control" content="no-siteapp" />
+
+
+
+
+
+
+
+
+
+
+
+
+  
+  
+  <link href="/lib/fancybox/source/jquery.fancybox.css?v=2.1.5" rel="stylesheet" type="text/css" />
+
+
+
+
+  
+  
+  
+  
+
+  
+    
+    
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+    
+    
+    <link href="//fonts.googleapis.com/css?family=Lato:300,300italic,400,400italic,700,700italic&subset=latin,latin-ext" rel="stylesheet" type="text/css">
+  
+
+
+
+
+
+
+<link href="/lib/font-awesome/css/font-awesome.min.css?v=4.6.2" rel="stylesheet" type="text/css" />
+
+<link href="/css/main.css?v=5.1.0" rel="stylesheet" type="text/css" />
+
+
+  <meta name="keywords" content="Shell," />
+
+
+
+
+
+
+
+
+  <link rel="shortcut icon" type="image/x-icon" href="/favicon.ico?v=5.1.0" />
+
+
+
+
+
+
+<meta name="description" content="今天在kubernetes中部署mongodb-rs时，发现其helm模板中使用到了一个bats,搜索了一下发现这是一个对bash领域的自动化测试框架，简单学习一下.">
+<meta property="og:type" content="article">
+<meta property="og:title" content="bash的自动化测试框架-bats">
+<meta property="og:url" content="https://zhoushuke.github.io/2020/08/23/shell-bats/index.html">
+<meta property="og:site_name" content="Z.S.K.&#39;s Records">
+<meta property="og:description" content="今天在kubernetes中部署mongodb-rs时，发现其helm模板中使用到了一个bats,搜索了一下发现这是一个对bash领域的自动化测试框架，简单学习一下.">
+<meta property="og:locale">
+<meta property="article:published_time" content="2020-08-23T09:10:53.000Z">
+<meta property="article:modified_time" content="2022-07-19T03:16:00.936Z">
+<meta property="article:author" content="Z.S.K.">
+<meta property="article:tag" content="Shell">
+<meta name="twitter:card" content="summary">
+
+
+
+<script type="text/javascript" id="hexo.configurations">
+  var NexT = window.NexT || {};
+  var CONFIG = {
+    root: '',
+    scheme: 'Mist',
+    sidebar: {"position":"left","display":"post"},
+    fancybox: true,
+    motion: true,
+    duoshuo: {
+      userId: 'undefined',
+      author: '博主'
+    },
+    algolia: {
+      applicationID: '',
+      apiKey: '',
+      indexName: '',
+      hits: {"per_page":10},
+      labels: {"input_placeholder":"Search for Posts","hits_empty":"We didn't find any results for the search: ${query}","hits_stats":"${hits} results found in ${time} ms"}
+    }
+  };
+</script>
+
+
+
+  <link rel="canonical" href="https://zhoushuke.github.io/2020/08/23/shell-bats/"/>
+
+
+
+
+
+  <title> bash的自动化测试框架-bats | Z.S.K.'s Records </title>
+<meta name="generator" content="Hexo 6.2.0"></head>
+
+<body itemscope itemtype="http://schema.org/WebPage" lang="zh-Hans">
+
+  
+
+
+
+
+
+
+
+
+
+
+  
+  
+    
+  
+
+  <div class="container one-collumn sidebar-position-left page-post-detail ">
+    <div class="headband"></div>
+
+    <header id="header" class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-meta ">
+  
+
+  <div class="custom-logo-site-title">
+    <a href="/"  class="brand" rel="start">
+      <span class="logo-line-before"><i></i></span>
+      <span class="site-title">Z.S.K.'s Records</span>
+      <span class="logo-line-after"><i></i></span>
+    </a>
+  </div>
+    
+      <p class="site-subtitle"></p>
+    
+</div>
+
+<div class="site-nav-toggle">
+  <button>
+    <span class="btn-bar"></span>
+    <span class="btn-bar"></span>
+    <span class="btn-bar"></span>
+  </button>
+</div>
+
+<nav class="site-nav">
+  
+
+  
+    <ul id="menu" class="menu">
+      
+        
+        <li class="menu-item menu-item-home">
+          <a href="/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-home"></i> <br />
+            
+            首页
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-categories">
+          <a href="/categories" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-th"></i> <br />
+            
+            分类
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-about">
+          <a href="/about/ZSK-Profile.pdf" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-user"></i> <br />
+            
+            简历
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-archives">
+          <a href="/archives" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-archive"></i> <br />
+            
+            归档
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-tags">
+          <a href="/tags" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-tags"></i> <br />
+            
+            标签
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-commonweal">
+          <a href="/404.html" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-heartbeat"></i> <br />
+            
+            公益404
+          </a>
+        </li>
+      
+
+      
+        <li class="menu-item menu-item-search">
+          
+            <a href="javascript:;" class="popup-trigger">
+          
+            
+              <i class="menu-item-icon fa fa-search fa-fw"></i> <br />
+            
+            搜索
+          </a>
+        </li>
+      
+    </ul>
+  
+
+  
+    <div class="site-search">
+      
+  <div class="popup">
+ <span class="search-icon fa fa-search"></span>
+ <input type="text" id="local-search-input">
+ <div id="local-search-result"></div>
+ <span class="popup-btn-close">close</span>
+</div>
+
+
+    </div>
+  
+</nav>
+
+
+
+ </div>
+    </header>
+
+    <main id="main" class="main">
+      <div class="main-inner">
+        <div class="content-wrap">
+          <div id="content" class="content">
+            
 
   <div id="posts" class="posts-expand">
-    {{ post_template.render(page) }}
+    
 
-    <div class="post-spread">
-      {% if theme.jiathis %}
-        {% include '_partials/share/jiathis.swig' %}
-      {% elseif theme.baidushare %}
-        {% include '_partials/share/baidushare.swig' %}
-      {% elseif theme.add_this_id %}
-        {% include '_partials/share/add-this.swig' %}
-      {% elseif theme.duoshuo_shortname and theme.duoshuo_share %}
-        {% include '_partials/share/duoshuo_share.swig' %}
-      {% endif %}
+  
+
+  
+  
+  
+
+  <article class="post post-type-normal " itemscope itemtype="http://schema.org/Article">
+  <link itemprop="mainEntityOfPage" href="https://zhoushuke.github.io/2020/08/23/shell-bats/">
+
+  <span style="display:none" itemprop="author" itemscope itemtype="http://schema.org/Person">
+    <meta itemprop="name" content="">
+    <meta itemprop="description" content="">
+    <meta itemprop="image" content="/images/avatar.gif">
+  </span>
+
+  <span style="display:none" itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+    <meta itemprop="name" content="Z.S.K.'s Records">
+    <span style="display:none" itemprop="logo" itemscope itemtype="http://schema.org/ImageObject">
+      <img style="display:none;" itemprop="url image" alt="Z.S.K.'s Records" src="">
+    </span>
+  </span>
+
+    
+      <header class="post-header">
+
+        
+        
+          <h1 class="post-title" itemprop="name headline">
+            
+            
+              
+                bash的自动化测试框架-bats
+              
+            
+          </h1>
+        
+
+        <div class="post-meta">
+          <span class="post-time">
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">发表于</span>
+              
+              <time title="Post created" itemprop="dateCreated datePublished" datetime="2020-08-23T17:10:53+08:00">
+                2020-08-23
+              </time>
+            
+
+            
+
+            
+          </span>
+
+          
+            <span class="post-category" >
+            
+              <span class="post-meta-divider">|</span>
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-folder-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">分类于</span>
+              
+              
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/Shell/" itemprop="url" rel="index">
+                    <span itemprop="name">Shell</span>
+                  </a>
+                </span>
+
+                
+                
+              
+            </span>
+          
+
+          
+            
+          
+
+          
+
+          
+          
+
+          
+
+          
+
+        </div>
+      </header>
+    
+
+
+    <div class="post-body" itemprop="articleBody">
+
+      
+      
+
+      
+        <p>今天在kubernetes中部署mongodb-rs时，发现其helm模板中使用到了一个bats,搜索了一下发现这是一个对bash领域的自动化测试框架，简单学习一下.</p>
+<span id="more"></span>
+
+<h3 id="使用"><a href="#使用" class="headerlink" title="使用"></a>使用</h3><p>mongodb-rs的部署不在这里详述了，直接来到使用到bats的地方,</p>
+<figure class="highlight yaml"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br><span class="line">58</span><br><span class="line">59</span><br><span class="line">60</span><br><span class="line">61</span><br><span class="line">62</span><br><span class="line">63</span><br><span class="line">64</span><br><span class="line">65</span><br><span class="line">66</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">---</span></span><br><span class="line"><span class="comment"># Source: mongodb-replicaset/templates/tests/mongodb-up-test-pod.yaml</span></span><br><span class="line"><span class="attr">apiVersion:</span> <span class="string">v1</span></span><br><span class="line"><span class="attr">kind:</span> <span class="string">Pod</span></span><br><span class="line"><span class="attr">metadata:</span></span><br><span class="line">  <span class="attr">labels:</span></span><br><span class="line">    <span class="attr">app:</span> <span class="string">mongodb-replicaset</span></span><br><span class="line">    <span class="attr">chart:</span> <span class="string">mongodb-replicaset-3.17.0</span></span><br><span class="line">    <span class="attr">heritage:</span> <span class="string">Helm</span></span><br><span class="line">    <span class="attr">release:</span> <span class="string">mongodb-rs</span></span><br><span class="line">  <span class="attr">name:</span> <span class="string">mongodb-rs-mongodb-replicaset-test</span></span><br><span class="line">  <span class="attr">namespace:</span> <span class="string">infra</span></span><br><span class="line">  <span class="attr">annotations:</span></span><br><span class="line">    <span class="attr">&quot;helm.sh/hook&quot;:</span> <span class="string">test-success</span></span><br><span class="line"><span class="attr">spec:</span></span><br><span class="line">  <span class="attr">initContainers:</span></span><br><span class="line">    <span class="bullet">-</span> <span class="attr">name:</span> <span class="string">test-framework</span></span><br><span class="line">      <span class="attr">image:</span> <span class="string">dduportal/bats:0.4.0</span></span><br><span class="line">      <span class="attr">command:</span></span><br><span class="line">        <span class="bullet">-</span> <span class="string">bash</span></span><br><span class="line">        <span class="bullet">-</span> <span class="string">-c</span></span><br><span class="line">        <span class="bullet">-</span> <span class="string">|</span></span><br><span class="line"><span class="string">          set -ex</span></span><br><span class="line"><span class="string">          # copy bats to tools dir</span></span><br><span class="line"><span class="string">          cp -R /usr/local/libexec/ /tools/bats/</span></span><br><span class="line"><span class="string"></span>      <span class="attr">volumeMounts:</span></span><br><span class="line">        <span class="bullet">-</span> <span class="attr">name:</span> <span class="string">tools</span></span><br><span class="line">          <span class="attr">mountPath:</span> <span class="string">/tools</span></span><br><span class="line">  <span class="attr">containers:</span></span><br><span class="line">    <span class="bullet">-</span> <span class="attr">name:</span> <span class="string">mongo</span></span><br><span class="line">      <span class="attr">image:</span> <span class="string">&quot;mongo:4.2&quot;</span></span><br><span class="line">      <span class="attr">command:</span></span><br><span class="line">        <span class="bullet">-</span> <span class="string">/tools/bats/bats</span></span><br><span class="line">        <span class="bullet">-</span> <span class="string">-t</span></span><br><span class="line">        <span class="bullet">-</span> <span class="string">/tests/mongodb-up-test.sh</span></span><br><span class="line">      <span class="attr">env:</span></span><br><span class="line">        <span class="bullet">-</span> <span class="attr">name:</span> <span class="string">FULL_NAME</span></span><br><span class="line">          <span class="attr">value:</span> <span class="string">mongodb-rs-mongodb-replicaset</span></span><br><span class="line">        <span class="bullet">-</span> <span class="attr">name:</span> <span class="string">NAMESPACE</span></span><br><span class="line">          <span class="attr">value:</span> <span class="string">infra</span></span><br><span class="line">        <span class="bullet">-</span> <span class="attr">name:</span> <span class="string">REPLICAS</span></span><br><span class="line">          <span class="attr">value:</span> <span class="string">&quot;3&quot;</span></span><br><span class="line">        <span class="bullet">-</span> <span class="attr">name:</span> <span class="string">AUTH</span></span><br><span class="line">          <span class="attr">value:</span> <span class="string">&quot;true&quot;</span></span><br><span class="line">        <span class="bullet">-</span> <span class="attr">name:</span> <span class="string">ADMIN_USER</span></span><br><span class="line">          <span class="attr">valueFrom:</span></span><br><span class="line">            <span class="attr">secretKeyRef:</span></span><br><span class="line">              <span class="attr">name:</span> <span class="string">&quot;mongodb-rs-mongodb-replicaset-admin&quot;</span></span><br><span class="line">              <span class="attr">key:</span> <span class="string">user</span></span><br><span class="line">        <span class="bullet">-</span> <span class="attr">name:</span> <span class="string">ADMIN_PASSWORD</span></span><br><span class="line">          <span class="attr">valueFrom:</span></span><br><span class="line">            <span class="attr">secretKeyRef:</span></span><br><span class="line">              <span class="attr">name:</span> <span class="string">&quot;mongodb-rs-mongodb-replicaset-admin&quot;</span></span><br><span class="line">              <span class="attr">key:</span> <span class="string">password</span></span><br><span class="line">      <span class="attr">volumeMounts:</span></span><br><span class="line">        <span class="bullet">-</span> <span class="attr">name:</span> <span class="string">tools</span></span><br><span class="line">          <span class="attr">mountPath:</span> <span class="string">/tools</span></span><br><span class="line">        <span class="bullet">-</span> <span class="attr">name:</span> <span class="string">tests</span></span><br><span class="line">          <span class="attr">mountPath:</span> <span class="string">/tests</span></span><br><span class="line">  <span class="attr">volumes:</span></span><br><span class="line">    <span class="bullet">-</span> <span class="attr">name:</span> <span class="string">tools</span></span><br><span class="line">      <span class="attr">emptyDir:</span> &#123;&#125;</span><br><span class="line">    <span class="bullet">-</span> <span class="attr">name:</span> <span class="string">tests</span></span><br><span class="line">      <span class="attr">configMap:</span></span><br><span class="line">        <span class="attr">name:</span> <span class="string">mongodb-rs-mongodb-replicaset-tests</span></span><br><span class="line">  <span class="attr">restartPolicy:</span> <span class="string">Never</span> <span class="comment"># 指定pod的启动命令为Never，表示只运行一次.</span></span><br></pre></td></tr></table></figure>
+
+<p>首先看到initContainers执行了<code>cp -R /usr/local/libexec/ /tools/bats/</code>，从<a target="_blank" rel="noopener" href="https://github.com/sstephenson/bats">bats</a> github中可以看到，这个目录下是一些可执行的bash代码，这是整个核心.</p>
+<p>然后在主containers中执行了<code>/tools/bats/bats -t /tests/mongodb-up-test.sh</code>, 这个脚本内容如下:</p>
+<p>cat mongodb-up-test.sh</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br><span class="line">58</span><br><span class="line">59</span><br><span class="line">60</span><br><span class="line">61</span><br><span class="line">62</span><br><span class="line">63</span><br><span class="line">64</span><br><span class="line">65</span><br><span class="line">66</span><br><span class="line">67</span><br><span class="line">68</span><br><span class="line">69</span><br><span class="line">70</span><br><span class="line">71</span><br><span class="line">72</span><br><span class="line">73</span><br><span class="line">74</span><br><span class="line">75</span><br><span class="line">76</span><br><span class="line">77</span><br><span class="line">78</span><br><span class="line">79</span><br><span class="line">80</span><br><span class="line">81</span><br><span class="line">82</span><br><span class="line">83</span><br><span class="line">84</span><br><span class="line">85</span><br><span class="line">86</span><br><span class="line">87</span><br><span class="line">88</span><br><span class="line">89</span><br><span class="line">90</span><br><span class="line">91</span><br><span class="line">92</span><br><span class="line">93</span><br><span class="line">94</span><br><span class="line">95</span><br><span class="line">96</span><br><span class="line">97</span><br><span class="line">98</span><br><span class="line">99</span><br><span class="line">100</span><br><span class="line">101</span><br><span class="line">102</span><br><span class="line">103</span><br><span class="line">104</span><br><span class="line">105</span><br><span class="line">106</span><br><span class="line">107</span><br><span class="line">108</span><br><span class="line">109</span><br><span class="line">110</span><br><span class="line">111</span><br><span class="line">112</span><br><span class="line">113</span><br><span class="line">114</span><br><span class="line">115</span><br><span class="line">116</span><br><span class="line">117</span><br><span class="line">118</span><br><span class="line">119</span><br><span class="line">120</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">#!/usr/bin/env bash</span></span><br><span class="line">    </span><br><span class="line">    <span class="built_in">set</span> -ex</span><br><span class="line">    </span><br><span class="line">    CACRT_FILE=/work-dir/tls.crt</span><br><span class="line">    CAKEY_FILE=/work-dir/tls.key</span><br><span class="line">    MONGOPEM=/work-dir/mongo.pem</span><br><span class="line">    </span><br><span class="line">    MONGOARGS=<span class="string">&quot;--quiet&quot;</span></span><br><span class="line">    </span><br><span class="line">    <span class="keyword">if</span> [ -e <span class="string">&quot;/tls/tls.crt&quot;</span> ]; <span class="keyword">then</span></span><br><span class="line">        <span class="comment"># log &quot;Generating certificate&quot;</span></span><br><span class="line">        <span class="built_in">mkdir</span> -p /work-dir</span><br><span class="line">        <span class="built_in">cp</span> /tls/tls.crt /work-dir/tls.crt</span><br><span class="line">        <span class="built_in">cp</span> /tls/tls.key /work-dir/tls.key</span><br><span class="line">    </span><br><span class="line">        <span class="comment"># Move into /work-dir</span></span><br><span class="line">        <span class="built_in">pushd</span> /work-dir</span><br><span class="line">    </span><br><span class="line">    <span class="built_in">cat</span> &gt;openssl.cnf &lt;&lt;<span class="string">EOL</span></span><br><span class="line"><span class="string">    [req]</span></span><br><span class="line"><span class="string">    req_extensions = v3_req</span></span><br><span class="line"><span class="string">    distinguished_name = req_distinguished_name</span></span><br><span class="line"><span class="string">    [req_distinguished_name]</span></span><br><span class="line"><span class="string">    [ v3_req ]</span></span><br><span class="line"><span class="string">    basicConstraints = CA:FALSE</span></span><br><span class="line"><span class="string">    keyUsage = nonRepudiation, digitalSignature, keyEncipherment</span></span><br><span class="line"><span class="string">    subjectAltName = @alt_names</span></span><br><span class="line"><span class="string">    [alt_names]</span></span><br><span class="line"><span class="string">    DNS.1 = $(echo -n &quot;$(hostname)&quot; | sed s/-[0-9]*$//)</span></span><br><span class="line"><span class="string">    DNS.2 = $(hostname)</span></span><br><span class="line"><span class="string">    DNS.3 = localhost</span></span><br><span class="line"><span class="string">    DNS.4 = 127.0.0.1</span></span><br><span class="line"><span class="string">    EOL</span></span><br><span class="line">    </span><br><span class="line">        <span class="comment"># Generate the certs</span></span><br><span class="line">        openssl genrsa -out mongo.key 2048</span><br><span class="line">        openssl req -new -key mongo.key -out mongo.csr -subj <span class="string">&quot;/OU=MongoDB/CN=<span class="subst">$(hostname)</span>&quot;</span> -config openssl.cnf</span><br><span class="line">        openssl x509 -req -<span class="keyword">in</span> mongo.csr \</span><br><span class="line">            -CA <span class="string">&quot;<span class="variable">$CACRT_FILE</span>&quot;</span> -CAkey <span class="string">&quot;<span class="variable">$CAKEY_FILE</span>&quot;</span> -CAcreateserial \</span><br><span class="line">            -out mongo.crt -days 3650 -extensions v3_req -extfile openssl.cnf</span><br><span class="line">        <span class="built_in">cat</span> mongo.crt mongo.key &gt; <span class="variable">$MONGOPEM</span></span><br><span class="line">        MONGOARGS=<span class="string">&quot;<span class="variable">$MONGOARGS</span> --ssl --sslCAFile <span class="variable">$CACRT_FILE</span> --sslPEMKeyFile <span class="variable">$MONGOPEM</span>&quot;</span></span><br><span class="line">    <span class="keyword">fi</span></span><br><span class="line">    </span><br><span class="line">    <span class="keyword">if</span> [[ <span class="string">&quot;<span class="variable">$&#123;AUTH&#125;</span>&quot;</span> == <span class="string">&quot;true&quot;</span> ]]; <span class="keyword">then</span></span><br><span class="line">        MONGOARGS=<span class="string">&quot;<span class="variable">$MONGOARGS</span> --username <span class="variable">$ADMIN_USER</span> --password <span class="variable">$ADMIN_PASSWORD</span> --authenticationDatabase admin&quot;</span></span><br><span class="line">    <span class="keyword">fi</span></span><br><span class="line">    </span><br><span class="line">    <span class="function"><span class="title">pod_name</span></span>() &#123;</span><br><span class="line">        <span class="built_in">local</span> full_name=<span class="string">&quot;<span class="variable">$&#123;FULL_NAME?Environment variable FULL_NAME not set&#125;</span>&quot;</span></span><br><span class="line">        <span class="built_in">local</span> namespace=<span class="string">&quot;<span class="variable">$&#123;NAMESPACE?Environment variable NAMESPACE not set&#125;</span>&quot;</span></span><br><span class="line">        <span class="built_in">local</span> index=<span class="string">&quot;<span class="variable">$1</span>&quot;</span></span><br><span class="line">        <span class="built_in">echo</span> <span class="string">&quot;<span class="variable">$full_name</span>-<span class="variable">$index</span>.<span class="variable">$full_name</span>.<span class="variable">$namespace</span>.svc.cluster.local&quot;</span></span><br><span class="line">    &#125;</span><br><span class="line">    </span><br><span class="line">    <span class="function"><span class="title">replicas</span></span>() &#123;</span><br><span class="line">        <span class="built_in">echo</span> <span class="string">&quot;<span class="variable">$&#123;REPLICAS?Environment variable REPLICAS not set&#125;</span>&quot;</span></span><br><span class="line">    &#125;</span><br><span class="line">    </span><br><span class="line">    <span class="function"><span class="title">master_pod</span></span>() &#123;</span><br><span class="line">        <span class="keyword">for</span> ((i = 0; i &lt; $(replicas); ++i)); <span class="keyword">do</span></span><br><span class="line">            response=$(mongo <span class="variable">$MONGOARGS</span> <span class="string">&quot;--host=<span class="subst">$(pod_name <span class="string">&quot;<span class="variable">$i</span>&quot;</span>)</span>&quot;</span> <span class="string">&quot;--eval=rs.isMaster().ismaster&quot;</span>)</span><br><span class="line">            <span class="keyword">if</span> [[ <span class="string">&quot;<span class="variable">$response</span>&quot;</span> == <span class="string">&quot;true&quot;</span> ]]; <span class="keyword">then</span></span><br><span class="line">                pod_name <span class="string">&quot;<span class="variable">$i</span>&quot;</span></span><br><span class="line">                <span class="built_in">break</span></span><br><span class="line">            <span class="keyword">fi</span></span><br><span class="line">        <span class="keyword">done</span></span><br><span class="line">    &#125;</span><br><span class="line">    </span><br><span class="line">    <span class="function"><span class="title">setup</span></span>() &#123;</span><br><span class="line">        <span class="built_in">local</span> ready=0</span><br><span class="line">        until [[ <span class="string">&quot;<span class="variable">$ready</span>&quot;</span> -eq $(replicas) ]]; <span class="keyword">do</span></span><br><span class="line">            <span class="built_in">echo</span> <span class="string">&quot;Waiting for application to become ready&quot;</span> &gt;&amp;2</span><br><span class="line">            <span class="built_in">sleep</span> 1</span><br><span class="line">            ready=0</span><br><span class="line">            <span class="keyword">for</span> ((i = 0; i &lt; $(replicas); ++i)); <span class="keyword">do</span></span><br><span class="line">                response=$(mongo <span class="variable">$MONGOARGS</span> <span class="string">&quot;--host=<span class="subst">$(pod_name <span class="string">&quot;<span class="variable">$i</span>&quot;</span>)</span>&quot;</span> <span class="string">&quot;--eval=rs.status().ok&quot;</span> || <span class="literal">true</span>)</span><br><span class="line">                <span class="keyword">if</span> [[ <span class="string">&quot;<span class="variable">$response</span>&quot;</span> -eq 1 ]]; <span class="keyword">then</span></span><br><span class="line">                    ready=$((ready + <span class="number">1</span>))</span><br><span class="line">                <span class="keyword">fi</span></span><br><span class="line">            <span class="keyword">done</span></span><br><span class="line">        <span class="keyword">done</span></span><br><span class="line">    &#125;</span><br><span class="line">    </span><br><span class="line">    @<span class="built_in">test</span> <span class="string">&quot;Testing mongodb client is executable&quot;</span> &#123;</span><br><span class="line">        mongo -h</span><br><span class="line">        [ <span class="string">&quot;$?&quot;</span> -eq 0 ]</span><br><span class="line">    &#125;</span><br><span class="line">    </span><br><span class="line">    @<span class="built_in">test</span> <span class="string">&quot;Connect mongodb client to mongodb pods&quot;</span> &#123;</span><br><span class="line">        <span class="keyword">for</span> ((i = 0; i &lt; $(replicas); ++i)); <span class="keyword">do</span></span><br><span class="line">            response=$(mongo <span class="variable">$MONGOARGS</span> <span class="string">&quot;--host=<span class="subst">$(pod_name <span class="string">&quot;<span class="variable">$i</span>&quot;</span>)</span>&quot;</span> <span class="string">&quot;--eval=rs.status().ok&quot;</span>)</span><br><span class="line">            <span class="keyword">if</span> [[ ! <span class="string">&quot;<span class="variable">$response</span>&quot;</span> -eq 1 ]]; <span class="keyword">then</span></span><br><span class="line">                <span class="built_in">exit</span> 1</span><br><span class="line">            <span class="keyword">fi</span></span><br><span class="line">        <span class="keyword">done</span></span><br><span class="line">    &#125;</span><br><span class="line">    </span><br><span class="line">    @<span class="built_in">test</span> <span class="string">&quot;Write key to primary&quot;</span> &#123;</span><br><span class="line">        response=$(mongo <span class="variable">$MONGOARGS</span> --host=$(master_pod) <span class="string">&quot;--eval=db.test.insert(&#123;\&quot;abc\&quot;: \&quot;def\&quot;&#125;).nInserted&quot;</span>)</span><br><span class="line">        <span class="keyword">if</span> [[ ! <span class="string">&quot;<span class="variable">$response</span>&quot;</span> -eq 1 ]]; <span class="keyword">then</span></span><br><span class="line">            <span class="built_in">exit</span> 1</span><br><span class="line">        <span class="keyword">fi</span></span><br><span class="line">    &#125;</span><br><span class="line">    </span><br><span class="line">    @<span class="built_in">test</span> <span class="string">&quot;Read key from slaves&quot;</span> &#123;</span><br><span class="line">        <span class="comment"># wait for slaves to catch up</span></span><br><span class="line">        <span class="built_in">sleep</span> 10</span><br><span class="line">    </span><br><span class="line">        <span class="keyword">for</span> ((i = 0; i &lt; $(replicas); ++i)); <span class="keyword">do</span></span><br><span class="line">            response=$(mongo <span class="variable">$MONGOARGS</span> --host=$(pod_name <span class="string">&quot;<span class="variable">$i</span>&quot;</span>) <span class="string">&quot;--eval=rs.slaveOk(); db.test.find(&#123;\&quot;abc\&quot;:\&quot;def\&quot;&#125;)&quot;</span>)</span><br><span class="line">            <span class="keyword">if</span> [[ ! <span class="string">&quot;<span class="variable">$response</span>&quot;</span> =~ .*def.* ]]; <span class="keyword">then</span></span><br><span class="line">                <span class="built_in">exit</span> 1</span><br><span class="line">            <span class="keyword">fi</span></span><br><span class="line">        <span class="keyword">done</span></span><br><span class="line">    </span><br><span class="line">        <span class="comment"># Clean up a document after test</span></span><br><span class="line">        mongo <span class="variable">$MONGOARGS</span> --host=$(master_pod) <span class="string">&quot;--eval=db.test.deleteMany(&#123;\&quot;abc\&quot;: \&quot;def\&quot;&#125;)&quot;</span></span><br><span class="line">    &#125;</span><br></pre></td></tr></table></figure>
+
+<p>该脚本的上半部分可以先忽略</p>
+<p>然后定义了几个函数, 其实<code>setup()</code>函数在bats中是特殊的函数,其实还有一个<code>teardown</code>，主要用于在执行测试函数前&#x2F;后执行的两个函数， <code>setup</code>用于做一些准备工作,<code>teardown</code>用于做一些清理工作</p>
+<p>最重要的部分是<code>@test</code>,比如:</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line">@<span class="built_in">test</span> <span class="string">&quot;Testing mongodb client is executable&quot;</span> &#123;</span><br><span class="line">    mongo -h</span><br><span class="line">    [ <span class="string">&quot;$?&quot;</span> -eq 0 ]</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p><code>@test</code>是一个关键字，指定被包含代码块需要被testing.在上面的脚本中指定了4个<code>@test</code>函数. 它到底是如何执行的呢？</p>
+<h3 id="源码分析"><a href="#源码分析" class="headerlink" title="源码分析"></a>源码分析</h3><p>首先: 在<a target="_blank" rel="noopener" href="https://github.com/sstephenson/bats/blob/03608115df2071fff4eaaff1605768c275e5f81f/libexec/bats-preprocess">bats-preprocess</a>中,这个代码主要是解析待测试脚本，可以发现以下代码:</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br></pre></td><td class="code"><pre><span class="line">pattern=<span class="string">&#x27;^ *@test  *([^ ].*)  *\&#123; *(.*)$&#x27;</span></span><br><span class="line"></span><br><span class="line"><span class="keyword">while</span> IFS= <span class="built_in">read</span> -r line; <span class="keyword">do</span></span><br><span class="line">  <span class="built_in">let</span> index+=1</span><br><span class="line">  <span class="keyword">if</span> [[ <span class="string">&quot;<span class="variable">$line</span>&quot;</span> =~ <span class="variable">$pattern</span> ]]; <span class="keyword">then</span></span><br><span class="line">    quoted_name=<span class="string">&quot;<span class="variable">$&#123;BASH_REMATCH[1]&#125;</span>&quot;</span></span><br><span class="line">    body=<span class="string">&quot;<span class="variable">$&#123;BASH_REMATCH[2]&#125;</span>&quot;</span></span><br><span class="line">    name=<span class="string">&quot;<span class="subst">$(eval echo <span class="string">&quot;<span class="variable">$quoted_name</span>&quot;</span>)</span>&quot;</span></span><br><span class="line">    encoded_name=<span class="string">&quot;<span class="subst">$(encode_name <span class="string">&quot;<span class="variable">$name</span>&quot;</span>)</span>&quot;</span></span><br><span class="line">    tests[<span class="string">&quot;<span class="variable">$&#123;#tests[@]&#125;</span>&quot;</span>]=<span class="string">&quot;<span class="variable">$encoded_name</span>&quot;</span></span><br><span class="line">    <span class="built_in">echo</span> <span class="string">&quot;<span class="variable">$&#123;encoded_name&#125;</span>() &#123; bats_test_begin <span class="variable">$&#123;quoted_name&#125;</span> <span class="variable">$&#123;index&#125;</span>; <span class="variable">$&#123;body&#125;</span>&quot;</span></span><br><span class="line">  <span class="keyword">else</span></span><br><span class="line">    <span class="built_in">printf</span> <span class="string">&quot;%s\n&quot;</span> <span class="string">&quot;<span class="variable">$line</span>&quot;</span></span><br><span class="line">  <span class="keyword">fi</span></span><br><span class="line"><span class="keyword">done</span></span><br></pre></td></tr></table></figure>
+
+<p>通过解析<code>@test</code>来得到有多个需要testing的代码块，从pod的日志中也可以看出</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br></pre></td><td class="code"><pre><span class="line">++ bats_test_function test_Testing_mongodb_client_is_executable</span><br><span class="line">++ <span class="built_in">local</span> test_name=test_Testing_mongodb_client_is_executable</span><br><span class="line">++ BATS_TEST_NAMES[<span class="string">&quot;<span class="variable">$&#123;#BATS_TEST_NAMES[@]&#125;</span>&quot;</span>]=test_Testing_mongodb_client_is_executable</span><br><span class="line">++ bats_test_function test_Connect_mongodb_client_to_mongodb_pods</span><br><span class="line">++ <span class="built_in">local</span> test_name=test_Connect_mongodb_client_to_mongodb_pods</span><br><span class="line">++ BATS_TEST_NAMES[<span class="string">&quot;<span class="variable">$&#123;#BATS_TEST_NAMES[@]&#125;</span>&quot;</span>]=test_Connect_mongodb_client_to_mongodb_pods</span><br><span class="line">++ bats_test_function test_Write_key_to_primary</span><br><span class="line">++ <span class="built_in">local</span> test_name=test_Write_key_to_primary</span><br><span class="line">++ BATS_TEST_NAMES[<span class="string">&quot;<span class="variable">$&#123;#BATS_TEST_NAMES[@]&#125;</span>&quot;</span>]=test_Write_key_to_primary</span><br><span class="line">++ bats_test_function test_Read_key_from_slaves</span><br><span class="line">++ <span class="built_in">local</span> test_name=test_Read_key_from_slaves</span><br><span class="line">++ BATS_TEST_NAMES[<span class="string">&quot;<span class="variable">$&#123;#BATS_TEST_NAMES[@]&#125;</span>&quot;</span>]=test_Read_key_from_slaves</span><br><span class="line">+ <span class="string">&#x27;[&#x27;</span> -n <span class="string">&#x27;&#x27;</span> <span class="string">&#x27;]&#x27;</span></span><br><span class="line">+ bats_perform_tests test_Testing_mongodb_client_is_executable test_Connect_mongodb_client_to_mongodb_pods test_Write_key_to_primary test_Read_key_from_slaves</span><br><span class="line">+ <span class="built_in">echo</span> 1..4</span><br><span class="line">+ test_number=1</span><br><span class="line">+ status=0</span><br><span class="line">1..4</span><br><span class="line">+ <span class="keyword">for</span> test_name <span class="keyword">in</span> <span class="string">&quot;<span class="variable">$@</span>&quot;</span></span><br><span class="line">+ /tools/bats/bats-exec-test /tests/mongodb-up-test.sh test_Testing_mongodb_client_is_executable 1</span><br><span class="line">+</span><br></pre></td></tr></table></figure>
+
+<p>从日志中可以看到，成功解析到了4个<code>@test</code>代码块, 然后最后循环调用<code>/tools/bats/bats-exec-test</code>, 来看看这个函数</p>
+<p>传递了三个参数，第一个是脚本文件，第二个是获取到的<code>@test</code>代码块的名字， 第三个是序号</p>
+<p>到<code>/tools/bats/bats-exec-test</code>,调用这个函数</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="title">bats_perform_test</span></span>() &#123;</span><br><span class="line">  BATS_TEST_NAME=<span class="string">&quot;<span class="variable">$1</span>&quot;</span></span><br><span class="line">  <span class="keyword">if</span> [ <span class="string">&quot;<span class="subst">$(type -t <span class="string">&quot;<span class="variable">$BATS_TEST_NAME</span>&quot;</span> || true)</span>&quot;</span> = <span class="string">&quot;function&quot;</span> ]; <span class="keyword">then</span></span><br><span class="line">    BATS_TEST_NUMBER=<span class="string">&quot;<span class="variable">$2</span>&quot;</span></span><br><span class="line">    <span class="keyword">if</span> [ -z <span class="string">&quot;<span class="variable">$BATS_TEST_NUMBER</span>&quot;</span> ]; <span class="keyword">then</span></span><br><span class="line">      <span class="built_in">echo</span> <span class="string">&quot;1..1&quot;</span></span><br><span class="line">      BATS_TEST_NUMBER=<span class="string">&quot;1&quot;</span></span><br><span class="line">    <span class="keyword">fi</span></span><br><span class="line"></span><br><span class="line">    BATS_TEST_COMPLETED=<span class="string">&quot;&quot;</span></span><br><span class="line">    BATS_TEARDOWN_COMPLETED=<span class="string">&quot;&quot;</span></span><br><span class="line">    <span class="built_in">trap</span> <span class="string">&quot;bats_debug_trap \&quot;\$BASH_SOURCE\&quot;&quot;</span> debug  <span class="comment"># trap是bash中用于捕捉信号函数</span></span><br><span class="line">    <span class="built_in">trap</span> <span class="string">&quot;bats_error_trap&quot;</span> err</span><br><span class="line">    <span class="built_in">trap</span> <span class="string">&quot;bats_teardown_trap&quot;</span> <span class="built_in">exit</span></span><br><span class="line">    <span class="string">&quot;<span class="variable">$BATS_TEST_NAME</span>&quot;</span> &gt;&gt;<span class="string">&quot;<span class="variable">$BATS_OUT</span>&quot;</span> 2&gt;&amp;1 <span class="comment"># 执行命令</span></span><br><span class="line">    BATS_TEST_COMPLETED=1</span><br><span class="line"></span><br><span class="line">  <span class="keyword">else</span></span><br><span class="line">    <span class="built_in">echo</span> <span class="string">&quot;bats: unknown test name \`<span class="variable">$BATS_TEST_NAME</span>&#x27;&quot;</span> &gt;&amp;2</span><br><span class="line">    <span class="built_in">exit</span> 1</span><br><span class="line">  <span class="keyword">fi</span></span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>因此，当命令在执行过程出现error时则会被trap捕获到,然后设置错误码</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="title">bats_error_trap</span></span>() &#123;</span><br><span class="line">  BATS_ERROR_STATUS=<span class="string">&quot;$?&quot;</span></span><br><span class="line">  BATS_ERROR_STACK_TRACE=( <span class="string">&quot;<span class="variable">$&#123;BATS_PREVIOUS_STACK_TRACE[@]&#125;</span>&quot;</span> )</span><br><span class="line">  <span class="built_in">trap</span> - debug</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>这样，一旦生成了错误码，则pod的状态即会出现异常状态，而正常情况下指定了restart:Never的pod执行完启动命令的状态会变成complete.</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># kubectl get pod -n infra</span></span><br><span class="line">NAME                                 READY   STATUS      RESTARTS   AGE</span><br><span class="line">mongodb-rs-mongodb-replicaset-0      1/1     Running     0          4h36m</span><br><span class="line">mongodb-rs-mongodb-replicaset-1      1/1     Running     0          4h35m</span><br><span class="line">mongodb-rs-mongodb-replicaset-2      1/1     Running     0          4h35m</span><br><span class="line">mongodb-rs-mongodb-replicaset-test   0/1     Completed   0          4h22m</span><br></pre></td></tr></table></figure>
+
+
+
+<p>bats还有一些其它的使用技巧, 比如可以使用skip来跳过某些<code>@test</code>代码块、可以用于<code>@test</code>网页等.可到<a target="_blank" rel="noopener" href="https://github.com/sstephenson/bats/blob/03608115df/README.md">github</a>查看</p>
+<p>不过batsN久没有更新了, 有一个改良版的<a target="_blank" rel="noopener" href="https://github.com/bats-core/bats-core">bats-core</a>，是在bats的基本之上改良的，感兴趣的可以看看.</p>
+<h3 id="参考文章"><a href="#参考文章" class="headerlink" title="参考文章:"></a>参考文章:</h3><blockquote>
+<ul>
+<li><a target="_blank" rel="noopener" href="https://github.com/bats-core/bats-core">https://github.com/bats-core/bats-core</a></li>
+<li><a target="_blank" rel="noopener" href="https://github.com/sstephenson/bats">https://github.com/sstephenson/bats</a></li>
+<li><a target="_blank" rel="noopener" href="https://wangchujiang.com/linux-command/c/trap.html">https://wangchujiang.com/linux-command/c/trap.html</a></li>
+</ul>
+</blockquote>
+<h3 id="转载请注明出处https-izsk-me"><a href="#转载请注明出处https-izsk-me" class="headerlink" title="转载请注明出处https://izsk.me"></a><strong>转载请注明出处<a target="_blank" rel="noopener" href="https://izsk.me/">https://izsk.me</a></strong></h3>
+      
+    </div>
+
+    <div>
+      
+        
+<div id="wechat_subscriber" style="display: block; padding: 10px 0; margin: 20px auto; width: 100%; text-align: center">
+    <img id="wechat_subscriber_qcode" src="/images/websitecode250.png" alt=" wechat" style="width: 200px; max-width: 100%;"/>
+    <div>Scan Me To Read on Phone</div>
+</div>
+
+
+      
+    </div>
+
+    <div>
+      
+        
+  <div style="padding: 10px 0; margin: 20px auto; width: 90%; text-align: center;">
+    <div>I know you won't do this,but what if you did?</div>
+    <button id="rewardButton" disable="enable" onclick="var qr = document.getElementById('QR'); if (qr.style.display === 'none') {qr.style.display='block';} else {qr.style.display='none'}">
+      <span>赏</span>
+    </button>
+    <div id="QR" style="display: none;">
+      
+        <div id="wechat" style="display: inline-block">
+          <img id="wechat_qr" src="/images/wechatpayme.png" alt=" WeChat Pay"/>
+          <p>微信打赏</p>
+        </div>
+      
+      
+        <div id="alipay" style="display: inline-block">
+          <img id="alipay_qr" src="/images/alipayme.jpg" alt=" Alipay"/>
+          <p>支付宝打赏</p>
+        </div>
+      
     </div>
   </div>
 
-{% endblock %}
 
-{% block sidebar %}
-  {{ sidebar_template.render(true) }}
-{% endblock %}
+      
+    </div>
 
 
-{% block script_extra %}
-  {% include '_scripts/pages/post-details.swig' %}
-{% endblock %}
+    <footer class="post-footer">
+      
+        <div class="post-tags">
+          
+            <a href="/tags/Shell/" rel="tag"># Shell</a>
+          
+        </div>
+      
+
+      
+        <div class="post-nav">
+          <div class="post-nav-next post-nav-item">
+            
+              <a href="/2020/08/17/Kubernetes-rancher-local-path-dymanic-provisioner-source-read/" rel="next" title="Kubernetes学习(rancher local path dynamic provisioner源码分析)">
+                <i class="fa fa-chevron-left"></i> Kubernetes学习(rancher local path dynamic provisioner源码分析)
+              </a>
+            
+          </div>
+
+          <span class="post-nav-divider"></span>
+
+          <div class="post-nav-prev post-nav-item">
+            
+              <a href="/2020/09/15/System-use-lvm-manager-disks/" rel="prev" title="Linux下使用lvm将多块盘合并">
+                Linux下使用lvm将多块盘合并 <i class="fa fa-chevron-right"></i>
+              </a>
+            
+          </div>
+        </div>
+      
+
+      
+      
+    </footer>
+  </article>
+
+
+
+    <div class="post-spread">
+      
+    </div>
+  </div>
+
+
+          </div>
+          
+
+
+          
+  <div class="comments" id="comments">
+    
+  </div>
+
+
+        </div>
+        
+          
+  
+  <div class="sidebar-toggle">
+    <div class="sidebar-toggle-line-wrap">
+      <span class="sidebar-toggle-line sidebar-toggle-line-first"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-middle"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-last"></span>
+    </div>
+  </div>
+
+  <aside id="sidebar" class="sidebar">
+    <div class="sidebar-inner">
+
+      
+
+      
+        <ul class="sidebar-nav motion-element">
+          <li class="sidebar-nav-toc sidebar-nav-active" data-target="post-toc-wrap" >
+            文章目录
+          </li>
+          <li class="sidebar-nav-overview" data-target="site-overview">
+            站点概览
+          </li>
+        </ul>
+      
+
+      <section class="site-overview sidebar-panel">
+        <div class="site-author motion-element" itemprop="author" itemscope itemtype="http://schema.org/Person">
+          <img class="site-author-image" itemprop="image"
+               src="/images/avatar.gif"
+               alt="" />
+          <p class="site-author-name" itemprop="name"></p>
+          <p class="site-description motion-element" itemprop="description"></p>
+        </div>
+        <nav class="site-state motion-element">
+        
+          
+            <div class="site-state-item site-state-posts">
+              <a href="/archives">
+                <span class="site-state-item-count">192</span>
+                <span class="site-state-item-name">日志</span>
+              </a>
+            </div>
+          
+
+          
+            <div class="site-state-item site-state-categories">
+              <a href="/categories">
+                <span class="site-state-item-count">14</span>
+                <span class="site-state-item-name">分类</span>
+              </a>
+            </div>
+          
+
+          
+            <div class="site-state-item site-state-tags">
+              <a href="/tags">
+                <span class="site-state-item-count">14</span>
+                <span class="site-state-item-name">标签</span>
+              </a>
+            </div>
+          
+
+        </nav>
+
+        
+
+        <div class="links-of-author motion-element">
+          
+        </div>
+
+        
+        
+
+        
+        
+
+        
+
+
+      </section>
+
+      
+      <!--noindex-->
+        <section class="post-toc-wrap motion-element sidebar-panel sidebar-panel-active">
+          <div class="post-toc">
+
+            
+              
+            
+
+            
+              <div class="post-toc-content"><ol class="nav"><li class="nav-item nav-level-3"><a class="nav-link" href="#%E4%BD%BF%E7%94%A8"><span class="nav-number">1.</span> <span class="nav-text">使用</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E6%BA%90%E7%A0%81%E5%88%86%E6%9E%90"><span class="nav-number">2.</span> <span class="nav-text">源码分析</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E5%8F%82%E8%80%83%E6%96%87%E7%AB%A0"><span class="nav-number">3.</span> <span class="nav-text">参考文章:</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E8%BD%AC%E8%BD%BD%E8%AF%B7%E6%B3%A8%E6%98%8E%E5%87%BA%E5%A4%84https-izsk-me"><span class="nav-number">4.</span> <span class="nav-text">转载请注明出处https:&#x2F;&#x2F;izsk.me</span></a></li></ol></div>
+            
+
+          </div>
+        </section>
+      <!--/noindex-->
+      
+
+    </div>
+  </aside>
+
+
+        
+      </div>
+    </main>
+
+    <footer id="footer" class="footer">
+      <div class="footer-inner">
+        <div class="copyright" >
+  
+  &copy; 
+  <span itemprop="copyrightYear">2022</span>
+  <span class="with-love">
+    <i class="fa fa-heart"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">Z.S.K.</span>
+</div>
+
+
+<div class="powered-by">
+  Supported by <a class="theme-link" target="_blank" rel="noopener" href="https://hexo.io">Hexo</a>
+</div>
+
+<div class="theme-info">
+  Theme -
+  <a class="theme-link" target="_blank" rel="noopener" href="https://github.com/iissnan/hexo-theme-next">
+    NexT.Mist
+  </a>
+</div>
+
+
+        
+
+        
+      </div>
+    </footer>
+
+    <div class="back-to-top">
+      <i class="fa fa-arrow-up"></i>
+    </div>
+  </div>
+
+  
+
+<script type="text/javascript">
+  if (Object.prototype.toString.call(window.Promise) !== '[object Function]') {
+    window.Promise = null;
+  }
+</script>
+
+
+
+
+
+
+
+
+
+  
+
+
+
+  
+  <script type="text/javascript" src="/lib/jquery/index.js?v=2.1.3"></script>
+
+  
+  <script type="text/javascript" src="/lib/fastclick/lib/fastclick.min.js?v=1.0.6"></script>
+
+  
+  <script type="text/javascript" src="/lib/jquery_lazyload/jquery.lazyload.js?v=1.9.7"></script>
+
+  
+  <script type="text/javascript" src="/lib/velocity/velocity.min.js?v=1.2.1"></script>
+
+  
+  <script type="text/javascript" src="/lib/velocity/velocity.ui.min.js?v=1.2.1"></script>
+
+  
+  <script type="text/javascript" src="/lib/fancybox/source/jquery.fancybox.pack.js?v=2.1.5"></script>
+
+
+  
+
+
+  <script type="text/javascript" src="/js/src/utils.js?v=5.1.0"></script>
+
+  <script type="text/javascript" src="/js/src/motion.js?v=5.1.0"></script>
+
+
+
+  
+  
+
+  
+  <script type="text/javascript" src="/js/src/scrollspy.js?v=5.1.0"></script>
+<script type="text/javascript" src="/js/src/post-details.js?v=5.1.0"></script>
+
+
+
+  
+
+
+  <script type="text/javascript" src="/js/src/bootstrap.js?v=5.1.0"></script>
+
+
+
+  
+
+
+
+  
+
+
+
+
+	
+
+
+
+
+
+  
+
+
+
+
+  
+  
+  <script type="text/javascript">
+    // Popup Window;
+    var isfetched = false;
+    // Search DB path;
+    var search_path = "search.xml";
+    if (search_path.length == 0) {
+      search_path = "search.xml";
+    }
+    var path = "/" + search_path;
+    // monitor main search box;
+
+    function proceedsearch() {
+      $("body").append('<div class="popoverlay">').css('overflow', 'hidden');
+      $('.popup').toggle();
+    }
+    // search function;
+    var searchFunc = function(path, search_id, content_id) {
+      'use strict';
+      $.ajax({
+        url: path,
+        dataType: "xml",
+        async: true,
+        success: function( xmlResponse ) {
+          // get the contents from search data
+          isfetched = true;
+          $('.popup').detach().appendTo('.header-inner');
+          var datas = $( "entry", xmlResponse ).map(function() {
+            return {
+              title: $( "title", this ).text(),
+              content: $("content",this).text(),
+              url: $( "url" , this).text()
+            };
+          }).get();
+          var $input = document.getElementById(search_id);
+          var $resultContent = document.getElementById(content_id);
+          $input.addEventListener('input', function(){
+            var matchcounts = 0;
+            var str='<ul class=\"search-result-list\">';
+            var keywords = this.value.trim().toLowerCase().split(/[\s\-]+/);
+            $resultContent.innerHTML = "";
+            if (this.value.trim().length > 1) {
+              // perform local searching
+              datas.forEach(function(data) {
+                var isMatch = false;
+                var content_index = [];
+                var data_title = data.title.trim().toLowerCase();
+                var data_content = data.content.trim().replace(/<[^>]+>/g,"").toLowerCase();
+                var data_url = decodeURIComponent(data.url);
+                var index_title = -1;
+                var index_content = -1;
+                var first_occur = -1;
+                // only match artiles with not empty titles and contents
+                if(data_title != '') {
+                  keywords.forEach(function(keyword, i) {
+                    index_title = data_title.indexOf(keyword);
+                    index_content = data_content.indexOf(keyword);
+                    if( index_title >= 0 || index_content >= 0 ){
+                      isMatch = true;
+                      if (i == 0) {
+                        first_occur = index_content;
+                      }
+                    }
+
+                  });
+                }
+                // show search results
+                if (isMatch) {
+                  matchcounts += 1;
+                  str += "<li><a href='"+ data_url +"' class='search-result-title'>"+ data_title +"</a>";
+                  var content = data.content.trim().replace(/<[^>]+>/g,"");
+                  if (first_occur >= 0) {
+                    // cut out 100 characters
+                    var start = first_occur - 20;
+                    var end = first_occur + 80;
+                    if(start < 0){
+                      start = 0;
+                    }
+                    if(start == 0){
+                      end = 50;
+                    }
+                    if(end > content.length){
+                      end = content.length;
+                    }
+                    var match_content = content.substring(start, end);
+                    // highlight all keywords
+                    keywords.forEach(function(keyword){
+                      var regS = new RegExp(keyword, "gi");
+                      match_content = match_content.replace(regS, "<b class=\"search-keyword\">"+keyword+"</b>");
+                    });
+
+                    str += "<p class=\"search-result\">" + match_content +"...</p>"
+                  }
+                  str += "</li>";
+                }
+              })};
+            str += "</ul>";
+            if (matchcounts == 0) { str = '<div id="no-result"><i class="fa fa-frown-o fa-5x" /></div>' }
+            if (keywords == "") { str = '<div id="no-result"><i class="fa fa-search fa-5x" /></div>' }
+            $resultContent.innerHTML = str;
+          });
+          proceedsearch();
+        }
+      });}
+
+    // handle and trigger popup window;
+    $('.popup-trigger').click(function(e) {
+      e.stopPropagation();
+      if (isfetched == false) {
+        searchFunc(path, 'local-search-input', 'local-search-result');
+      } else {
+        proceedsearch();
+      };
+    });
+
+    $('.popup-btn-close').click(function(e){
+      $('.popup').hide();
+      $(".popoverlay").remove();
+      $('body').css('overflow', '');
+    });
+    $('.popup').click(function(e){
+      e.stopPropagation();
+    });
+  </script>
+
+
+  
+
+  
+
+  
+
+  
+
+
+</body>
+</html>

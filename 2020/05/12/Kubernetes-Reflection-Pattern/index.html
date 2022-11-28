@@ -1,38 +1,977 @@
-{% extends '_layout.swig' %}
-{% import '_macro/post.swig' as post_template %}
-{% import '_macro/sidebar.swig' as sidebar_template %}
+<!doctype html>
 
 
-{% block title %} {{ page.title }} | {{ config.title }} {% endblock %}
 
-{% block page_class %}page-post-detail{% endblock %}
+  
 
 
-{% block content %}
+<html class="theme-next mist use-motion" lang="zh-Hans">
+<head>
+  <meta charset="UTF-8"/>
+<meta http-equiv="X-UA-Compatible" content="IE=edge" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1"/>
+
+
+
+<meta http-equiv="Cache-Control" content="no-transform" />
+<meta http-equiv="Cache-Control" content="no-siteapp" />
+
+
+
+
+
+
+
+
+
+
+
+
+  
+  
+  <link href="/lib/fancybox/source/jquery.fancybox.css?v=2.1.5" rel="stylesheet" type="text/css" />
+
+
+
+
+  
+  
+  
+  
+
+  
+    
+    
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+    
+    
+    <link href="//fonts.googleapis.com/css?family=Lato:300,300italic,400,400italic,700,700italic&subset=latin,latin-ext" rel="stylesheet" type="text/css">
+  
+
+
+
+
+
+
+<link href="/lib/font-awesome/css/font-awesome.min.css?v=4.6.2" rel="stylesheet" type="text/css" />
+
+<link href="/css/main.css?v=5.1.0" rel="stylesheet" type="text/css" />
+
+
+  <meta name="keywords" content="Kubernetes," />
+
+
+
+
+
+
+
+
+  <link rel="shortcut icon" type="image/x-icon" href="/favicon.ico?v=5.1.0" />
+
+
+
+
+
+
+<meta name="description" content="该文章为翻译文档, 主要在阐述kubernetes中的DownwardAPI的作用， 这里是原文地址">
+<meta property="og:type" content="article">
+<meta property="og:title" content="Kubernetes学习(kubernetes中的反射模式(DownwardAPI))">
+<meta property="og:url" content="https://zhoushuke.github.io/2020/05/12/Kubernetes-Reflection-Pattern/index.html">
+<meta property="og:site_name" content="Z.S.K.&#39;s Records">
+<meta property="og:description" content="该文章为翻译文档, 主要在阐述kubernetes中的DownwardAPI的作用， 这里是原文地址">
+<meta property="og:locale">
+<meta property="og:image" content="https://www.magalix.com/hs-fs/hubfs/reflection.png?width=720&name=reflection.png">
+<meta property="article:published_time" content="2020-05-12T09:10:53.000Z">
+<meta property="article:modified_time" content="2022-07-19T03:16:00.944Z">
+<meta property="article:author" content="Z.S.K.">
+<meta property="article:tag" content="Kubernetes">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:image" content="https://www.magalix.com/hs-fs/hubfs/reflection.png?width=720&name=reflection.png">
+
+
+
+<script type="text/javascript" id="hexo.configurations">
+  var NexT = window.NexT || {};
+  var CONFIG = {
+    root: '',
+    scheme: 'Mist',
+    sidebar: {"position":"left","display":"post"},
+    fancybox: true,
+    motion: true,
+    duoshuo: {
+      userId: 'undefined',
+      author: '博主'
+    },
+    algolia: {
+      applicationID: '',
+      apiKey: '',
+      indexName: '',
+      hits: {"per_page":10},
+      labels: {"input_placeholder":"Search for Posts","hits_empty":"We didn't find any results for the search: ${query}","hits_stats":"${hits} results found in ${time} ms"}
+    }
+  };
+</script>
+
+
+
+  <link rel="canonical" href="https://zhoushuke.github.io/2020/05/12/Kubernetes-Reflection-Pattern/"/>
+
+
+
+
+
+  <title> Kubernetes学习(kubernetes中的反射模式(DownwardAPI)) | Z.S.K.'s Records </title>
+<meta name="generator" content="Hexo 6.2.0"></head>
+
+<body itemscope itemtype="http://schema.org/WebPage" lang="zh-Hans">
+
+  
+
+
+
+
+
+
+
+
+
+
+  
+  
+    
+  
+
+  <div class="container one-collumn sidebar-position-left page-post-detail ">
+    <div class="headband"></div>
+
+    <header id="header" class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-meta ">
+  
+
+  <div class="custom-logo-site-title">
+    <a href="/"  class="brand" rel="start">
+      <span class="logo-line-before"><i></i></span>
+      <span class="site-title">Z.S.K.'s Records</span>
+      <span class="logo-line-after"><i></i></span>
+    </a>
+  </div>
+    
+      <p class="site-subtitle"></p>
+    
+</div>
+
+<div class="site-nav-toggle">
+  <button>
+    <span class="btn-bar"></span>
+    <span class="btn-bar"></span>
+    <span class="btn-bar"></span>
+  </button>
+</div>
+
+<nav class="site-nav">
+  
+
+  
+    <ul id="menu" class="menu">
+      
+        
+        <li class="menu-item menu-item-home">
+          <a href="/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-home"></i> <br />
+            
+            首页
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-categories">
+          <a href="/categories" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-th"></i> <br />
+            
+            分类
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-about">
+          <a href="/about/ZSK-Profile.pdf" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-user"></i> <br />
+            
+            简历
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-archives">
+          <a href="/archives" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-archive"></i> <br />
+            
+            归档
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-tags">
+          <a href="/tags" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-tags"></i> <br />
+            
+            标签
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-commonweal">
+          <a href="/404.html" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-heartbeat"></i> <br />
+            
+            公益404
+          </a>
+        </li>
+      
+
+      
+        <li class="menu-item menu-item-search">
+          
+            <a href="javascript:;" class="popup-trigger">
+          
+            
+              <i class="menu-item-icon fa fa-search fa-fw"></i> <br />
+            
+            搜索
+          </a>
+        </li>
+      
+    </ul>
+  
+
+  
+    <div class="site-search">
+      
+  <div class="popup">
+ <span class="search-icon fa fa-search"></span>
+ <input type="text" id="local-search-input">
+ <div id="local-search-result"></div>
+ <span class="popup-btn-close">close</span>
+</div>
+
+
+    </div>
+  
+</nav>
+
+
+
+ </div>
+    </header>
+
+    <main id="main" class="main">
+      <div class="main-inner">
+        <div class="content-wrap">
+          <div id="content" class="content">
+            
 
   <div id="posts" class="posts-expand">
-    {{ post_template.render(page) }}
+    
 
-    <div class="post-spread">
-      {% if theme.jiathis %}
-        {% include '_partials/share/jiathis.swig' %}
-      {% elseif theme.baidushare %}
-        {% include '_partials/share/baidushare.swig' %}
-      {% elseif theme.add_this_id %}
-        {% include '_partials/share/add-this.swig' %}
-      {% elseif theme.duoshuo_shortname and theme.duoshuo_share %}
-        {% include '_partials/share/duoshuo_share.swig' %}
-      {% endif %}
+  
+
+  
+  
+  
+
+  <article class="post post-type-normal " itemscope itemtype="http://schema.org/Article">
+  <link itemprop="mainEntityOfPage" href="https://zhoushuke.github.io/2020/05/12/Kubernetes-Reflection-Pattern/">
+
+  <span style="display:none" itemprop="author" itemscope itemtype="http://schema.org/Person">
+    <meta itemprop="name" content="">
+    <meta itemprop="description" content="">
+    <meta itemprop="image" content="/images/avatar.gif">
+  </span>
+
+  <span style="display:none" itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+    <meta itemprop="name" content="Z.S.K.'s Records">
+    <span style="display:none" itemprop="logo" itemscope itemtype="http://schema.org/ImageObject">
+      <img style="display:none;" itemprop="url image" alt="Z.S.K.'s Records" src="">
+    </span>
+  </span>
+
+    
+      <header class="post-header">
+
+        
+        
+          <h1 class="post-title" itemprop="name headline">
+            
+            
+              
+                Kubernetes学习(kubernetes中的反射模式(DownwardAPI))
+              
+            
+          </h1>
+        
+
+        <div class="post-meta">
+          <span class="post-time">
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">发表于</span>
+              
+              <time title="Post created" itemprop="dateCreated datePublished" datetime="2020-05-12T17:10:53+08:00">
+                2020-05-12
+              </time>
+            
+
+            
+
+            
+          </span>
+
+          
+            <span class="post-category" >
+            
+              <span class="post-meta-divider">|</span>
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-folder-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">分类于</span>
+              
+              
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/Kubernetes/" itemprop="url" rel="index">
+                    <span itemprop="name">Kubernetes</span>
+                  </a>
+                </span>
+
+                
+                
+              
+            </span>
+          
+
+          
+            
+          
+
+          
+
+          
+          
+
+          
+
+          
+
+        </div>
+      </header>
+    
+
+
+    <div class="post-body" itemprop="articleBody">
+
+      
+      
+
+      
+        <p>该文章为翻译文档, 主要在阐述kubernetes中的DownwardAPI的作用， 这里是<a target="_blank" rel="noopener" href="https://www.magalix.com/blog/kubernetes-patterns-the-reflection-pattern">原文地址</a></p>
+<span id="more"></span>
+
+
+
+<h1 id="什么是“反射”？"><a href="#什么是“反射”？" class="headerlink" title="什么是“反射”？"></a>什么是“反射”？</h1><p>反射是大多数（不是全部）编程语言中都可以使用的概念。它只是指某种对象揭示其自身重要信息的能力。例如，它的名称，它的父类以及它包含的任何元数据。在Cloud和DevOps领域中具有相同的概念。例如，如果您登录到AWS EC2实例，则可以通过从以下位置发出GET请求到<a target="_blank" rel="noopener" href="http://169.254.169.254/latest/meta-data/%E6%9D%A5%E8%BD%BB%E6%9D%BE%E8%8E%B7%E5%8F%96%E6%9C%89%E5%85%B3%E8%AF%A5%E7%89%B9%E5%AE%9A%E5%AE%9E%E4%BE%8B%E7%9A%84%E5%A4%A7%E9%87%8F%E4%BF%A1%E6%81%AF%E3%80%82">http://169.254.169.254/latest/meta-data/来轻松获取有关该特定实例的大量信息。</a></p>
+<h1 id="为什么我们需要反射？"><a href="#为什么我们需要反射？" class="headerlink" title="为什么我们需要反射？"></a>为什么我们需要反射？</h1><p>对象的能用术语指的是工作单元。因此，在编程语言中，对象是类的实例，在内部部署基础结构中，对象可以是物理或虚拟主机，在云环境中，它是实例，而在Kubernetes中，它是Pod 。</p>
+<p>在本文中，我们对Kubernetes感兴趣，因此Pod和object可以互换使用。</p>
+<p>在许多情况下，您需要Pod的元数据，尤其是在该Pod是无状态应用程序的一部分的情况下，其中Pod本质上是动态的。让我们看一些可能的情况：</p>
+<ul>
+<li>您需要Pod的IP地址，以识别它是否是网络上检测到的可疑流量的来源。</li>
+<li>在容器内运行的应用程序需要知道Pod在其中运行的名称空间，这可能是因为该程序被编程为根据名称空间所传达的运行环境而有所不同。</li>
+<li>您需要知道限制容器当前资源限制（CPU和内存）。例如，您可以进一步使用此数据在启动Java应用程序时自动调整其堆大小。</li>
+</ul>
+<p>幸运的是，Kubernetes通过使用Downward API使这项任务相对容易。</p>
+<h1 id="DownwardAPI是如何工作？"><a href="#DownwardAPI是如何工作？" class="headerlink" title="DownwardAPI是如何工作？"></a>DownwardAPI是如何工作？</h1><p>Downward API通过环境变量和文件将元数据注入到容器中。它们的使用方式与configMaps和Secrets一样，用于处理将外部信息传递给应用程序的情况。但是，Downward API不会将所有可用的元数据注入到容器中。相反，我们选择需要对容器可用的变量。</p>
+<p>让我们举个例子以便更好地理解。以下定义文件创建一个Pod，该Pod从bash映像运行容器。我们使用Downward API注入三个可用变量：Pod的IP地址，此Pod运行所在的名称空间以及对其施加的当前内存限制。下图可以描述这种情况：</p>
+<p><img src="https://www.magalix.com/hs-fs/hubfs/reflection.png?width=720&name=reflection.png" alt="反射"></p>
+<p><a target="_blank" rel="noopener" href="https://www.magalix.com/cs/c/?cta_guid=18dc390a-3729-410b-a0ec-41819020a462&placement_guid=963b2ba4-df32-4a3b-8781-f8fa4ff38750&portal_id=3487587&canon=https://www.magalix.com/blog/kubernetes-patterns-the-reflection-pattern&redirect_url=APefjpFCTwHTF_0D7xGnKEa3OyhUHUrxPjuzbaM6DJbCtG7cCui55tcC3IEiq2qMyBoWSCtpP2YORW-hQeacfrxSibzeMsSHiUV67Y_bPVzca7Oq0nDy4FJtbLNajeOMnwmSMHL-HZOs&click=f4df9f45-b688-40bc-a4b9-bfd9cfcbde54&hsutk=33479dc673383b321023ea8e6a151cb1&signature=AAH58kGwChv9446MJBtnkLTaNmfCXRWI0g&utm_referrer=https://www.google.com/&__hstc=197029363.33479dc673383b321023ea8e6a151cb1.1589190812305.1589190812305.1589190812305.1&__hssc=197029363.1.1589190812306&__hsfp=441927329&contentType=blog-post">了解如何持续优化您的k8s集群</a></p>
+<p>定义文件如下所示：</p>
+<figure class="highlight yaml"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br></pre></td><td class="code"><pre><span class="line"><span class="attr">apiVersion:</span> <span class="string">v1</span></span><br><span class="line"><span class="attr">kind:</span> <span class="string">Pod</span></span><br><span class="line"><span class="attr">metadata:</span></span><br><span class="line">  <span class="attr">name:</span> <span class="string">mypod</span></span><br><span class="line"><span class="attr">spec:</span></span><br><span class="line">  <span class="attr">containers:</span></span><br><span class="line">  <span class="bullet">-</span> <span class="attr">image:</span> <span class="string">bash</span></span><br><span class="line">    <span class="attr">name:</span> <span class="string">mycontainer</span></span><br><span class="line">    <span class="attr">command:</span> [<span class="string">&#x27;bash&#x27;</span>,<span class="string">&#x27;-c&#x27;</span>,<span class="string">&#x27;sleep 1000000&#x27;</span>]</span><br><span class="line">    <span class="attr">env:</span></span><br><span class="line">    <span class="bullet">-</span> <span class="attr">name:</span> <span class="string">MY_IP</span></span><br><span class="line">      <span class="attr">valueFrom:</span></span><br><span class="line">        <span class="attr">fieldRef:</span></span><br><span class="line">          <span class="attr">fieldPath:</span> <span class="string">status.podIP</span></span><br><span class="line">    <span class="bullet">-</span> <span class="attr">name:</span> <span class="string">MY_NAMESPACE</span></span><br><span class="line">      <span class="attr">valueFrom:</span></span><br><span class="line">        <span class="attr">fieldRef:</span></span><br><span class="line">          <span class="attr">fieldPath:</span> <span class="string">metadata.namespace</span></span><br><span class="line">    <span class="bullet">-</span> <span class="attr">name:</span> <span class="string">MY_MEMORY_LIMIT</span></span><br><span class="line">      <span class="attr">valueFrom:</span></span><br><span class="line">        <span class="attr">resourceFieldRef:</span></span><br><span class="line">          <span class="attr">containerName:</span> <span class="string">mycontainer</span></span><br><span class="line">          <span class="attr">resource:</span> <span class="string">limits.memory</span></span><br><span class="line">          <span class="attr">divisor:</span> <span class="string">1Mi</span></span><br></pre></td></tr></table></figure>
+
+<p>让我们使用kubectl apply -f <em>filename</em>运行此定义，然后访问Pod内的容器，看看我们的元数据是否可用：</p>
+<figure class="highlight yaml"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br></pre></td><td class="code"><pre><span class="line"><span class="string">$</span> <span class="string">kubectl</span> <span class="string">exec</span> <span class="string">-it</span> <span class="string">mypod</span> <span class="string">bash</span></span><br><span class="line"><span class="string">bash-5.0#</span> <span class="string">echo</span> <span class="string">MY_IP</span></span><br><span class="line"><span class="string">MY_IP</span></span><br><span class="line"><span class="string">bash-5.0#</span> <span class="string">echo</span> <span class="string">$MY_IP</span></span><br><span class="line"><span class="number">172.17</span><span class="number">.0</span><span class="number">.4</span></span><br><span class="line"><span class="string">bash-5.0#</span> <span class="string">echo</span> <span class="string">$MY_NAMESPACE</span></span><br><span class="line"><span class="string">default</span></span><br><span class="line"><span class="string">bash-5.0#</span> <span class="string">echo</span> <span class="string">$MY_MEMORY_LIMIT</span></span><br><span class="line"><span class="number">1900</span></span><br></pre></td></tr></table></figure>
+
+<p>因此，我们可以通过查询相应的环境变量MY_IP，MY_NAMESPACE和MY_MEMORY_LIMIT来获取运行此Pod的IP地址和命名空间。</p>
+<h1 id="FieldRef"><a href="#FieldRef" class="headerlink" title="FieldRef"></a>FieldRef</h1><p>在第一个示例中，我们使用fieldRef参数来选择需要通过fieldPath注入到Pod中的信息。以下是通过fieldRef可用的可能值的列表：</p>
+<table>
+<thead>
+<tr>
+<th><strong>Name</strong></th>
+<th><strong>Description</strong></th>
+</tr>
+</thead>
+<tbody><tr>
+<td>spec.nodename</td>
+<td>The name of the node where the Pod is running.</td>
+</tr>
+<tr>
+<td>status.hostIP</td>
+<td>The IP address of the node where the Pod us running.</td>
+</tr>
+<tr>
+<td>metadata.name</td>
+<td>The Pod name (notice that this is different than the container’s name. A Pod may have more than one container)</td>
+</tr>
+<tr>
+<td>metadata.namespace</td>
+<td>The namespace of the Pod</td>
+</tr>
+<tr>
+<td>status.podIP</td>
+<td>The IP address of the Pod</td>
+</tr>
+<tr>
+<td>spec.serviceAccountName</td>
+<td>The service account that was used with the Pod.</td>
+</tr>
+<tr>
+<td>metadata.uid</td>
+<td>The UID of the running Pod</td>
+</tr>
+<tr>
+<td>metadata.labels[<em>‘label</em>‘]</td>
+<td>The value of the label put on the Pod. For example, if a Pod is labeled env&#x3D;prod, then metadata.labels[‘env’] returns ‘prod’.</td>
+</tr>
+<tr>
+<td>metadata.annotations[‘annotation’]</td>
+<td>Similar to labels, it gets the value of the specified annotation.</td>
+</tr>
+</tbody></table>
+<h1 id="ResourceFieldRef"><a href="#ResourceFieldRef" class="headerlink" title="ResourceFieldRef"></a>ResourceFieldRef</h1><p>fieldRef参数允许您注入有关Pod的元数据。如果需要有关Pod消耗的资源（即CPU和内存）的数据，则应使用resourceFieldRef。以下是可用于获取此数据的可用选项的列表：</p>
+<table>
+<thead>
+<tr>
+<th><strong>Name</strong></th>
+<th><strong>Description</strong></th>
+</tr>
+</thead>
+<tbody><tr>
+<td>requests.cpu</td>
+<td>The amount of CPU specified in the requests field of the Pod definition</td>
+</tr>
+<tr>
+<td>requests.memory</td>
+<td>The amount of memory specified in the requests field of the Pod definition</td>
+</tr>
+<tr>
+<td>limits.cpu</td>
+<td>The CPU limit of the Pod</td>
+</tr>
+<tr>
+<td>limits.memory</td>
+<td>The memory limit of the Pod</td>
+</tr>
+</tbody></table>
+<p>可以在其定义文件内的Pod上添加requests和limits。它们都允许您控制给定Pod可以消耗多少资源的硬性限制和软性限制。它们还帮助调度程序根据其资源请求和限制将Pod分配给适当的节点。有关此主题的更多信息，您可以参考我们的容量规划文章。</p>
+<h1 id="在修改它们之后获取Pod元数据"><a href="#在修改它们之后获取Pod元数据" class="headerlink" title="在修改它们之后获取Pod元数据"></a>在修改它们之后获取Pod元数据</h1><p>在Pod运行时，允许Kubernetes用户更改Pod的某些元数据。因此，否则无法更改诸如资源请求和限制之类的字段是无法修改的, 除非删除Pod, 但可以更改Pod标签。如果用户发出了kubectl edit pod pod_name命令，则只要该字段接受，他们就可以对Pod定义进行动态修改。</p>
+<p>如果Pod的元数据已动态更改，则无法通过环境变量将它们重新注入到容器中，因为这需要重新启动容器。但是，您仍然可以通过使用将数据注入到容器中的另一种方法（卷）来监视和捕获这些更改。</p>
+<p>以下定义演示了如何使用与configMaps和Secrets一起使用卷的方式相同的卷，以允许容器访问数据：</p>
+<figure class="highlight yaml"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br></pre></td><td class="code"><pre><span class="line"><span class="attr">apiVersion:</span> <span class="string">v1</span></span><br><span class="line"><span class="attr">kind:</span> <span class="string">Pod</span></span><br><span class="line"><span class="attr">metadata:</span></span><br><span class="line">  <span class="attr">name:</span> <span class="string">mypod</span></span><br><span class="line">  <span class="attr">labels:</span></span><br><span class="line">    <span class="attr">env:</span> <span class="string">prod</span></span><br><span class="line"><span class="attr">spec:</span></span><br><span class="line">  <span class="attr">containers:</span></span><br><span class="line">  <span class="bullet">-</span> <span class="attr">image:</span> <span class="string">bash</span></span><br><span class="line">    <span class="attr">name:</span> <span class="string">mycontainer</span></span><br><span class="line">    <span class="attr">command:</span> [<span class="string">&#x27;bash&#x27;</span>,<span class="string">&#x27;-c&#x27;</span>,<span class="string">&#x27;sleep 1000000&#x27;</span>]</span><br><span class="line">    <span class="attr">volumeMounts:</span></span><br><span class="line">    <span class="bullet">-</span> <span class="attr">name:</span> <span class="string">mypod-vol</span></span><br><span class="line">      <span class="attr">mountPath:</span> <span class="string">/mypod-metadata</span></span><br><span class="line">  <span class="attr">volumes:</span></span><br><span class="line">  <span class="bullet">-</span> <span class="attr">name:</span> <span class="string">mypod-vol</span></span><br><span class="line">    <span class="attr">downwardAPI:</span></span><br><span class="line">      <span class="attr">items:</span></span><br><span class="line">      <span class="bullet">-</span> <span class="attr">path:</span> <span class="string">labels</span></span><br><span class="line">        <span class="attr">fieldRef:</span></span><br><span class="line">          <span class="attr">fieldPath:</span> <span class="string">metadata.labels</span></span><br><span class="line">      <span class="bullet">-</span> <span class="attr">path:</span> <span class="string">annotations</span></span><br><span class="line">        <span class="attr">fieldRef:</span></span><br><span class="line">          <span class="attr">fieldPath:</span> <span class="string">metadata.annotations</span></span><br></pre></td></tr></table></figure>
+
+<p>应用此定义并登录到Pod，我们可以看到已经为我们安装了包含相关数据的卷：</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line">title: Kubernetes学习(使用PodSecurityPolicy)</span><br><span class="line">comments: flase</span><br><span class="line"><span class="built_in">date</span>: 2019-12-13 17:10:53</span><br><span class="line">tags: Kubernetes</span><br><span class="line">categories: Kubernetes</span><br></pre></td></tr></table></figure>
+
+<p>如您所见，我们通过存储在卷上的文件而不是环境变量来获取数据。这使我们能够在信息变化的任何地方动态地检索信息，而无需重新启动容器。但是，仍需要对正在运行的应用程序进行配置，以检测标签或注释文件中的更改（如果正在使用其值），并在进行修改时采取相应的措施。</p>
+<ul>
+<li>在很多情况下，您需要应用程序了解运行它的基础结构的某些元数据。应用程序可以使用此信息来做出明智的决定或使手动任务自动化。</li>
+<li>Kubernetes提供了Downward API，该API允许您将其中一些元数据注入Pod，并使其中的容器可以访问它们。</li>
+<li>Downward API允许您在API服务器上查询许多元数据项以及资源请求和限制。</li>
+<li>您可以通过环境变量或安装卷将所需的信息注入Pod。</li>
+<li>使用环境变量的不利之处在于它们无法反映对Pod的元数据（如标签和注释）的动态更改。您可以将卷用作解决方法。</li>
+<li>尽管Downward API是实现Pod反射的一种优雅方法，但它仍然可以提供的数据量受到限制。还有其他Pod方面可能需要通过Downward API提供，而其他方面则不提供。解决此缺点的方法是让应用程序直接查询API服务器以获取丢失的数据。许多编程语言中都有许多客户端库，使您可以通过代码查询API服务器。</li>
+</ul>
+
+      
+    </div>
+
+    <div>
+      
+        
+<div id="wechat_subscriber" style="display: block; padding: 10px 0; margin: 20px auto; width: 100%; text-align: center">
+    <img id="wechat_subscriber_qcode" src="/images/websitecode250.png" alt=" wechat" style="width: 200px; max-width: 100%;"/>
+    <div>Scan Me To Read on Phone</div>
+</div>
+
+
+      
+    </div>
+
+    <div>
+      
+        
+  <div style="padding: 10px 0; margin: 20px auto; width: 90%; text-align: center;">
+    <div>I know you won't do this,but what if you did?</div>
+    <button id="rewardButton" disable="enable" onclick="var qr = document.getElementById('QR'); if (qr.style.display === 'none') {qr.style.display='block';} else {qr.style.display='none'}">
+      <span>赏</span>
+    </button>
+    <div id="QR" style="display: none;">
+      
+        <div id="wechat" style="display: inline-block">
+          <img id="wechat_qr" src="/images/wechatpayme.png" alt=" WeChat Pay"/>
+          <p>微信打赏</p>
+        </div>
+      
+      
+        <div id="alipay" style="display: inline-block">
+          <img id="alipay_qr" src="/images/alipayme.jpg" alt=" Alipay"/>
+          <p>支付宝打赏</p>
+        </div>
+      
     </div>
   </div>
 
-{% endblock %}
 
-{% block sidebar %}
-  {{ sidebar_template.render(true) }}
-{% endblock %}
+      
+    </div>
 
 
-{% block script_extra %}
-  {% include '_scripts/pages/post-details.swig' %}
-{% endblock %}
+    <footer class="post-footer">
+      
+        <div class="post-tags">
+          
+            <a href="/tags/Kubernetes/" rel="tag"># Kubernetes</a>
+          
+        </div>
+      
+
+      
+        <div class="post-nav">
+          <div class="post-nav-next post-nav-item">
+            
+              <a href="/2020/05/12/Kubernetes-why-local-PV-need-bound-delay/" rel="next" title="Kubernetes学习(PVC为什么需要延迟绑定)">
+                <i class="fa fa-chevron-left"></i> Kubernetes学习(PVC为什么需要延迟绑定)
+              </a>
+            
+          </div>
+
+          <span class="post-nav-divider"></span>
+
+          <div class="post-nav-prev post-nav-item">
+            
+              <a href="/2020/05/15/gitlab-kubernetes-multi-environment-deploy/" rel="prev" title="Gitlab学习(实现多kubernets环境CI/CD)">
+                Gitlab学习(实现多kubernets环境CI/CD) <i class="fa fa-chevron-right"></i>
+              </a>
+            
+          </div>
+        </div>
+      
+
+      
+      
+    </footer>
+  </article>
+
+
+
+    <div class="post-spread">
+      
+    </div>
+  </div>
+
+
+          </div>
+          
+
+
+          
+  <div class="comments" id="comments">
+    
+  </div>
+
+
+        </div>
+        
+          
+  
+  <div class="sidebar-toggle">
+    <div class="sidebar-toggle-line-wrap">
+      <span class="sidebar-toggle-line sidebar-toggle-line-first"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-middle"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-last"></span>
+    </div>
+  </div>
+
+  <aside id="sidebar" class="sidebar">
+    <div class="sidebar-inner">
+
+      
+
+      
+        <ul class="sidebar-nav motion-element">
+          <li class="sidebar-nav-toc sidebar-nav-active" data-target="post-toc-wrap" >
+            文章目录
+          </li>
+          <li class="sidebar-nav-overview" data-target="site-overview">
+            站点概览
+          </li>
+        </ul>
+      
+
+      <section class="site-overview sidebar-panel">
+        <div class="site-author motion-element" itemprop="author" itemscope itemtype="http://schema.org/Person">
+          <img class="site-author-image" itemprop="image"
+               src="/images/avatar.gif"
+               alt="" />
+          <p class="site-author-name" itemprop="name"></p>
+          <p class="site-description motion-element" itemprop="description"></p>
+        </div>
+        <nav class="site-state motion-element">
+        
+          
+            <div class="site-state-item site-state-posts">
+              <a href="/archives">
+                <span class="site-state-item-count">192</span>
+                <span class="site-state-item-name">日志</span>
+              </a>
+            </div>
+          
+
+          
+            <div class="site-state-item site-state-categories">
+              <a href="/categories">
+                <span class="site-state-item-count">14</span>
+                <span class="site-state-item-name">分类</span>
+              </a>
+            </div>
+          
+
+          
+            <div class="site-state-item site-state-tags">
+              <a href="/tags">
+                <span class="site-state-item-count">14</span>
+                <span class="site-state-item-name">标签</span>
+              </a>
+            </div>
+          
+
+        </nav>
+
+        
+
+        <div class="links-of-author motion-element">
+          
+        </div>
+
+        
+        
+
+        
+        
+
+        
+
+
+      </section>
+
+      
+      <!--noindex-->
+        <section class="post-toc-wrap motion-element sidebar-panel sidebar-panel-active">
+          <div class="post-toc">
+
+            
+              
+            
+
+            
+              <div class="post-toc-content"><ol class="nav"><li class="nav-item nav-level-1"><a class="nav-link" href="#%E4%BB%80%E4%B9%88%E6%98%AF%E2%80%9C%E5%8F%8D%E5%B0%84%E2%80%9D%EF%BC%9F"><span class="nav-number">1.</span> <span class="nav-text">什么是“反射”？</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#%E4%B8%BA%E4%BB%80%E4%B9%88%E6%88%91%E4%BB%AC%E9%9C%80%E8%A6%81%E5%8F%8D%E5%B0%84%EF%BC%9F"><span class="nav-number">2.</span> <span class="nav-text">为什么我们需要反射？</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#DownwardAPI%E6%98%AF%E5%A6%82%E4%BD%95%E5%B7%A5%E4%BD%9C%EF%BC%9F"><span class="nav-number">3.</span> <span class="nav-text">DownwardAPI是如何工作？</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#FieldRef"><span class="nav-number">4.</span> <span class="nav-text">FieldRef</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#ResourceFieldRef"><span class="nav-number">5.</span> <span class="nav-text">ResourceFieldRef</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#%E5%9C%A8%E4%BF%AE%E6%94%B9%E5%AE%83%E4%BB%AC%E4%B9%8B%E5%90%8E%E8%8E%B7%E5%8F%96Pod%E5%85%83%E6%95%B0%E6%8D%AE"><span class="nav-number">6.</span> <span class="nav-text">在修改它们之后获取Pod元数据</span></a></li></ol></div>
+            
+
+          </div>
+        </section>
+      <!--/noindex-->
+      
+
+    </div>
+  </aside>
+
+
+        
+      </div>
+    </main>
+
+    <footer id="footer" class="footer">
+      <div class="footer-inner">
+        <div class="copyright" >
+  
+  &copy; 
+  <span itemprop="copyrightYear">2022</span>
+  <span class="with-love">
+    <i class="fa fa-heart"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">Z.S.K.</span>
+</div>
+
+
+<div class="powered-by">
+  Supported by <a class="theme-link" target="_blank" rel="noopener" href="https://hexo.io">Hexo</a>
+</div>
+
+<div class="theme-info">
+  Theme -
+  <a class="theme-link" target="_blank" rel="noopener" href="https://github.com/iissnan/hexo-theme-next">
+    NexT.Mist
+  </a>
+</div>
+
+
+        
+
+        
+      </div>
+    </footer>
+
+    <div class="back-to-top">
+      <i class="fa fa-arrow-up"></i>
+    </div>
+  </div>
+
+  
+
+<script type="text/javascript">
+  if (Object.prototype.toString.call(window.Promise) !== '[object Function]') {
+    window.Promise = null;
+  }
+</script>
+
+
+
+
+
+
+
+
+
+  
+
+
+
+  
+  <script type="text/javascript" src="/lib/jquery/index.js?v=2.1.3"></script>
+
+  
+  <script type="text/javascript" src="/lib/fastclick/lib/fastclick.min.js?v=1.0.6"></script>
+
+  
+  <script type="text/javascript" src="/lib/jquery_lazyload/jquery.lazyload.js?v=1.9.7"></script>
+
+  
+  <script type="text/javascript" src="/lib/velocity/velocity.min.js?v=1.2.1"></script>
+
+  
+  <script type="text/javascript" src="/lib/velocity/velocity.ui.min.js?v=1.2.1"></script>
+
+  
+  <script type="text/javascript" src="/lib/fancybox/source/jquery.fancybox.pack.js?v=2.1.5"></script>
+
+
+  
+
+
+  <script type="text/javascript" src="/js/src/utils.js?v=5.1.0"></script>
+
+  <script type="text/javascript" src="/js/src/motion.js?v=5.1.0"></script>
+
+
+
+  
+  
+
+  
+  <script type="text/javascript" src="/js/src/scrollspy.js?v=5.1.0"></script>
+<script type="text/javascript" src="/js/src/post-details.js?v=5.1.0"></script>
+
+
+
+  
+
+
+  <script type="text/javascript" src="/js/src/bootstrap.js?v=5.1.0"></script>
+
+
+
+  
+
+
+
+  
+
+
+
+
+	
+
+
+
+
+
+  
+
+
+
+
+  
+  
+  <script type="text/javascript">
+    // Popup Window;
+    var isfetched = false;
+    // Search DB path;
+    var search_path = "search.xml";
+    if (search_path.length == 0) {
+      search_path = "search.xml";
+    }
+    var path = "/" + search_path;
+    // monitor main search box;
+
+    function proceedsearch() {
+      $("body").append('<div class="popoverlay">').css('overflow', 'hidden');
+      $('.popup').toggle();
+    }
+    // search function;
+    var searchFunc = function(path, search_id, content_id) {
+      'use strict';
+      $.ajax({
+        url: path,
+        dataType: "xml",
+        async: true,
+        success: function( xmlResponse ) {
+          // get the contents from search data
+          isfetched = true;
+          $('.popup').detach().appendTo('.header-inner');
+          var datas = $( "entry", xmlResponse ).map(function() {
+            return {
+              title: $( "title", this ).text(),
+              content: $("content",this).text(),
+              url: $( "url" , this).text()
+            };
+          }).get();
+          var $input = document.getElementById(search_id);
+          var $resultContent = document.getElementById(content_id);
+          $input.addEventListener('input', function(){
+            var matchcounts = 0;
+            var str='<ul class=\"search-result-list\">';
+            var keywords = this.value.trim().toLowerCase().split(/[\s\-]+/);
+            $resultContent.innerHTML = "";
+            if (this.value.trim().length > 1) {
+              // perform local searching
+              datas.forEach(function(data) {
+                var isMatch = false;
+                var content_index = [];
+                var data_title = data.title.trim().toLowerCase();
+                var data_content = data.content.trim().replace(/<[^>]+>/g,"").toLowerCase();
+                var data_url = decodeURIComponent(data.url);
+                var index_title = -1;
+                var index_content = -1;
+                var first_occur = -1;
+                // only match artiles with not empty titles and contents
+                if(data_title != '') {
+                  keywords.forEach(function(keyword, i) {
+                    index_title = data_title.indexOf(keyword);
+                    index_content = data_content.indexOf(keyword);
+                    if( index_title >= 0 || index_content >= 0 ){
+                      isMatch = true;
+                      if (i == 0) {
+                        first_occur = index_content;
+                      }
+                    }
+
+                  });
+                }
+                // show search results
+                if (isMatch) {
+                  matchcounts += 1;
+                  str += "<li><a href='"+ data_url +"' class='search-result-title'>"+ data_title +"</a>";
+                  var content = data.content.trim().replace(/<[^>]+>/g,"");
+                  if (first_occur >= 0) {
+                    // cut out 100 characters
+                    var start = first_occur - 20;
+                    var end = first_occur + 80;
+                    if(start < 0){
+                      start = 0;
+                    }
+                    if(start == 0){
+                      end = 50;
+                    }
+                    if(end > content.length){
+                      end = content.length;
+                    }
+                    var match_content = content.substring(start, end);
+                    // highlight all keywords
+                    keywords.forEach(function(keyword){
+                      var regS = new RegExp(keyword, "gi");
+                      match_content = match_content.replace(regS, "<b class=\"search-keyword\">"+keyword+"</b>");
+                    });
+
+                    str += "<p class=\"search-result\">" + match_content +"...</p>"
+                  }
+                  str += "</li>";
+                }
+              })};
+            str += "</ul>";
+            if (matchcounts == 0) { str = '<div id="no-result"><i class="fa fa-frown-o fa-5x" /></div>' }
+            if (keywords == "") { str = '<div id="no-result"><i class="fa fa-search fa-5x" /></div>' }
+            $resultContent.innerHTML = str;
+          });
+          proceedsearch();
+        }
+      });}
+
+    // handle and trigger popup window;
+    $('.popup-trigger').click(function(e) {
+      e.stopPropagation();
+      if (isfetched == false) {
+        searchFunc(path, 'local-search-input', 'local-search-result');
+      } else {
+        proceedsearch();
+      };
+    });
+
+    $('.popup-btn-close').click(function(e){
+      $('.popup').hide();
+      $(".popoverlay").remove();
+      $('body').css('overflow', '');
+    });
+    $('.popup').click(function(e){
+      e.stopPropagation();
+    });
+  </script>
+
+
+  
+
+  
+
+  
+
+  
+
+
+</body>
+</html>

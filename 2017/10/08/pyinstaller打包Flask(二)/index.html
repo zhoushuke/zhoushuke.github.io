@@ -1,38 +1,898 @@
-{% extends '_layout.swig' %}
-{% import '_macro/post.swig' as post_template %}
-{% import '_macro/sidebar.swig' as sidebar_template %}
+<!doctype html>
 
 
-{% block title %} {{ page.title }} | {{ config.title }} {% endblock %}
 
-{% block page_class %}page-post-detail{% endblock %}
+  
 
 
-{% block content %}
+<html class="theme-next mist use-motion" lang="zh-Hans">
+<head>
+  <meta charset="UTF-8"/>
+<meta http-equiv="X-UA-Compatible" content="IE=edge" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1"/>
+
+
+
+<meta http-equiv="Cache-Control" content="no-transform" />
+<meta http-equiv="Cache-Control" content="no-siteapp" />
+
+
+
+
+
+
+
+
+
+
+
+
+  
+  
+  <link href="/lib/fancybox/source/jquery.fancybox.css?v=2.1.5" rel="stylesheet" type="text/css" />
+
+
+
+
+  
+  
+  
+  
+
+  
+    
+    
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+    
+    
+    <link href="//fonts.googleapis.com/css?family=Lato:300,300italic,400,400italic,700,700italic&subset=latin,latin-ext" rel="stylesheet" type="text/css">
+  
+
+
+
+
+
+
+<link href="/lib/font-awesome/css/font-awesome.min.css?v=4.6.2" rel="stylesheet" type="text/css" />
+
+<link href="/css/main.css?v=5.1.0" rel="stylesheet" type="text/css" />
+
+
+  <meta name="keywords" content="Python," />
+
+
+
+
+
+
+
+
+  <link rel="shortcut icon" type="image/x-icon" href="/favicon.ico?v=5.1.0" />
+
+
+
+
+
+
+<meta name="description" content="在使用pyinstaller库的过程中遇到几个问题,看了下源码,发现造成这几个问题的原因类似,感觉挺有意思,之前说过,pyinstaller其实就是分析python文件中的import 语句,然后打包成pyd或都是dll等库文件,但是对于一些python中使用动态导入或者是使用指定路径等形式,或者换句话说就是:在运行中才能确定导入了哪些库或者是使用了哪些dll,这种情况下pyinstaller是无">
+<meta property="og:type" content="article">
+<meta property="og:title" content="pyinstaller打包flask(二)">
+<meta property="og:url" content="https://zhoushuke.github.io/2017/10/08/pyinstaller%E6%89%93%E5%8C%85Flask(%E4%BA%8C)/index.html">
+<meta property="og:site_name" content="Z.S.K.&#39;s Records">
+<meta property="og:description" content="在使用pyinstaller库的过程中遇到几个问题,看了下源码,发现造成这几个问题的原因类似,感觉挺有意思,之前说过,pyinstaller其实就是分析python文件中的import 语句,然后打包成pyd或都是dll等库文件,但是对于一些python中使用动态导入或者是使用指定路径等形式,或者换句话说就是:在运行中才能确定导入了哪些库或者是使用了哪些dll,这种情况下pyinstaller是无">
+<meta property="og:locale">
+<meta property="article:published_time" content="2017-10-08T05:50:53.000Z">
+<meta property="article:modified_time" content="2022-07-19T03:16:00.983Z">
+<meta property="article:author" content="Z.S.K.">
+<meta property="article:tag" content="Python">
+<meta name="twitter:card" content="summary">
+
+
+
+<script type="text/javascript" id="hexo.configurations">
+  var NexT = window.NexT || {};
+  var CONFIG = {
+    root: '',
+    scheme: 'Mist',
+    sidebar: {"position":"left","display":"post"},
+    fancybox: true,
+    motion: true,
+    duoshuo: {
+      userId: 'undefined',
+      author: '博主'
+    },
+    algolia: {
+      applicationID: '',
+      apiKey: '',
+      indexName: '',
+      hits: {"per_page":10},
+      labels: {"input_placeholder":"Search for Posts","hits_empty":"We didn't find any results for the search: ${query}","hits_stats":"${hits} results found in ${time} ms"}
+    }
+  };
+</script>
+
+
+
+  <link rel="canonical" href="https://zhoushuke.github.io/2017/10/08/pyinstaller打包Flask(二)/"/>
+
+
+
+
+
+  <title> pyinstaller打包flask(二) | Z.S.K.'s Records </title>
+<meta name="generator" content="Hexo 6.2.0"></head>
+
+<body itemscope itemtype="http://schema.org/WebPage" lang="zh-Hans">
+
+  
+
+
+
+
+
+
+
+
+
+
+  
+  
+    
+  
+
+  <div class="container one-collumn sidebar-position-left page-post-detail ">
+    <div class="headband"></div>
+
+    <header id="header" class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-meta ">
+  
+
+  <div class="custom-logo-site-title">
+    <a href="/"  class="brand" rel="start">
+      <span class="logo-line-before"><i></i></span>
+      <span class="site-title">Z.S.K.'s Records</span>
+      <span class="logo-line-after"><i></i></span>
+    </a>
+  </div>
+    
+      <p class="site-subtitle"></p>
+    
+</div>
+
+<div class="site-nav-toggle">
+  <button>
+    <span class="btn-bar"></span>
+    <span class="btn-bar"></span>
+    <span class="btn-bar"></span>
+  </button>
+</div>
+
+<nav class="site-nav">
+  
+
+  
+    <ul id="menu" class="menu">
+      
+        
+        <li class="menu-item menu-item-home">
+          <a href="/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-home"></i> <br />
+            
+            首页
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-categories">
+          <a href="/categories" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-th"></i> <br />
+            
+            分类
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-about">
+          <a href="/about/ZSK-Profile.pdf" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-user"></i> <br />
+            
+            简历
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-archives">
+          <a href="/archives" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-archive"></i> <br />
+            
+            归档
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-tags">
+          <a href="/tags" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-tags"></i> <br />
+            
+            标签
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-commonweal">
+          <a href="/404.html" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-heartbeat"></i> <br />
+            
+            公益404
+          </a>
+        </li>
+      
+
+      
+        <li class="menu-item menu-item-search">
+          
+            <a href="javascript:;" class="popup-trigger">
+          
+            
+              <i class="menu-item-icon fa fa-search fa-fw"></i> <br />
+            
+            搜索
+          </a>
+        </li>
+      
+    </ul>
+  
+
+  
+    <div class="site-search">
+      
+  <div class="popup">
+ <span class="search-icon fa fa-search"></span>
+ <input type="text" id="local-search-input">
+ <div id="local-search-result"></div>
+ <span class="popup-btn-close">close</span>
+</div>
+
+
+    </div>
+  
+</nav>
+
+
+
+ </div>
+    </header>
+
+    <main id="main" class="main">
+      <div class="main-inner">
+        <div class="content-wrap">
+          <div id="content" class="content">
+            
 
   <div id="posts" class="posts-expand">
-    {{ post_template.render(page) }}
+    
 
-    <div class="post-spread">
-      {% if theme.jiathis %}
-        {% include '_partials/share/jiathis.swig' %}
-      {% elseif theme.baidushare %}
-        {% include '_partials/share/baidushare.swig' %}
-      {% elseif theme.add_this_id %}
-        {% include '_partials/share/add-this.swig' %}
-      {% elseif theme.duoshuo_shortname and theme.duoshuo_share %}
-        {% include '_partials/share/duoshuo_share.swig' %}
-      {% endif %}
+  
+
+  
+  
+  
+
+  <article class="post post-type-normal " itemscope itemtype="http://schema.org/Article">
+  <link itemprop="mainEntityOfPage" href="https://zhoushuke.github.io/2017/10/08/pyinstaller%E6%89%93%E5%8C%85Flask(%E4%BA%8C)/">
+
+  <span style="display:none" itemprop="author" itemscope itemtype="http://schema.org/Person">
+    <meta itemprop="name" content="">
+    <meta itemprop="description" content="">
+    <meta itemprop="image" content="/images/avatar.gif">
+  </span>
+
+  <span style="display:none" itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+    <meta itemprop="name" content="Z.S.K.'s Records">
+    <span style="display:none" itemprop="logo" itemscope itemtype="http://schema.org/ImageObject">
+      <img style="display:none;" itemprop="url image" alt="Z.S.K.'s Records" src="">
+    </span>
+  </span>
+
+    
+      <header class="post-header">
+
+        
+        
+          <h1 class="post-title" itemprop="name headline">
+            
+            
+              
+                pyinstaller打包flask(二)
+              
+            
+          </h1>
+        
+
+        <div class="post-meta">
+          <span class="post-time">
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">发表于</span>
+              
+              <time title="Post created" itemprop="dateCreated datePublished" datetime="2017-10-08T13:50:53+08:00">
+                2017-10-08
+              </time>
+            
+
+            
+
+            
+          </span>
+
+          
+            <span class="post-category" >
+            
+              <span class="post-meta-divider">|</span>
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-folder-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">分类于</span>
+              
+              
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/Python/" itemprop="url" rel="index">
+                    <span itemprop="name">Python</span>
+                  </a>
+                </span>
+
+                
+                
+              
+            </span>
+          
+
+          
+            
+          
+
+          
+
+          
+          
+
+          
+
+          
+
+        </div>
+      </header>
+    
+
+
+    <div class="post-body" itemprop="articleBody">
+
+      
+      
+
+      
+        <p>在使用pyinstaller库的过程中遇到几个问题,看了下源码,发现造成这几个问题的原因类似,感觉挺有意思,之前说过,pyinstaller其实就是分析python文件中的import 语句,然后打包成pyd或都是dll等库文件,但是对于一些python中使用动态导入或者是使用指定路径等形式,或者换句话说就是:<strong>在运行中才能确定导入了哪些库或者是使用了哪些dll</strong>,这种情况下pyinstaller是无法自动辨别的,下面遇到的三个问题都是由于动态导入的问题,这个时候就需要使用pyinstaller更高级的用法了.</p>
+<span id="more"></span>
+
+<h3 id="问题"><a href="#问题" class="headerlink" title="问题"></a><strong>问题</strong></h3><h4 id="错误一-No-executor-by-the-name-“threadpool”-was-found"><a href="#错误一-No-executor-by-the-name-“threadpool”-was-found" class="headerlink" title="错误一: No executor by the name “threadpool” was found"></a><strong>错误一: No executor by the name “threadpool” was found</strong></h4><p>在<a target="_blank" rel="noopener" href="https://izsk.me/2017/09/27/python%E5%AE%9A%E6%97%B6%E6%A1%86%E6%9E%B6APScheduler(%E4%B8%80)">上一篇</a>介绍jobstore时我们知道apscheduler中默认的执行器为threadpool,而且有3种初始化写法,具体请参考这篇<a target="_blank" rel="noopener" href="http://apscheduler.readthedocs.io/en/latest/userguide.html#configuring-the-scheduler">官网</a>,而那对于flask-apscheduler,默认的初始化方式也很json风格</p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">class</span> <span class="title class_">Config</span>(<span class="title class_ inherited__">object</span>):</span><br><span class="line">    JOBS = [</span><br><span class="line">        <span class="comment">#每月15号23:30删除32天之前采集的awr.db的历史数据,一键生成报表时需要当月数据,历史数据需要保留一个月,这里设置为32天</span></span><br><span class="line">        &#123;</span><br><span class="line">            <span class="string">&#x27;id&#x27;</span>: <span class="string">&#x27;truncatedb&#x27;</span>,</span><br><span class="line">            <span class="string">&#x27;func&#x27;</span>: <span class="string">&#x27;dbfunc:truncatedb&#x27;</span>,</span><br><span class="line">            <span class="string">&#x27;args&#x27;</span>: (<span class="number">32</span>,),</span><br><span class="line">            <span class="string">&#x27;trigger&#x27;</span>: CronTrigger(day=<span class="number">15</span>,hour=<span class="number">23</span>,minute=<span class="number">30</span>),</span><br><span class="line">            <span class="string">&#x27;replace_existing&#x27;</span>: <span class="literal">True</span></span><br><span class="line">        &#125;</span><br><span class="line">    ]</span><br><span class="line">    SCHEDULER_JOBSTORES = &#123;</span><br><span class="line">        <span class="string">&#x27;default&#x27;</span>: SQLAlchemyJobStore(url=<span class="string">&#x27;sqlite:///&#x27;</span> + SQLITE_DB)</span><br><span class="line">    &#125;</span><br><span class="line">    SCHEDULER_EXECUTORS = &#123;</span><br><span class="line">        <span class="string">&#x27;default&#x27;</span>: &#123;<span class="string">&#x27;type&#x27;</span>: <span class="string">&#x27;threadpool&#x27;</span>, <span class="string">&#x27;max_workers&#x27;</span>: <span class="number">20</span>&#125;</span><br><span class="line">    &#125;</span><br><span class="line">    SCHEDULER_JOB_DEFAULTS = &#123;</span><br><span class="line">        <span class="comment">#如果某一任务错过执行多次,设定为True时,只会执行一次</span></span><br><span class="line">        <span class="string">&#x27;coalesce&#x27;</span>: <span class="literal">True</span>,</span><br><span class="line">        <span class="comment">#应该调度执行的时间跟当前时间差值泛围,小于则会被再次调度</span></span><br><span class="line">        <span class="string">&#x27;misfire_grace_time&#x27;</span>: <span class="number">20</span>,</span><br><span class="line">        <span class="comment">#每个job在同一时刻能够运行的最大实例数</span></span><br><span class="line">        <span class="string">&#x27;max_instances&#x27;</span>: <span class="number">10</span></span><br><span class="line">    &#125;</span><br><span class="line">    SCHEDULER_API_ENABLED = <span class="literal">True</span></span><br></pre></td></tr></table></figure>
+
+<p>上面指定了默认的执行器为threadpool,按照flask-apscheduler用户手册来说这样写没有问题,事实上单独写成脚本执行也没有问题,但是一整合到flask web中,就会报如下错误,提示找不到threadpool执行器:</p>
+<p>查看flask-apscheduler源码,有如下函数:</p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">def</span> <span class="title function_">_load_config</span>(<span class="params">self</span>):</span><br><span class="line">        <span class="string">&quot;&quot;&quot;</span></span><br><span class="line"><span class="string">        Load the configuration from the Flask configuration.</span></span><br><span class="line"><span class="string">        &quot;&quot;&quot;</span></span><br><span class="line">        options = <span class="built_in">dict</span>()</span><br><span class="line"></span><br><span class="line">        job_stores = self.app.config.get(<span class="string">&#x27;SCHEDULER_JOBSTORES&#x27;</span>)</span><br><span class="line">        <span class="keyword">if</span> job_stores:</span><br><span class="line">            options[<span class="string">&#x27;jobstores&#x27;</span>] = job_stores</span><br><span class="line"></span><br><span class="line">        executors = self.app.config.get(<span class="string">&#x27;SCHEDULER_EXECUTORS&#x27;</span>)</span><br><span class="line">        <span class="keyword">if</span> executors:</span><br><span class="line">            options[<span class="string">&#x27;executors&#x27;</span>] = executors</span><br><span class="line"></span><br><span class="line">        job_defaults = self.app.config.get(<span class="string">&#x27;SCHEDULER_JOB_DEFAULTS&#x27;</span>)</span><br><span class="line">        <span class="keyword">if</span> job_defaults:</span><br><span class="line">            options[<span class="string">&#x27;job_defaults&#x27;</span>] = job_defaults</span><br><span class="line"></span><br><span class="line">        timezone = self.app.config.get(<span class="string">&#x27;SCHEDULER_TIMEZONE&#x27;</span>)</span><br><span class="line">        <span class="keyword">if</span> timezone:</span><br><span class="line">            options[<span class="string">&#x27;timezone&#x27;</span>] = timezone</span><br><span class="line">        self._scheduler.configure(**options)</span><br><span class="line">            ...</span><br><span class="line">            </span><br></pre></td></tr></table></figure>
+
+<p>该函数从app中get到配置,然后通过字典形式传入_scheduler中,_scheduler是一个BackgroundScheduler()对象,而这个对象又是继承于BaseScheduler(),看BaseScheduler类这完全没问题,那为何找不到threadpool呢?</p>
+<h4 id="问题二-No-modules-named-‘reportlab-graphics-barcode-common’"><a href="#问题二-No-modules-named-‘reportlab-graphics-barcode-common’" class="headerlink" title="问题二:No modules named ‘reportlab.graphics.barcode.common’"></a><strong>问题二:No modules named ‘reportlab.graphics.barcode.common’</strong></h4><p>同样的问题,单独脚本执行可以,使用pyinstaller打包flask成all-in-one就提示找不到库了,当时还以为是reportlab库需要适配,也是追了reportlab的源码,没发现什么问题,reportlab出问题的源码如下:</p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">def</span> <span class="title function_">_BCW</span>(<span class="params">doc,codeName,attrMap,mod,value,**kwds</span>):</span><br><span class="line">    <span class="string">&quot;&quot;&quot;factory for Barcode Widgets&quot;&quot;&quot;</span></span><br><span class="line">    _pre_init = kwds.pop(<span class="string">&#x27;_pre_init&#x27;</span>,<span class="string">&#x27;&#x27;</span>)</span><br><span class="line">    _methods = kwds.pop(<span class="string">&#x27;_methods&#x27;</span>,<span class="string">&#x27;&#x27;</span>)</span><br><span class="line">    name = <span class="string">&#x27;Barcode&#x27;</span>+codeName</span><br><span class="line">    ns = <span class="built_in">vars</span>().copy()</span><br><span class="line">    code = <span class="string">&#x27;from %s import %s&#x27;</span> % (mod,codeName)</span><br><span class="line">    rl_exec(code,ns)</span><br><span class="line">    ns[<span class="string">&#x27;_BarcodeWidget&#x27;</span>] = _BarcodeWidget</span><br><span class="line">    code = <span class="string">&#x27;&#x27;&#x27;class %(name)s(_BarcodeWidget,%(codeName)s):</span></span><br><span class="line"><span class="string">\t_BCC = %(codeName)s</span></span><br><span class="line"><span class="string">\tcodeName = %(codeName)r</span></span><br><span class="line"><span class="string">\tdef __init__(self,**kw):%(_pre_init)s</span></span><br><span class="line"><span class="string">\t\t_BarcodeWidget.__init__(self,%(value)r,**kw)%(_methods)s&#x27;&#x27;&#x27;</span> % ns</span><br><span class="line">    rl_exec(code,ns)</span><br><span class="line">    Klass = ns[name]</span><br><span class="line">    <span class="keyword">if</span> attrMap: Klass._attrMap = attrMap</span><br><span class="line">    <span class="keyword">if</span> doc: Klass.__doc__ = doc</span><br><span class="line">    <span class="keyword">for</span> k, v <span class="keyword">in</span> kwds.items():</span><br><span class="line">        <span class="built_in">setattr</span>(Klass,k,v)</span><br><span class="line">    <span class="keyword">return</span> Klass</span><br><span class="line"></span><br></pre></td></tr></table></figure>
+
+<p>很明显上面的代码中有<code>code = &#39;from %s import %s&#39; % (mod,codeName)</code>,动态导入方式.</p>
+<h4 id="问题三-dlopen-failed-to-load-a-library-cairo-x2F-cairo-2"><a href="#问题三-dlopen-failed-to-load-a-library-cairo-x2F-cairo-2" class="headerlink" title="问题三:dlopen() failed to load a library: cairo &#x2F; cairo-2"></a><strong>问题三:dlopen() failed to load a library: cairo &#x2F; cairo-2</strong></h4><figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">try</span>:</span><br><span class="line">    cairo = ffi.dlopen(os.path.join(os.path.dirname(__file__), <span class="string">&#x27;cairo.dll&#x27;</span>)) <span class="comment"># case1</span></span><br><span class="line">    <span class="comment">#cairo = ffi.dlopen(os.path.join(os.path.dirname(os.path.abspath(__file__)), &#x27;cairo.dll&#x27;)) # case2</span></span><br><span class="line">    <span class="comment">#cairo = ffi.dlopen(&#x27;cairo.dll&#x27;) # case3</span></span><br><span class="line"><span class="keyword">except</span> Exception:</span><br><span class="line">    cairo = dlopen(ffi, <span class="string">&#x27;cairo&#x27;</span>, <span class="string">&#x27;cairo-2&#x27;</span>)</span><br></pre></td></tr></table></figure>
+
+<p>  上面最开始那句是cairocffi的源码,可以看出这里使用了os.path.join(os.path.dirname(_<em>file_</em>,’cairo.dll’),其实就是使用该目录下的cairo.dll文件,这也是只能在脚本运行时才能确定路径,所以pyinstaller运行时会产生异常.</p>
+<p>那么最重要的问题来了,同样也是解决上面3个问题的方法</p>
+<h3 id="解决"><a href="#解决" class="headerlink" title="解决"></a><strong>解决</strong></h3><h4 id="pyinstaller之hiddenimports"><a href="#pyinstaller之hiddenimports" class="headerlink" title="pyinstaller之hiddenimports"></a><strong>pyinstaller之hiddenimports</strong></h4><p>从字面上可以理解,隐藏式导入就是可以不以代码为标准直接导入指定的模块,<strong>问题二</strong>:可以直接使用hiddenimports导入pyinstaller不能自动导入的模块:</p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br></pre></td><td class="code"><pre><span class="line">hiddenimports = [</span><br><span class="line"><span class="string">&#x27;reportlab.graphics.barcode.common&#x27;</span>,</span><br><span class="line"><span class="string">&#x27;reportlab.graphics.barcode.code128&#x27;</span>,</span><br><span class="line"><span class="string">&#x27;reportlab.graphics.barcode.code93&#x27;</span>,</span><br><span class="line"><span class="string">&#x27;reportlab.graphics.barcode.code39&#x27;</span>,</span><br><span class="line"><span class="string">&#x27;reportlab.graphics.barcode.usps&#x27;</span>,</span><br><span class="line"><span class="string">&#x27;reportlab.graphics.barcode.usps4s&#x27;</span>,</span><br><span class="line"><span class="string">&#x27;reportlab.graphics.barcode.ecc200datamatrix&#x27;</span></span><br><span class="line">]</span><br></pre></td></tr></table></figure>
+
+<p>这样pyinstaller在打包的时候会把上面指定的模块也打包进去,是不是很方便</p>
+<h4 id="pyinstaller之打包二进制文件"><a href="#pyinstaller之打包二进制文件" class="headerlink" title="pyinstaller之打包二进制文件"></a><strong>pyinstaller之打包二进制文件</strong></h4><p><strong>问题三</strong>则是pyinstaller无法打到dll文件,这个时候可以使用binaries指定,</p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br></pre></td><td class="code"><pre><span class="line">a = Analysis([<span class="string">&#x27;xxx.py&#x27;</span>],</span><br><span class="line">             pathex=[<span class="string">&#x27;D:\\xxx&#x27;</span>],</span><br><span class="line">             hiddenimports=hiddenimports,</span><br><span class="line">             binaries=[(<span class="string">&#x27;.\\cairo.dll&#x27;</span>,<span class="string">&#x27;.&#x27;</span>)],</span><br><span class="line">             datas=added_files,</span><br><span class="line">             hookspath=[],</span><br><span class="line">             runtime_hooks=[],</span><br><span class="line">             excludes=[],</span><br><span class="line">             win_no_prefer_redirects=<span class="literal">False</span>,</span><br><span class="line">             win_private_assemblies=<span class="literal">False</span>,</span><br><span class="line">             cipher=block_cipher)</span><br></pre></td></tr></table></figure>
+
+<p>pyinstaller则会在当前目录下查找cairo.dll打包进exe,exe执行的时候会把cairo.dll解压到pyinstaller的临时生成的解压路径,而且也把问题三的源码修改成了case3,不需要再使用os.path就能找到了</p>
+<p>而<strong>问题一</strong>则需要改成如下声明:</p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">from</span> apscheduler.jobstores.sqlalchemy <span class="keyword">import</span> SQLAlchemyJobStore</span><br><span class="line"><span class="keyword">from</span> apscheduler.executors.pool <span class="keyword">import</span> ThreadPoolExecutor</span><br><span class="line"><span class="keyword">from</span> apscheduler.triggers.cron <span class="keyword">import</span> CronTrigger</span><br><span class="line"><span class="keyword">from</span> apscheduler.triggers.interval <span class="keyword">import</span> IntervalTrigger</span><br><span class="line"><span class="keyword">from</span> apscheduler.events <span class="keyword">import</span> EVENT_JOB_EXECUTED,EVENT_JOB_ERROR</span><br><span class="line"></span><br><span class="line"><span class="keyword">class</span> <span class="title class_">Config</span>(<span class="title class_ inherited__">object</span>):</span><br><span class="line">    JOBS = [</span><br><span class="line">        <span class="comment">#每月15号23:30删除32天之前采集的awr.db的历史数据,一键生成报表时需要当月数据,历史数据需要保留一个月,这里设置为32天</span></span><br><span class="line">        &#123;</span><br><span class="line">            <span class="string">&#x27;id&#x27;</span>: <span class="string">&#x27;truncatedb&#x27;</span>,</span><br><span class="line">            <span class="string">&#x27;func&#x27;</span>: <span class="string">&#x27;dbfunc:truncatedb&#x27;</span>,</span><br><span class="line">            <span class="string">&#x27;args&#x27;</span>: (<span class="number">32</span>,),</span><br><span class="line">            <span class="string">&#x27;trigger&#x27;</span>: CronTrigger(day=<span class="number">15</span>,hour=<span class="number">23</span>,minute=<span class="number">30</span>),</span><br><span class="line">            <span class="string">&#x27;replace_existing&#x27;</span>: <span class="literal">True</span></span><br><span class="line">        &#125;</span><br><span class="line">    ]</span><br><span class="line">    SCHEDULER_JOBSTORES = &#123;</span><br><span class="line">        <span class="string">&#x27;default&#x27;</span>: SQLAlchemyJobStore(url=<span class="string">&#x27;sqlite:///&#x27;</span> + SQLITE_DB)</span><br><span class="line">    &#125;</span><br><span class="line">    SCHEDULER_EXECUTORS = &#123;</span><br><span class="line">        <span class="comment">#使用pyinstaller打包时只能采用第二种写法,第一种写法会提示No executor by the name &quot;threadpool&quot; was found</span></span><br><span class="line">        <span class="comment">#&#x27;default&#x27;: &#123;&#x27;type&#x27;: &#x27;threadpool&#x27;, &#x27;max_workers&#x27;: 20&#125;</span></span><br><span class="line">        <span class="string">&#x27;default&#x27;</span>:ThreadPoolExecutor(<span class="number">20</span>)</span><br><span class="line">    &#125;</span><br><span class="line">    SCHEDULER_JOB_DEFAULTS = &#123;</span><br><span class="line">        <span class="comment">#如果某一任务错过执行多次,设定为True时,只会执行一次</span></span><br><span class="line">        <span class="string">&#x27;coalesce&#x27;</span>: <span class="literal">True</span>,</span><br><span class="line">        <span class="comment">#应该调度执行的时间跟当前时间差值泛围,小于则会被再次调度</span></span><br><span class="line">        <span class="string">&#x27;misfire_grace_time&#x27;</span>: <span class="number">20</span>,</span><br><span class="line">        <span class="comment">#每个job在同一时刻能够运行的最大实例数</span></span><br><span class="line">        <span class="string">&#x27;max_instances&#x27;</span>: <span class="number">10</span></span><br><span class="line">    &#125;</span><br><span class="line">    SCHEDULER_API_ENABLED = <span class="literal">True</span></span><br></pre></td></tr></table></figure>
+
+<h3 id="总结"><a href="#总结" class="headerlink" title="总结"></a><strong>总结</strong></h3><p>总之就是一句话,在打包好的exe运行所需要的环境需要在pyinstaller解压路径下存在,对于在程序运行时才能确定的模块则需要额外处理了,可以指定路径(不是所有的机器都有环境,要不然就不需要一键打包了),可以hiddenimports,也可以hooks,hooks意为勾子,也是pyinstaller的一种查找模块机制,下次再研究.</p>
+<h3 id="参考文章"><a href="#参考文章" class="headerlink" title="参考文章:"></a><strong>参考文章:</strong></h3><blockquote>
+<ul>
+<li><a target="_blank" rel="noopener" href="https://pyinstaller.readthedocs.io/en/stable/usage.html">pyinstaller官网</a></li>
+</ul>
+</blockquote>
+<h3 id="转载请注明出处https-izsk-me"><a href="#转载请注明出处https-izsk-me" class="headerlink" title="转载请注明出处https://izsk.me"></a><strong>转载请注明出处<a target="_blank" rel="noopener" href="https://izsk.me/">https://izsk.me</a></strong></h3><hr>
+
+      
+    </div>
+
+    <div>
+      
+        
+<div id="wechat_subscriber" style="display: block; padding: 10px 0; margin: 20px auto; width: 100%; text-align: center">
+    <img id="wechat_subscriber_qcode" src="/images/websitecode250.png" alt=" wechat" style="width: 200px; max-width: 100%;"/>
+    <div>Scan Me To Read on Phone</div>
+</div>
+
+
+      
+    </div>
+
+    <div>
+      
+        
+  <div style="padding: 10px 0; margin: 20px auto; width: 90%; text-align: center;">
+    <div>I know you won't do this,but what if you did?</div>
+    <button id="rewardButton" disable="enable" onclick="var qr = document.getElementById('QR'); if (qr.style.display === 'none') {qr.style.display='block';} else {qr.style.display='none'}">
+      <span>赏</span>
+    </button>
+    <div id="QR" style="display: none;">
+      
+        <div id="wechat" style="display: inline-block">
+          <img id="wechat_qr" src="/images/wechatpayme.png" alt=" WeChat Pay"/>
+          <p>微信打赏</p>
+        </div>
+      
+      
+        <div id="alipay" style="display: inline-block">
+          <img id="alipay_qr" src="/images/alipayme.jpg" alt=" Alipay"/>
+          <p>支付宝打赏</p>
+        </div>
+      
     </div>
   </div>
 
-{% endblock %}
 
-{% block sidebar %}
-  {{ sidebar_template.render(true) }}
-{% endblock %}
+      
+    </div>
 
 
-{% block script_extra %}
-  {% include '_scripts/pages/post-details.swig' %}
-{% endblock %}
+    <footer class="post-footer">
+      
+        <div class="post-tags">
+          
+            <a href="/tags/Python/" rel="tag"># Python</a>
+          
+        </div>
+      
+
+      
+        <div class="post-nav">
+          <div class="post-nav-next post-nav-item">
+            
+              <a href="/2017/09/27/python%E5%AE%9A%E6%97%B6%E6%A1%86%E6%9E%B6APScheduler(%E4%B8%80)/" rel="next" title="python定时框架APScheduler使用(-)">
+                <i class="fa fa-chevron-left"></i> python定时框架APScheduler使用(-)
+              </a>
+            
+          </div>
+
+          <span class="post-nav-divider"></span>
+
+          <div class="post-nav-prev post-nav-item">
+            
+              <a href="/2017/10/10/python%E9%97%AD%E5%8C%85%E5%8F%8A%E8%A3%85%E9%A5%B0%E5%99%A8/" rel="prev" title="python闭包及装饰器">
+                python闭包及装饰器 <i class="fa fa-chevron-right"></i>
+              </a>
+            
+          </div>
+        </div>
+      
+
+      
+      
+    </footer>
+  </article>
+
+
+
+    <div class="post-spread">
+      
+    </div>
+  </div>
+
+
+          </div>
+          
+
+
+          
+  <div class="comments" id="comments">
+    
+  </div>
+
+
+        </div>
+        
+          
+  
+  <div class="sidebar-toggle">
+    <div class="sidebar-toggle-line-wrap">
+      <span class="sidebar-toggle-line sidebar-toggle-line-first"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-middle"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-last"></span>
+    </div>
+  </div>
+
+  <aside id="sidebar" class="sidebar">
+    <div class="sidebar-inner">
+
+      
+
+      
+        <ul class="sidebar-nav motion-element">
+          <li class="sidebar-nav-toc sidebar-nav-active" data-target="post-toc-wrap" >
+            文章目录
+          </li>
+          <li class="sidebar-nav-overview" data-target="site-overview">
+            站点概览
+          </li>
+        </ul>
+      
+
+      <section class="site-overview sidebar-panel">
+        <div class="site-author motion-element" itemprop="author" itemscope itemtype="http://schema.org/Person">
+          <img class="site-author-image" itemprop="image"
+               src="/images/avatar.gif"
+               alt="" />
+          <p class="site-author-name" itemprop="name"></p>
+          <p class="site-description motion-element" itemprop="description"></p>
+        </div>
+        <nav class="site-state motion-element">
+        
+          
+            <div class="site-state-item site-state-posts">
+              <a href="/archives">
+                <span class="site-state-item-count">192</span>
+                <span class="site-state-item-name">日志</span>
+              </a>
+            </div>
+          
+
+          
+            <div class="site-state-item site-state-categories">
+              <a href="/categories">
+                <span class="site-state-item-count">14</span>
+                <span class="site-state-item-name">分类</span>
+              </a>
+            </div>
+          
+
+          
+            <div class="site-state-item site-state-tags">
+              <a href="/tags">
+                <span class="site-state-item-count">14</span>
+                <span class="site-state-item-name">标签</span>
+              </a>
+            </div>
+          
+
+        </nav>
+
+        
+
+        <div class="links-of-author motion-element">
+          
+        </div>
+
+        
+        
+
+        
+        
+
+        
+
+
+      </section>
+
+      
+      <!--noindex-->
+        <section class="post-toc-wrap motion-element sidebar-panel sidebar-panel-active">
+          <div class="post-toc">
+
+            
+              
+            
+
+            
+              <div class="post-toc-content"><ol class="nav"><li class="nav-item nav-level-3"><a class="nav-link" href="#%E9%97%AE%E9%A2%98"><span class="nav-number">1.</span> <span class="nav-text">问题</span></a><ol class="nav-child"><li class="nav-item nav-level-4"><a class="nav-link" href="#%E9%94%99%E8%AF%AF%E4%B8%80-No-executor-by-the-name-%E2%80%9Cthreadpool%E2%80%9D-was-found"><span class="nav-number">1.1.</span> <span class="nav-text">错误一: No executor by the name “threadpool” was found</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#%E9%97%AE%E9%A2%98%E4%BA%8C-No-modules-named-%E2%80%98reportlab-graphics-barcode-common%E2%80%99"><span class="nav-number">1.2.</span> <span class="nav-text">问题二:No modules named ‘reportlab.graphics.barcode.common’</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#%E9%97%AE%E9%A2%98%E4%B8%89-dlopen-failed-to-load-a-library-cairo-x2F-cairo-2"><span class="nav-number">1.3.</span> <span class="nav-text">问题三:dlopen() failed to load a library: cairo &#x2F; cairo-2</span></a></li></ol></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E8%A7%A3%E5%86%B3"><span class="nav-number">2.</span> <span class="nav-text">解决</span></a><ol class="nav-child"><li class="nav-item nav-level-4"><a class="nav-link" href="#pyinstaller%E4%B9%8Bhiddenimports"><span class="nav-number">2.1.</span> <span class="nav-text">pyinstaller之hiddenimports</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#pyinstaller%E4%B9%8B%E6%89%93%E5%8C%85%E4%BA%8C%E8%BF%9B%E5%88%B6%E6%96%87%E4%BB%B6"><span class="nav-number">2.2.</span> <span class="nav-text">pyinstaller之打包二进制文件</span></a></li></ol></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E6%80%BB%E7%BB%93"><span class="nav-number">3.</span> <span class="nav-text">总结</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E5%8F%82%E8%80%83%E6%96%87%E7%AB%A0"><span class="nav-number">4.</span> <span class="nav-text">参考文章:</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E8%BD%AC%E8%BD%BD%E8%AF%B7%E6%B3%A8%E6%98%8E%E5%87%BA%E5%A4%84https-izsk-me"><span class="nav-number">5.</span> <span class="nav-text">转载请注明出处https:&#x2F;&#x2F;izsk.me</span></a></li></ol></div>
+            
+
+          </div>
+        </section>
+      <!--/noindex-->
+      
+
+    </div>
+  </aside>
+
+
+        
+      </div>
+    </main>
+
+    <footer id="footer" class="footer">
+      <div class="footer-inner">
+        <div class="copyright" >
+  
+  &copy; 
+  <span itemprop="copyrightYear">2022</span>
+  <span class="with-love">
+    <i class="fa fa-heart"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">Z.S.K.</span>
+</div>
+
+
+<div class="powered-by">
+  Supported by <a class="theme-link" target="_blank" rel="noopener" href="https://hexo.io">Hexo</a>
+</div>
+
+<div class="theme-info">
+  Theme -
+  <a class="theme-link" target="_blank" rel="noopener" href="https://github.com/iissnan/hexo-theme-next">
+    NexT.Mist
+  </a>
+</div>
+
+
+        
+
+        
+      </div>
+    </footer>
+
+    <div class="back-to-top">
+      <i class="fa fa-arrow-up"></i>
+    </div>
+  </div>
+
+  
+
+<script type="text/javascript">
+  if (Object.prototype.toString.call(window.Promise) !== '[object Function]') {
+    window.Promise = null;
+  }
+</script>
+
+
+
+
+
+
+
+
+
+  
+
+
+
+  
+  <script type="text/javascript" src="/lib/jquery/index.js?v=2.1.3"></script>
+
+  
+  <script type="text/javascript" src="/lib/fastclick/lib/fastclick.min.js?v=1.0.6"></script>
+
+  
+  <script type="text/javascript" src="/lib/jquery_lazyload/jquery.lazyload.js?v=1.9.7"></script>
+
+  
+  <script type="text/javascript" src="/lib/velocity/velocity.min.js?v=1.2.1"></script>
+
+  
+  <script type="text/javascript" src="/lib/velocity/velocity.ui.min.js?v=1.2.1"></script>
+
+  
+  <script type="text/javascript" src="/lib/fancybox/source/jquery.fancybox.pack.js?v=2.1.5"></script>
+
+
+  
+
+
+  <script type="text/javascript" src="/js/src/utils.js?v=5.1.0"></script>
+
+  <script type="text/javascript" src="/js/src/motion.js?v=5.1.0"></script>
+
+
+
+  
+  
+
+  
+  <script type="text/javascript" src="/js/src/scrollspy.js?v=5.1.0"></script>
+<script type="text/javascript" src="/js/src/post-details.js?v=5.1.0"></script>
+
+
+
+  
+
+
+  <script type="text/javascript" src="/js/src/bootstrap.js?v=5.1.0"></script>
+
+
+
+  
+
+
+
+  
+
+
+
+
+	
+
+
+
+
+
+  
+
+
+
+
+  
+  
+  <script type="text/javascript">
+    // Popup Window;
+    var isfetched = false;
+    // Search DB path;
+    var search_path = "search.xml";
+    if (search_path.length == 0) {
+      search_path = "search.xml";
+    }
+    var path = "/" + search_path;
+    // monitor main search box;
+
+    function proceedsearch() {
+      $("body").append('<div class="popoverlay">').css('overflow', 'hidden');
+      $('.popup').toggle();
+    }
+    // search function;
+    var searchFunc = function(path, search_id, content_id) {
+      'use strict';
+      $.ajax({
+        url: path,
+        dataType: "xml",
+        async: true,
+        success: function( xmlResponse ) {
+          // get the contents from search data
+          isfetched = true;
+          $('.popup').detach().appendTo('.header-inner');
+          var datas = $( "entry", xmlResponse ).map(function() {
+            return {
+              title: $( "title", this ).text(),
+              content: $("content",this).text(),
+              url: $( "url" , this).text()
+            };
+          }).get();
+          var $input = document.getElementById(search_id);
+          var $resultContent = document.getElementById(content_id);
+          $input.addEventListener('input', function(){
+            var matchcounts = 0;
+            var str='<ul class=\"search-result-list\">';
+            var keywords = this.value.trim().toLowerCase().split(/[\s\-]+/);
+            $resultContent.innerHTML = "";
+            if (this.value.trim().length > 1) {
+              // perform local searching
+              datas.forEach(function(data) {
+                var isMatch = false;
+                var content_index = [];
+                var data_title = data.title.trim().toLowerCase();
+                var data_content = data.content.trim().replace(/<[^>]+>/g,"").toLowerCase();
+                var data_url = decodeURIComponent(data.url);
+                var index_title = -1;
+                var index_content = -1;
+                var first_occur = -1;
+                // only match artiles with not empty titles and contents
+                if(data_title != '') {
+                  keywords.forEach(function(keyword, i) {
+                    index_title = data_title.indexOf(keyword);
+                    index_content = data_content.indexOf(keyword);
+                    if( index_title >= 0 || index_content >= 0 ){
+                      isMatch = true;
+                      if (i == 0) {
+                        first_occur = index_content;
+                      }
+                    }
+
+                  });
+                }
+                // show search results
+                if (isMatch) {
+                  matchcounts += 1;
+                  str += "<li><a href='"+ data_url +"' class='search-result-title'>"+ data_title +"</a>";
+                  var content = data.content.trim().replace(/<[^>]+>/g,"");
+                  if (first_occur >= 0) {
+                    // cut out 100 characters
+                    var start = first_occur - 20;
+                    var end = first_occur + 80;
+                    if(start < 0){
+                      start = 0;
+                    }
+                    if(start == 0){
+                      end = 50;
+                    }
+                    if(end > content.length){
+                      end = content.length;
+                    }
+                    var match_content = content.substring(start, end);
+                    // highlight all keywords
+                    keywords.forEach(function(keyword){
+                      var regS = new RegExp(keyword, "gi");
+                      match_content = match_content.replace(regS, "<b class=\"search-keyword\">"+keyword+"</b>");
+                    });
+
+                    str += "<p class=\"search-result\">" + match_content +"...</p>"
+                  }
+                  str += "</li>";
+                }
+              })};
+            str += "</ul>";
+            if (matchcounts == 0) { str = '<div id="no-result"><i class="fa fa-frown-o fa-5x" /></div>' }
+            if (keywords == "") { str = '<div id="no-result"><i class="fa fa-search fa-5x" /></div>' }
+            $resultContent.innerHTML = str;
+          });
+          proceedsearch();
+        }
+      });}
+
+    // handle and trigger popup window;
+    $('.popup-trigger').click(function(e) {
+      e.stopPropagation();
+      if (isfetched == false) {
+        searchFunc(path, 'local-search-input', 'local-search-result');
+      } else {
+        proceedsearch();
+      };
+    });
+
+    $('.popup-btn-close').click(function(e){
+      $('.popup').hide();
+      $(".popoverlay").remove();
+      $('body').css('overflow', '');
+    });
+    $('.popup').click(function(e){
+      e.stopPropagation();
+    });
+  </script>
+
+
+  
+
+  
+
+  
+
+  
+
+
+</body>
+</html>

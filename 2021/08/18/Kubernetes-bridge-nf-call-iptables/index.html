@@ -1,38 +1,967 @@
-{% extends '_layout.swig' %}
-{% import '_macro/post.swig' as post_template %}
-{% import '_macro/sidebar.swig' as sidebar_template %}
+<!doctype html>
 
 
-{% block title %} {{ page.title }} | {{ config.title }} {% endblock %}
 
-{% block page_class %}page-post-detail{% endblock %}
+  
 
 
-{% block content %}
+<html class="theme-next mist use-motion" lang="zh-Hans">
+<head>
+  <meta charset="UTF-8"/>
+<meta http-equiv="X-UA-Compatible" content="IE=edge" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1"/>
+
+
+
+<meta http-equiv="Cache-Control" content="no-transform" />
+<meta http-equiv="Cache-Control" content="no-siteapp" />
+
+
+
+
+
+
+
+
+
+
+
+
+  
+  
+  <link href="/lib/fancybox/source/jquery.fancybox.css?v=2.1.5" rel="stylesheet" type="text/css" />
+
+
+
+
+  
+  
+  
+  
+
+  
+    
+    
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+    
+    
+    <link href="//fonts.googleapis.com/css?family=Lato:300,300italic,400,400italic,700,700italic&subset=latin,latin-ext" rel="stylesheet" type="text/css">
+  
+
+
+
+
+
+
+<link href="/lib/font-awesome/css/font-awesome.min.css?v=4.6.2" rel="stylesheet" type="text/css" />
+
+<link href="/css/main.css?v=5.1.0" rel="stylesheet" type="text/css" />
+
+
+  <meta name="keywords" content="Kubernetes," />
+
+
+
+
+
+
+
+
+  <link rel="shortcut icon" type="image/x-icon" href="/favicon.ico?v=5.1.0" />
+
+
+
+
+
+
+<meta name="description" content="使用kubernetes遇到最多的70%问题都可以归于网络问题，最近发现如果内核参数: bridge-nf-call-iptables设置不当的话会影响kubernetes中Node节点上的Pod通过ClusterIP去访问同Node上的其它pod时会有超时现象，复盘记录一下排查的前因后因.">
+<meta property="og:type" content="article">
+<meta property="og:title" content="Kubernetes学习(又是bridge-nf-call-iptables惹的祸)">
+<meta property="og:url" content="https://zhoushuke.github.io/2021/08/18/Kubernetes-bridge-nf-call-iptables/index.html">
+<meta property="og:site_name" content="Z.S.K.&#39;s Records">
+<meta property="og:description" content="使用kubernetes遇到最多的70%问题都可以归于网络问题，最近发现如果内核参数: bridge-nf-call-iptables设置不当的话会影响kubernetes中Node节点上的Pod通过ClusterIP去访问同Node上的其它pod时会有超时现象，复盘记录一下排查的前因后因.">
+<meta property="og:locale">
+<meta property="og:image" content="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20210818235131.png">
+<meta property="article:published_time" content="2021-08-18T15:20:53.000Z">
+<meta property="article:modified_time" content="2022-07-19T03:16:00.963Z">
+<meta property="article:author" content="Z.S.K.">
+<meta property="article:tag" content="Kubernetes">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:image" content="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20210818235131.png">
+
+
+
+<script type="text/javascript" id="hexo.configurations">
+  var NexT = window.NexT || {};
+  var CONFIG = {
+    root: '',
+    scheme: 'Mist',
+    sidebar: {"position":"left","display":"post"},
+    fancybox: true,
+    motion: true,
+    duoshuo: {
+      userId: 'undefined',
+      author: '博主'
+    },
+    algolia: {
+      applicationID: '',
+      apiKey: '',
+      indexName: '',
+      hits: {"per_page":10},
+      labels: {"input_placeholder":"Search for Posts","hits_empty":"We didn't find any results for the search: ${query}","hits_stats":"${hits} results found in ${time} ms"}
+    }
+  };
+</script>
+
+
+
+  <link rel="canonical" href="https://zhoushuke.github.io/2021/08/18/Kubernetes-bridge-nf-call-iptables/"/>
+
+
+
+
+
+  <title> Kubernetes学习(又是bridge-nf-call-iptables惹的祸) | Z.S.K.'s Records </title>
+<meta name="generator" content="Hexo 6.2.0"></head>
+
+<body itemscope itemtype="http://schema.org/WebPage" lang="zh-Hans">
+
+  
+
+
+
+
+
+
+
+
+
+
+  
+  
+    
+  
+
+  <div class="container one-collumn sidebar-position-left page-post-detail ">
+    <div class="headband"></div>
+
+    <header id="header" class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-meta ">
+  
+
+  <div class="custom-logo-site-title">
+    <a href="/"  class="brand" rel="start">
+      <span class="logo-line-before"><i></i></span>
+      <span class="site-title">Z.S.K.'s Records</span>
+      <span class="logo-line-after"><i></i></span>
+    </a>
+  </div>
+    
+      <p class="site-subtitle"></p>
+    
+</div>
+
+<div class="site-nav-toggle">
+  <button>
+    <span class="btn-bar"></span>
+    <span class="btn-bar"></span>
+    <span class="btn-bar"></span>
+  </button>
+</div>
+
+<nav class="site-nav">
+  
+
+  
+    <ul id="menu" class="menu">
+      
+        
+        <li class="menu-item menu-item-home">
+          <a href="/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-home"></i> <br />
+            
+            首页
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-categories">
+          <a href="/categories" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-th"></i> <br />
+            
+            分类
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-about">
+          <a href="/about/ZSK-Profile.pdf" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-user"></i> <br />
+            
+            简历
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-archives">
+          <a href="/archives" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-archive"></i> <br />
+            
+            归档
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-tags">
+          <a href="/tags" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-tags"></i> <br />
+            
+            标签
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-commonweal">
+          <a href="/404.html" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-heartbeat"></i> <br />
+            
+            公益404
+          </a>
+        </li>
+      
+
+      
+        <li class="menu-item menu-item-search">
+          
+            <a href="javascript:;" class="popup-trigger">
+          
+            
+              <i class="menu-item-icon fa fa-search fa-fw"></i> <br />
+            
+            搜索
+          </a>
+        </li>
+      
+    </ul>
+  
+
+  
+    <div class="site-search">
+      
+  <div class="popup">
+ <span class="search-icon fa fa-search"></span>
+ <input type="text" id="local-search-input">
+ <div id="local-search-result"></div>
+ <span class="popup-btn-close">close</span>
+</div>
+
+
+    </div>
+  
+</nav>
+
+
+
+ </div>
+    </header>
+
+    <main id="main" class="main">
+      <div class="main-inner">
+        <div class="content-wrap">
+          <div id="content" class="content">
+            
 
   <div id="posts" class="posts-expand">
-    {{ post_template.render(page) }}
+    
 
-    <div class="post-spread">
-      {% if theme.jiathis %}
-        {% include '_partials/share/jiathis.swig' %}
-      {% elseif theme.baidushare %}
-        {% include '_partials/share/baidushare.swig' %}
-      {% elseif theme.add_this_id %}
-        {% include '_partials/share/add-this.swig' %}
-      {% elseif theme.duoshuo_shortname and theme.duoshuo_share %}
-        {% include '_partials/share/duoshuo_share.swig' %}
-      {% endif %}
+  
+
+  
+  
+  
+
+  <article class="post post-type-normal " itemscope itemtype="http://schema.org/Article">
+  <link itemprop="mainEntityOfPage" href="https://zhoushuke.github.io/2021/08/18/Kubernetes-bridge-nf-call-iptables/">
+
+  <span style="display:none" itemprop="author" itemscope itemtype="http://schema.org/Person">
+    <meta itemprop="name" content="">
+    <meta itemprop="description" content="">
+    <meta itemprop="image" content="/images/avatar.gif">
+  </span>
+
+  <span style="display:none" itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+    <meta itemprop="name" content="Z.S.K.'s Records">
+    <span style="display:none" itemprop="logo" itemscope itemtype="http://schema.org/ImageObject">
+      <img style="display:none;" itemprop="url image" alt="Z.S.K.'s Records" src="">
+    </span>
+  </span>
+
+    
+      <header class="post-header">
+
+        
+        
+          <h1 class="post-title" itemprop="name headline">
+            
+            
+              
+                Kubernetes学习(又是bridge-nf-call-iptables惹的祸)
+              
+            
+          </h1>
+        
+
+        <div class="post-meta">
+          <span class="post-time">
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">发表于</span>
+              
+              <time title="Post created" itemprop="dateCreated datePublished" datetime="2021-08-18T23:20:53+08:00">
+                2021-08-18
+              </time>
+            
+
+            
+
+            
+          </span>
+
+          
+            <span class="post-category" >
+            
+              <span class="post-meta-divider">|</span>
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-folder-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">分类于</span>
+              
+              
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/Kubernetes/" itemprop="url" rel="index">
+                    <span itemprop="name">Kubernetes</span>
+                  </a>
+                </span>
+
+                
+                
+              
+            </span>
+          
+
+          
+            
+          
+
+          
+
+          
+          
+
+          
+
+          
+
+        </div>
+      </header>
+    
+
+
+    <div class="post-body" itemprop="articleBody">
+
+      
+      
+
+      
+        <p>使用kubernetes遇到最多的70%问题都可以归于网络问题，最近发现如果内核参数: <code>bridge-nf-call-iptables</code>设置不当的话会影响kubernetes中Node节点上的Pod通过ClusterIP去访问<strong>同Node</strong>上的其它pod时会有超时现象，复盘记录一下排查的前因后因.</p>
+<span id="more"></span>
+
+
+
+<h3 id="问题现象"><a href="#问题现象" class="headerlink" title="问题现象"></a>问题现象</h3><p>集群环境为K8s v1.15.9，cni指定了flannel-vxlan跟portmap, kube-proxy使用mode为ipvs</p>
+<p>问题现象是，<strong>某个Node节点上的pod通过service访问其它服务时，有些能通，有些不通，不通的都提示timeout</strong></p>
+<p>异常的请求:</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line">curl -v http://panorama-v2-frontend-service.spring-prod.svc.cluster.local:8080</span><br><span class="line">* Rebuilt URL to: http://panorama-v2-frontend-service.spring-prod.svc.cluster.local:8080/</span><br><span class="line">*   Trying 10.233.53.172...</span><br><span class="line">* TCP_NODELAY <span class="built_in">set</span></span><br><span class="line"><span class="comment"># 这里一直等待直到超时</span></span><br></pre></td></tr></table></figure>
+
+<p>这个节点上的很多pod都存在这个问题， 其它节点未发现异常.</p>
+<p>正常请求:</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br></pre></td><td class="code"><pre><span class="line">curl -v http://panorama-v2-frontend-service.spring-prod.svc.cluster.local:8080</span><br><span class="line">* Rebuilt URL to: http://panorama-v2-frontend-service.spring-prod.svc.cluster.local:8080/</span><br><span class="line">*   Trying 10.233.53.172...</span><br><span class="line">* TCP_NODELAY <span class="built_in">set</span></span><br><span class="line">* Connected to panorama-v2-frontend-service.spring-prod.svc.cluster.local (10.233.53.172) port 8080 (<span class="comment">#0)</span></span><br><span class="line">&gt; GET / HTTP/1.1</span><br><span class="line">&gt; Host: panorama-v2-frontend-service.spring-prod.svc.cluster.local:8080</span><br><span class="line">&gt; User-Agent: curl/7.52.1</span><br><span class="line">&gt; Accept: */*</span><br><span class="line">&gt; </span><br><span class="line">&lt; HTTP/1.1 200 OK</span><br></pre></td></tr></table></figure>
+
+
+
+<h3 id="排查过程"><a href="#排查过程" class="headerlink" title="排查过程"></a>排查过程</h3><p>先对异常Node进行排查，因为其它节点是正常的,通过对异常Node的网络、kube-proxy、 iptables、ipvs规则、kubelet等排查后未发现有可疑的地方，就暂时排除嫌疑了.</p>
+<p>第二个可疑的是DNS, coreDNS负责对service解析成ClusterIP, 在出问题的Node上经过多次测试均能正确解析，<strong>coreDNS排除嫌疑</strong></p>
+<p>可疑的地方都筛了一遍,无果, 那就只能再从现象来发现看看有没有相同点.</p>
+<p>首先，访问路径为: <strong>Service – &gt; ClusterIP – &gt; PodIP</strong></p>
+<p>对service访问异常，coreDNS已经被排除了，那先绕过service，直接使用ClusterIP访问呢? 测试后现象依旧</p>
+<p>那再绕过ClusterIP，直接使用PodIP呢? Bingo，之前会出问题的访问都是正常的了.</p>
+<p>那么问题就出在CluterIP – &gt; PodIP上, 那么又有以下可能:</p>
+<blockquote>
+<ul>
+<li><ol>
+<li>ClusterIP没有正确转发到PodIP上可能导致超时</li>
+</ol>
+</li>
+<li><ol start="2">
+<li>如果正确转发，响应没有返回也可能导致超时</li>
+</ol>
+</li>
+</ul>
+</blockquote>
+<p>第一种可能性很容易排查，之前已经确认了ipvs规则、iptables规则都是没有问题的，且通过ClusterIP发起的请求可以到达PodIP上, 基本就排除了可能性一</p>
+<p>另外，对比正常跟异常请求会发现，异常的请求原Pod跟目标pod都是在同一个Node上，而正常的请求则处于不同的Node，会是这个影响吗？</p>
+<p>上面的可能性二，只能祭出抓包神器了<strong>tcpdump</strong>, 通过抓包发现(<strong>抓包过程见文未</strong>)会发现请求中出现了<strong>Reset</strong></p>
+<p>那么问题转换一下: 为什么相同Node上podA通过service&#x2F;ClusterIP访问PodB响应会不返回呢，而通过PodIP访问就没问题？</p>
+<p>补充一句就是，<strong>相同Node上的pod相互访问是不需要经过Flannel的，因此Flannel可以排除嫌疑</strong></p>
+<p>so, 问题在哪?</p>
+<p>回到tcpdump的抓包数据, 可以发现，响应的数据没有按照请求的路径返回，嗯，Interesting</p>
+<h3 id="罪魁祸首"><a href="#罪魁祸首" class="headerlink" title="罪魁祸首"></a>罪魁祸首</h3><p>不管是 iptables 还是 ipvs 模式，Kubernetes 中访问 service都会进行 DNAT，将原本访问 ClusterIP:Port 的数据包 <strong>DNAT</strong> 成 service 的某个 Endpoint (PodIP:Port)，然后内核将连接信息插入 conntrack 表以记录连接，目的端回包的时候内核从 conntrack 表匹配连接并<strong>SNAT</strong>，这样原路返回形成一个完整的连接链路.</p>
+<p><img src="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20210818235131.png"></p>
+<p>从tcpdump看到请求被reset了, 没错, <strong>bridge-nf-call-iptables</strong>(如果是ipv6的话则是<strong>net.bridge.bridge-nf-call-ip6tables</strong>)参数</p>
+<p>但是不对，这个参数linux默认开启的呢?难道是有人修改了么？</p>
+<p>使用命令查看该参数是否开启:</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line"><span class="built_in">cat</span> /proc/sys/net/bridge/bridge-nf-call-iptables</span><br><span class="line"><span class="comment"># 0</span></span><br></pre></td></tr></table></figure>
+
+<p>返回0，说明确实没有开启(后来被证实是被同事修改了)，那这个参数是如何影响的返回路径的呢?</p>
+<p>那就不得不说<strong>linux bridge</strong>了</p>
+<p>虽然CNI使用的是flannel, 但flannel封装的也是linux bridge，<strong>linux bridge是虚拟的二层转发设备</strong>，而 iptables conntrack 是在三层上，所以如果直接访问同一网桥内的地址(ip同一网段)，就会直接走二层转发，不经过 conntrack:</p>
+<p>结合上面的图来看，同Node通过service访问pod的访问路径如下:</p>
+<blockquote>
+<ul>
+<li><ol>
+<li>PodA 访问 service, 经过coreDNS解析成Cluster IP，不是网桥内的地址(ClusterIP一般跟PodIP不在一个网段)，走Conntrack,进行DNAT，将ClusterIP转换成PodIP:Port</li>
+</ol>
+</li>
+<li><ol start="2">
+<li>DNAT 后发现是要转发到了<strong>同节点</strong>上的 PodB，PodB 回包时发现目的 IP(此时是PodA的IP) 在同一网桥上(PodA与PodB的IP段一致)，就直接走二层转发了，不会去调 conntrack，这样就导致回包时没有原路返回</li>
+</ol>
+</li>
+</ul>
+</blockquote>
+<p>没有返回包就导致请求方一直等直到超时退出.</p>
+<p>这样也解释了为何访问在其它节点的应用的ClusterIP没有问题，因为目标PodIP与源PodIP不在同一个网段上,肯定要走conntrack.</p>
+<h3 id="问题解决"><a href="#问题解决" class="headerlink" title="问题解决"></a>问题解决</h3><p>总述，开启参数后问题解决</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line"><span class="built_in">echo</span> <span class="string">&quot;net.bridge.bridge-nf-call-iptables=1&quot;</span> &gt;&gt; /etc/sysctl.conf</span><br><span class="line"><span class="built_in">echo</span> <span class="string">&quot;net.bridge.bridge-nf-call-ip6tables=1&quot;</span> &gt;&gt; /etc/sysctl.conf</span><br><span class="line"></span><br><span class="line">sysctl -p /etc/sysctl.conf</span><br></pre></td></tr></table></figure>
+
+
+
+<h3 id="linux-conntrack"><a href="#linux-conntrack" class="headerlink" title="linux conntrack"></a>linux conntrack</h3><p>关于conntrack其实也是个值得好好研究一番的知识点, 各个发行版都有工具可以看到conntrack里的记录,格式如下:</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># conntrack -L</span></span><br><span class="line">tcp      6 119 SYN_SENT src=10.224.1.34 dst=10.233.53.172 sport=56916 dport=8080 [UNREPLIED] src=10.224.1.56 dst=10.224.1.34 sport=8080 dport=56916 mark=0 use=1</span><br></pre></td></tr></table></figure>
+
+<p>那个著名的<a target="_blank" rel="noopener" href="https://izsk.me/2020/06/10/Kubernetes-coredns-5s-timeout/">DNS 5s timeout</a>的问题就跟conntrack机制有关，由于篇幅有限，就不在这里展开.</p>
+<h3 id="tcpdump"><a href="#tcpdump" class="headerlink" title="tcpdump"></a>tcpdump</h3><p>在容器中的抓包命令</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">tcpdump -vvv host 10.224.1.34 or 10.233.53.172 or 10.224.1.56</span><br></pre></td></tr></table></figure>
+
+<p>其中的三个ip分别对应podA IP, podB的ClusterIP, podB的PodIP</p>
+<p>这里由于篇幅的关系，只保存有关键信息，同时使用注释是作者加入的，方便理解.</p>
+<p>对于异常请求的tcpdump，如下:</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># podA 请求 PodB</span></span><br><span class="line">panorama-frontend-deploy-c8f6fd4b6-52tvf.45954 &gt; panorama-v2-frontend-service.spring-prod.svc.cluster.local.8080: Flags [S], <span class="built_in">cksum</span> 0x4cc5 (incorrect -&gt; 0xba1b), <span class="built_in">seq</span> 1108986852, win 28200, options [mss 1410,sackOK,TS val 1345430037 ecr 0,nop,wscale 7], length 0</span><br><span class="line"><span class="comment"># 10-224-1-56是PodB的podIP, 这里省略了解析过程,可以看到返回数据给PodA</span></span><br><span class="line">10-224-1-56.panorama-v2-frontend-service.spring-prod.svc.cluster.local.8080 &gt; panorama-frontend-deploy-c8f6fd4b6-52tvf.45954: Flags [S.], <span class="built_in">cksum</span> 0x1848 (incorrect -&gt; 0x99ac), <span class="built_in">seq</span> 3860576650, ack 1108986853, win 27960, options [mss 1410,sackOK,TS val 2444502128 ecr 1345430037,nop,wscale 7], length 0</span><br><span class="line"><span class="comment"># 重点: podA直接reset了请求.</span></span><br><span class="line">panorama-frontend-deploy-c8f6fd4b6-52tvf.45954 &gt; 10-224-1-56.panorama-v2-frontend-service.spring-prod.svc.cluster.local.8080: Flags [R], <span class="built_in">cksum</span> 0xb6b5 (correct), <span class="built_in">seq</span> 1108986853, win 0, length 0</span><br></pre></td></tr></table></figure>
+
+<p>最后会发现PodA给PodB发送了个<strong>R Flags</strong>, 也就是<strong>reset</strong>, 就是因为当PodB返回<strong>握手确认</strong>给到PodA，PodA根本不认识这个请求，所以直接给reset掉了, <strong>三手握手都没有建立</strong>，this is why!</p>
+<p>而对于<code>net.bridge.bridge-nf-call-iptables=1</code>的正常请求的tcpdump如下:</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># 能看到正常的三次握手， 这里省略</span></span><br><span class="line"></span><br><span class="line"><span class="comment"># 开启传输数据</span></span><br><span class="line">panorama-frontend-deploy-c8f6fd4b6-52tvf.36434 &gt; panorama-v2-frontend-service.spring-prod.svc.cluster.local.8080: Flags [P.], <span class="built_in">cksum</span> 0x4d3c (incorrect -&gt; 0x6f84), <span class="built_in">seq</span> 1:128, ack 1, win 221, options [nop,nop,TS val 1346139372 ecr 2445211463], length 127: HTTP, length: 127</span><br><span class="line">    GET / HTTP/1.1</span><br><span class="line">    Host: panorama-v2-frontend-service.spring-prod.svc.cluster.local:8080</span><br><span class="line">    User-Agent: curl/7.52.1</span><br><span class="line">    Accept: */*</span><br><span class="line"></span><br><span class="line">panorama-v2-frontend-service.spring-prod.svc.cluster.local.8080 &gt; panorama-frontend-deploy-c8f6fd4b6-52tvf.36434: Flags [.], <span class="built_in">cksum</span> 0x4cbd (incorrect -&gt; 0xe8a6), <span class="built_in">seq</span> 1, ack 128, win 219, options [nop,nop,TS val 2445211463 ecr 1346139372], length 0</span><br><span class="line"></span><br><span class="line">panorama-v2-frontend-service.spring-prod.svc.cluster.local.8080 &gt; panorama-frontend-deploy-c8f6fd4b6-52tvf.36434: Flags [P.], <span class="built_in">cksum</span> 0x4dac (incorrect -&gt; 0x0421), <span class="built_in">seq</span> 1:240, ack 128, win 219, options [nop,nop,TS val 2445211463 ecr 1346139372], length 239: HTTP, length: 239</span><br><span class="line">    HTTP/1.1 200 OK</span><br><span class="line">    Server: nginx/1.17.1</span><br><span class="line">    Date: Wed, 18 Aug 2021 15:10:17 GMT</span><br><span class="line">    Content-Type: text/html</span><br><span class="line">    Content-Length: 1540</span><br><span class="line">    Last-Modified: Fri, 09 Jul 2021 06:36:53 GMT</span><br><span class="line">    Connection: keep-alive</span><br><span class="line">    ETag: <span class="string">&quot;60e7ee85-604&quot;</span></span><br><span class="line">    Accept-Ranges: bytes</span><br></pre></td></tr></table></figure>
+
+<p>相信这个请求路径还是很清晰的，就不再啰嗦.</p>
+<h3 id="结语"><a href="#结语" class="headerlink" title="结语"></a>结语</h3><p>禁用<strong>net.bridge.bridge-nf-call-ip6tables</strong>这个参数当然也有好外，那就是考虑同网段的IP访问没必要走conntrack，一定程度有助于性能.</p>
+<p>kubernetes的<a target="_blank" rel="noopener" href="https://kubernetes.io/docs/setup/production-environment/tools/kubeadm/install-kubeadm/">官方文档</a>中<strong>明确</strong>提及Node节点上需要开启这个参数,不然碰到各种诡异的现象也只是时间问题，所以还是不要随意调整。</p>
+<p>以防后患的话可以对该参数是否开启进行监控,防止被人误修改.</p>
+<h3 id="参考文章"><a href="#参考文章" class="headerlink" title="参考文章:"></a><strong>参考文章:</strong></h3><blockquote>
+<ul>
+<li><a target="_blank" rel="noopener" href="https://izsk.me/2020/06/10/Kubernetes-coredns-5s-timeout">https://izsk.me/2020/06/10/Kubernetes-coredns-5s-timeout</a></li>
+<li><a target="_blank" rel="noopener" href="https://wiki.libvirt.org/page/Net.bridge.bridge-nf-call_and_sysctl.conf">https://wiki.libvirt.org/page/Net.bridge.bridge-nf-call_and_sysctl.conf</a></li>
+<li><a target="_blank" rel="noopener" href="https://cloud.tencent.com/developer/article/1761367">https://cloud.tencent.com/developer/article/1761367</a></li>
+<li><a target="_blank" rel="noopener" href="https://kubernetes.io/docs/setup/production-environment/tools/kubeadm/install-kubeadm/">https://kubernetes.io/docs/setup/production-environment/tools/kubeadm/install-kubeadm/</a></li>
+<li><a target="_blank" rel="noopener" href="https://imroc.cc/post/202105/why-enable-bridge-nf-call-iptables/">https://imroc.cc/post/202105/why-enable-bridge-nf-call-iptables/</a></li>
+<li><a target="_blank" rel="noopener" href="https://github.com/kubernetes/kubernetes/issues/85422#issuecomment-714629138">https://github.com/kubernetes/kubernetes/issues/85422#issuecomment-714629138</a></li>
+<li><a target="_blank" rel="noopener" href="https://www.stackrox.com/post/2020/01/kubernetes-networking-demystified/">https://www.stackrox.com/post/2020/01/kubernetes-networking-demystified/</a></li>
+<li><a target="_blank" rel="noopener" href="https://blog.csdn.net/u010278923/article/details/81735970">https://blog.csdn.net/u010278923/article/details/81735970</a></li>
+</ul>
+</blockquote>
+<h3 id="转载请注明出处https-izsk-me"><a href="#转载请注明出处https-izsk-me" class="headerlink" title="转载请注明出处https://izsk.me"></a><strong>转载请注明出处<a target="_blank" rel="noopener" href="https://izsk.me/">https://izsk.me</a></strong></h3>
+      
+    </div>
+
+    <div>
+      
+        
+<div id="wechat_subscriber" style="display: block; padding: 10px 0; margin: 20px auto; width: 100%; text-align: center">
+    <img id="wechat_subscriber_qcode" src="/images/websitecode250.png" alt=" wechat" style="width: 200px; max-width: 100%;"/>
+    <div>Scan Me To Read on Phone</div>
+</div>
+
+
+      
+    </div>
+
+    <div>
+      
+        
+  <div style="padding: 10px 0; margin: 20px auto; width: 90%; text-align: center;">
+    <div>I know you won't do this,but what if you did?</div>
+    <button id="rewardButton" disable="enable" onclick="var qr = document.getElementById('QR'); if (qr.style.display === 'none') {qr.style.display='block';} else {qr.style.display='none'}">
+      <span>赏</span>
+    </button>
+    <div id="QR" style="display: none;">
+      
+        <div id="wechat" style="display: inline-block">
+          <img id="wechat_qr" src="/images/wechatpayme.png" alt=" WeChat Pay"/>
+          <p>微信打赏</p>
+        </div>
+      
+      
+        <div id="alipay" style="display: inline-block">
+          <img id="alipay_qr" src="/images/alipayme.jpg" alt=" Alipay"/>
+          <p>支付宝打赏</p>
+        </div>
+      
     </div>
   </div>
 
-{% endblock %}
 
-{% block sidebar %}
-  {{ sidebar_template.render(true) }}
-{% endblock %}
+      
+    </div>
 
 
-{% block script_extra %}
-  {% include '_scripts/pages/post-details.swig' %}
-{% endblock %}
+    <footer class="post-footer">
+      
+        <div class="post-tags">
+          
+            <a href="/tags/Kubernetes/" rel="tag"># Kubernetes</a>
+          
+        </div>
+      
+
+      
+        <div class="post-nav">
+          <div class="post-nav-next post-nav-item">
+            
+              <a href="/2021/08/01/Kubernetes-hostport/" rel="next" title="Kubernetes学习(hostPort劫持了我的请求)">
+                <i class="fa fa-chevron-left"></i> Kubernetes学习(hostPort劫持了我的请求)
+              </a>
+            
+          </div>
+
+          <span class="post-nav-divider"></span>
+
+          <div class="post-nav-prev post-nav-item">
+            
+              <a href="/2021/10/19/OpenTelemetry-what-is-observability/" rel="prev" title="Opentelemetry调研实践一(可观测性到底在说什么)">
+                Opentelemetry调研实践一(可观测性到底在说什么) <i class="fa fa-chevron-right"></i>
+              </a>
+            
+          </div>
+        </div>
+      
+
+      
+      
+    </footer>
+  </article>
+
+
+
+    <div class="post-spread">
+      
+    </div>
+  </div>
+
+
+          </div>
+          
+
+
+          
+  <div class="comments" id="comments">
+    
+  </div>
+
+
+        </div>
+        
+          
+  
+  <div class="sidebar-toggle">
+    <div class="sidebar-toggle-line-wrap">
+      <span class="sidebar-toggle-line sidebar-toggle-line-first"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-middle"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-last"></span>
+    </div>
+  </div>
+
+  <aside id="sidebar" class="sidebar">
+    <div class="sidebar-inner">
+
+      
+
+      
+        <ul class="sidebar-nav motion-element">
+          <li class="sidebar-nav-toc sidebar-nav-active" data-target="post-toc-wrap" >
+            文章目录
+          </li>
+          <li class="sidebar-nav-overview" data-target="site-overview">
+            站点概览
+          </li>
+        </ul>
+      
+
+      <section class="site-overview sidebar-panel">
+        <div class="site-author motion-element" itemprop="author" itemscope itemtype="http://schema.org/Person">
+          <img class="site-author-image" itemprop="image"
+               src="/images/avatar.gif"
+               alt="" />
+          <p class="site-author-name" itemprop="name"></p>
+          <p class="site-description motion-element" itemprop="description"></p>
+        </div>
+        <nav class="site-state motion-element">
+        
+          
+            <div class="site-state-item site-state-posts">
+              <a href="/archives">
+                <span class="site-state-item-count">192</span>
+                <span class="site-state-item-name">日志</span>
+              </a>
+            </div>
+          
+
+          
+            <div class="site-state-item site-state-categories">
+              <a href="/categories">
+                <span class="site-state-item-count">14</span>
+                <span class="site-state-item-name">分类</span>
+              </a>
+            </div>
+          
+
+          
+            <div class="site-state-item site-state-tags">
+              <a href="/tags">
+                <span class="site-state-item-count">14</span>
+                <span class="site-state-item-name">标签</span>
+              </a>
+            </div>
+          
+
+        </nav>
+
+        
+
+        <div class="links-of-author motion-element">
+          
+        </div>
+
+        
+        
+
+        
+        
+
+        
+
+
+      </section>
+
+      
+      <!--noindex-->
+        <section class="post-toc-wrap motion-element sidebar-panel sidebar-panel-active">
+          <div class="post-toc">
+
+            
+              
+            
+
+            
+              <div class="post-toc-content"><ol class="nav"><li class="nav-item nav-level-3"><a class="nav-link" href="#%E9%97%AE%E9%A2%98%E7%8E%B0%E8%B1%A1"><span class="nav-number">1.</span> <span class="nav-text">问题现象</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E6%8E%92%E6%9F%A5%E8%BF%87%E7%A8%8B"><span class="nav-number">2.</span> <span class="nav-text">排查过程</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E7%BD%AA%E9%AD%81%E7%A5%B8%E9%A6%96"><span class="nav-number">3.</span> <span class="nav-text">罪魁祸首</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E9%97%AE%E9%A2%98%E8%A7%A3%E5%86%B3"><span class="nav-number">4.</span> <span class="nav-text">问题解决</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#linux-conntrack"><span class="nav-number">5.</span> <span class="nav-text">linux conntrack</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#tcpdump"><span class="nav-number">6.</span> <span class="nav-text">tcpdump</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E7%BB%93%E8%AF%AD"><span class="nav-number">7.</span> <span class="nav-text">结语</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E5%8F%82%E8%80%83%E6%96%87%E7%AB%A0"><span class="nav-number">8.</span> <span class="nav-text">参考文章:</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E8%BD%AC%E8%BD%BD%E8%AF%B7%E6%B3%A8%E6%98%8E%E5%87%BA%E5%A4%84https-izsk-me"><span class="nav-number">9.</span> <span class="nav-text">转载请注明出处https:&#x2F;&#x2F;izsk.me</span></a></li></ol></div>
+            
+
+          </div>
+        </section>
+      <!--/noindex-->
+      
+
+    </div>
+  </aside>
+
+
+        
+      </div>
+    </main>
+
+    <footer id="footer" class="footer">
+      <div class="footer-inner">
+        <div class="copyright" >
+  
+  &copy; 
+  <span itemprop="copyrightYear">2022</span>
+  <span class="with-love">
+    <i class="fa fa-heart"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">Z.S.K.</span>
+</div>
+
+
+<div class="powered-by">
+  Supported by <a class="theme-link" target="_blank" rel="noopener" href="https://hexo.io">Hexo</a>
+</div>
+
+<div class="theme-info">
+  Theme -
+  <a class="theme-link" target="_blank" rel="noopener" href="https://github.com/iissnan/hexo-theme-next">
+    NexT.Mist
+  </a>
+</div>
+
+
+        
+
+        
+      </div>
+    </footer>
+
+    <div class="back-to-top">
+      <i class="fa fa-arrow-up"></i>
+    </div>
+  </div>
+
+  
+
+<script type="text/javascript">
+  if (Object.prototype.toString.call(window.Promise) !== '[object Function]') {
+    window.Promise = null;
+  }
+</script>
+
+
+
+
+
+
+
+
+
+  
+
+
+
+  
+  <script type="text/javascript" src="/lib/jquery/index.js?v=2.1.3"></script>
+
+  
+  <script type="text/javascript" src="/lib/fastclick/lib/fastclick.min.js?v=1.0.6"></script>
+
+  
+  <script type="text/javascript" src="/lib/jquery_lazyload/jquery.lazyload.js?v=1.9.7"></script>
+
+  
+  <script type="text/javascript" src="/lib/velocity/velocity.min.js?v=1.2.1"></script>
+
+  
+  <script type="text/javascript" src="/lib/velocity/velocity.ui.min.js?v=1.2.1"></script>
+
+  
+  <script type="text/javascript" src="/lib/fancybox/source/jquery.fancybox.pack.js?v=2.1.5"></script>
+
+
+  
+
+
+  <script type="text/javascript" src="/js/src/utils.js?v=5.1.0"></script>
+
+  <script type="text/javascript" src="/js/src/motion.js?v=5.1.0"></script>
+
+
+
+  
+  
+
+  
+  <script type="text/javascript" src="/js/src/scrollspy.js?v=5.1.0"></script>
+<script type="text/javascript" src="/js/src/post-details.js?v=5.1.0"></script>
+
+
+
+  
+
+
+  <script type="text/javascript" src="/js/src/bootstrap.js?v=5.1.0"></script>
+
+
+
+  
+
+
+
+  
+
+
+
+
+	
+
+
+
+
+
+  
+
+
+
+
+  
+  
+  <script type="text/javascript">
+    // Popup Window;
+    var isfetched = false;
+    // Search DB path;
+    var search_path = "search.xml";
+    if (search_path.length == 0) {
+      search_path = "search.xml";
+    }
+    var path = "/" + search_path;
+    // monitor main search box;
+
+    function proceedsearch() {
+      $("body").append('<div class="popoverlay">').css('overflow', 'hidden');
+      $('.popup').toggle();
+    }
+    // search function;
+    var searchFunc = function(path, search_id, content_id) {
+      'use strict';
+      $.ajax({
+        url: path,
+        dataType: "xml",
+        async: true,
+        success: function( xmlResponse ) {
+          // get the contents from search data
+          isfetched = true;
+          $('.popup').detach().appendTo('.header-inner');
+          var datas = $( "entry", xmlResponse ).map(function() {
+            return {
+              title: $( "title", this ).text(),
+              content: $("content",this).text(),
+              url: $( "url" , this).text()
+            };
+          }).get();
+          var $input = document.getElementById(search_id);
+          var $resultContent = document.getElementById(content_id);
+          $input.addEventListener('input', function(){
+            var matchcounts = 0;
+            var str='<ul class=\"search-result-list\">';
+            var keywords = this.value.trim().toLowerCase().split(/[\s\-]+/);
+            $resultContent.innerHTML = "";
+            if (this.value.trim().length > 1) {
+              // perform local searching
+              datas.forEach(function(data) {
+                var isMatch = false;
+                var content_index = [];
+                var data_title = data.title.trim().toLowerCase();
+                var data_content = data.content.trim().replace(/<[^>]+>/g,"").toLowerCase();
+                var data_url = decodeURIComponent(data.url);
+                var index_title = -1;
+                var index_content = -1;
+                var first_occur = -1;
+                // only match artiles with not empty titles and contents
+                if(data_title != '') {
+                  keywords.forEach(function(keyword, i) {
+                    index_title = data_title.indexOf(keyword);
+                    index_content = data_content.indexOf(keyword);
+                    if( index_title >= 0 || index_content >= 0 ){
+                      isMatch = true;
+                      if (i == 0) {
+                        first_occur = index_content;
+                      }
+                    }
+
+                  });
+                }
+                // show search results
+                if (isMatch) {
+                  matchcounts += 1;
+                  str += "<li><a href='"+ data_url +"' class='search-result-title'>"+ data_title +"</a>";
+                  var content = data.content.trim().replace(/<[^>]+>/g,"");
+                  if (first_occur >= 0) {
+                    // cut out 100 characters
+                    var start = first_occur - 20;
+                    var end = first_occur + 80;
+                    if(start < 0){
+                      start = 0;
+                    }
+                    if(start == 0){
+                      end = 50;
+                    }
+                    if(end > content.length){
+                      end = content.length;
+                    }
+                    var match_content = content.substring(start, end);
+                    // highlight all keywords
+                    keywords.forEach(function(keyword){
+                      var regS = new RegExp(keyword, "gi");
+                      match_content = match_content.replace(regS, "<b class=\"search-keyword\">"+keyword+"</b>");
+                    });
+
+                    str += "<p class=\"search-result\">" + match_content +"...</p>"
+                  }
+                  str += "</li>";
+                }
+              })};
+            str += "</ul>";
+            if (matchcounts == 0) { str = '<div id="no-result"><i class="fa fa-frown-o fa-5x" /></div>' }
+            if (keywords == "") { str = '<div id="no-result"><i class="fa fa-search fa-5x" /></div>' }
+            $resultContent.innerHTML = str;
+          });
+          proceedsearch();
+        }
+      });}
+
+    // handle and trigger popup window;
+    $('.popup-trigger').click(function(e) {
+      e.stopPropagation();
+      if (isfetched == false) {
+        searchFunc(path, 'local-search-input', 'local-search-result');
+      } else {
+        proceedsearch();
+      };
+    });
+
+    $('.popup-btn-close').click(function(e){
+      $('.popup').hide();
+      $(".popoverlay").remove();
+      $('body').css('overflow', '');
+    });
+    $('.popup').click(function(e){
+      e.stopPropagation();
+    });
+  </script>
+
+
+  
+
+  
+
+  
+
+  
+
+
+</body>
+</html>

@@ -1,38 +1,889 @@
-{% extends '_layout.swig' %}
-{% import '_macro/post.swig' as post_template %}
-{% import '_macro/sidebar.swig' as sidebar_template %}
+<!doctype html>
 
 
-{% block title %} {{ page.title }} | {{ config.title }} {% endblock %}
 
-{% block page_class %}page-post-detail{% endblock %}
+  
 
 
-{% block content %}
+<html class="theme-next mist use-motion" lang="zh-Hans">
+<head>
+  <meta charset="UTF-8"/>
+<meta http-equiv="X-UA-Compatible" content="IE=edge" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1"/>
+
+
+
+<meta http-equiv="Cache-Control" content="no-transform" />
+<meta http-equiv="Cache-Control" content="no-siteapp" />
+
+
+
+
+
+
+
+
+
+
+
+
+  
+  
+  <link href="/lib/fancybox/source/jquery.fancybox.css?v=2.1.5" rel="stylesheet" type="text/css" />
+
+
+
+
+  
+  
+  
+  
+
+  
+    
+    
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+    
+    
+    <link href="//fonts.googleapis.com/css?family=Lato:300,300italic,400,400italic,700,700italic&subset=latin,latin-ext" rel="stylesheet" type="text/css">
+  
+
+
+
+
+
+
+<link href="/lib/font-awesome/css/font-awesome.min.css?v=4.6.2" rel="stylesheet" type="text/css" />
+
+<link href="/css/main.css?v=5.1.0" rel="stylesheet" type="text/css" />
+
+
+  <meta name="keywords" content="分布式架构," />
+
+
+
+
+
+
+
+
+  <link rel="shortcut icon" type="image/x-icon" href="/favicon.ico?v=5.1.0" />
+
+
+
+
+
+
+<meta name="description" content="其它的话就不多说了, 上来说是干吧 环境说明:   zabbix-3.2.6 centos-6.4 mysql-5.7.18 nginx-1.8 php-5.6">
+<meta property="og:type" content="article">
+<meta property="og:title" content="zabbix学习(zabbix-server安装)">
+<meta property="og:url" content="https://zhoushuke.github.io/2016/10/30/zabbix%E4%BD%BF%E7%94%A8%E6%95%99%E7%A8%8B%E4%BA%8C(zabbix%E6%9C%8D%E5%8A%A1%E5%99%A8%E7%AB%AF%E5%AE%89%E8%A3%85)/index.html">
+<meta property="og:site_name" content="Z.S.K.&#39;s Records">
+<meta property="og:description" content="其它的话就不多说了, 上来说是干吧 环境说明:   zabbix-3.2.6 centos-6.4 mysql-5.7.18 nginx-1.8 php-5.6">
+<meta property="og:locale">
+<meta property="article:published_time" content="2016-10-30T13:22:53.000Z">
+<meta property="article:modified_time" content="2022-07-19T03:16:00.982Z">
+<meta property="article:author" content="Z.S.K.">
+<meta property="article:tag" content="分布式架构">
+<meta name="twitter:card" content="summary">
+
+
+
+<script type="text/javascript" id="hexo.configurations">
+  var NexT = window.NexT || {};
+  var CONFIG = {
+    root: '',
+    scheme: 'Mist',
+    sidebar: {"position":"left","display":"post"},
+    fancybox: true,
+    motion: true,
+    duoshuo: {
+      userId: 'undefined',
+      author: '博主'
+    },
+    algolia: {
+      applicationID: '',
+      apiKey: '',
+      indexName: '',
+      hits: {"per_page":10},
+      labels: {"input_placeholder":"Search for Posts","hits_empty":"We didn't find any results for the search: ${query}","hits_stats":"${hits} results found in ${time} ms"}
+    }
+  };
+</script>
+
+
+
+  <link rel="canonical" href="https://zhoushuke.github.io/2016/10/30/zabbix使用教程二(zabbix服务器端安装)/"/>
+
+
+
+
+
+  <title> zabbix学习(zabbix-server安装) | Z.S.K.'s Records </title>
+<meta name="generator" content="Hexo 6.2.0"></head>
+
+<body itemscope itemtype="http://schema.org/WebPage" lang="zh-Hans">
+
+  
+
+
+
+
+
+
+
+
+
+
+  
+  
+    
+  
+
+  <div class="container one-collumn sidebar-position-left page-post-detail ">
+    <div class="headband"></div>
+
+    <header id="header" class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-meta ">
+  
+
+  <div class="custom-logo-site-title">
+    <a href="/"  class="brand" rel="start">
+      <span class="logo-line-before"><i></i></span>
+      <span class="site-title">Z.S.K.'s Records</span>
+      <span class="logo-line-after"><i></i></span>
+    </a>
+  </div>
+    
+      <p class="site-subtitle"></p>
+    
+</div>
+
+<div class="site-nav-toggle">
+  <button>
+    <span class="btn-bar"></span>
+    <span class="btn-bar"></span>
+    <span class="btn-bar"></span>
+  </button>
+</div>
+
+<nav class="site-nav">
+  
+
+  
+    <ul id="menu" class="menu">
+      
+        
+        <li class="menu-item menu-item-home">
+          <a href="/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-home"></i> <br />
+            
+            首页
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-categories">
+          <a href="/categories" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-th"></i> <br />
+            
+            分类
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-about">
+          <a href="/about/ZSK-Profile.pdf" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-user"></i> <br />
+            
+            简历
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-archives">
+          <a href="/archives" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-archive"></i> <br />
+            
+            归档
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-tags">
+          <a href="/tags" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-tags"></i> <br />
+            
+            标签
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-commonweal">
+          <a href="/404.html" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-heartbeat"></i> <br />
+            
+            公益404
+          </a>
+        </li>
+      
+
+      
+        <li class="menu-item menu-item-search">
+          
+            <a href="javascript:;" class="popup-trigger">
+          
+            
+              <i class="menu-item-icon fa fa-search fa-fw"></i> <br />
+            
+            搜索
+          </a>
+        </li>
+      
+    </ul>
+  
+
+  
+    <div class="site-search">
+      
+  <div class="popup">
+ <span class="search-icon fa fa-search"></span>
+ <input type="text" id="local-search-input">
+ <div id="local-search-result"></div>
+ <span class="popup-btn-close">close</span>
+</div>
+
+
+    </div>
+  
+</nav>
+
+
+
+ </div>
+    </header>
+
+    <main id="main" class="main">
+      <div class="main-inner">
+        <div class="content-wrap">
+          <div id="content" class="content">
+            
 
   <div id="posts" class="posts-expand">
-    {{ post_template.render(page) }}
+    
 
-    <div class="post-spread">
-      {% if theme.jiathis %}
-        {% include '_partials/share/jiathis.swig' %}
-      {% elseif theme.baidushare %}
-        {% include '_partials/share/baidushare.swig' %}
-      {% elseif theme.add_this_id %}
-        {% include '_partials/share/add-this.swig' %}
-      {% elseif theme.duoshuo_shortname and theme.duoshuo_share %}
-        {% include '_partials/share/duoshuo_share.swig' %}
-      {% endif %}
+  
+
+  
+  
+  
+
+  <article class="post post-type-normal " itemscope itemtype="http://schema.org/Article">
+  <link itemprop="mainEntityOfPage" href="https://zhoushuke.github.io/2016/10/30/zabbix%E4%BD%BF%E7%94%A8%E6%95%99%E7%A8%8B%E4%BA%8C(zabbix%E6%9C%8D%E5%8A%A1%E5%99%A8%E7%AB%AF%E5%AE%89%E8%A3%85)/">
+
+  <span style="display:none" itemprop="author" itemscope itemtype="http://schema.org/Person">
+    <meta itemprop="name" content="">
+    <meta itemprop="description" content="">
+    <meta itemprop="image" content="/images/avatar.gif">
+  </span>
+
+  <span style="display:none" itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+    <meta itemprop="name" content="Z.S.K.'s Records">
+    <span style="display:none" itemprop="logo" itemscope itemtype="http://schema.org/ImageObject">
+      <img style="display:none;" itemprop="url image" alt="Z.S.K.'s Records" src="">
+    </span>
+  </span>
+
+    
+      <header class="post-header">
+
+        
+        
+          <h1 class="post-title" itemprop="name headline">
+            
+            
+              
+                zabbix学习(zabbix-server安装)
+              
+            
+          </h1>
+        
+
+        <div class="post-meta">
+          <span class="post-time">
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">发表于</span>
+              
+              <time title="Post created" itemprop="dateCreated datePublished" datetime="2016-10-30T21:22:53+08:00">
+                2016-10-30
+              </time>
+            
+
+            
+
+            
+          </span>
+
+          
+            <span class="post-category" >
+            
+              <span class="post-meta-divider">|</span>
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-folder-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">分类于</span>
+              
+              
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/%E5%88%86%E5%B8%83%E5%BC%8F%E6%9E%B6%E6%9E%84/" itemprop="url" rel="index">
+                    <span itemprop="name">分布式架构</span>
+                  </a>
+                </span>
+
+                
+                
+              
+            </span>
+          
+
+          
+            
+          
+
+          
+
+          
+          
+
+          
+
+          
+
+        </div>
+      </header>
+    
+
+
+    <div class="post-body" itemprop="articleBody">
+
+      
+      
+
+      
+        <p>其它的话就不多说了, 上来说是干吧</p>
+<p>环境说明:</p>
+<blockquote>
+<ul>
+<li>zabbix-3.2.6</li>
+<li>centos-6.4</li>
+<li>mysql-5.7.18</li>
+<li>nginx-1.8</li>
+<li>php-5.6</li>
+</ul>
+</blockquote>
+<span id="more"></span>
+
+<h3 id="NLMP环境安装"><a href="#NLMP环境安装" class="headerlink" title="NLMP环境安装"></a><strong>NLMP环境安装</strong></h3><h4 id="mysql-5-7-18安装"><a href="#mysql-5-7-18安装" class="headerlink" title="mysql-5.7.18安装"></a><strong>mysql-5.7.18安装</strong></h4><figure class="highlight shell"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br><span class="line">58</span><br><span class="line">59</span><br><span class="line">60</span><br><span class="line">61</span><br><span class="line">62</span><br><span class="line">63</span><br><span class="line">64</span><br><span class="line">65</span><br><span class="line">66</span><br><span class="line">67</span><br><span class="line">68</span><br><span class="line">69</span><br><span class="line">70</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta prompt_">#</span><span class="language-bash">1、安装mysql依赖</span></span><br><span class="line">[root@www ~]# yum install gcc gcc-c++ zlib-devel libtool ncurses-devel openssh-clients cmake ncurses bison</span><br><span class="line"><span class="meta prompt_"></span></span><br><span class="line"><span class="meta prompt_">#</span><span class="language-bash">2、新建mysql用户并将mysql系统用户的密码修改为mysql</span></span><br><span class="line">[root@www ~]# groupadd mysql</span><br><span class="line">[root@www ~]# useradd -g mysql mysql</span><br><span class="line">[root@www ~]# passwd mysql</span><br><span class="line"><span class="meta prompt_"></span></span><br><span class="line"><span class="meta prompt_">#</span><span class="language-bash">3、mysql-5.7需要安装boost_1_59_0.tar.gz,且编译器使用cmake</span></span><br><span class="line">[root@www ~]# tar zxvf boost_1_59_0.tar.gz</span><br><span class="line">[root@www ~]# tar mysql5.7.tar.gz</span><br><span class="line">[root@www ~]# cd mysql5.7</span><br><span class="line">[root@www ~]# cmake . -DCMAKE_INSTALL_PREFIX=/usr/local/mysql \</span><br><span class="line">-DMYSQL_DATADIR=/data/mysql \</span><br><span class="line">-DWITH_BOOST=../boost_1_59_0 \</span><br><span class="line">-DMYSQL_UNIX_ADDR=/tmp/mysql.sock \</span><br><span class="line">-DSYSCONFDIR=/etc \</span><br><span class="line">-DWITH_INNOBASE_STORAGE_ENGINE=1 \</span><br><span class="line">-DWITH_PARTITION_STORAGE_ENGINE=1 \</span><br><span class="line">-DWITH_FEDERATED_STORAGE_ENGINE=1 \</span><br><span class="line">-DWITH_BLACKHOLE_STORAGE_ENGINE=1 \</span><br><span class="line">-DWITH_MYISAM_STORAGE_ENGINE=1 \</span><br><span class="line">-DMYSQL_TCP_PORT=3306 \</span><br><span class="line">-DEXTRA_CHARSETS=all \</span><br><span class="line">-DDEFAULT_CHARSET=utf8 \</span><br><span class="line">-DDEFAULT_COLLATION=utf8_general_ci \</span><br><span class="line">-DWITH_DEBUG=0</span><br><span class="line">[root@www ~]# make &amp;&amp; make install</span><br><span class="line"><span class="meta prompt_"></span></span><br><span class="line"><span class="meta prompt_">#</span><span class="language-bash">4、初始化mysql</span></span><br><span class="line">[root@www ~]# cp /usr/local/mysql/support-files/mysql.server /etc/init.d/mysqld</span><br><span class="line">[root@www ~]# chmod a+x /etc/init.d/mysqld </span><br><span class="line">[root@www ~]# chown -R mysql:mysql /etc/init.d/mysqld</span><br><span class="line">[root@www ~]# chown -R mysql:mysql /usr/local/mysql</span><br><span class="line">[root@www ~]# chown -R mysql:mysql /data/mysql</span><br><span class="line">[root@www ~]# chown -R mysql:mysql /etc/my.cnf</span><br><span class="line"><span class="meta prompt_"></span></span><br><span class="line"><span class="meta prompt_">#</span><span class="language-bash">5、修改mysql配置文件/etc/my.cnf</span></span><br><span class="line"><span class="meta prompt_"></span></span><br><span class="line"><span class="meta prompt_">#</span><span class="language-bash">6、加入开机启动</span></span><br><span class="line">[root@www ~]# chkconfig --add mysqld</span><br><span class="line"><span class="meta prompt_"></span></span><br><span class="line"><span class="meta prompt_">#</span><span class="language-bash">7、把mysql路径添加到/etc/ld.so.conf</span></span><br><span class="line">[root@www ~]# echo &quot;/usr/local/mysql/include/&quot; &gt;&gt;/etc/ld.so.conf</span><br><span class="line">[root@www ~]# echo &quot;/usr/local/mysql/bin/&quot; &gt;&gt;/etc/ld.so.conf</span><br><span class="line">[root@www ~]# ldconfig</span><br><span class="line"><span class="meta prompt_"></span></span><br><span class="line"><span class="meta prompt_">#</span><span class="language-bash">8、修改/etc/profile在最后添加</span></span><br><span class="line">[root@www ~]# vi /etc/profile</span><br><span class="line">export PATH=/usr/local/mysql/bin:$PATH</span><br><span class="line">[root@www ~]# source /etc/profile</span><br><span class="line"><span class="meta prompt_"></span></span><br><span class="line"><span class="meta prompt_">#</span><span class="language-bash">9、执行</span></span><br><span class="line">[root@www ~]#mysqld –tmpdir=/home/mysql/mysqltmp --initialize-insecure --user=mysql --basedir=/usr/local/mysql --datadir=/data/mysql</span><br><span class="line"><span class="meta prompt_"></span></span><br><span class="line"><span class="meta prompt_">#</span><span class="language-bash">10、使用mysql用户启动mysql</span></span><br><span class="line">[mysql@www ~]$ service mysqld start</span><br><span class="line"><span class="meta prompt_"></span></span><br><span class="line"><span class="meta prompt_">#</span><span class="language-bash">11、切换回root,修改mysql数据库中root用户的登陆密码</span></span><br><span class="line">[root@www ~]# mysql_secure_installation</span><br><span class="line"><span class="meta prompt_">#</span><span class="language-bash">一路输入Y即可,其中会询问设置密码的强度,请根据自身需要设置,如果选择密码强度为高,则密码需要符合强度要求才能继续,不然会提示密码强度不够,这里密码修改为Mysql0000<span class="comment">#</span></span></span><br><span class="line"><span class="meta prompt_"></span></span><br><span class="line"><span class="meta prompt_">#</span><span class="language-bash">12、给root用户授权</span></span><br><span class="line">[root@www ~]# mysql -uroot -pMysql0000#</span><br><span class="line"><span class="meta prompt_">mysql&gt; </span><span class="language-bash">use mysql;</span></span><br><span class="line">mysql &gt; grant all privileges on *.* to &#x27;root&#x27;@localhost;</span><br><span class="line">mysql &gt; grant all privileges on *.* to &#x27;root&#x27;@’100.12.255.160’;</span><br><span class="line">mysql &gt; flush privileges;</span><br><span class="line"><span class="meta prompt_"></span></span><br><span class="line"><span class="meta prompt_">#</span><span class="language-bash">根据实际情况改为服务器的ip地址</span></span><br></pre></td></tr></table></figure>
+
+<h4 id="PHP安装"><a href="#PHP安装" class="headerlink" title="PHP安装"></a><strong>PHP安装</strong></h4><figure class="highlight shell"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta prompt_">#</span><span class="language-bash">1、php依赖关系</span></span><br><span class="line">[root@www ~]# yum -y install gcc gcc-c++ autoconf libjpeg libjpeg-devel libpng libpng-devel freetype freetype-devel libxml2 libxml2-devel zlib zlib-devel glibc glibc-devel glib2 glib2-devel bzip2 bzip2-devel ncurses ncurses-devel curl curl-devel e2fsprogs e2fsprogs-devel krb5 krb5-devel libidn libidn-devel openssl openssl-devel openldap openldap-devel nss_ldap openldap-clients openldap-servers gd gd2 gd-devel gd2-devel perl-CPAN pcre-devel</span><br><span class="line"><span class="meta prompt_"></span></span><br><span class="line"><span class="meta prompt_">#</span><span class="language-bash">2、注意：centos源不能安装libmcrypt-devel,由于版权的原因没有自带mcrypt的包</span></span><br><span class="line">使用php mcrypt 前必须先安装Libmcrypt 这个需要源码编译安装,且版本要大于2.5.6</span><br><span class="line">[root@www ~]# tar zxvf libmcrypt.tar.gz</span><br><span class="line">[root@www ~]# ./configure</span><br><span class="line">[root@www ~]# make &amp;&amp; make install</span><br><span class="line"><span class="meta prompt_"></span></span><br><span class="line"><span class="meta prompt_">#</span><span class="language-bash">3、对php的编译要求如下,不然的话在最后前端生成zabbix前台的时候模块会检验不过:</span></span><br><span class="line">[root@www ~]#./configure --prefix=/usr/local/php --with-config-file-path=/etc/php/ --with-bz2 --with-curl --enable-mbstring --enable-calendar --enable-gd-native-ttf --enable-ftp --enable-sockets --enable-dom --enable-shmop --enable-fpm --enable-ctype --enable-session --enable-xmlwriter --enable-xmlreader --enable-bcmath --enable-xml --enable-opcache --enable-sysvmsg --enable-sysvsem --enable-zip --disable-ipv6 --disable-rpath --disable-debug --disable-fileinfo --with-libdir=lib64 --with-gd --with-jpeg-dir=/usr/local --with-png-dir=/usr/local --with-freetype-dir=/usr/local --with-iconv-dir=/usr/local --with-gettext --with-libxml-dir=/usr/local --with-zlib --with-mysql --with-curl --with-pdo-mysql=mysqlnd --with-mysqli=mysqlnd --with-mysql=mysqlnd --with-openssl --with-mhash --with-xmlrpc --with-mcrypt</span><br><span class="line">[root@www ~]# make &amp;&amp; make install</span><br><span class="line"><span class="meta prompt_"></span></span><br><span class="line"><span class="meta prompt_">#</span><span class="language-bash">4、编译安装完成之后 在/usr/local/php/etc/或是/etc/php下都没有php.ini文件 所以需要<span class="built_in">cp</span>一个模板文件到/etc/php/下</span></span><br><span class="line">[root@www ~]# cp php.ini-production /etc/php/php.ini</span><br><span class="line"><span class="meta prompt_">#</span><span class="language-bash">打开php.ini配置文件，找到如下参数,修改为如下值，否则zabbix安装不了</span></span><br><span class="line"></span><br><span class="line">upload_max_filesize = 2M</span><br><span class="line">max_execution_time = 300</span><br><span class="line">max_input_time = 300</span><br><span class="line">memory_limit = 128M</span><br><span class="line">post_max_size = 32M</span><br><span class="line">date.timezone = Asia/Shanghai</span><br><span class="line">mbstring.func_overload = 0</span><br><span class="line">session.auto_start = 0</span><br><span class="line">always_populate_raw_post_data = -1</span><br><span class="line"></span><br><span class="line">[root@www ~]# cp /usr/local/php/etc/php-fpm.conf.default /usr/local/php/etc/php-fpm.conf</span><br><span class="line">[root@www ~]# cp /usr/local/src/php-5.6.30/sapi/fpm/init.d.php-fpm /etc/init.d/php-fpm</span><br><span class="line">[root@www ~]# chmod a+x /etc/init.d/php-fpm</span><br><span class="line">[root@www ~]# chkconfig --add php-fpm</span><br><span class="line">[root@www ~]# /etc/init.d/php-fpm start</span><br><span class="line"><span class="meta prompt_"></span></span><br><span class="line"><span class="meta prompt_">#</span><span class="language-bash">若访问前台报502 bad gateway时,修改 /usr/local/php/etc/php-fpm.ini里global中的pid=run/php-fpm.pid前的注释去掉 重启php-fpm</span></span><br></pre></td></tr></table></figure>
+
+<h4 id="Nginx1-8安装"><a href="#Nginx1-8安装" class="headerlink" title="Nginx1.8安装"></a><strong>Nginx1.8安装</strong></h4><figure class="highlight shell"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta prompt_">#</span><span class="language-bash">1、新建www用户</span></span><br><span class="line">[root@www ~]# groupadd www </span><br><span class="line">[root@www ~]# useradd -g www www</span><br><span class="line">[root@www ~]# passwd www</span><br><span class="line"><span class="meta prompt_">#</span><span class="language-bash">密码修改为www</span></span><br><span class="line"><span class="meta prompt_"></span></span><br><span class="line"><span class="meta prompt_">#</span><span class="language-bash">2、把nginx-1.8.0.tar.gz放到/usr/local/src</span></span><br><span class="line">[root@www ~]# tar zxvf nginx-1.8.0.tar.gz</span><br><span class="line">[root@www ~]# cd nginx-1.8.0</span><br><span class="line">[root@www ~]# ./configure --user=www --group=www --prefix=/usr/local/nginx --with-http_stub_status_module --with-http_ssl_module</span><br><span class="line">[root@www ~]# cd /usr/local/nginx/conf</span><br><span class="line"><span class="meta prompt_"></span></span><br><span class="line"><span class="meta prompt_">#</span><span class="language-bash">3. 修改nginx的配置文件nginx.conf</span></span><br></pre></td></tr></table></figure>
+
+<h3 id="Zabbix3安装"><a href="#Zabbix3安装" class="headerlink" title="Zabbix3安装"></a><strong>Zabbix3安装</strong></h3><figure class="highlight shell"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br><span class="line">58</span><br><span class="line">59</span><br><span class="line">60</span><br><span class="line">61</span><br><span class="line">62</span><br><span class="line">63</span><br><span class="line">64</span><br><span class="line">65</span><br><span class="line">66</span><br><span class="line">67</span><br><span class="line">68</span><br><span class="line">69</span><br><span class="line">70</span><br><span class="line">71</span><br><span class="line">72</span><br><span class="line">73</span><br><span class="line">74</span><br><span class="line">75</span><br><span class="line">76</span><br><span class="line">77</span><br><span class="line">78</span><br><span class="line">79</span><br><span class="line">80</span><br><span class="line">81</span><br><span class="line">82</span><br><span class="line">83</span><br><span class="line">84</span><br><span class="line">85</span><br><span class="line">86</span><br><span class="line">87</span><br><span class="line">88</span><br><span class="line">89</span><br><span class="line">90</span><br><span class="line">91</span><br><span class="line">92</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta prompt_">#</span><span class="language-bash">1、zabbix依赖</span></span><br><span class="line">[root@www ~]# yum install gcc mysql-devel net-snmp-devel net-snmp curl-devel perl-DBI php-gd php-ctype php-mysql php-bcmath php-mbstring  php-xml php-session php-sockets php-gettext php-xmlreader php-xmlwriter libxml2-devel libcurl-devel unixODBC unixODBC-devel libssh2-devel libssh2 OpenIPMI-devel OpenIPMI OpenIPMI-libs</span><br><span class="line"><span class="meta prompt_"></span></span><br><span class="line"><span class="meta prompt_">#</span><span class="language-bash">2、新建系统用户</span></span><br><span class="line">[root@www ~]#groupadd zabbix</span><br><span class="line">[root@www ~]#useradd -g zabbix -m zabbix</span><br><span class="line">[root@www ~]#passwd zabbix</span><br><span class="line"><span class="meta prompt_">#</span><span class="language-bash">密码修改为 zabbix</span></span><br><span class="line"><span class="meta prompt_"></span></span><br><span class="line"><span class="meta prompt_">#</span><span class="language-bash">3、创建zabbix数据库,新建的mysql数据库用户zabbix,密码也设为zabbix</span></span><br><span class="line">[root@www ~]#mysql -uroot -pMysql0000#</span><br><span class="line"><span class="meta prompt_">mysql&gt;</span><span class="language-bash">use mysql;</span></span><br><span class="line"><span class="meta prompt_">mysql&gt;</span><span class="language-bash">create database zabbix character <span class="built_in">set</span> utf8;</span></span><br><span class="line"><span class="meta prompt_">mysql&gt;</span><span class="language-bash">grant all privileges on zabbix.* to zabbix@<span class="string">&#x27;100.12.255.160&#x27;</span> identified by <span class="string">&#x27;Zabbix0000#&#x27;</span>;</span></span><br><span class="line"><span class="meta prompt_">mysql&gt;</span><span class="language-bash">grant all privileges on zabbix.* to zabbix@<span class="string">&#x27;localhost&#x27;</span> identified by <span class="string">&#x27;Zabbix0000#&#x27;</span>;</span></span><br><span class="line"><span class="meta prompt_">mysql&gt;</span><span class="language-bash">grant all privileges on zabbix.* to zabbix@<span class="string">&#x27;127.0.0.1&#x27;</span> identified by <span class="string">&#x27;Zabbix0000#&#x27;</span>;</span></span><br><span class="line"><span class="meta prompt_">mysql&gt;</span><span class="language-bash">flush privileges;</span></span><br><span class="line"><span class="meta prompt_">mysql&gt;</span><span class="language-bash"><span class="built_in">exit</span>;</span></span><br><span class="line"><span class="meta prompt_">#</span><span class="language-bash">红色标注的为zabbix服务器的地址,zabbix0000<span class="comment">#为数据库用户zabbix设置的密码</span></span></span><br><span class="line"><span class="meta prompt_"></span></span><br><span class="line"><span class="meta prompt_">#</span><span class="language-bash">4、从zabbix.tar.gz源文件中导入zabbix数据库文件</span></span><br><span class="line">[root@www ~]# tar -zxvf zabbix-3.2.6.tar.gz</span><br><span class="line">[root@www ~]# cd zabbix-3.2.6/database/mysql</span><br><span class="line">[root@www ~]# mysql -uroot -pMysql0000# zabbix &lt; schema.sql</span><br><span class="line">[root@www ~]# mysql -uroot -pMysql0000# zabbix &lt; images.sql </span><br><span class="line">[root@www ~]# mysql -uroot -pMysql0000# zabbix &lt; data.sql</span><br><span class="line"><span class="meta prompt_"></span></span><br><span class="line"><span class="meta prompt_">#</span><span class="language-bash">5、服务器端编译</span></span><br><span class="line">[root@www ~]# ./configure --prefix=/usr/local/zabbix --enable-server --enable-agent --enable-java --with-mysql --with-net-snmp --with-libcurl --with-libxml2 --with-openssl --with-unixodbc --with-ssh2 --with-openipmi</span><br><span class="line">[root@www ~]# make &amp;&amp; make install</span><br><span class="line"><span class="meta prompt_"></span></span><br><span class="line"><span class="meta prompt_">#</span><span class="language-bash">6、添加服务端口：(可能这个配置文件中已有如下内容则不需要添加)</span></span><br><span class="line">[root@www ~]# vim /etc/services</span><br><span class="line">zabbix-agent 10050/tcp   # Zabbix Agent</span><br><span class="line">zabbix-agent 10050/udp   # Zabbix Agent</span><br><span class="line">zabbix-trapper 10051/tcp # Zabbix Trapper</span><br><span class="line">zabbix-trapper 10051/udp # Zabbix Trapper</span><br><span class="line"><span class="meta prompt_"></span></span><br><span class="line"><span class="meta prompt_">#</span><span class="language-bash">7、服务端copy源码包中的前端文件</span></span><br><span class="line">[root@www ~]# mkdir -p /usr/local/nginx/html/zabbix </span><br><span class="line">[root@www ~]# cp -rf /usr/local/src/zabbix-3.2.6/frontends/php/* /usr/local/nginx/html/zabbix/   #虚拟主机目录</span><br><span class="line">[root@www ~]# chown -R zabbix:zabbix /usr/local/nginx/html/zabbix</span><br><span class="line"><span class="meta prompt_"></span></span><br><span class="line"><span class="meta prompt_">#</span><span class="language-bash">8、修改zabbix的GUI配置文件：</span></span><br><span class="line"><span class="meta prompt_">[root@www~]#</span><span class="language-bash"><span class="built_in">cp</span> /usr/local/nginx/html/zabbix/conf/zabbix.conf.php.default /usr/local/nginx/html/zabbix/conf/zabbix.conf.php</span></span><br><span class="line">[root@www ~]# vim /usr/local/nginx/html/zabbix/conf/zabbix.conf.php</span><br><span class="line">&lt;?php</span><br><span class="line">// Zabbix GUI configuration file.</span><br><span class="line">global $DB;</span><br><span class="line"><span class="meta prompt_">$</span><span class="language-bash">DB[<span class="string">&#x27;TYPE&#x27;</span>]     = <span class="string">&#x27;MYSQL&#x27;</span>;</span></span><br><span class="line"><span class="meta prompt_">$</span><span class="language-bash">DB[<span class="string">&#x27;SERVER&#x27;</span>]   = <span class="string">&#x27;192.168.150.160&#x27;</span>;  <span class="comment">#这里必须填写zabbix_server真实地址,默认的#127.0.0.1在启动zabbix_server时web会报is not running错误</span></span></span><br><span class="line"><span class="meta prompt_">$</span><span class="language-bash">DB[<span class="string">&#x27;PORT&#x27;</span>]     = <span class="string">&#x27;3306&#x27;</span>;</span></span><br><span class="line"><span class="meta prompt_">$</span><span class="language-bash">DB[<span class="string">&#x27;DATABASE&#x27;</span>] = <span class="string">&#x27;zabbix&#x27;</span>;</span></span><br><span class="line"><span class="meta prompt_">$</span><span class="language-bash">DB[<span class="string">&#x27;USER&#x27;</span>]     = <span class="string">&#x27;zabbix&#x27;</span>;</span></span><br><span class="line"><span class="meta prompt_">$</span><span class="language-bash">DB[<span class="string">&#x27;PASSWORD&#x27;</span>] = <span class="string">&#x27;Zabbix0000#&#x27;</span>;</span></span><br><span class="line">// Schema name. Used for IBM DB2 and PostgreSQL.</span><br><span class="line"><span class="meta prompt_">$</span><span class="language-bash">DB[<span class="string">&#x27;SCHEMA&#x27;</span>] = <span class="string">&#x27;&#x27;</span>;</span></span><br><span class="line"><span class="meta prompt_">$</span><span class="language-bash">ZBX_SERVER      = <span class="string">&#x27;192.168.150.160&#x27;</span>;  <span class="comment">#这里必须填写zabbix_server真实地址,默认的#127.0.0.1在启动zabbix_server时web会报is not running错误</span></span></span><br><span class="line"><span class="meta prompt_">$</span><span class="language-bash">ZBX_SERVER_PORT = <span class="string">&#x27;10051&#x27;</span>;</span></span><br><span class="line"><span class="meta prompt_">$</span><span class="language-bash">ZBX_SERVER_NAME = <span class="string">&#x27;&#x27;</span>;</span></span><br><span class="line"><span class="meta prompt_">$</span><span class="language-bash">IMAGE_FORMAT_DEFAULT = IMAGE_FORMAT_PNG;</span></span><br><span class="line">?&gt;</span><br><span class="line"><span class="meta prompt_"></span></span><br><span class="line"><span class="meta prompt_">#</span><span class="language-bash">9、修改zabbix_server.conf</span></span><br><span class="line">[root@www ~]# vi /usr/local/zabbix/etc/zabbix_server.conf</span><br><span class="line">LogFile=/tmp/zabbix_server.log</span><br><span class="line">PidFile=/tmp/zabbix_server.pid</span><br><span class="line">DBSocket=/tmp/mysql.sock</span><br><span class="line">DBName=zabbix                #指定zabbix数据库</span><br><span class="line">DBUser=zabbix                #指定zabbix数据库用户</span><br><span class="line">DBPassword=Zabbix0000#       #指定zabbix数据库密码</span><br><span class="line">DBPort=3306                  #指定zabbix数据库端口</span><br><span class="line">ListenIP=192.168.150.160     #服务器IP地址</span><br><span class="line">Timeout=30</span><br><span class="line"><span class="meta prompt_"></span></span><br><span class="line"><span class="meta prompt_">#</span><span class="language-bash">10、[root@www ~]<span class="comment"># chown -R zabbix:zabbix /usr/local/zabbix</span></span></span><br><span class="line"><span class="meta prompt_"></span></span><br><span class="line"><span class="meta prompt_">#</span><span class="language-bash">11、把zabbix_server加入开机启动服务</span></span><br><span class="line">[root@www ~]# cp /usr/local/src/zabbix-3.2.6/misc/init.d/tru64/zabbix_server</span><br><span class="line">[root@www ~]# chmod a+x /etc/init.d/zabbix_agentd</span><br><span class="line">[root@www ~]# chown zabbix:zabbix /etc/init.d/zabbix_server</span><br><span class="line">[root@www ~]# vi /etc/init.d/zabbix_agentd</span><br><span class="line"><span class="meta prompt_">#</span><span class="language-bash">按照实际情况修改以下三行</span></span><br><span class="line">SERVICE=&quot;Zabbix server&quot;</span><br><span class="line">DAEMON=/usr/local/zabbix/sbin/zabbix_server</span><br><span class="line">PIDFILE=/tmp/zabbix_server.pid</span><br><span class="line"><span class="meta prompt_"></span></span><br><span class="line"><span class="meta prompt_">#</span><span class="language-bash">12、若启动zabbix_server 提示如下错误</span></span><br><span class="line">./zabbix_server: error while loading shared libraries: libmysqlclient.so.20: cannot open shared object file: No such file or directory</span><br><span class="line">[root@www ~]#vim /etc/ld.so.conf</span><br><span class="line"><span class="meta prompt_">#</span><span class="language-bash">在最后一行添加 /usr/local/mysql/lib</span></span><br><span class="line">[root@www ~]#ldconfig</span><br></pre></td></tr></table></figure>
+
+<h3 id="参考文章"><a href="#参考文章" class="headerlink" title="参考文章:"></a><strong>参考文章:</strong></h3><blockquote>
+<ul>
+<li><a target="_blank" rel="noopener" href="https://www.zabbix.com/manuals">zabbix</a></li>
+<li><a target="_blank" rel="noopener" href="http://www.361way.com/zabbix-summarize/3335.html">zabbix概述</a></li>
+</ul>
+</blockquote>
+<h3 id="转载请注明出处https-izsk-me"><a href="#转载请注明出处https-izsk-me" class="headerlink" title="转载请注明出处https://izsk.me"></a><strong>转载请注明出处<a target="_blank" rel="noopener" href="https://izsk.me/">https://izsk.me</a></strong></h3><hr>
+
+      
+    </div>
+
+    <div>
+      
+        
+<div id="wechat_subscriber" style="display: block; padding: 10px 0; margin: 20px auto; width: 100%; text-align: center">
+    <img id="wechat_subscriber_qcode" src="/images/websitecode250.png" alt=" wechat" style="width: 200px; max-width: 100%;"/>
+    <div>Scan Me To Read on Phone</div>
+</div>
+
+
+      
+    </div>
+
+    <div>
+      
+        
+  <div style="padding: 10px 0; margin: 20px auto; width: 90%; text-align: center;">
+    <div>I know you won't do this,but what if you did?</div>
+    <button id="rewardButton" disable="enable" onclick="var qr = document.getElementById('QR'); if (qr.style.display === 'none') {qr.style.display='block';} else {qr.style.display='none'}">
+      <span>赏</span>
+    </button>
+    <div id="QR" style="display: none;">
+      
+        <div id="wechat" style="display: inline-block">
+          <img id="wechat_qr" src="/images/wechatpayme.png" alt=" WeChat Pay"/>
+          <p>微信打赏</p>
+        </div>
+      
+      
+        <div id="alipay" style="display: inline-block">
+          <img id="alipay_qr" src="/images/alipayme.jpg" alt=" Alipay"/>
+          <p>支付宝打赏</p>
+        </div>
+      
     </div>
   </div>
 
-{% endblock %}
 
-{% block sidebar %}
-  {{ sidebar_template.render(true) }}
-{% endblock %}
+      
+    </div>
 
 
-{% block script_extra %}
-  {% include '_scripts/pages/post-details.swig' %}
-{% endblock %}
+    <footer class="post-footer">
+      
+        <div class="post-tags">
+          
+            <a href="/tags/%E5%88%86%E5%B8%83%E5%BC%8F%E6%9E%B6%E6%9E%84/" rel="tag"># 分布式架构</a>
+          
+        </div>
+      
+
+      
+        <div class="post-nav">
+          <div class="post-nav-next post-nav-item">
+            
+              <a href="/2016/10/27/zabbix%E4%BD%BF%E7%94%A8%E6%95%99%E7%A8%8B%E4%B8%80(zabbix%E4%BB%8B%E7%BB%8D)/" rel="next" title="zabbix学习(zabbix介绍)">
+                <i class="fa fa-chevron-left"></i> zabbix学习(zabbix介绍)
+              </a>
+            
+          </div>
+
+          <span class="post-nav-divider"></span>
+
+          <div class="post-nav-prev post-nav-item">
+            
+              <a href="/2016/11/03/zabbix%E4%BD%BF%E7%94%A8%E6%95%99%E7%A8%8B%E4%B8%89(zabbix%E5%AE%A2%E6%88%B7%E7%AB%AF%E5%AE%89%E8%A3%85)/" rel="prev" title="zabbix学习(zabbix-agentd安装)">
+                zabbix学习(zabbix-agentd安装) <i class="fa fa-chevron-right"></i>
+              </a>
+            
+          </div>
+        </div>
+      
+
+      
+      
+    </footer>
+  </article>
+
+
+
+    <div class="post-spread">
+      
+    </div>
+  </div>
+
+
+          </div>
+          
+
+
+          
+  <div class="comments" id="comments">
+    
+  </div>
+
+
+        </div>
+        
+          
+  
+  <div class="sidebar-toggle">
+    <div class="sidebar-toggle-line-wrap">
+      <span class="sidebar-toggle-line sidebar-toggle-line-first"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-middle"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-last"></span>
+    </div>
+  </div>
+
+  <aside id="sidebar" class="sidebar">
+    <div class="sidebar-inner">
+
+      
+
+      
+        <ul class="sidebar-nav motion-element">
+          <li class="sidebar-nav-toc sidebar-nav-active" data-target="post-toc-wrap" >
+            文章目录
+          </li>
+          <li class="sidebar-nav-overview" data-target="site-overview">
+            站点概览
+          </li>
+        </ul>
+      
+
+      <section class="site-overview sidebar-panel">
+        <div class="site-author motion-element" itemprop="author" itemscope itemtype="http://schema.org/Person">
+          <img class="site-author-image" itemprop="image"
+               src="/images/avatar.gif"
+               alt="" />
+          <p class="site-author-name" itemprop="name"></p>
+          <p class="site-description motion-element" itemprop="description"></p>
+        </div>
+        <nav class="site-state motion-element">
+        
+          
+            <div class="site-state-item site-state-posts">
+              <a href="/archives">
+                <span class="site-state-item-count">192</span>
+                <span class="site-state-item-name">日志</span>
+              </a>
+            </div>
+          
+
+          
+            <div class="site-state-item site-state-categories">
+              <a href="/categories">
+                <span class="site-state-item-count">14</span>
+                <span class="site-state-item-name">分类</span>
+              </a>
+            </div>
+          
+
+          
+            <div class="site-state-item site-state-tags">
+              <a href="/tags">
+                <span class="site-state-item-count">14</span>
+                <span class="site-state-item-name">标签</span>
+              </a>
+            </div>
+          
+
+        </nav>
+
+        
+
+        <div class="links-of-author motion-element">
+          
+        </div>
+
+        
+        
+
+        
+        
+
+        
+
+
+      </section>
+
+      
+      <!--noindex-->
+        <section class="post-toc-wrap motion-element sidebar-panel sidebar-panel-active">
+          <div class="post-toc">
+
+            
+              
+            
+
+            
+              <div class="post-toc-content"><ol class="nav"><li class="nav-item nav-level-3"><a class="nav-link" href="#NLMP%E7%8E%AF%E5%A2%83%E5%AE%89%E8%A3%85"><span class="nav-number">1.</span> <span class="nav-text">NLMP环境安装</span></a><ol class="nav-child"><li class="nav-item nav-level-4"><a class="nav-link" href="#mysql-5-7-18%E5%AE%89%E8%A3%85"><span class="nav-number">1.1.</span> <span class="nav-text">mysql-5.7.18安装</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#PHP%E5%AE%89%E8%A3%85"><span class="nav-number">1.2.</span> <span class="nav-text">PHP安装</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#Nginx1-8%E5%AE%89%E8%A3%85"><span class="nav-number">1.3.</span> <span class="nav-text">Nginx1.8安装</span></a></li></ol></li><li class="nav-item nav-level-3"><a class="nav-link" href="#Zabbix3%E5%AE%89%E8%A3%85"><span class="nav-number">2.</span> <span class="nav-text">Zabbix3安装</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E5%8F%82%E8%80%83%E6%96%87%E7%AB%A0"><span class="nav-number">3.</span> <span class="nav-text">参考文章:</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E8%BD%AC%E8%BD%BD%E8%AF%B7%E6%B3%A8%E6%98%8E%E5%87%BA%E5%A4%84https-izsk-me"><span class="nav-number">4.</span> <span class="nav-text">转载请注明出处https:&#x2F;&#x2F;izsk.me</span></a></li></ol></div>
+            
+
+          </div>
+        </section>
+      <!--/noindex-->
+      
+
+    </div>
+  </aside>
+
+
+        
+      </div>
+    </main>
+
+    <footer id="footer" class="footer">
+      <div class="footer-inner">
+        <div class="copyright" >
+  
+  &copy; 
+  <span itemprop="copyrightYear">2022</span>
+  <span class="with-love">
+    <i class="fa fa-heart"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">Z.S.K.</span>
+</div>
+
+
+<div class="powered-by">
+  Supported by <a class="theme-link" target="_blank" rel="noopener" href="https://hexo.io">Hexo</a>
+</div>
+
+<div class="theme-info">
+  Theme -
+  <a class="theme-link" target="_blank" rel="noopener" href="https://github.com/iissnan/hexo-theme-next">
+    NexT.Mist
+  </a>
+</div>
+
+
+        
+
+        
+      </div>
+    </footer>
+
+    <div class="back-to-top">
+      <i class="fa fa-arrow-up"></i>
+    </div>
+  </div>
+
+  
+
+<script type="text/javascript">
+  if (Object.prototype.toString.call(window.Promise) !== '[object Function]') {
+    window.Promise = null;
+  }
+</script>
+
+
+
+
+
+
+
+
+
+  
+
+
+
+  
+  <script type="text/javascript" src="/lib/jquery/index.js?v=2.1.3"></script>
+
+  
+  <script type="text/javascript" src="/lib/fastclick/lib/fastclick.min.js?v=1.0.6"></script>
+
+  
+  <script type="text/javascript" src="/lib/jquery_lazyload/jquery.lazyload.js?v=1.9.7"></script>
+
+  
+  <script type="text/javascript" src="/lib/velocity/velocity.min.js?v=1.2.1"></script>
+
+  
+  <script type="text/javascript" src="/lib/velocity/velocity.ui.min.js?v=1.2.1"></script>
+
+  
+  <script type="text/javascript" src="/lib/fancybox/source/jquery.fancybox.pack.js?v=2.1.5"></script>
+
+
+  
+
+
+  <script type="text/javascript" src="/js/src/utils.js?v=5.1.0"></script>
+
+  <script type="text/javascript" src="/js/src/motion.js?v=5.1.0"></script>
+
+
+
+  
+  
+
+  
+  <script type="text/javascript" src="/js/src/scrollspy.js?v=5.1.0"></script>
+<script type="text/javascript" src="/js/src/post-details.js?v=5.1.0"></script>
+
+
+
+  
+
+
+  <script type="text/javascript" src="/js/src/bootstrap.js?v=5.1.0"></script>
+
+
+
+  
+
+
+
+  
+
+
+
+
+	
+
+
+
+
+
+  
+
+
+
+
+  
+  
+  <script type="text/javascript">
+    // Popup Window;
+    var isfetched = false;
+    // Search DB path;
+    var search_path = "search.xml";
+    if (search_path.length == 0) {
+      search_path = "search.xml";
+    }
+    var path = "/" + search_path;
+    // monitor main search box;
+
+    function proceedsearch() {
+      $("body").append('<div class="popoverlay">').css('overflow', 'hidden');
+      $('.popup').toggle();
+    }
+    // search function;
+    var searchFunc = function(path, search_id, content_id) {
+      'use strict';
+      $.ajax({
+        url: path,
+        dataType: "xml",
+        async: true,
+        success: function( xmlResponse ) {
+          // get the contents from search data
+          isfetched = true;
+          $('.popup').detach().appendTo('.header-inner');
+          var datas = $( "entry", xmlResponse ).map(function() {
+            return {
+              title: $( "title", this ).text(),
+              content: $("content",this).text(),
+              url: $( "url" , this).text()
+            };
+          }).get();
+          var $input = document.getElementById(search_id);
+          var $resultContent = document.getElementById(content_id);
+          $input.addEventListener('input', function(){
+            var matchcounts = 0;
+            var str='<ul class=\"search-result-list\">';
+            var keywords = this.value.trim().toLowerCase().split(/[\s\-]+/);
+            $resultContent.innerHTML = "";
+            if (this.value.trim().length > 1) {
+              // perform local searching
+              datas.forEach(function(data) {
+                var isMatch = false;
+                var content_index = [];
+                var data_title = data.title.trim().toLowerCase();
+                var data_content = data.content.trim().replace(/<[^>]+>/g,"").toLowerCase();
+                var data_url = decodeURIComponent(data.url);
+                var index_title = -1;
+                var index_content = -1;
+                var first_occur = -1;
+                // only match artiles with not empty titles and contents
+                if(data_title != '') {
+                  keywords.forEach(function(keyword, i) {
+                    index_title = data_title.indexOf(keyword);
+                    index_content = data_content.indexOf(keyword);
+                    if( index_title >= 0 || index_content >= 0 ){
+                      isMatch = true;
+                      if (i == 0) {
+                        first_occur = index_content;
+                      }
+                    }
+
+                  });
+                }
+                // show search results
+                if (isMatch) {
+                  matchcounts += 1;
+                  str += "<li><a href='"+ data_url +"' class='search-result-title'>"+ data_title +"</a>";
+                  var content = data.content.trim().replace(/<[^>]+>/g,"");
+                  if (first_occur >= 0) {
+                    // cut out 100 characters
+                    var start = first_occur - 20;
+                    var end = first_occur + 80;
+                    if(start < 0){
+                      start = 0;
+                    }
+                    if(start == 0){
+                      end = 50;
+                    }
+                    if(end > content.length){
+                      end = content.length;
+                    }
+                    var match_content = content.substring(start, end);
+                    // highlight all keywords
+                    keywords.forEach(function(keyword){
+                      var regS = new RegExp(keyword, "gi");
+                      match_content = match_content.replace(regS, "<b class=\"search-keyword\">"+keyword+"</b>");
+                    });
+
+                    str += "<p class=\"search-result\">" + match_content +"...</p>"
+                  }
+                  str += "</li>";
+                }
+              })};
+            str += "</ul>";
+            if (matchcounts == 0) { str = '<div id="no-result"><i class="fa fa-frown-o fa-5x" /></div>' }
+            if (keywords == "") { str = '<div id="no-result"><i class="fa fa-search fa-5x" /></div>' }
+            $resultContent.innerHTML = str;
+          });
+          proceedsearch();
+        }
+      });}
+
+    // handle and trigger popup window;
+    $('.popup-trigger').click(function(e) {
+      e.stopPropagation();
+      if (isfetched == false) {
+        searchFunc(path, 'local-search-input', 'local-search-result');
+      } else {
+        proceedsearch();
+      };
+    });
+
+    $('.popup-btn-close').click(function(e){
+      $('.popup').hide();
+      $(".popoverlay").remove();
+      $('body').css('overflow', '');
+    });
+    $('.popup').click(function(e){
+      e.stopPropagation();
+    });
+  </script>
+
+
+  
+
+  
+
+  
+
+  
+
+
+</body>
+</html>

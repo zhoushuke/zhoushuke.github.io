@@ -1,38 +1,919 @@
-{% extends '_layout.swig' %}
-{% import '_macro/post.swig' as post_template %}
-{% import '_macro/sidebar.swig' as sidebar_template %}
+<!doctype html>
 
 
-{% block title %} {{ page.title }} | {{ config.title }} {% endblock %}
 
-{% block page_class %}page-post-detail{% endblock %}
+  
 
 
-{% block content %}
+<html class="theme-next mist use-motion" lang="zh-Hans">
+<head>
+  <meta charset="UTF-8"/>
+<meta http-equiv="X-UA-Compatible" content="IE=edge" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1"/>
+
+
+
+<meta http-equiv="Cache-Control" content="no-transform" />
+<meta http-equiv="Cache-Control" content="no-siteapp" />
+
+
+
+
+
+
+
+
+
+
+
+
+  
+  
+  <link href="/lib/fancybox/source/jquery.fancybox.css?v=2.1.5" rel="stylesheet" type="text/css" />
+
+
+
+
+  
+  
+  
+  
+
+  
+    
+    
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+    
+    
+    <link href="//fonts.googleapis.com/css?family=Lato:300,300italic,400,400italic,700,700italic&subset=latin,latin-ext" rel="stylesheet" type="text/css">
+  
+
+
+
+
+
+
+<link href="/lib/font-awesome/css/font-awesome.min.css?v=4.6.2" rel="stylesheet" type="text/css" />
+
+<link href="/css/main.css?v=5.1.0" rel="stylesheet" type="text/css" />
+
+
+  <meta name="keywords" content="Http-Tcp-Ip," />
+
+
+
+
+
+
+
+
+  <link rel="shortcut icon" type="image/x-icon" href="/favicon.ico?v=5.1.0" />
+
+
+
+
+
+
+<meta name="description" content="今天排查了一个HTTPS证书的问题, 虽然很快的就解决了, 但里面涉及到的东西学是蛮多啊的，学习一下">
+<meta property="og:type" content="article">
+<meta property="og:title" content="访问https时为何会出现x509 certificate signed by unknown authority">
+<meta property="og:url" content="https://zhoushuke.github.io/2020/06/18/why-x509-error-when-curl-https/index.html">
+<meta property="og:site_name" content="Z.S.K.&#39;s Records">
+<meta property="og:description" content="今天排查了一个HTTPS证书的问题, 虽然很快的就解决了, 但里面涉及到的东西学是蛮多啊的，学习一下">
+<meta property="og:locale">
+<meta property="og:image" content="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20200618211710.png">
+<meta property="article:published_time" content="2020-06-18T13:10:53.000Z">
+<meta property="article:modified_time" content="2022-07-19T03:16:00.954Z">
+<meta property="article:author" content="Z.S.K.">
+<meta property="article:tag" content="Http-Tcp-Ip">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:image" content="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20200618211710.png">
+
+
+
+<script type="text/javascript" id="hexo.configurations">
+  var NexT = window.NexT || {};
+  var CONFIG = {
+    root: '',
+    scheme: 'Mist',
+    sidebar: {"position":"left","display":"post"},
+    fancybox: true,
+    motion: true,
+    duoshuo: {
+      userId: 'undefined',
+      author: '博主'
+    },
+    algolia: {
+      applicationID: '',
+      apiKey: '',
+      indexName: '',
+      hits: {"per_page":10},
+      labels: {"input_placeholder":"Search for Posts","hits_empty":"We didn't find any results for the search: ${query}","hits_stats":"${hits} results found in ${time} ms"}
+    }
+  };
+</script>
+
+
+
+  <link rel="canonical" href="https://zhoushuke.github.io/2020/06/18/why-x509-error-when-curl-https/"/>
+
+
+
+
+
+  <title> 访问https时为何会出现x509 certificate signed by unknown authority | Z.S.K.'s Records </title>
+<meta name="generator" content="Hexo 6.2.0"></head>
+
+<body itemscope itemtype="http://schema.org/WebPage" lang="zh-Hans">
+
+  
+
+
+
+
+
+
+
+
+
+
+  
+  
+    
+  
+
+  <div class="container one-collumn sidebar-position-left page-post-detail ">
+    <div class="headband"></div>
+
+    <header id="header" class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-meta ">
+  
+
+  <div class="custom-logo-site-title">
+    <a href="/"  class="brand" rel="start">
+      <span class="logo-line-before"><i></i></span>
+      <span class="site-title">Z.S.K.'s Records</span>
+      <span class="logo-line-after"><i></i></span>
+    </a>
+  </div>
+    
+      <p class="site-subtitle"></p>
+    
+</div>
+
+<div class="site-nav-toggle">
+  <button>
+    <span class="btn-bar"></span>
+    <span class="btn-bar"></span>
+    <span class="btn-bar"></span>
+  </button>
+</div>
+
+<nav class="site-nav">
+  
+
+  
+    <ul id="menu" class="menu">
+      
+        
+        <li class="menu-item menu-item-home">
+          <a href="/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-home"></i> <br />
+            
+            首页
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-categories">
+          <a href="/categories" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-th"></i> <br />
+            
+            分类
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-about">
+          <a href="/about/ZSK-Profile.pdf" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-user"></i> <br />
+            
+            简历
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-archives">
+          <a href="/archives" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-archive"></i> <br />
+            
+            归档
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-tags">
+          <a href="/tags" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-tags"></i> <br />
+            
+            标签
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-commonweal">
+          <a href="/404.html" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-heartbeat"></i> <br />
+            
+            公益404
+          </a>
+        </li>
+      
+
+      
+        <li class="menu-item menu-item-search">
+          
+            <a href="javascript:;" class="popup-trigger">
+          
+            
+              <i class="menu-item-icon fa fa-search fa-fw"></i> <br />
+            
+            搜索
+          </a>
+        </li>
+      
+    </ul>
+  
+
+  
+    <div class="site-search">
+      
+  <div class="popup">
+ <span class="search-icon fa fa-search"></span>
+ <input type="text" id="local-search-input">
+ <div id="local-search-result"></div>
+ <span class="popup-btn-close">close</span>
+</div>
+
+
+    </div>
+  
+</nav>
+
+
+
+ </div>
+    </header>
+
+    <main id="main" class="main">
+      <div class="main-inner">
+        <div class="content-wrap">
+          <div id="content" class="content">
+            
 
   <div id="posts" class="posts-expand">
-    {{ post_template.render(page) }}
+    
 
-    <div class="post-spread">
-      {% if theme.jiathis %}
-        {% include '_partials/share/jiathis.swig' %}
-      {% elseif theme.baidushare %}
-        {% include '_partials/share/baidushare.swig' %}
-      {% elseif theme.add_this_id %}
-        {% include '_partials/share/add-this.swig' %}
-      {% elseif theme.duoshuo_shortname and theme.duoshuo_share %}
-        {% include '_partials/share/duoshuo_share.swig' %}
-      {% endif %}
+  
+
+  
+  
+  
+
+  <article class="post post-type-normal " itemscope itemtype="http://schema.org/Article">
+  <link itemprop="mainEntityOfPage" href="https://zhoushuke.github.io/2020/06/18/why-x509-error-when-curl-https/">
+
+  <span style="display:none" itemprop="author" itemscope itemtype="http://schema.org/Person">
+    <meta itemprop="name" content="">
+    <meta itemprop="description" content="">
+    <meta itemprop="image" content="/images/avatar.gif">
+  </span>
+
+  <span style="display:none" itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+    <meta itemprop="name" content="Z.S.K.'s Records">
+    <span style="display:none" itemprop="logo" itemscope itemtype="http://schema.org/ImageObject">
+      <img style="display:none;" itemprop="url image" alt="Z.S.K.'s Records" src="">
+    </span>
+  </span>
+
+    
+      <header class="post-header">
+
+        
+        
+          <h1 class="post-title" itemprop="name headline">
+            
+            
+              
+                访问https时为何会出现x509 certificate signed by unknown authority
+              
+            
+          </h1>
+        
+
+        <div class="post-meta">
+          <span class="post-time">
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">发表于</span>
+              
+              <time title="Post created" itemprop="dateCreated datePublished" datetime="2020-06-18T21:10:53+08:00">
+                2020-06-18
+              </time>
+            
+
+            
+
+            
+          </span>
+
+          
+            <span class="post-category" >
+            
+              <span class="post-meta-divider">|</span>
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-folder-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">分类于</span>
+              
+              
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/Http-Tcp-Ip/" itemprop="url" rel="index">
+                    <span itemprop="name">Http-Tcp-Ip</span>
+                  </a>
+                </span>
+
+                
+                
+              
+            </span>
+          
+
+          
+            
+          
+
+          
+
+          
+          
+
+          
+
+          
+
+        </div>
+      </header>
+    
+
+
+    <div class="post-body" itemprop="articleBody">
+
+      
+      
+
+      
+        <p>今天排查了一个HTTPS证书的问题, 虽然很快的就解决了, 但里面涉及到的东西学是蛮多啊的，学习一下</p>
+<span id="more"></span>
+
+<p>问题是这样, 一个运行在容器中的服务给一个https地址发送POST请求时提示<code>x509: certificate signed by unknown authority</code></p>
+<p>大家都知道, 一般https都需要通过ca认证，问题很显然, 证书认证不过, 但是为何会出这个问题呢?</p>
+<p>要回答这个问题, 自然就引出另一个问题:<code>当我们访问https的问题, 一般不会带上跟证书相关的参数，那又是如何验证网站身份的呢</code></p>
+<p>这里使用curl来模拟，效果一样</p>
+<h3 id="curl"><a href="#curl" class="headerlink" title="curl"></a>curl</h3><p>在ubuntu上16.04， 内核<code>4.4.0-130-generic</code>上运行curl</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br></pre></td><td class="code"><pre><span class="line">curl https://baidu.com -v</span><br><span class="line"><span class="comment"># 输出</span></span><br><span class="line">* Rebuilt URL to: https://baidu.com/</span><br><span class="line">*   Trying 39.156.69.79...</span><br><span class="line">* Connected to baidu.com (39.156.69.79) port 443 (<span class="comment">#0)</span></span><br><span class="line">* found 148 certificates <span class="keyword">in</span> /etc/ssl/certs/ca-certificates.crt</span><br><span class="line">* found 592 certificates <span class="keyword">in</span> /etc/ssl/certs</span><br><span class="line">* ALPN, offering http/1.1</span><br><span class="line">* SSL connection using TLS1.2 / ECDHE_RSA_AES_128_GCM_SHA256</span><br><span class="line">* 	 server certificate verification OK</span><br><span class="line">* 	 server certificate status verification SKIPPED</span><br><span class="line">* 	 common name: www.baidu.cn (matched)</span><br><span class="line">* 	 server certificate expiration <span class="built_in">date</span> OK</span><br><span class="line">* 	 server certificate activation <span class="built_in">date</span> OK</span><br><span class="line">* 	 certificate public key: RSA</span><br><span class="line">* 	 certificate version: <span class="comment">#3</span></span><br><span class="line">* 	 subject: C=CN,ST=Beijing,O=BeiJing Baidu Netcom Science Technology Co.\, Ltd,OU=service operation department,CN=www.baidu.cn</span><br><span class="line">* 	 start <span class="built_in">date</span>: Thu, 27 Feb 2020 00:00:00 GMT</span><br><span class="line">* 	 expire <span class="built_in">date</span>: Fri, 26 Feb 2021 12:00:00 GMT</span><br><span class="line">* 	 issuer: C=US,O=DigiCert Inc,CN=DigiCert SHA2 Secure Server CA</span><br><span class="line">* 	 compression: NULL</span><br><span class="line">* ALPN, server accepted to use http/1.1</span><br><span class="line"><span class="comment"># ....</span></span><br></pre></td></tr></table></figure>
+
+<p>关注重点信息:</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">* found 148 certificates <span class="keyword">in</span> /etc/ssl/certs/ca-certificates.crt</span><br><span class="line">* found 592 certificates <span class="keyword">in</span> /etc/ssl/certs</span><br></pre></td></tr></table></figure>
+
+
+
+<h3 id="x2F-etc-x2F-ssl"><a href="#x2F-etc-x2F-ssl" class="headerlink" title="&#x2F;etc&#x2F;ssl"></a>&#x2F;etc&#x2F;ssl</h3><p>从上面可以看出, 在<code>/etc/ssl</code>中发现大量的<code>certificates</code>, 可以来看看<code>/etc/ssl</code>,</p>
+<p>这个目录在使用命令<code>apt install ca-certificates</code>后生成</p>
+<p><code>/etc/ssl</code> 该目录下只有<code>certs  openssl.cnf  private</code></p>
+<p>这几个文件,有用的为certs目录，这个目录下有大量跟证书相关的pem文件, 其中就包含<code>ca-certificates.crt</code>文件.</p>
+<p>pem跟crt都是证书相关的文件，不同的格式罢了，这个不是重点</p>
+<p>重点在于,在使用curl的时候，如果不带证书相关的参数,则会引用默认的证书路径(依操作系统不同而不同)</p>
+<p>这个默认值怎么来确定呢? 可以确认是curl底层的代码根据环境因素定义的默认值，可以通过<code>strace</code>方式来查看</p>
+<p><code>strace curl https://www.baidu.com |&amp; grep open</code></p>
+<p><img src="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20200618211710.png"></p>
+<p>从上面可以看到, curl如果不指定ca参数的话,则会到<code>/etc/ssl</code>目录下查找</p>
+<p>同时, curl也是支持传递参数来实现https的访问</p>
+<p>我们可以通过 <code>man curl</code>来查看几个重要的跟参数相关的参数,写的很详细，这里就不翻译了</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br></pre></td><td class="code"><pre><span class="line">--cacert &lt;CA certificate&gt;</span><br><span class="line">              (SSL)  Tells  curl  to use the specified certificate file to verify the peer. The file may contain multiple CA certificates. The cer‐</span><br><span class="line">              tificate(s) must be <span class="keyword">in</span> PEM format. Normally curl is built to use a default file <span class="keyword">for</span> this, so this option is typically used  to  alter</span><br><span class="line">              that default file.</span><br><span class="line">              curl  recognizes the environment variable named <span class="string">&#x27;CURL_CA_BUNDLE&#x27;</span> <span class="keyword">if</span> it is <span class="built_in">set</span>, and uses the given path as a path to a CA cert bundle.</span><br><span class="line">              This option overrides that variable.</span><br><span class="line">              The windows version of curl will automatically look <span class="keyword">for</span> a CA certs file named ´curl-ca-bundle.crt´, either <span class="keyword">in</span> the same  directory  as</span><br><span class="line">              curl.exe, or <span class="keyword">in</span> the Current Working Directory, or <span class="keyword">in</span> any folder along your PATH.</span><br><span class="line">              If curl is built against the NSS SSL library, the NSS PEM PKCS<span class="comment">#11 module (libnsspem.so) needs to be available for this option to work</span></span><br><span class="line">              properly.</span><br><span class="line">              If this option is used several <span class="built_in">times</span>, the last one will be used.</span><br></pre></td></tr></table></figure>
+
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line">--capath &lt;CA certificate directory&gt;</span><br><span class="line">              (SSL) Tells curl to use the specified certificate directory to verify the peer. Multiple paths can be  provided  by  separating  them</span><br><span class="line">              with  <span class="string">&quot;:&quot;</span>  (e.g.   <span class="string">&quot;path1:path2:path3&quot;</span>).  The certificates must be <span class="keyword">in</span> PEM format, and <span class="keyword">if</span> curl is built against OpenSSL, the directory</span><br><span class="line">              must have been processed using the c_rehash utility supplied with OpenSSL. Using --capath can allow OpenSSL-powered curl to make SSL-</span><br><span class="line">              connections much more efficiently than using --cacert <span class="keyword">if</span> the --cacert file contains many CA certificates.</span><br><span class="line">              If this option is <span class="built_in">set</span>, the default capath value will be ignored, and <span class="keyword">if</span> it is used several <span class="built_in">times</span>, the last one will be used.</span><br></pre></td></tr></table></figure>
+
+
+
+<h3 id="ca-certificates"><a href="#ca-certificates" class="headerlink" title="ca-certificates"></a>ca-certificates</h3><p>ca-certificates则是一个包, 用于维护根证书库, 所有的 CA 根证书实际上是由 Mozilla 维护的</p>
+<p>可以通过<code>dpkg  -L ca-certificates</code>来查看证书相关信息</p>
+<p>也可以通过<code>apt-cache show ca-certificates</code> 查看相关信息，当然太多，看不出什么来,就是一堆证书</p>
+<p>那么可能有人会问, 一般情况下, 系统安装好之后基本就不会再做操作了，那如何更新根证书呢?</p>
+<p>有一个工具<code>update-ca-certificates</code>可以手动更新根证书信息, 可以使用<code>man </code>update-ca-certificates&#96;, 说的非常清楚</p>
+<p>因此可以手工执行以下命令来更新根证书列表	</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line">update-ca-certificates</span><br><span class="line"><span class="comment"># 全输出</span></span><br><span class="line">Updating certificates <span class="keyword">in</span> /etc/ssl/certs...</span><br><span class="line">0 added, 0 removed; <span class="keyword">done</span>.</span><br><span class="line">Running hooks <span class="keyword">in</span> /etc/ca-certificates/update.d...</span><br><span class="line"><span class="keyword">done</span>.</span><br></pre></td></tr></table></figure>
+
+
+
+<h3 id="Resolve"><a href="#Resolve" class="headerlink" title="Resolve"></a>Resolve</h3><p>通过curl可以知道, 访问https的时候默认会到&#x2F;etc&#x2F;ssl目录下查找根证书，通过根证书验证对端网站的身份,因为对端的证书一般也是由这些根证书签名我, 因此可以难通过</p>
+<p>那么出现开头的问题的原因在于, <strong>使用的镜像本身没有包含<code>/etc/ssl</code>目录，同时在Dockerfile中也没有使用<code>apt install ca-certificates</code>来安装, 因此在所有请求https时都会出现问题</strong>.</p>
+<p>这里提一下， 在安装<code>curl</code>的时候，默认会安装<code>ca-certificates</code>，实际上这个包由 OpenSSL 安装的</p>
+<p>Curl 是通过 OpenSSL 实现客户端 HTTPS 协议的，就是说在 Curl&#x2F;OpenSSL 平台下，Curl 使用的根证书库都是由 ca-certificates 包处理</p>
+<p>curl也是一种上层应用, 对于其它的比如golang程序出现这个问题，原理都是一样的.</p>
+<p>修改镜像，问题解决</p>
+<h3 id="参考文章"><a href="#参考文章" class="headerlink" title="参考文章:"></a><strong>参考文章:</strong></h3><blockquote>
+<ul>
+<li><a target="_blank" rel="noopener" href="http://manpages.ubuntu.com/manpages/bionic/man8/update-ca-certificates.8.html">http://manpages.ubuntu.com/manpages/bionic/man8/update-ca-certificates.8.html</a></li>
+<li><a target="_blank" rel="noopener" href="https://www.jianshu.com/p/abcee3270e9a">https://www.jianshu.com/p/abcee3270e9a</a></li>
+<li><a target="_blank" rel="noopener" href="https://curl.haxx.se/docs/sslcerts.html">https://curl.haxx.se/docs/sslcerts.html</a></li>
+</ul>
+</blockquote>
+<h3 id="转载请注明出处https-izsk-me"><a href="#转载请注明出处https-izsk-me" class="headerlink" title="转载请注明出处https://izsk.me"></a><strong>转载请注明出处<a target="_blank" rel="noopener" href="https://izsk.me/">https://izsk.me</a></strong></h3>
+      
+    </div>
+
+    <div>
+      
+        
+<div id="wechat_subscriber" style="display: block; padding: 10px 0; margin: 20px auto; width: 100%; text-align: center">
+    <img id="wechat_subscriber_qcode" src="/images/websitecode250.png" alt=" wechat" style="width: 200px; max-width: 100%;"/>
+    <div>Scan Me To Read on Phone</div>
+</div>
+
+
+      
+    </div>
+
+    <div>
+      
+        
+  <div style="padding: 10px 0; margin: 20px auto; width: 90%; text-align: center;">
+    <div>I know you won't do this,but what if you did?</div>
+    <button id="rewardButton" disable="enable" onclick="var qr = document.getElementById('QR'); if (qr.style.display === 'none') {qr.style.display='block';} else {qr.style.display='none'}">
+      <span>赏</span>
+    </button>
+    <div id="QR" style="display: none;">
+      
+        <div id="wechat" style="display: inline-block">
+          <img id="wechat_qr" src="/images/wechatpayme.png" alt=" WeChat Pay"/>
+          <p>微信打赏</p>
+        </div>
+      
+      
+        <div id="alipay" style="display: inline-block">
+          <img id="alipay_qr" src="/images/alipayme.jpg" alt=" Alipay"/>
+          <p>支付宝打赏</p>
+        </div>
+      
     </div>
   </div>
 
-{% endblock %}
 
-{% block sidebar %}
-  {{ sidebar_template.render(true) }}
-{% endblock %}
+      
+    </div>
 
 
-{% block script_extra %}
-  {% include '_scripts/pages/post-details.swig' %}
-{% endblock %}
+    <footer class="post-footer">
+      
+        <div class="post-tags">
+          
+            <a href="/tags/Http-Tcp-Ip/" rel="tag"># Http-Tcp-Ip</a>
+          
+        </div>
+      
+
+      
+        <div class="post-nav">
+          <div class="post-nav-next post-nav-item">
+            
+              <a href="/2020/06/10/Kubernetes-coredns-5s-timeout/" rel="next" title="Kubernetes学习(关于CoreDNS的5s超时问题)">
+                <i class="fa fa-chevron-left"></i> Kubernetes学习(关于CoreDNS的5s超时问题)
+              </a>
+            
+          </div>
+
+          <span class="post-nav-divider"></span>
+
+          <div class="post-nav-prev post-nav-item">
+            
+              <a href="/2020/06/24/Kubernetes-sealed-secrets/" rel="prev" title="Kubernetes学习(Sealed Secrets如何安全地将密码存储在git中)">
+                Kubernetes学习(Sealed Secrets如何安全地将密码存储在git中) <i class="fa fa-chevron-right"></i>
+              </a>
+            
+          </div>
+        </div>
+      
+
+      
+      
+    </footer>
+  </article>
+
+
+
+    <div class="post-spread">
+      
+    </div>
+  </div>
+
+
+          </div>
+          
+
+
+          
+  <div class="comments" id="comments">
+    
+  </div>
+
+
+        </div>
+        
+          
+  
+  <div class="sidebar-toggle">
+    <div class="sidebar-toggle-line-wrap">
+      <span class="sidebar-toggle-line sidebar-toggle-line-first"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-middle"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-last"></span>
+    </div>
+  </div>
+
+  <aside id="sidebar" class="sidebar">
+    <div class="sidebar-inner">
+
+      
+
+      
+        <ul class="sidebar-nav motion-element">
+          <li class="sidebar-nav-toc sidebar-nav-active" data-target="post-toc-wrap" >
+            文章目录
+          </li>
+          <li class="sidebar-nav-overview" data-target="site-overview">
+            站点概览
+          </li>
+        </ul>
+      
+
+      <section class="site-overview sidebar-panel">
+        <div class="site-author motion-element" itemprop="author" itemscope itemtype="http://schema.org/Person">
+          <img class="site-author-image" itemprop="image"
+               src="/images/avatar.gif"
+               alt="" />
+          <p class="site-author-name" itemprop="name"></p>
+          <p class="site-description motion-element" itemprop="description"></p>
+        </div>
+        <nav class="site-state motion-element">
+        
+          
+            <div class="site-state-item site-state-posts">
+              <a href="/archives">
+                <span class="site-state-item-count">192</span>
+                <span class="site-state-item-name">日志</span>
+              </a>
+            </div>
+          
+
+          
+            <div class="site-state-item site-state-categories">
+              <a href="/categories">
+                <span class="site-state-item-count">14</span>
+                <span class="site-state-item-name">分类</span>
+              </a>
+            </div>
+          
+
+          
+            <div class="site-state-item site-state-tags">
+              <a href="/tags">
+                <span class="site-state-item-count">14</span>
+                <span class="site-state-item-name">标签</span>
+              </a>
+            </div>
+          
+
+        </nav>
+
+        
+
+        <div class="links-of-author motion-element">
+          
+        </div>
+
+        
+        
+
+        
+        
+
+        
+
+
+      </section>
+
+      
+      <!--noindex-->
+        <section class="post-toc-wrap motion-element sidebar-panel sidebar-panel-active">
+          <div class="post-toc">
+
+            
+              
+            
+
+            
+              <div class="post-toc-content"><ol class="nav"><li class="nav-item nav-level-3"><a class="nav-link" href="#curl"><span class="nav-number">1.</span> <span class="nav-text">curl</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#x2F-etc-x2F-ssl"><span class="nav-number">2.</span> <span class="nav-text">&#x2F;etc&#x2F;ssl</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#ca-certificates"><span class="nav-number">3.</span> <span class="nav-text">ca-certificates</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#Resolve"><span class="nav-number">4.</span> <span class="nav-text">Resolve</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E5%8F%82%E8%80%83%E6%96%87%E7%AB%A0"><span class="nav-number">5.</span> <span class="nav-text">参考文章:</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E8%BD%AC%E8%BD%BD%E8%AF%B7%E6%B3%A8%E6%98%8E%E5%87%BA%E5%A4%84https-izsk-me"><span class="nav-number">6.</span> <span class="nav-text">转载请注明出处https:&#x2F;&#x2F;izsk.me</span></a></li></ol></div>
+            
+
+          </div>
+        </section>
+      <!--/noindex-->
+      
+
+    </div>
+  </aside>
+
+
+        
+      </div>
+    </main>
+
+    <footer id="footer" class="footer">
+      <div class="footer-inner">
+        <div class="copyright" >
+  
+  &copy; 
+  <span itemprop="copyrightYear">2022</span>
+  <span class="with-love">
+    <i class="fa fa-heart"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">Z.S.K.</span>
+</div>
+
+
+<div class="powered-by">
+  Supported by <a class="theme-link" target="_blank" rel="noopener" href="https://hexo.io">Hexo</a>
+</div>
+
+<div class="theme-info">
+  Theme -
+  <a class="theme-link" target="_blank" rel="noopener" href="https://github.com/iissnan/hexo-theme-next">
+    NexT.Mist
+  </a>
+</div>
+
+
+        
+
+        
+      </div>
+    </footer>
+
+    <div class="back-to-top">
+      <i class="fa fa-arrow-up"></i>
+    </div>
+  </div>
+
+  
+
+<script type="text/javascript">
+  if (Object.prototype.toString.call(window.Promise) !== '[object Function]') {
+    window.Promise = null;
+  }
+</script>
+
+
+
+
+
+
+
+
+
+  
+
+
+
+  
+  <script type="text/javascript" src="/lib/jquery/index.js?v=2.1.3"></script>
+
+  
+  <script type="text/javascript" src="/lib/fastclick/lib/fastclick.min.js?v=1.0.6"></script>
+
+  
+  <script type="text/javascript" src="/lib/jquery_lazyload/jquery.lazyload.js?v=1.9.7"></script>
+
+  
+  <script type="text/javascript" src="/lib/velocity/velocity.min.js?v=1.2.1"></script>
+
+  
+  <script type="text/javascript" src="/lib/velocity/velocity.ui.min.js?v=1.2.1"></script>
+
+  
+  <script type="text/javascript" src="/lib/fancybox/source/jquery.fancybox.pack.js?v=2.1.5"></script>
+
+
+  
+
+
+  <script type="text/javascript" src="/js/src/utils.js?v=5.1.0"></script>
+
+  <script type="text/javascript" src="/js/src/motion.js?v=5.1.0"></script>
+
+
+
+  
+  
+
+  
+  <script type="text/javascript" src="/js/src/scrollspy.js?v=5.1.0"></script>
+<script type="text/javascript" src="/js/src/post-details.js?v=5.1.0"></script>
+
+
+
+  
+
+
+  <script type="text/javascript" src="/js/src/bootstrap.js?v=5.1.0"></script>
+
+
+
+  
+
+
+
+  
+
+
+
+
+	
+
+
+
+
+
+  
+
+
+
+
+  
+  
+  <script type="text/javascript">
+    // Popup Window;
+    var isfetched = false;
+    // Search DB path;
+    var search_path = "search.xml";
+    if (search_path.length == 0) {
+      search_path = "search.xml";
+    }
+    var path = "/" + search_path;
+    // monitor main search box;
+
+    function proceedsearch() {
+      $("body").append('<div class="popoverlay">').css('overflow', 'hidden');
+      $('.popup').toggle();
+    }
+    // search function;
+    var searchFunc = function(path, search_id, content_id) {
+      'use strict';
+      $.ajax({
+        url: path,
+        dataType: "xml",
+        async: true,
+        success: function( xmlResponse ) {
+          // get the contents from search data
+          isfetched = true;
+          $('.popup').detach().appendTo('.header-inner');
+          var datas = $( "entry", xmlResponse ).map(function() {
+            return {
+              title: $( "title", this ).text(),
+              content: $("content",this).text(),
+              url: $( "url" , this).text()
+            };
+          }).get();
+          var $input = document.getElementById(search_id);
+          var $resultContent = document.getElementById(content_id);
+          $input.addEventListener('input', function(){
+            var matchcounts = 0;
+            var str='<ul class=\"search-result-list\">';
+            var keywords = this.value.trim().toLowerCase().split(/[\s\-]+/);
+            $resultContent.innerHTML = "";
+            if (this.value.trim().length > 1) {
+              // perform local searching
+              datas.forEach(function(data) {
+                var isMatch = false;
+                var content_index = [];
+                var data_title = data.title.trim().toLowerCase();
+                var data_content = data.content.trim().replace(/<[^>]+>/g,"").toLowerCase();
+                var data_url = decodeURIComponent(data.url);
+                var index_title = -1;
+                var index_content = -1;
+                var first_occur = -1;
+                // only match artiles with not empty titles and contents
+                if(data_title != '') {
+                  keywords.forEach(function(keyword, i) {
+                    index_title = data_title.indexOf(keyword);
+                    index_content = data_content.indexOf(keyword);
+                    if( index_title >= 0 || index_content >= 0 ){
+                      isMatch = true;
+                      if (i == 0) {
+                        first_occur = index_content;
+                      }
+                    }
+
+                  });
+                }
+                // show search results
+                if (isMatch) {
+                  matchcounts += 1;
+                  str += "<li><a href='"+ data_url +"' class='search-result-title'>"+ data_title +"</a>";
+                  var content = data.content.trim().replace(/<[^>]+>/g,"");
+                  if (first_occur >= 0) {
+                    // cut out 100 characters
+                    var start = first_occur - 20;
+                    var end = first_occur + 80;
+                    if(start < 0){
+                      start = 0;
+                    }
+                    if(start == 0){
+                      end = 50;
+                    }
+                    if(end > content.length){
+                      end = content.length;
+                    }
+                    var match_content = content.substring(start, end);
+                    // highlight all keywords
+                    keywords.forEach(function(keyword){
+                      var regS = new RegExp(keyword, "gi");
+                      match_content = match_content.replace(regS, "<b class=\"search-keyword\">"+keyword+"</b>");
+                    });
+
+                    str += "<p class=\"search-result\">" + match_content +"...</p>"
+                  }
+                  str += "</li>";
+                }
+              })};
+            str += "</ul>";
+            if (matchcounts == 0) { str = '<div id="no-result"><i class="fa fa-frown-o fa-5x" /></div>' }
+            if (keywords == "") { str = '<div id="no-result"><i class="fa fa-search fa-5x" /></div>' }
+            $resultContent.innerHTML = str;
+          });
+          proceedsearch();
+        }
+      });}
+
+    // handle and trigger popup window;
+    $('.popup-trigger').click(function(e) {
+      e.stopPropagation();
+      if (isfetched == false) {
+        searchFunc(path, 'local-search-input', 'local-search-result');
+      } else {
+        proceedsearch();
+      };
+    });
+
+    $('.popup-btn-close').click(function(e){
+      $('.popup').hide();
+      $(".popoverlay").remove();
+      $('body').css('overflow', '');
+    });
+    $('.popup').click(function(e){
+      e.stopPropagation();
+    });
+  </script>
+
+
+  
+
+  
+
+  
+
+  
+
+
+</body>
+</html>

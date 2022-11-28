@@ -1,38 +1,948 @@
-{% extends '_layout.swig' %}
-{% import '_macro/post.swig' as post_template %}
-{% import '_macro/sidebar.swig' as sidebar_template %}
+<!doctype html>
 
 
-{% block title %} {{ page.title }} | {{ config.title }} {% endblock %}
 
-{% block page_class %}page-post-detail{% endblock %}
+  
 
 
-{% block content %}
+<html class="theme-next mist use-motion" lang="zh-Hans">
+<head>
+  <meta charset="UTF-8"/>
+<meta http-equiv="X-UA-Compatible" content="IE=edge" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1"/>
+
+
+
+<meta http-equiv="Cache-Control" content="no-transform" />
+<meta http-equiv="Cache-Control" content="no-siteapp" />
+
+
+
+
+
+
+
+
+
+
+
+
+  
+  
+  <link href="/lib/fancybox/source/jquery.fancybox.css?v=2.1.5" rel="stylesheet" type="text/css" />
+
+
+
+
+  
+  
+  
+  
+
+  
+    
+    
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+    
+    
+    <link href="//fonts.googleapis.com/css?family=Lato:300,300italic,400,400italic,700,700italic&subset=latin,latin-ext" rel="stylesheet" type="text/css">
+  
+
+
+
+
+
+
+<link href="/lib/font-awesome/css/font-awesome.min.css?v=4.6.2" rel="stylesheet" type="text/css" />
+
+<link href="/css/main.css?v=5.1.0" rel="stylesheet" type="text/css" />
+
+
+  <meta name="keywords" content="Shell," />
+
+
+
+
+
+
+
+
+  <link rel="shortcut icon" type="image/x-icon" href="/favicon.ico?v=5.1.0" />
+
+
+
+
+
+
+<meta name="description" content="记录下遇到的有趣的shell代码, 可能是一些常用的snippet, 也可能是使用的时候不经意踩到的坑 不定时更新">
+<meta property="og:type" content="article">
+<meta property="og:title" content="有趣的Shell Snippet">
+<meta property="og:url" content="https://zhoushuke.github.io/2021/03/21/shell-funny-snippet/index.html">
+<meta property="og:site_name" content="Z.S.K.&#39;s Records">
+<meta property="og:description" content="记录下遇到的有趣的shell代码, 可能是一些常用的snippet, 也可能是使用的时候不经意踩到的坑 不定时更新">
+<meta property="og:locale">
+<meta property="article:published_time" content="2021-03-21T12:10:53.000Z">
+<meta property="article:modified_time" content="2022-07-19T03:16:00.982Z">
+<meta property="article:author" content="Z.S.K.">
+<meta property="article:tag" content="Shell">
+<meta name="twitter:card" content="summary">
+
+
+
+<script type="text/javascript" id="hexo.configurations">
+  var NexT = window.NexT || {};
+  var CONFIG = {
+    root: '',
+    scheme: 'Mist',
+    sidebar: {"position":"left","display":"post"},
+    fancybox: true,
+    motion: true,
+    duoshuo: {
+      userId: 'undefined',
+      author: '博主'
+    },
+    algolia: {
+      applicationID: '',
+      apiKey: '',
+      indexName: '',
+      hits: {"per_page":10},
+      labels: {"input_placeholder":"Search for Posts","hits_empty":"We didn't find any results for the search: ${query}","hits_stats":"${hits} results found in ${time} ms"}
+    }
+  };
+</script>
+
+
+
+  <link rel="canonical" href="https://zhoushuke.github.io/2021/03/21/shell-funny-snippet/"/>
+
+
+
+
+
+  <title> 有趣的Shell Snippet | Z.S.K.'s Records </title>
+<meta name="generator" content="Hexo 6.2.0"></head>
+
+<body itemscope itemtype="http://schema.org/WebPage" lang="zh-Hans">
+
+  
+
+
+
+
+
+
+
+
+
+
+  
+  
+    
+  
+
+  <div class="container one-collumn sidebar-position-left page-post-detail ">
+    <div class="headband"></div>
+
+    <header id="header" class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-meta ">
+  
+
+  <div class="custom-logo-site-title">
+    <a href="/"  class="brand" rel="start">
+      <span class="logo-line-before"><i></i></span>
+      <span class="site-title">Z.S.K.'s Records</span>
+      <span class="logo-line-after"><i></i></span>
+    </a>
+  </div>
+    
+      <p class="site-subtitle"></p>
+    
+</div>
+
+<div class="site-nav-toggle">
+  <button>
+    <span class="btn-bar"></span>
+    <span class="btn-bar"></span>
+    <span class="btn-bar"></span>
+  </button>
+</div>
+
+<nav class="site-nav">
+  
+
+  
+    <ul id="menu" class="menu">
+      
+        
+        <li class="menu-item menu-item-home">
+          <a href="/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-home"></i> <br />
+            
+            首页
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-categories">
+          <a href="/categories" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-th"></i> <br />
+            
+            分类
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-about">
+          <a href="/about/ZSK-Profile.pdf" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-user"></i> <br />
+            
+            简历
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-archives">
+          <a href="/archives" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-archive"></i> <br />
+            
+            归档
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-tags">
+          <a href="/tags" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-tags"></i> <br />
+            
+            标签
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-commonweal">
+          <a href="/404.html" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-heartbeat"></i> <br />
+            
+            公益404
+          </a>
+        </li>
+      
+
+      
+        <li class="menu-item menu-item-search">
+          
+            <a href="javascript:;" class="popup-trigger">
+          
+            
+              <i class="menu-item-icon fa fa-search fa-fw"></i> <br />
+            
+            搜索
+          </a>
+        </li>
+      
+    </ul>
+  
+
+  
+    <div class="site-search">
+      
+  <div class="popup">
+ <span class="search-icon fa fa-search"></span>
+ <input type="text" id="local-search-input">
+ <div id="local-search-result"></div>
+ <span class="popup-btn-close">close</span>
+</div>
+
+
+    </div>
+  
+</nav>
+
+
+
+ </div>
+    </header>
+
+    <main id="main" class="main">
+      <div class="main-inner">
+        <div class="content-wrap">
+          <div id="content" class="content">
+            
 
   <div id="posts" class="posts-expand">
-    {{ post_template.render(page) }}
+    
 
-    <div class="post-spread">
-      {% if theme.jiathis %}
-        {% include '_partials/share/jiathis.swig' %}
-      {% elseif theme.baidushare %}
-        {% include '_partials/share/baidushare.swig' %}
-      {% elseif theme.add_this_id %}
-        {% include '_partials/share/add-this.swig' %}
-      {% elseif theme.duoshuo_shortname and theme.duoshuo_share %}
-        {% include '_partials/share/duoshuo_share.swig' %}
-      {% endif %}
+  
+
+  
+  
+  
+
+  <article class="post post-type-normal " itemscope itemtype="http://schema.org/Article">
+  <link itemprop="mainEntityOfPage" href="https://zhoushuke.github.io/2021/03/21/shell-funny-snippet/">
+
+  <span style="display:none" itemprop="author" itemscope itemtype="http://schema.org/Person">
+    <meta itemprop="name" content="">
+    <meta itemprop="description" content="">
+    <meta itemprop="image" content="/images/avatar.gif">
+  </span>
+
+  <span style="display:none" itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+    <meta itemprop="name" content="Z.S.K.'s Records">
+    <span style="display:none" itemprop="logo" itemscope itemtype="http://schema.org/ImageObject">
+      <img style="display:none;" itemprop="url image" alt="Z.S.K.'s Records" src="">
+    </span>
+  </span>
+
+    
+      <header class="post-header">
+
+        
+        
+          <h1 class="post-title" itemprop="name headline">
+            
+            
+              
+                有趣的Shell Snippet
+              
+            
+          </h1>
+        
+
+        <div class="post-meta">
+          <span class="post-time">
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">发表于</span>
+              
+              <time title="Post created" itemprop="dateCreated datePublished" datetime="2021-03-21T20:10:53+08:00">
+                2021-03-21
+              </time>
+            
+
+            
+
+            
+          </span>
+
+          
+            <span class="post-category" >
+            
+              <span class="post-meta-divider">|</span>
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-folder-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">分类于</span>
+              
+              
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/Shell/" itemprop="url" rel="index">
+                    <span itemprop="name">Shell</span>
+                  </a>
+                </span>
+
+                
+                
+              
+            </span>
+          
+
+          
+            
+          
+
+          
+
+          
+          
+
+          
+
+          
+
+        </div>
+      </header>
+    
+
+
+    <div class="post-body" itemprop="articleBody">
+
+      
+      
+
+      
+        <p>记录下遇到的有趣的shell代码, 可能是一些常用的snippet, 也可能是使用的时候不经意踩到的坑</p>
+<p><strong>不定时更新</strong></p>
+<span id="more"></span>
+
+
+
+<h3 id="正确传递数组到函数中"><a href="#正确传递数组到函数中" class="headerlink" title="正确传递数组到函数中"></a>正确传递数组到函数中</h3><figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">function</span> <span class="function"><span class="title">update</span></span>() &#123;</span><br><span class="line">    <span class="built_in">declare</span> -a apps_version=(<span class="string">&quot;<span class="variable">$&#123;!1&#125;</span>&quot;</span>)</span><br><span class="line">    <span class="built_in">echo</span> <span class="string">&quot;<span class="variable">$&#123;apps_version[@]&#125;</span>&quot;</span></span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line">APPS_VERSION=(<span class="string">&quot;aaa&quot;</span> <span class="string">&quot;bbb&quot;</span> <span class="string">&quot;ccc&quot;</span>)</span><br><span class="line">update APPS_VERSION[@]</span><br></pre></td></tr></table></figure>
+
+<p>要特别注意的是，使用不当就造成只将数组的第一个数组到函数中</p>
+<p>上面是正确的使用方法</p>
+<h3 id="使用sed修改Yaml文件中指定关键字的下N行"><a href="#使用sed修改Yaml文件中指定关键字的下N行" class="headerlink" title="使用sed修改Yaml文件中指定关键字的下N行"></a>使用sed修改Yaml文件中指定关键字的下N行</h3><p>文件如下:</p>
+<figure class="highlight yaml"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line"><span class="attr">this:</span></span><br><span class="line">  <span class="attr">is:</span> <span class="string">is</span></span><br><span class="line">  <span class="attr">a:</span> <span class="string">a</span></span><br><span class="line">  <span class="attr">test:</span> <span class="string">test</span></span><br><span class="line"><span class="attr">is:</span> <span class="string">is</span></span><br><span class="line"><span class="attr">test:</span> <span class="string">test</span></span><br></pre></td></tr></table></figure>
+
+<p>现在要修改this所在行的下面2行</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">sed -i <span class="string">&quot;/this:/!b;n;n;c\  a: <span class="variable">$&#123;tmp_version&#125;</span>&quot;</span> <span class="variable">$&#123;file&#125;</span></span><br></pre></td></tr></table></figure>
+
+<blockquote>
+<ul>
+<li>!b表示中断sed命令</li>
+<li>n表示读入下一行</li>
+<li>c表示将当前行修改为后面的字符串</li>
+</ul>
+</blockquote>
+<p>因为a: a这行需要缩进2个空格，空格需要使用<code>\</code>进行转义</p>
+<h3 id="查看进程占用的文件句柄"><a href="#查看进程占用的文件句柄" class="headerlink" title="查看进程占用的文件句柄"></a>查看进程占用的文件句柄</h3><figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># 用户级</span></span><br><span class="line">find /proc/*/fd/* -<span class="built_in">type</span> l -lname <span class="string">&#x27;anon_inode:inotify&#x27;</span> -<span class="built_in">print</span> 2&gt;/dev/null | <span class="built_in">cut</span> -d/ -f3 |xargs -I <span class="string">&#x27;&#123;&#125;&#x27;</span> -- ps --no-headers -o <span class="string">&#x27;%U&#x27;</span> -p <span class="string">&#x27;&#123;&#125;&#x27;</span> | <span class="built_in">sort</span> | <span class="built_in">uniq</span> -c | <span class="built_in">sort</span> -nr</span><br><span class="line"><span class="comment"># 结果: 第一列表示打开的句柄，第二列表示用户</span></span><br><span class="line"><span class="comment">#     39 root</span></span><br><span class="line"><span class="comment">#     36 SENSETIME\zhoushuke</span></span><br><span class="line"><span class="comment">#      2 mfe</span></span><br><span class="line">      </span><br><span class="line"><span class="comment"># 进程级</span></span><br><span class="line">find /proc/*/fd/* -<span class="built_in">type</span> l -lname <span class="string">&#x27;anon_inode:inotify&#x27;</span> -<span class="built_in">print</span> 2&gt;/dev/null | <span class="built_in">cut</span> -d/ -f3 |xargs -I <span class="string">&#x27;&#123;&#125;&#x27;</span> -- ps --no-headers -o <span class="string">&#x27;%U %p %c&#x27;</span> -p <span class="string">&#x27;&#123;&#125;&#x27;</span> | <span class="built_in">sort</span> | <span class="built_in">uniq</span> -c | <span class="built_in">sort</span> -nr</span><br><span class="line"><span class="comment"># 结果: 第一列表示打开的句柄，第二列表示用户，第三列表示用户id，第四列表示进程</span></span><br><span class="line"><span class="comment">#      6 root         1 systemd</span></span><br><span class="line"><span class="comment">#      5 SENSETI+ 11808 sogou-qimpanel</span></span><br><span class="line"><span class="comment">#      5 root      1072 kubelet</span></span><br></pre></td></tr></table></figure>
+
+
+
+<h3 id="使用sed删除多行内容"><a href="#使用sed删除多行内容" class="headerlink" title="使用sed删除多行内容"></a>使用sed删除多行内容</h3><figure class="highlight yaml"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br></pre></td><td class="code"><pre><span class="line"><span class="attr">env:</span> <span class="string">prod</span></span><br><span class="line"></span><br><span class="line"><span class="attr">sensebee3:</span></span><br><span class="line">  <span class="attr">xxx:</span></span><br><span class="line">    <span class="attr">yyy:</span> <span class="string">yyy</span></span><br><span class="line">  <span class="attr">svc_name:</span> <span class="string">ss_class.ingress_namespace.svc.cluster.local</span></span><br><span class="line">  <span class="attr">sensebee:</span> <span class="string">sensebee</span></span><br><span class="line">  <span class="attr">svc_port:</span> <span class="number">8443</span></span><br><span class="line">  <span class="attr">node_port:</span> <span class="number">30123</span></span><br><span class="line"><span class="attr">http:</span> <span class="number">1234</span></span><br><span class="line"><span class="attr">sensebee2:</span></span><br><span class="line">  <span class="attr">http:</span> <span class="number">1234</span></span><br><span class="line">  <span class="attr">svc_name:</span> <span class="string">sensebee.default</span></span><br></pre></td></tr></table></figure>
+
+<p>对于上面的的yaml文件内容,如果想将sensebee3下的行直到http: 1234之间的内容都删除,但是<code>sensebee3及http: 1234</code>这两行不删除，使用<code>sed</code>如何操作呢?</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">sed -i <span class="string">&quot;/^sensebee3:/I,/^[^[:space:]#]/&#123;//!d;&#125;&quot;</span> file</span><br></pre></td></tr></table></figure>
+
+<p>从上面的格式可以看出,只需要先确定范围，然后删除即可, </p>
+<p><code>/^sensebee3:/</code>用于匹配<code>sensebee3</code></p>
+<p><code>/^[^[:space:]#]/</code>用于匹配到不是以空格及<code>#</code>号开头的行，自然就匹配到了<code>http: 1234</code>, 这样就选定了这两行之间的内容</p>
+<p><code>&#123;//!d;&#125;</code>其中<code>//</code>表示使用前面的正则表达式, <code>!d</code>表示不删除, 这样就实现了<code>sensebee3及http: 1234</code>这两行不会删除，只删除这两行之间的内容.</p>
+<h3 id="在脚本中修改crontab"><a href="#在脚本中修改crontab" class="headerlink" title="在脚本中修改crontab"></a>在脚本中修改crontab</h3><figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">(crontab -l 2&gt;/dev/null; <span class="built_in">echo</span> <span class="string">&#x27;*/2 * * * * bash /usr/local/src/kestrel.openfiles.check &gt; /usr/local/src/logs/kestrel_openfiles.check.$(date &quot;+\%Y\%m\%d-\%H\%M\%S&quot;).details 2&gt;&amp;1&#x27;</span>) | crontab -</span><br></pre></td></tr></table></figure>
+
+
+
+<h3 id="善用"><a href="#善用" class="headerlink" title="善用{}"></a>善用<code>&#123;&#125;</code></h3><figure class="highlight shell"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line">ATEST=&quot;ISTEST&quot;</span><br><span class="line"><span class="meta prompt_"># </span><span class="language-bash">错误使用，打印为空, bash会把ATEST_exec当成是一个变量，也就是最大的查找_连接的字符</span></span><br><span class="line">echo $ATEST_exec</span><br><span class="line"><span class="meta prompt_"># </span><span class="language-bash">正确</span></span><br><span class="line">echo $&#123;ATEST&#125;_exec</span><br></pre></td></tr></table></figure>
+
+
+
+<h3 id="使用-amp-amp"><a href="#使用-amp-amp" class="headerlink" title="使用&amp;&amp; ||"></a>使用<code>&amp;&amp;</code> <code>||</code></h3><p>有时为了shell命令能够简短, 经常会连着使用 <code>&amp;&amp;(且) ||(或)</code>, 但是如果不多想一次的话，可能就会跟结果相背.</p>
+<figure class="highlight shell"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta prompt_"># </span><span class="language-bash">只有当command1成功(命令返回值为0), 才会执行command2</span></span><br><span class="line">command1 &amp;&amp; command 2</span><br><span class="line"><span class="meta prompt_"></span></span><br><span class="line"><span class="meta prompt_"># </span><span class="language-bash">只有当command1失败(命令返回值不为0), 才会执行command2</span></span><br><span class="line">command1 || command2</span><br><span class="line"><span class="meta prompt_"></span></span><br><span class="line"><span class="meta prompt_"># </span><span class="language-bash">command1与command2会顺序执行, 两个命令之间没有关系.</span></span><br><span class="line">command1; command2</span><br><span class="line"><span class="meta prompt_"></span></span><br><span class="line"><span class="meta prompt_"># </span><span class="language-bash">例子</span></span><br><span class="line"><span class="meta prompt_"># </span><span class="language-bash">假如想判断从网上下载一个东西, 如果成功继续执行, 如果失败, 则打印一句话并退出.</span></span><br><span class="line"><span class="meta prompt_"># </span><span class="language-bash">思考下面三个句子，哪条符合要求</span></span><br><span class="line"><span class="meta prompt_"></span></span><br><span class="line"><span class="meta prompt_"># </span><span class="language-bash">这句话相当于(wget -q someURL -O localdir || <span class="built_in">echo</span> <span class="string">&quot;DOWN FAILED!&quot;</span>); <span class="built_in">exit</span> 1</span></span><br><span class="line"><span class="meta prompt_"># </span><span class="language-bash">因此, 不管wget是否成功, <span class="built_in">exit</span> 1都将被执行.</span> </span><br><span class="line">wget -q someURL -O localdir || echo &quot;DOWN FAILED!&quot;; exit 1</span><br><span class="line"><span class="meta prompt_"></span></span><br><span class="line"><span class="meta prompt_"># </span><span class="language-bash">当wget成功后, 忽略 || 后面的语句, 只有失败了，才会<span class="built_in">echo</span>, 由于<span class="built_in">echo</span>成功, 因此也会执行 <span class="built_in">exit</span> 1</span></span><br><span class="line">wget -q someURL -O localdir || (echo &quot;DOWN FAILED!&quot; &amp;&amp; exit 1)</span><br><span class="line"><span class="meta prompt_"></span></span><br><span class="line"><span class="meta prompt_"># </span><span class="language-bash">这句跟上面的效果一样, 唯一的区别在于<span class="built_in">exit</span> 1必然会执行而不管<span class="built_in">echo</span>语句有没有成功</span></span><br><span class="line">wget -q someURL -O localdir || (echo &quot;DOWN FAILED!&quot;; exit 1)</span><br></pre></td></tr></table></figure>
+
+
+
+<h3 id="换行符"><a href="#换行符" class="headerlink" title="换行符"></a>换行符</h3><p>经常会有读取文件的需要, 用的最多的是使用for循环读取文件, 使用的时候需要特别注意文件的换行符, 默认情况下，换行符为空格, 需要使用<code>IFS</code>指定为换行</p>
+<figure class="highlight shell"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta prompt_"># </span><span class="language-bash">测试文件</span></span><br><span class="line">cat xx.md</span><br><span class="line">this is a test</span><br><span class="line">for readline</span><br><span class="line">from bash</span><br><span class="line"><span class="meta prompt_"></span></span><br><span class="line"><span class="meta prompt_"># </span><span class="language-bash">读取文件脚本(错误)</span></span><br><span class="line">cat readfromfile.sh</span><br><span class="line"><span class="meta prompt_">#</span><span class="language-bash">!/bin/bash</span></span><br><span class="line"></span><br><span class="line">for LINE in `cat xx.md`</span><br><span class="line">do</span><br><span class="line">    echo $LINE</span><br><span class="line">done</span><br><span class="line"><span class="meta prompt_"></span></span><br><span class="line"><span class="meta prompt_"># </span><span class="language-bash">输出, 没有按行输出, 第个单词都占据了一行</span></span><br><span class="line">this</span><br><span class="line">is</span><br><span class="line">a</span><br><span class="line">test</span><br><span class="line">for</span><br><span class="line">readline</span><br><span class="line">from</span><br><span class="line">bash</span><br><span class="line"><span class="meta prompt_"></span></span><br><span class="line"><span class="meta prompt_"># </span><span class="language-bash">正确的脚本</span></span><br><span class="line"><span class="meta prompt_">#</span><span class="language-bash">!/bin/bash</span></span><br><span class="line"></span><br><span class="line">IFS_old=$IFS      # 将原IFS值保存，以便用完后恢复</span><br><span class="line">IFS=$&#x27;\n&#x27;					# 指定回车为分隔符</span><br><span class="line"></span><br><span class="line">for LINE in $(cat xx.md)</span><br><span class="line">do</span><br><span class="line">        echo $&#123;LINE&#125;</span><br><span class="line">done</span><br><span class="line">IFS=$IFS_old 			# 恢复原IFS值</span><br><span class="line"><span class="meta prompt_"></span></span><br><span class="line"><span class="meta prompt_"># </span><span class="language-bash">输出</span></span><br><span class="line">this is a test</span><br><span class="line">for readline</span><br><span class="line">from bash</span><br><span class="line"><span class="meta prompt_"></span></span><br><span class="line"><span class="meta prompt_"># </span><span class="language-bash">当然以下两种方式也可以达到逐行输出效果, 大文件请考虑效率</span></span><br><span class="line"><span class="meta prompt_"># </span><span class="language-bash">second</span></span><br><span class="line">cat xx.md | while read line</span><br><span class="line">do</span><br><span class="line">    echo &quot;$&#123;line&#125;&quot;</span><br><span class="line">done</span><br><span class="line"><span class="meta prompt_"># </span><span class="language-bash"> third</span></span><br><span class="line">while read line</span><br><span class="line">do </span><br><span class="line">    echo &quot;$&#123;line&#125;&quot;</span><br><span class="line">done &lt; xx.md</span><br></pre></td></tr></table></figure>
+
+
+
+<h3 id="变量默认值"><a href="#变量默认值" class="headerlink" title="变量默认值"></a>变量默认值</h3><p>有时候定义变量的时候, 经常需要默认值, shell中也有一些比较有趣的表达式</p>
+<figure class="highlight shell"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta prompt_">$</span><span class="language-bash">&#123;value:=word&#125;</span>  </span><br><span class="line"><span class="meta prompt_">#</span><span class="language-bash">如果value存在且非null 则返回value 否则把word赋值给value并返回word(=value), 适合场景：如果value没有初始化 可给它赋初值</span></span><br><span class="line">echo $&#123;value:=word&#125;---&gt;文件的第一行</span><br><span class="line">echo $&#123;value1:=word&#125;---&gt;word 且会把word赋值给value</span><br><span class="line"><span class="meta prompt_"></span></span><br><span class="line"><span class="meta prompt_">$</span><span class="language-bash">&#123;value:+word&#125;</span>  </span><br><span class="line"><span class="meta prompt_"># </span><span class="language-bash">如果value存在且非null 则返回word 如果value没有设置或为空 则返回value</span></span><br><span class="line">echo $&#123;value:+word&#125;---&gt;word</span><br><span class="line">echo $&#123;value1:-word&#125;---&gt; 返回空 因为value1本身就是空</span><br><span class="line"><span class="meta prompt_"></span></span><br><span class="line"><span class="meta prompt_">$</span><span class="language-bash">&#123;value:?word&#125;</span> </span><br><span class="line"><span class="meta prompt_"># </span><span class="language-bash">如果valued存在且非Null， 那就什么也不做。否则，value:word会被发送到标准错误输出，并且程序会退出；如果没有指定word 则输出  value: parameter null or not <span class="built_in">set</span></span></span><br><span class="line">echo $&#123;value:?nomessage&#125;----&gt;输出第一行</span><br><span class="line">echo $&#123;value:?nomessage&#125;----&gt;value:nomessage</span><br><span class="line">echo $&#123;value:?&#125;-----&gt;value: parameter null or not set</span><br><span class="line"></span><br></pre></td></tr></table></figure>
+
+
+
+<h3 id="参数解析getops"><a href="#参数解析getops" class="headerlink" title="参数解析getops"></a>参数解析getops</h3><p>在写脚本的时候，经常需要对参数进行解析,shell毕竟是个脚本语言, 不可能像python等高级语言一样有很完善的参数解析库, <code>getops是bash自带的一个用于参数解析的工具, 但是它只是用于参数解析, 不能对参数进行更高级的操作，比如参数间依赖, 参数判断等</code></p>
+<figure class="highlight shell"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br></pre></td><td class="code"><pre><span class="line">function usage() &#123;</span><br><span class="line">	echo &quot;$&#123;0&#125; -m [master/slave] -t [my/db] -s [slave-ip]&quot;</span><br><span class="line">    echo &#x27;&#x27;</span><br><span class="line">    # shellcheck disable=SC2016</span><br><span class="line">    echo &#x27;  -m: Specify install type: master or slave&#x27;</span><br><span class="line">    # shellcheck disable=SC2016</span><br><span class="line">    echo &#x27;  -s: If type == master, then must specify opq slave ip&#x27;</span><br><span class="line">    # shellcheck disable=SC2016</span><br><span class="line">    echo &#x27;  -t: Specify instll opq type: my or db, my is short for mingyuan&#x27;</span><br><span class="line">    echo &#x27;example:&#x27;</span><br><span class="line">    cat &lt;&lt; EOF</span><br><span class="line">    #install opq-db</span><br><span class="line"><span class="meta prompt_"> 		# </span><span class="language-bash">master</span></span><br><span class="line"><span class="meta prompt_">			# </span><span class="language-bash">./auto_install_opq_from_oss.sh -m master -s 127.0.0.1 -t db</span></span><br><span class="line"><span class="meta prompt_"> 		# </span><span class="language-bash">slave</span></span><br><span class="line"><span class="meta prompt_">			# </span><span class="language-bash">./auto_install_opq_from_oss.sh -m slave -t db</span></span><br><span class="line"><span class="meta prompt_"> 	# </span><span class="language-bash">install opq-mingyuan</span></span><br><span class="line"><span class="meta prompt_">		# </span><span class="language-bash">master</span></span><br><span class="line"><span class="meta prompt_">			# </span><span class="language-bash">./install_opq.sh -m master -s 127.0.0.1 -t my</span></span><br><span class="line"><span class="meta prompt_">		# </span><span class="language-bash">slave</span></span><br><span class="line"><span class="meta prompt_">			# </span><span class="language-bash">./install_opq.sh -m slave -t my</span></span><br><span class="line">EOF</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line">while getopts &quot;m:s:t:h&quot; opt   # &quot;:m:s:t:h&quot; 如果首位的出现: 表示不打印错误信息</span><br><span class="line"><span class="meta prompt_"># </span><span class="language-bash">上面这句表示: -m -s -t 需要参数 -h 不需要传参</span></span><br><span class="line">do</span><br><span class="line">    case $&#123;opt&#125; in</span><br><span class="line">       m)</span><br><span class="line">         MODE=$&#123;OPTARG&#125;</span><br><span class="line">         ;;</span><br><span class="line">       s)</span><br><span class="line">         SLAVEIP=$&#123;OPTARG&#125;</span><br><span class="line">         ;;</span><br><span class="line">       t)</span><br><span class="line">         STYPE=$&#123;OPTARG&#125;</span><br><span class="line">         ;;</span><br><span class="line">       h)</span><br><span class="line">         usage</span><br><span class="line">         exit 0</span><br><span class="line">         ;;</span><br><span class="line">       \?)</span><br><span class="line">         echo &quot;Invalid option: -$OPTARG&quot; &gt;&amp;2</span><br><span class="line">         usage</span><br><span class="line">         exit 1</span><br><span class="line">         ;;</span><br><span class="line">    esac</span><br><span class="line">done</span><br><span class="line"><span class="meta prompt_"></span></span><br><span class="line"><span class="meta prompt_"># </span><span class="language-bash">这里要说明一下 <span class="string">&quot;m:s:t:h&quot;</span>的含义</span></span><br><span class="line"><span class="meta prompt_"># </span><span class="language-bash">如果首位(m前)出现 : 表示「不打印错误信息」，也就是说如果需要带参数但没有带时不会打印错误</span></span><br><span class="line"><span class="meta prompt_"># </span><span class="language-bash">紧邻字母后面的 : 表示该选项接收一个参数, 如果没有带参数的话,则会提示错误</span></span><br></pre></td></tr></table></figure>
+
+
+
+<h3 id="多if时不如使用case"><a href="#多if时不如使用case" class="headerlink" title="多if时不如使用case"></a>多if时不如使用case</h3><p>在需要使用法if进行业务判断时, 不防使用case，相对于层层if, 代码会更加清晰</p>
+<figure class="highlight shell"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br></pre></td><td class="code"><pre><span class="line">if [[ &quot;$lmode&quot; == &quot;master&quot; ]]; then</span><br><span class="line">	case $lstype in</span><br><span class="line"> 		my)</span><br><span class="line">			OPQ_UNTAR_DIR_NAME=&#x27;multiindex_opq_master_mingyuan&#x27;</span><br><span class="line">			;;</span><br><span class="line">		db)</span><br><span class="line">			OPQ_UNTAR_DIR_NAME=&#x27;multiindex_opq_master&#x27;</span><br><span class="line">			;;</span><br><span class="line">	esac</span><br><span class="line">	PROGRAM=&#x27;opq_master&#x27;</span><br><span class="line">else</span><br><span class="line">	case $lstype in</span><br><span class="line">		my)</span><br><span class="line">			OPQ_UNTAR_DIR_NAME=&#x27;multiindex_opq_slave_mingyuan&#x27;</span><br><span class="line">			;;</span><br><span class="line">		db)</span><br><span class="line">			OPQ_UNTAR_DIR_NAME=&#x27;multiindex_opq_slave&#x27;</span><br><span class="line">			;;</span><br><span class="line">	esac</span><br><span class="line">	PROGRAM=&#x27;opq_slave&#x27;</span><br><span class="line">fi</span><br></pre></td></tr></table></figure>
+
+
+
+<h3 id="加载key-value类的配置文件"><a href="#加载key-value类的配置文件" class="headerlink" title="加载key-value类的配置文件"></a>加载key-value类的配置文件</h3><figure class="highlight shell"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br></pre></td><td class="code"><pre><span class="line">cat xx</span><br><span class="line">key1=value1</span><br><span class="line">key2=value2</span><br><span class="line"></span><br><span class="line">cat xx.sh</span><br><span class="line">. xx # 这里直接使用. xx即可把xx文件里的key-value引入,后续可直接使用k.</span><br><span class="line">echo $key1, $key2</span><br><span class="line"><span class="meta prompt_"></span></span><br><span class="line"><span class="meta prompt_">#</span><span class="language-bash">注意, 配置文件只能是k=v的形式(多个k=v可以在一行, 使用空格隔开), 其它形式会报错</span></span><br></pre></td></tr></table></figure>
+
+
+
+<h3 id="一行代码-字符串是否包含子串"><a href="#一行代码-字符串是否包含子串" class="headerlink" title="一行代码: 字符串是否包含子串"></a>一行代码: 字符串是否包含子串</h3><figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># 判断CONSUL_SERVER中是否包含逗号 如果包含EXPECT_LEN=3， 不包含EXPECT_LEN=1</span></span><br><span class="line">[ -z <span class="string">&quot;<span class="variable">$&#123;CONSUL_SERVER##*,*&#125;</span>&quot;</span> ] &amp;&amp; EXPECT_LEN=3 || EXPECT_LEN=1</span><br></pre></td></tr></table></figure>
+
+
+
+<h3 id="for循环打印带空格字符串"><a href="#for循环打印带空格字符串" class="headerlink" title="for循环打印带空格字符串"></a>for循环打印带空格字符串</h3><figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># 需求, 提供个数组，循环数组中的元素， 如果元素存在于某个文件中，则不追加，如果不存在,则追加</span></span><br><span class="line">K8S_CLUSTER=(<span class="string">&quot;172.1.52.250 k8s-master-250&quot;</span> <span class="string">&quot;172.1.52.50 k8s-master-50&quot;</span>)</span><br><span class="line"><span class="comment"># TARGET=/etc/hosts</span></span><br><span class="line"><span class="comment"># 错误的写法</span></span><br><span class="line"><span class="keyword">for</span> x <span class="keyword">in</span> <span class="variable">$&#123;K8S_CLUSTER[@]&#125;</span>; <span class="keyword">do</span> grep <span class="string">&quot;<span class="variable">$x</span>&quot;</span> /etc/hosts &gt; /dev/null || <span class="built_in">echo</span> <span class="string">&quot;<span class="variable">$x</span>&quot;</span> &gt;&gt; /etc/hosts;<span class="keyword">done</span></span><br><span class="line"><span class="comment"># 会发现cat /etc/hosts输出以下格式, 正是因为元素中存在空格, 而echo的时候会以空格进行换行，不符合预期</span></span><br><span class="line">172.1.52.250 </span><br><span class="line">k8s-master-250</span><br><span class="line">172.1.52.50</span><br><span class="line">k8s-master-50</span><br><span class="line"></span><br><span class="line"><span class="comment"># 正确的写法</span></span><br><span class="line"><span class="keyword">for</span> x <span class="keyword">in</span> <span class="string">&quot;<span class="variable">$&#123;K8S_CLUSTER[@]&#125;</span>&quot;</span>; <span class="keyword">do</span> grep <span class="string">&quot;<span class="variable">$x</span>&quot;</span> /etc/hosts &gt; /dev/null || <span class="built_in">echo</span> <span class="string">&quot;<span class="variable">$x</span>&quot;</span> &gt;&gt; /etc/hosts;<span class="keyword">done</span></span><br><span class="line"><span class="comment"># 将数组用引号做为一个整体进行for循环就没问题, cat /etc/hosts</span></span><br><span class="line">172.1.52.250 k8s-master-250</span><br><span class="line">172.1.52.50 k8s-master-50</span><br></pre></td></tr></table></figure>
+
+
+
+<h3 id="未完待续"><a href="#未完待续" class="headerlink" title="未完待续"></a>未完待续</h3><h3 id="参考文章"><a href="#参考文章" class="headerlink" title="参考文章:"></a>参考文章:</h3><blockquote>
+<ul>
+<li><a target="_blank" rel="noopener" href="https://stackoverflow.com/questions/18620153/find-matching-text-and-replace-next-line">https://stackoverflow.com/questions/18620153/find-matching-text-and-replace-next-line</a></li>
+</ul>
+</blockquote>
+<h3 id="转载请注明出处https-izsk-me"><a href="#转载请注明出处https-izsk-me" class="headerlink" title="转载请注明出处https://izsk.me"></a><strong>转载请注明出处<a target="_blank" rel="noopener" href="https://izsk.me/">https://izsk.me</a></strong></h3>
+      
+    </div>
+
+    <div>
+      
+        
+<div id="wechat_subscriber" style="display: block; padding: 10px 0; margin: 20px auto; width: 100%; text-align: center">
+    <img id="wechat_subscriber_qcode" src="/images/websitecode250.png" alt=" wechat" style="width: 200px; max-width: 100%;"/>
+    <div>Scan Me To Read on Phone</div>
+</div>
+
+
+      
+    </div>
+
+    <div>
+      
+        
+  <div style="padding: 10px 0; margin: 20px auto; width: 90%; text-align: center;">
+    <div>I know you won't do this,but what if you did?</div>
+    <button id="rewardButton" disable="enable" onclick="var qr = document.getElementById('QR'); if (qr.style.display === 'none') {qr.style.display='block';} else {qr.style.display='none'}">
+      <span>赏</span>
+    </button>
+    <div id="QR" style="display: none;">
+      
+        <div id="wechat" style="display: inline-block">
+          <img id="wechat_qr" src="/images/wechatpayme.png" alt=" WeChat Pay"/>
+          <p>微信打赏</p>
+        </div>
+      
+      
+        <div id="alipay" style="display: inline-block">
+          <img id="alipay_qr" src="/images/alipayme.jpg" alt=" Alipay"/>
+          <p>支付宝打赏</p>
+        </div>
+      
     </div>
   </div>
 
-{% endblock %}
 
-{% block sidebar %}
-  {{ sidebar_template.render(true) }}
-{% endblock %}
+      
+    </div>
 
 
-{% block script_extra %}
-  {% include '_scripts/pages/post-details.swig' %}
-{% endblock %}
+    <footer class="post-footer">
+      
+        <div class="post-tags">
+          
+            <a href="/tags/Shell/" rel="tag"># Shell</a>
+          
+        </div>
+      
+
+      
+        <div class="post-nav">
+          <div class="post-nav-next post-nav-item">
+            
+              <a href="/2021/03/17/Kubernetes-kubebatch-install/" rel="next" title="Kube-batch学习(安装部署)">
+                <i class="fa fa-chevron-left"></i> Kube-batch学习(安装部署)
+              </a>
+            
+          </div>
+
+          <span class="post-nav-divider"></span>
+
+          <div class="post-nav-prev post-nav-item">
+            
+              <a href="/2021/03/21/Kubernetes-kubebatch-theory/" rel="prev" title="Kube-batch学习(queue及podgroup)">
+                Kube-batch学习(queue及podgroup) <i class="fa fa-chevron-right"></i>
+              </a>
+            
+          </div>
+        </div>
+      
+
+      
+      
+    </footer>
+  </article>
+
+
+
+    <div class="post-spread">
+      
+    </div>
+  </div>
+
+
+          </div>
+          
+
+
+          
+  <div class="comments" id="comments">
+    
+  </div>
+
+
+        </div>
+        
+          
+  
+  <div class="sidebar-toggle">
+    <div class="sidebar-toggle-line-wrap">
+      <span class="sidebar-toggle-line sidebar-toggle-line-first"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-middle"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-last"></span>
+    </div>
+  </div>
+
+  <aside id="sidebar" class="sidebar">
+    <div class="sidebar-inner">
+
+      
+
+      
+        <ul class="sidebar-nav motion-element">
+          <li class="sidebar-nav-toc sidebar-nav-active" data-target="post-toc-wrap" >
+            文章目录
+          </li>
+          <li class="sidebar-nav-overview" data-target="site-overview">
+            站点概览
+          </li>
+        </ul>
+      
+
+      <section class="site-overview sidebar-panel">
+        <div class="site-author motion-element" itemprop="author" itemscope itemtype="http://schema.org/Person">
+          <img class="site-author-image" itemprop="image"
+               src="/images/avatar.gif"
+               alt="" />
+          <p class="site-author-name" itemprop="name"></p>
+          <p class="site-description motion-element" itemprop="description"></p>
+        </div>
+        <nav class="site-state motion-element">
+        
+          
+            <div class="site-state-item site-state-posts">
+              <a href="/archives">
+                <span class="site-state-item-count">192</span>
+                <span class="site-state-item-name">日志</span>
+              </a>
+            </div>
+          
+
+          
+            <div class="site-state-item site-state-categories">
+              <a href="/categories">
+                <span class="site-state-item-count">14</span>
+                <span class="site-state-item-name">分类</span>
+              </a>
+            </div>
+          
+
+          
+            <div class="site-state-item site-state-tags">
+              <a href="/tags">
+                <span class="site-state-item-count">14</span>
+                <span class="site-state-item-name">标签</span>
+              </a>
+            </div>
+          
+
+        </nav>
+
+        
+
+        <div class="links-of-author motion-element">
+          
+        </div>
+
+        
+        
+
+        
+        
+
+        
+
+
+      </section>
+
+      
+      <!--noindex-->
+        <section class="post-toc-wrap motion-element sidebar-panel sidebar-panel-active">
+          <div class="post-toc">
+
+            
+              
+            
+
+            
+              <div class="post-toc-content"><ol class="nav"><li class="nav-item nav-level-3"><a class="nav-link" href="#%E6%AD%A3%E7%A1%AE%E4%BC%A0%E9%80%92%E6%95%B0%E7%BB%84%E5%88%B0%E5%87%BD%E6%95%B0%E4%B8%AD"><span class="nav-number">1.</span> <span class="nav-text">正确传递数组到函数中</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E4%BD%BF%E7%94%A8sed%E4%BF%AE%E6%94%B9Yaml%E6%96%87%E4%BB%B6%E4%B8%AD%E6%8C%87%E5%AE%9A%E5%85%B3%E9%94%AE%E5%AD%97%E7%9A%84%E4%B8%8BN%E8%A1%8C"><span class="nav-number">2.</span> <span class="nav-text">使用sed修改Yaml文件中指定关键字的下N行</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E6%9F%A5%E7%9C%8B%E8%BF%9B%E7%A8%8B%E5%8D%A0%E7%94%A8%E7%9A%84%E6%96%87%E4%BB%B6%E5%8F%A5%E6%9F%84"><span class="nav-number">3.</span> <span class="nav-text">查看进程占用的文件句柄</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E4%BD%BF%E7%94%A8sed%E5%88%A0%E9%99%A4%E5%A4%9A%E8%A1%8C%E5%86%85%E5%AE%B9"><span class="nav-number">4.</span> <span class="nav-text">使用sed删除多行内容</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E5%9C%A8%E8%84%9A%E6%9C%AC%E4%B8%AD%E4%BF%AE%E6%94%B9crontab"><span class="nav-number">5.</span> <span class="nav-text">在脚本中修改crontab</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E5%96%84%E7%94%A8"><span class="nav-number">6.</span> <span class="nav-text">善用{}</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E4%BD%BF%E7%94%A8-amp-amp"><span class="nav-number">7.</span> <span class="nav-text">使用&amp;&amp; ||</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E6%8D%A2%E8%A1%8C%E7%AC%A6"><span class="nav-number">8.</span> <span class="nav-text">换行符</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E5%8F%98%E9%87%8F%E9%BB%98%E8%AE%A4%E5%80%BC"><span class="nav-number">9.</span> <span class="nav-text">变量默认值</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E5%8F%82%E6%95%B0%E8%A7%A3%E6%9E%90getops"><span class="nav-number">10.</span> <span class="nav-text">参数解析getops</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E5%A4%9Aif%E6%97%B6%E4%B8%8D%E5%A6%82%E4%BD%BF%E7%94%A8case"><span class="nav-number">11.</span> <span class="nav-text">多if时不如使用case</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E5%8A%A0%E8%BD%BDkey-value%E7%B1%BB%E7%9A%84%E9%85%8D%E7%BD%AE%E6%96%87%E4%BB%B6"><span class="nav-number">12.</span> <span class="nav-text">加载key-value类的配置文件</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E4%B8%80%E8%A1%8C%E4%BB%A3%E7%A0%81-%E5%AD%97%E7%AC%A6%E4%B8%B2%E6%98%AF%E5%90%A6%E5%8C%85%E5%90%AB%E5%AD%90%E4%B8%B2"><span class="nav-number">13.</span> <span class="nav-text">一行代码: 字符串是否包含子串</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#for%E5%BE%AA%E7%8E%AF%E6%89%93%E5%8D%B0%E5%B8%A6%E7%A9%BA%E6%A0%BC%E5%AD%97%E7%AC%A6%E4%B8%B2"><span class="nav-number">14.</span> <span class="nav-text">for循环打印带空格字符串</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E6%9C%AA%E5%AE%8C%E5%BE%85%E7%BB%AD"><span class="nav-number">15.</span> <span class="nav-text">未完待续</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E5%8F%82%E8%80%83%E6%96%87%E7%AB%A0"><span class="nav-number">16.</span> <span class="nav-text">参考文章:</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E8%BD%AC%E8%BD%BD%E8%AF%B7%E6%B3%A8%E6%98%8E%E5%87%BA%E5%A4%84https-izsk-me"><span class="nav-number">17.</span> <span class="nav-text">转载请注明出处https:&#x2F;&#x2F;izsk.me</span></a></li></ol></div>
+            
+
+          </div>
+        </section>
+      <!--/noindex-->
+      
+
+    </div>
+  </aside>
+
+
+        
+      </div>
+    </main>
+
+    <footer id="footer" class="footer">
+      <div class="footer-inner">
+        <div class="copyright" >
+  
+  &copy; 
+  <span itemprop="copyrightYear">2022</span>
+  <span class="with-love">
+    <i class="fa fa-heart"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">Z.S.K.</span>
+</div>
+
+
+<div class="powered-by">
+  Supported by <a class="theme-link" target="_blank" rel="noopener" href="https://hexo.io">Hexo</a>
+</div>
+
+<div class="theme-info">
+  Theme -
+  <a class="theme-link" target="_blank" rel="noopener" href="https://github.com/iissnan/hexo-theme-next">
+    NexT.Mist
+  </a>
+</div>
+
+
+        
+
+        
+      </div>
+    </footer>
+
+    <div class="back-to-top">
+      <i class="fa fa-arrow-up"></i>
+    </div>
+  </div>
+
+  
+
+<script type="text/javascript">
+  if (Object.prototype.toString.call(window.Promise) !== '[object Function]') {
+    window.Promise = null;
+  }
+</script>
+
+
+
+
+
+
+
+
+
+  
+
+
+
+  
+  <script type="text/javascript" src="/lib/jquery/index.js?v=2.1.3"></script>
+
+  
+  <script type="text/javascript" src="/lib/fastclick/lib/fastclick.min.js?v=1.0.6"></script>
+
+  
+  <script type="text/javascript" src="/lib/jquery_lazyload/jquery.lazyload.js?v=1.9.7"></script>
+
+  
+  <script type="text/javascript" src="/lib/velocity/velocity.min.js?v=1.2.1"></script>
+
+  
+  <script type="text/javascript" src="/lib/velocity/velocity.ui.min.js?v=1.2.1"></script>
+
+  
+  <script type="text/javascript" src="/lib/fancybox/source/jquery.fancybox.pack.js?v=2.1.5"></script>
+
+
+  
+
+
+  <script type="text/javascript" src="/js/src/utils.js?v=5.1.0"></script>
+
+  <script type="text/javascript" src="/js/src/motion.js?v=5.1.0"></script>
+
+
+
+  
+  
+
+  
+  <script type="text/javascript" src="/js/src/scrollspy.js?v=5.1.0"></script>
+<script type="text/javascript" src="/js/src/post-details.js?v=5.1.0"></script>
+
+
+
+  
+
+
+  <script type="text/javascript" src="/js/src/bootstrap.js?v=5.1.0"></script>
+
+
+
+  
+
+
+
+  
+
+
+
+
+	
+
+
+
+
+
+  
+
+
+
+
+  
+  
+  <script type="text/javascript">
+    // Popup Window;
+    var isfetched = false;
+    // Search DB path;
+    var search_path = "search.xml";
+    if (search_path.length == 0) {
+      search_path = "search.xml";
+    }
+    var path = "/" + search_path;
+    // monitor main search box;
+
+    function proceedsearch() {
+      $("body").append('<div class="popoverlay">').css('overflow', 'hidden');
+      $('.popup').toggle();
+    }
+    // search function;
+    var searchFunc = function(path, search_id, content_id) {
+      'use strict';
+      $.ajax({
+        url: path,
+        dataType: "xml",
+        async: true,
+        success: function( xmlResponse ) {
+          // get the contents from search data
+          isfetched = true;
+          $('.popup').detach().appendTo('.header-inner');
+          var datas = $( "entry", xmlResponse ).map(function() {
+            return {
+              title: $( "title", this ).text(),
+              content: $("content",this).text(),
+              url: $( "url" , this).text()
+            };
+          }).get();
+          var $input = document.getElementById(search_id);
+          var $resultContent = document.getElementById(content_id);
+          $input.addEventListener('input', function(){
+            var matchcounts = 0;
+            var str='<ul class=\"search-result-list\">';
+            var keywords = this.value.trim().toLowerCase().split(/[\s\-]+/);
+            $resultContent.innerHTML = "";
+            if (this.value.trim().length > 1) {
+              // perform local searching
+              datas.forEach(function(data) {
+                var isMatch = false;
+                var content_index = [];
+                var data_title = data.title.trim().toLowerCase();
+                var data_content = data.content.trim().replace(/<[^>]+>/g,"").toLowerCase();
+                var data_url = decodeURIComponent(data.url);
+                var index_title = -1;
+                var index_content = -1;
+                var first_occur = -1;
+                // only match artiles with not empty titles and contents
+                if(data_title != '') {
+                  keywords.forEach(function(keyword, i) {
+                    index_title = data_title.indexOf(keyword);
+                    index_content = data_content.indexOf(keyword);
+                    if( index_title >= 0 || index_content >= 0 ){
+                      isMatch = true;
+                      if (i == 0) {
+                        first_occur = index_content;
+                      }
+                    }
+
+                  });
+                }
+                // show search results
+                if (isMatch) {
+                  matchcounts += 1;
+                  str += "<li><a href='"+ data_url +"' class='search-result-title'>"+ data_title +"</a>";
+                  var content = data.content.trim().replace(/<[^>]+>/g,"");
+                  if (first_occur >= 0) {
+                    // cut out 100 characters
+                    var start = first_occur - 20;
+                    var end = first_occur + 80;
+                    if(start < 0){
+                      start = 0;
+                    }
+                    if(start == 0){
+                      end = 50;
+                    }
+                    if(end > content.length){
+                      end = content.length;
+                    }
+                    var match_content = content.substring(start, end);
+                    // highlight all keywords
+                    keywords.forEach(function(keyword){
+                      var regS = new RegExp(keyword, "gi");
+                      match_content = match_content.replace(regS, "<b class=\"search-keyword\">"+keyword+"</b>");
+                    });
+
+                    str += "<p class=\"search-result\">" + match_content +"...</p>"
+                  }
+                  str += "</li>";
+                }
+              })};
+            str += "</ul>";
+            if (matchcounts == 0) { str = '<div id="no-result"><i class="fa fa-frown-o fa-5x" /></div>' }
+            if (keywords == "") { str = '<div id="no-result"><i class="fa fa-search fa-5x" /></div>' }
+            $resultContent.innerHTML = str;
+          });
+          proceedsearch();
+        }
+      });}
+
+    // handle and trigger popup window;
+    $('.popup-trigger').click(function(e) {
+      e.stopPropagation();
+      if (isfetched == false) {
+        searchFunc(path, 'local-search-input', 'local-search-result');
+      } else {
+        proceedsearch();
+      };
+    });
+
+    $('.popup-btn-close').click(function(e){
+      $('.popup').hide();
+      $(".popoverlay").remove();
+      $('body').css('overflow', '');
+    });
+    $('.popup').click(function(e){
+      e.stopPropagation();
+    });
+  </script>
+
+
+  
+
+  
+
+  
+
+  
+
+
+</body>
+</html>

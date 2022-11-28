@@ -1,38 +1,917 @@
-{% extends '_layout.swig' %}
-{% import '_macro/post.swig' as post_template %}
-{% import '_macro/sidebar.swig' as sidebar_template %}
+<!doctype html>
 
 
-{% block title %} {{ page.title }} | {{ config.title }} {% endblock %}
 
-{% block page_class %}page-post-detail{% endblock %}
+  
 
 
-{% block content %}
+<html class="theme-next mist use-motion" lang="zh-Hans">
+<head>
+  <meta charset="UTF-8"/>
+<meta http-equiv="X-UA-Compatible" content="IE=edge" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1"/>
+
+
+
+<meta http-equiv="Cache-Control" content="no-transform" />
+<meta http-equiv="Cache-Control" content="no-siteapp" />
+
+
+
+
+
+
+
+
+
+
+
+
+  
+  
+  <link href="/lib/fancybox/source/jquery.fancybox.css?v=2.1.5" rel="stylesheet" type="text/css" />
+
+
+
+
+  
+  
+  
+  
+
+  
+    
+    
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+    
+    
+    <link href="//fonts.googleapis.com/css?family=Lato:300,300italic,400,400italic,700,700italic&subset=latin,latin-ext" rel="stylesheet" type="text/css">
+  
+
+
+
+
+
+
+<link href="/lib/font-awesome/css/font-awesome.min.css?v=4.6.2" rel="stylesheet" type="text/css" />
+
+<link href="/css/main.css?v=5.1.0" rel="stylesheet" type="text/css" />
+
+
+  <meta name="keywords" content="Kubernetes," />
+
+
+
+
+
+
+
+
+  <link rel="shortcut icon" type="image/x-icon" href="/favicon.ico?v=5.1.0" />
+
+
+
+
+
+
+<meta name="description" content="前面记录的都是在现有的集群中如何基于infiniband实现集群中的pod同时能够拥有两个网络, 其中一些实现细节并没有展开，个人觉得还是有必要再总结总结.">
+<meta property="og:type" content="article">
+<meta property="og:title" content="Kubernetes学习(k8s基于InfiniBand实现HPC高性能容器网络组网方案实践四)">
+<meta property="og:url" content="https://zhoushuke.github.io/2021/07/06/Kubernetes-Infinitband-SRIOV-network-4-knows/index.html">
+<meta property="og:site_name" content="Z.S.K.&#39;s Records">
+<meta property="og:description" content="前面记录的都是在现有的集群中如何基于infiniband实现集群中的pod同时能够拥有两个网络, 其中一些实现细节并没有展开，个人觉得还是有必要再总结总结.">
+<meta property="og:locale">
+<meta property="og:image" content="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20210711203304.png">
+<meta property="article:published_time" content="2021-07-06T03:10:53.000Z">
+<meta property="article:modified_time" content="2022-07-19T03:16:00.935Z">
+<meta property="article:author" content="Z.S.K.">
+<meta property="article:tag" content="Kubernetes">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:image" content="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20210711203304.png">
+
+
+
+<script type="text/javascript" id="hexo.configurations">
+  var NexT = window.NexT || {};
+  var CONFIG = {
+    root: '',
+    scheme: 'Mist',
+    sidebar: {"position":"left","display":"post"},
+    fancybox: true,
+    motion: true,
+    duoshuo: {
+      userId: 'undefined',
+      author: '博主'
+    },
+    algolia: {
+      applicationID: '',
+      apiKey: '',
+      indexName: '',
+      hits: {"per_page":10},
+      labels: {"input_placeholder":"Search for Posts","hits_empty":"We didn't find any results for the search: ${query}","hits_stats":"${hits} results found in ${time} ms"}
+    }
+  };
+</script>
+
+
+
+  <link rel="canonical" href="https://zhoushuke.github.io/2021/07/06/Kubernetes-Infinitband-SRIOV-network-4-knows/"/>
+
+
+
+
+
+  <title> Kubernetes学习(k8s基于InfiniBand实现HPC高性能容器网络组网方案实践四) | Z.S.K.'s Records </title>
+<meta name="generator" content="Hexo 6.2.0"></head>
+
+<body itemscope itemtype="http://schema.org/WebPage" lang="zh-Hans">
+
+  
+
+
+
+
+
+
+
+
+
+
+  
+  
+    
+  
+
+  <div class="container one-collumn sidebar-position-left page-post-detail ">
+    <div class="headband"></div>
+
+    <header id="header" class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-meta ">
+  
+
+  <div class="custom-logo-site-title">
+    <a href="/"  class="brand" rel="start">
+      <span class="logo-line-before"><i></i></span>
+      <span class="site-title">Z.S.K.'s Records</span>
+      <span class="logo-line-after"><i></i></span>
+    </a>
+  </div>
+    
+      <p class="site-subtitle"></p>
+    
+</div>
+
+<div class="site-nav-toggle">
+  <button>
+    <span class="btn-bar"></span>
+    <span class="btn-bar"></span>
+    <span class="btn-bar"></span>
+  </button>
+</div>
+
+<nav class="site-nav">
+  
+
+  
+    <ul id="menu" class="menu">
+      
+        
+        <li class="menu-item menu-item-home">
+          <a href="/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-home"></i> <br />
+            
+            首页
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-categories">
+          <a href="/categories" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-th"></i> <br />
+            
+            分类
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-about">
+          <a href="/about/ZSK-Profile.pdf" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-user"></i> <br />
+            
+            简历
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-archives">
+          <a href="/archives" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-archive"></i> <br />
+            
+            归档
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-tags">
+          <a href="/tags" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-tags"></i> <br />
+            
+            标签
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-commonweal">
+          <a href="/404.html" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-heartbeat"></i> <br />
+            
+            公益404
+          </a>
+        </li>
+      
+
+      
+        <li class="menu-item menu-item-search">
+          
+            <a href="javascript:;" class="popup-trigger">
+          
+            
+              <i class="menu-item-icon fa fa-search fa-fw"></i> <br />
+            
+            搜索
+          </a>
+        </li>
+      
+    </ul>
+  
+
+  
+    <div class="site-search">
+      
+  <div class="popup">
+ <span class="search-icon fa fa-search"></span>
+ <input type="text" id="local-search-input">
+ <div id="local-search-result"></div>
+ <span class="popup-btn-close">close</span>
+</div>
+
+
+    </div>
+  
+</nav>
+
+
+
+ </div>
+    </header>
+
+    <main id="main" class="main">
+      <div class="main-inner">
+        <div class="content-wrap">
+          <div id="content" class="content">
+            
 
   <div id="posts" class="posts-expand">
-    {{ post_template.render(page) }}
+    
 
-    <div class="post-spread">
-      {% if theme.jiathis %}
-        {% include '_partials/share/jiathis.swig' %}
-      {% elseif theme.baidushare %}
-        {% include '_partials/share/baidushare.swig' %}
-      {% elseif theme.add_this_id %}
-        {% include '_partials/share/add-this.swig' %}
-      {% elseif theme.duoshuo_shortname and theme.duoshuo_share %}
-        {% include '_partials/share/duoshuo_share.swig' %}
-      {% endif %}
+  
+
+  
+  
+  
+
+  <article class="post post-type-normal " itemscope itemtype="http://schema.org/Article">
+  <link itemprop="mainEntityOfPage" href="https://zhoushuke.github.io/2021/07/06/Kubernetes-Infinitband-SRIOV-network-4-knows/">
+
+  <span style="display:none" itemprop="author" itemscope itemtype="http://schema.org/Person">
+    <meta itemprop="name" content="">
+    <meta itemprop="description" content="">
+    <meta itemprop="image" content="/images/avatar.gif">
+  </span>
+
+  <span style="display:none" itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+    <meta itemprop="name" content="Z.S.K.'s Records">
+    <span style="display:none" itemprop="logo" itemscope itemtype="http://schema.org/ImageObject">
+      <img style="display:none;" itemprop="url image" alt="Z.S.K.'s Records" src="">
+    </span>
+  </span>
+
+    
+      <header class="post-header">
+
+        
+        
+          <h1 class="post-title" itemprop="name headline">
+            
+            
+              
+                Kubernetes学习(k8s基于InfiniBand实现HPC高性能容器网络组网方案实践四)
+              
+            
+          </h1>
+        
+
+        <div class="post-meta">
+          <span class="post-time">
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">发表于</span>
+              
+              <time title="Post created" itemprop="dateCreated datePublished" datetime="2021-07-06T11:10:53+08:00">
+                2021-07-06
+              </time>
+            
+
+            
+
+            
+          </span>
+
+          
+            <span class="post-category" >
+            
+              <span class="post-meta-divider">|</span>
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-folder-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">分类于</span>
+              
+              
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/Kubernetes/" itemprop="url" rel="index">
+                    <span itemprop="name">Kubernetes</span>
+                  </a>
+                </span>
+
+                
+                
+              
+            </span>
+          
+
+          
+            
+          
+
+          
+
+          
+          
+
+          
+
+          
+
+        </div>
+      </header>
+    
+
+
+    <div class="post-body" itemprop="articleBody">
+
+      
+      
+
+      
+        <p>前面记录的都是在现有的集群中如何基于infiniband实现集群中的pod同时能够拥有两个网络, 其中一些实现细节并没有展开，个人觉得还是有必要再总结总结.</p>
+<span id="more"></span>
+
+
+
+<h3 id="Infinitband"><a href="#Infinitband" class="headerlink" title="Infinitband"></a>Infinitband</h3><p>由于infinitband涉及到硬件, 是一种比较复杂的高速网络，个人能力有限，在这之前也没有接触过该技术，如果想全方位的了解的话，网上的有些资料还是很有帮助的，感兴趣的可以参考下列连接</p>
+<p><a target="_blank" rel="noopener" href="https://zhuanlan.zhihu.com/p/74238082">关于InfiniBand架构和知识点漫谈</a></p>
+<p><a target="_blank" rel="noopener" href="https://zhuanlan.zhihu.com/p/163104439">谈谈InfiniBand和Ethernet网络的差异</a></p>
+<p><a target="_blank" rel="noopener" href="https://blog.csdn.net/swingwang/article/details/72935461">InfiniBand主流厂商和产品分析</a></p>
+<p>通过个人的实践及网上的资料，有以下结论:</p>
+<ol>
+<li>infiniband网络与以太网之间是无法直接通信的，但目前有些交换机可以进行协议的转换，最直接便捷的方法是带有IB网卡的机器也配置以太网网卡即可</li>
+<li>infiniband设置现在只有少量的厂家有能力生产， intel跟Mellanox是佼佼者. Mellanox占据龙头位置，同时Mellanox能够为infiniband技术提供全套服务</li>
+<li>Infinitband一般用于连接海量数据交换场景，比如直连存储, AI节点GPU数据交换等，但Infinitband毕竟是需要硬件支撑，非常昂贵，也有DPDK,RoCE等方案也能提供高速网络.</li>
+</ol>
+<h3 id="SR-IOV"><a href="#SR-IOV" class="headerlink" title="SR-IOV"></a>SR-IOV</h3><p>SR-IOV (Single Root Input&#x2F;Output Virtualization) 的主要作用是将一个物理设备模拟成多个虚拟设备,在虚拟化技术中使用非常频繁，</p>
+<p>比如一台物理机上可以虚拟出多台虚机，虚机中的网卡就可以通过SR-iov技术虚拟出来的</p>
+<p><img src="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20210711203304.png"></p>
+<p><strong>sr-iov需要硬件上的支持，前提条件就是硬件需要支持SRIOV，主板要支持VT-d技术，好在目前大部分服务器都支持了该技术</strong></p>
+<p>但是sr-iov跟传统的虚拟化技术有啥区别呢:</p>
+<p>以前的虚拟化技术大多都是通过软件模拟的方式模拟出相关的硬件功能，<strong>而sriov是硬件级别的虚拟化，也就是说在使用方来看，这跟真实的硬件几乎没有差别，因此性能大大的提升</strong></p>
+<p>通过sriov虚拟出来的硬件之间是隔离的,在某一时刻，一个 VF 只能被分配给一个虚机。一个虚机可以拥有多个 VF</p>
+<p>SR-IOV 驱动是在内核中实现的.</p>
+<p>总结以下知识点:</p>
+<ol>
+<li><p>PF就是物理网卡所支持的一项PCI(元件扩展接口)功能，PF可以扩展出若干个VF</p>
+</li>
+<li><p>VF是支持SRIOV的物理网卡所虚拟出的一个“网卡”或者说虚出来的一个实例，它会以一个独立网卡的形式呈现出来，每一个VF有它自己独享的PCI配置区域，并且可能与其他VF共享着同一个物理资源（公用同一个物理网口）</p>
+</li>
+<li><p>PF miniport driver在VF之前最先加载,VF及PF之间是隔离的，任何经由VF驱动或所执行的结果都不会影响到其他的VF或PF</p>
+</li>
+<li><p>Network Interface Card（NIC）即物理网卡，在启用SRIOV之后会生成若干vport，物理NIC所要做的就是转发physical port与vport之间的流量</p>
+</li>
+<li><p>physical port顾名思义就是物理网口，在SRIOV场景中physical port充当一个面向对外的网络媒介</p>
+</li>
+<li><p>VPort是个抽象出来的接口，类似于物理网口，它们被映射给每一个VF或者PF，供parentOS或guestOS来使用</p>
+<p>通过以上架构的描述就可以看出，启用SRIOV之后，物理NIC将通过VF与虚拟机（VF driver）进行数据交互，反之亦然。那么这样一来即可跳过中间的虚拟化堆栈（即VMM层），以达到近乎于纯物理环境的性能；这一点也是SRIOV最大的价值所在，它有别于以往虚拟机通过仿真设备和虚拟化层进行流量传递的情况</p>
+<p>同样，sr-iov也是一种很复杂的技术，这里也只能挑一些重点记录，毕竟，我们也只是用.</p>
+</li>
+</ol>
+<h3 id="sriov-network-cni"><a href="#sriov-network-cni" class="headerlink" title="sriov-network-cni"></a>sriov-network-cni</h3><p>如果pod想使用基于物理网通过sriov虚拟出的网络，那这个时候就需要实现network-cni逻辑,用于给pod分配ip.</p>
+<h3 id="sriov-network-device-plugin"><a href="#sriov-network-device-plugin" class="headerlink" title="sriov-network-device-plugin"></a>sriov-network-device-plugin</h3><p>同理，虚拟出来的网卡的数据是有限的，不可能一个ip可以分配给多个pod，那这个时候虚拟IP就是一种device资源，自然要通过device-plugin来进行增删改查,在pod新建时网卡的库存减1，销毁时加1.</p>
+<h3 id="sriov-network-operator"><a href="#sriov-network-operator" class="headerlink" title="sriov-network-operator"></a>sriov-network-operator</h3><p>而sriov-network-operator则是基于operator的机制次上述两种方案组合在一起, 方便部署，其它里面启动的也就上述两个pod</p>
+<h3 id="multus"><a href="#multus" class="headerlink" title="multus"></a>multus</h3><p>在大多数情况下，一个k8s集群中只会有一种容器网络，如果想同时使用多种的话，k8s本身是没有方案的，而multus则可以处理这个场景，<strong>multus其实就是个代理</strong>，它会获取所有pod创建前请求的cni，然后根据配置文件将请求转发到真实的CNI插件上，比如flannel，比如sriov-cni等等，这些插件的路径默认在&#x2F;opt&#x2F;cni&#x2F;bin，在multus中，可以指定一种容器网络为默认的容器网络，通过解析pod的annotation来是否存在<code>k8s.v1.cni.cncf.io/networks</code>来判断该pod需要请求的cni。</p>
+<h3 id="whereabouts"><a href="#whereabouts" class="headerlink" title="whereabouts"></a>whereabouts</h3><p>pod请求cni二进制后会从ip池中选择ip，那IP池要怎么管理呢?如果只是一台机器的话，则通过host-local这种最简单的方案也可以实现对ip增删改查来实现管理，host-local会在本地的某个路径下，如果是已经分配出去的ip,则会以ip为主新建一个文件，如果释放就删除，这样的话，就能知道哪些ip已经分配，哪些还没有，但是如果在多个node共享一个ip段的话，host-local显然是无法做到分布式，比如flannel是通过etcd来实现分布式ip分配不重复的，而<strong>whereabouts也是一种代理工具,用于解决ip分配问题</strong>，它支持etcd做为后端的存储，而kubernetes本身就用etc做为数据库，因此whereabouts可以很人性化的直接指定Kubernetes来使用集群的etcd，这样就完美地解决了分布式ip不重复的问题.</p>
+<h3 id="参考文章"><a href="#参考文章" class="headerlink" title="参考文章:"></a><strong>参考文章:</strong></h3><blockquote>
+<ul>
+<li><a target="_blank" rel="noopener" href="https://zhuanlan.zhihu.com/p/347204232">https://zhuanlan.zhihu.com/p/347204232</a></li>
+<li><a target="_blank" rel="noopener" href="https://blog.csdn.net/wangdd_199326/article/details/90476728">https://blog.csdn.net/wangdd_199326/article/details/90476728</a></li>
+<li><a target="_blank" rel="noopener" href="https://zhuanlan.zhihu.com/p/74238082">https://zhuanlan.zhihu.com/p/74238082</a></li>
+<li><a target="_blank" rel="noopener" href="https://zhuanlan.zhihu.com/p/163104439">https://zhuanlan.zhihu.com/p/163104439</a></li>
+<li><a target="_blank" rel="noopener" href="https://blog.csdn.net/swingwang/article/details/72935461">https://blog.csdn.net/swingwang/article/details/72935461</a></li>
+</ul>
+</blockquote>
+<h3 id="转载请注明出处https-izsk-me"><a href="#转载请注明出处https-izsk-me" class="headerlink" title="转载请注明出处https://izsk.me"></a><strong>转载请注明出处<a target="_blank" rel="noopener" href="https://izsk.me/">https://izsk.me</a></strong></h3>
+      
+    </div>
+
+    <div>
+      
+        
+<div id="wechat_subscriber" style="display: block; padding: 10px 0; margin: 20px auto; width: 100%; text-align: center">
+    <img id="wechat_subscriber_qcode" src="/images/websitecode250.png" alt=" wechat" style="width: 200px; max-width: 100%;"/>
+    <div>Scan Me To Read on Phone</div>
+</div>
+
+
+      
+    </div>
+
+    <div>
+      
+        
+  <div style="padding: 10px 0; margin: 20px auto; width: 90%; text-align: center;">
+    <div>I know you won't do this,but what if you did?</div>
+    <button id="rewardButton" disable="enable" onclick="var qr = document.getElementById('QR'); if (qr.style.display === 'none') {qr.style.display='block';} else {qr.style.display='none'}">
+      <span>赏</span>
+    </button>
+    <div id="QR" style="display: none;">
+      
+        <div id="wechat" style="display: inline-block">
+          <img id="wechat_qr" src="/images/wechatpayme.png" alt=" WeChat Pay"/>
+          <p>微信打赏</p>
+        </div>
+      
+      
+        <div id="alipay" style="display: inline-block">
+          <img id="alipay_qr" src="/images/alipayme.jpg" alt=" Alipay"/>
+          <p>支付宝打赏</p>
+        </div>
+      
     </div>
   </div>
 
-{% endblock %}
 
-{% block sidebar %}
-  {{ sidebar_template.render(true) }}
-{% endblock %}
+      
+    </div>
 
 
-{% block script_extra %}
-  {% include '_scripts/pages/post-details.swig' %}
-{% endblock %}
+    <footer class="post-footer">
+      
+        <div class="post-tags">
+          
+            <a href="/tags/Kubernetes/" rel="tag"># Kubernetes</a>
+          
+        </div>
+      
+
+      
+        <div class="post-nav">
+          <div class="post-nav-next post-nav-item">
+            
+              <a href="/2021/07/05/Kubernetes-Infinitband-SRIOV-network-3-erros/" rel="next" title="Kubernetes学习(k8s基于InfiniBand实现HPC高性能容器网络组网方案实践三)">
+                <i class="fa fa-chevron-left"></i> Kubernetes学习(k8s基于InfiniBand实现HPC高性能容器网络组网方案实践三)
+              </a>
+            
+          </div>
+
+          <span class="post-nav-divider"></span>
+
+          <div class="post-nav-prev post-nav-item">
+            
+              <a href="/2021/07/07/Kubernetes-kubebatch-plugin-nodeorder/" rel="prev" title="Kube-batch学习(nodeorder插件使用)">
+                Kube-batch学习(nodeorder插件使用) <i class="fa fa-chevron-right"></i>
+              </a>
+            
+          </div>
+        </div>
+      
+
+      
+      
+    </footer>
+  </article>
+
+
+
+    <div class="post-spread">
+      
+    </div>
+  </div>
+
+
+          </div>
+          
+
+
+          
+  <div class="comments" id="comments">
+    
+  </div>
+
+
+        </div>
+        
+          
+  
+  <div class="sidebar-toggle">
+    <div class="sidebar-toggle-line-wrap">
+      <span class="sidebar-toggle-line sidebar-toggle-line-first"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-middle"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-last"></span>
+    </div>
+  </div>
+
+  <aside id="sidebar" class="sidebar">
+    <div class="sidebar-inner">
+
+      
+
+      
+        <ul class="sidebar-nav motion-element">
+          <li class="sidebar-nav-toc sidebar-nav-active" data-target="post-toc-wrap" >
+            文章目录
+          </li>
+          <li class="sidebar-nav-overview" data-target="site-overview">
+            站点概览
+          </li>
+        </ul>
+      
+
+      <section class="site-overview sidebar-panel">
+        <div class="site-author motion-element" itemprop="author" itemscope itemtype="http://schema.org/Person">
+          <img class="site-author-image" itemprop="image"
+               src="/images/avatar.gif"
+               alt="" />
+          <p class="site-author-name" itemprop="name"></p>
+          <p class="site-description motion-element" itemprop="description"></p>
+        </div>
+        <nav class="site-state motion-element">
+        
+          
+            <div class="site-state-item site-state-posts">
+              <a href="/archives">
+                <span class="site-state-item-count">192</span>
+                <span class="site-state-item-name">日志</span>
+              </a>
+            </div>
+          
+
+          
+            <div class="site-state-item site-state-categories">
+              <a href="/categories">
+                <span class="site-state-item-count">14</span>
+                <span class="site-state-item-name">分类</span>
+              </a>
+            </div>
+          
+
+          
+            <div class="site-state-item site-state-tags">
+              <a href="/tags">
+                <span class="site-state-item-count">14</span>
+                <span class="site-state-item-name">标签</span>
+              </a>
+            </div>
+          
+
+        </nav>
+
+        
+
+        <div class="links-of-author motion-element">
+          
+        </div>
+
+        
+        
+
+        
+        
+
+        
+
+
+      </section>
+
+      
+      <!--noindex-->
+        <section class="post-toc-wrap motion-element sidebar-panel sidebar-panel-active">
+          <div class="post-toc">
+
+            
+              
+            
+
+            
+              <div class="post-toc-content"><ol class="nav"><li class="nav-item nav-level-3"><a class="nav-link" href="#Infinitband"><span class="nav-number">1.</span> <span class="nav-text">Infinitband</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#SR-IOV"><span class="nav-number">2.</span> <span class="nav-text">SR-IOV</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#sriov-network-cni"><span class="nav-number">3.</span> <span class="nav-text">sriov-network-cni</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#sriov-network-device-plugin"><span class="nav-number">4.</span> <span class="nav-text">sriov-network-device-plugin</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#sriov-network-operator"><span class="nav-number">5.</span> <span class="nav-text">sriov-network-operator</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#multus"><span class="nav-number">6.</span> <span class="nav-text">multus</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#whereabouts"><span class="nav-number">7.</span> <span class="nav-text">whereabouts</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E5%8F%82%E8%80%83%E6%96%87%E7%AB%A0"><span class="nav-number">8.</span> <span class="nav-text">参考文章:</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E8%BD%AC%E8%BD%BD%E8%AF%B7%E6%B3%A8%E6%98%8E%E5%87%BA%E5%A4%84https-izsk-me"><span class="nav-number">9.</span> <span class="nav-text">转载请注明出处https:&#x2F;&#x2F;izsk.me</span></a></li></ol></div>
+            
+
+          </div>
+        </section>
+      <!--/noindex-->
+      
+
+    </div>
+  </aside>
+
+
+        
+      </div>
+    </main>
+
+    <footer id="footer" class="footer">
+      <div class="footer-inner">
+        <div class="copyright" >
+  
+  &copy; 
+  <span itemprop="copyrightYear">2022</span>
+  <span class="with-love">
+    <i class="fa fa-heart"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">Z.S.K.</span>
+</div>
+
+
+<div class="powered-by">
+  Supported by <a class="theme-link" target="_blank" rel="noopener" href="https://hexo.io">Hexo</a>
+</div>
+
+<div class="theme-info">
+  Theme -
+  <a class="theme-link" target="_blank" rel="noopener" href="https://github.com/iissnan/hexo-theme-next">
+    NexT.Mist
+  </a>
+</div>
+
+
+        
+
+        
+      </div>
+    </footer>
+
+    <div class="back-to-top">
+      <i class="fa fa-arrow-up"></i>
+    </div>
+  </div>
+
+  
+
+<script type="text/javascript">
+  if (Object.prototype.toString.call(window.Promise) !== '[object Function]') {
+    window.Promise = null;
+  }
+</script>
+
+
+
+
+
+
+
+
+
+  
+
+
+
+  
+  <script type="text/javascript" src="/lib/jquery/index.js?v=2.1.3"></script>
+
+  
+  <script type="text/javascript" src="/lib/fastclick/lib/fastclick.min.js?v=1.0.6"></script>
+
+  
+  <script type="text/javascript" src="/lib/jquery_lazyload/jquery.lazyload.js?v=1.9.7"></script>
+
+  
+  <script type="text/javascript" src="/lib/velocity/velocity.min.js?v=1.2.1"></script>
+
+  
+  <script type="text/javascript" src="/lib/velocity/velocity.ui.min.js?v=1.2.1"></script>
+
+  
+  <script type="text/javascript" src="/lib/fancybox/source/jquery.fancybox.pack.js?v=2.1.5"></script>
+
+
+  
+
+
+  <script type="text/javascript" src="/js/src/utils.js?v=5.1.0"></script>
+
+  <script type="text/javascript" src="/js/src/motion.js?v=5.1.0"></script>
+
+
+
+  
+  
+
+  
+  <script type="text/javascript" src="/js/src/scrollspy.js?v=5.1.0"></script>
+<script type="text/javascript" src="/js/src/post-details.js?v=5.1.0"></script>
+
+
+
+  
+
+
+  <script type="text/javascript" src="/js/src/bootstrap.js?v=5.1.0"></script>
+
+
+
+  
+
+
+
+  
+
+
+
+
+	
+
+
+
+
+
+  
+
+
+
+
+  
+  
+  <script type="text/javascript">
+    // Popup Window;
+    var isfetched = false;
+    // Search DB path;
+    var search_path = "search.xml";
+    if (search_path.length == 0) {
+      search_path = "search.xml";
+    }
+    var path = "/" + search_path;
+    // monitor main search box;
+
+    function proceedsearch() {
+      $("body").append('<div class="popoverlay">').css('overflow', 'hidden');
+      $('.popup').toggle();
+    }
+    // search function;
+    var searchFunc = function(path, search_id, content_id) {
+      'use strict';
+      $.ajax({
+        url: path,
+        dataType: "xml",
+        async: true,
+        success: function( xmlResponse ) {
+          // get the contents from search data
+          isfetched = true;
+          $('.popup').detach().appendTo('.header-inner');
+          var datas = $( "entry", xmlResponse ).map(function() {
+            return {
+              title: $( "title", this ).text(),
+              content: $("content",this).text(),
+              url: $( "url" , this).text()
+            };
+          }).get();
+          var $input = document.getElementById(search_id);
+          var $resultContent = document.getElementById(content_id);
+          $input.addEventListener('input', function(){
+            var matchcounts = 0;
+            var str='<ul class=\"search-result-list\">';
+            var keywords = this.value.trim().toLowerCase().split(/[\s\-]+/);
+            $resultContent.innerHTML = "";
+            if (this.value.trim().length > 1) {
+              // perform local searching
+              datas.forEach(function(data) {
+                var isMatch = false;
+                var content_index = [];
+                var data_title = data.title.trim().toLowerCase();
+                var data_content = data.content.trim().replace(/<[^>]+>/g,"").toLowerCase();
+                var data_url = decodeURIComponent(data.url);
+                var index_title = -1;
+                var index_content = -1;
+                var first_occur = -1;
+                // only match artiles with not empty titles and contents
+                if(data_title != '') {
+                  keywords.forEach(function(keyword, i) {
+                    index_title = data_title.indexOf(keyword);
+                    index_content = data_content.indexOf(keyword);
+                    if( index_title >= 0 || index_content >= 0 ){
+                      isMatch = true;
+                      if (i == 0) {
+                        first_occur = index_content;
+                      }
+                    }
+
+                  });
+                }
+                // show search results
+                if (isMatch) {
+                  matchcounts += 1;
+                  str += "<li><a href='"+ data_url +"' class='search-result-title'>"+ data_title +"</a>";
+                  var content = data.content.trim().replace(/<[^>]+>/g,"");
+                  if (first_occur >= 0) {
+                    // cut out 100 characters
+                    var start = first_occur - 20;
+                    var end = first_occur + 80;
+                    if(start < 0){
+                      start = 0;
+                    }
+                    if(start == 0){
+                      end = 50;
+                    }
+                    if(end > content.length){
+                      end = content.length;
+                    }
+                    var match_content = content.substring(start, end);
+                    // highlight all keywords
+                    keywords.forEach(function(keyword){
+                      var regS = new RegExp(keyword, "gi");
+                      match_content = match_content.replace(regS, "<b class=\"search-keyword\">"+keyword+"</b>");
+                    });
+
+                    str += "<p class=\"search-result\">" + match_content +"...</p>"
+                  }
+                  str += "</li>";
+                }
+              })};
+            str += "</ul>";
+            if (matchcounts == 0) { str = '<div id="no-result"><i class="fa fa-frown-o fa-5x" /></div>' }
+            if (keywords == "") { str = '<div id="no-result"><i class="fa fa-search fa-5x" /></div>' }
+            $resultContent.innerHTML = str;
+          });
+          proceedsearch();
+        }
+      });}
+
+    // handle and trigger popup window;
+    $('.popup-trigger').click(function(e) {
+      e.stopPropagation();
+      if (isfetched == false) {
+        searchFunc(path, 'local-search-input', 'local-search-result');
+      } else {
+        proceedsearch();
+      };
+    });
+
+    $('.popup-btn-close').click(function(e){
+      $('.popup').hide();
+      $(".popoverlay").remove();
+      $('body').css('overflow', '');
+    });
+    $('.popup').click(function(e){
+      e.stopPropagation();
+    });
+  </script>
+
+
+  
+
+  
+
+  
+
+  
+
+
+</body>
+</html>

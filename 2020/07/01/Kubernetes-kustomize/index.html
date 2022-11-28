@@ -1,38 +1,1004 @@
-{% extends '_layout.swig' %}
-{% import '_macro/post.swig' as post_template %}
-{% import '_macro/sidebar.swig' as sidebar_template %}
+<!doctype html>
 
 
-{% block title %} {{ page.title }} | {{ config.title }} {% endblock %}
 
-{% block page_class %}page-post-detail{% endblock %}
+  
 
 
-{% block content %}
+<html class="theme-next mist use-motion" lang="zh-Hans">
+<head>
+  <meta charset="UTF-8"/>
+<meta http-equiv="X-UA-Compatible" content="IE=edge" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1"/>
+
+
+
+<meta http-equiv="Cache-Control" content="no-transform" />
+<meta http-equiv="Cache-Control" content="no-siteapp" />
+
+
+
+
+
+
+
+
+
+
+
+
+  
+  
+  <link href="/lib/fancybox/source/jquery.fancybox.css?v=2.1.5" rel="stylesheet" type="text/css" />
+
+
+
+
+  
+  
+  
+  
+
+  
+    
+    
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+    
+    
+    <link href="//fonts.googleapis.com/css?family=Lato:300,300italic,400,400italic,700,700italic&subset=latin,latin-ext" rel="stylesheet" type="text/css">
+  
+
+
+
+
+
+
+<link href="/lib/font-awesome/css/font-awesome.min.css?v=4.6.2" rel="stylesheet" type="text/css" />
+
+<link href="/css/main.css?v=5.1.0" rel="stylesheet" type="text/css" />
+
+
+  <meta name="keywords" content="Kubernetes," />
+
+
+
+
+
+
+
+
+  <link rel="shortcut icon" type="image/x-icon" href="/favicon.ico?v=5.1.0" />
+
+
+
+
+
+
+<meta name="description" content="最近在思考作为一个小团队来说，在没有配置管理平台的情况下怎么样的配置管理才能更好地支持多个Kubernetes环境的差异呢, 大多数的人跟我的反应一样, 使用Helm, 这也是我一直的想法，Helm对于复杂的应用来说，其实比较实用，特别是在Helm3去除了Tiller之后，可是业务中的应用基本都属于轻应用，有更优的解决方案吗?">
+<meta property="og:type" content="article">
+<meta property="og:title" content="Kubernetes学习(使用kustomize实现不同环境的配置派生)">
+<meta property="og:url" content="https://zhoushuke.github.io/2020/07/01/Kubernetes-kustomize/index.html">
+<meta property="og:site_name" content="Z.S.K.&#39;s Records">
+<meta property="og:description" content="最近在思考作为一个小团队来说，在没有配置管理平台的情况下怎么样的配置管理才能更好地支持多个Kubernetes环境的差异呢, 大多数的人跟我的反应一样, 使用Helm, 这也是我一直的想法，Helm对于复杂的应用来说，其实比较实用，特别是在Helm3去除了Tiller之后，可是业务中的应用基本都属于轻应用，有更优的解决方案吗?">
+<meta property="og:locale">
+<meta property="og:image" content="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20200701133434.png">
+<meta property="og:image" content="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20200701133953.png">
+<meta property="article:published_time" content="2020-07-01T07:10:53.000Z">
+<meta property="article:modified_time" content="2022-07-19T03:16:00.983Z">
+<meta property="article:author" content="Z.S.K.">
+<meta property="article:tag" content="Kubernetes">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:image" content="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20200701133434.png">
+
+
+
+<script type="text/javascript" id="hexo.configurations">
+  var NexT = window.NexT || {};
+  var CONFIG = {
+    root: '',
+    scheme: 'Mist',
+    sidebar: {"position":"left","display":"post"},
+    fancybox: true,
+    motion: true,
+    duoshuo: {
+      userId: 'undefined',
+      author: '博主'
+    },
+    algolia: {
+      applicationID: '',
+      apiKey: '',
+      indexName: '',
+      hits: {"per_page":10},
+      labels: {"input_placeholder":"Search for Posts","hits_empty":"We didn't find any results for the search: ${query}","hits_stats":"${hits} results found in ${time} ms"}
+    }
+  };
+</script>
+
+
+
+  <link rel="canonical" href="https://zhoushuke.github.io/2020/07/01/Kubernetes-kustomize/"/>
+
+
+
+
+
+  <title> Kubernetes学习(使用kustomize实现不同环境的配置派生) | Z.S.K.'s Records </title>
+<meta name="generator" content="Hexo 6.2.0"></head>
+
+<body itemscope itemtype="http://schema.org/WebPage" lang="zh-Hans">
+
+  
+
+
+
+
+
+
+
+
+
+
+  
+  
+    
+  
+
+  <div class="container one-collumn sidebar-position-left page-post-detail ">
+    <div class="headband"></div>
+
+    <header id="header" class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-meta ">
+  
+
+  <div class="custom-logo-site-title">
+    <a href="/"  class="brand" rel="start">
+      <span class="logo-line-before"><i></i></span>
+      <span class="site-title">Z.S.K.'s Records</span>
+      <span class="logo-line-after"><i></i></span>
+    </a>
+  </div>
+    
+      <p class="site-subtitle"></p>
+    
+</div>
+
+<div class="site-nav-toggle">
+  <button>
+    <span class="btn-bar"></span>
+    <span class="btn-bar"></span>
+    <span class="btn-bar"></span>
+  </button>
+</div>
+
+<nav class="site-nav">
+  
+
+  
+    <ul id="menu" class="menu">
+      
+        
+        <li class="menu-item menu-item-home">
+          <a href="/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-home"></i> <br />
+            
+            首页
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-categories">
+          <a href="/categories" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-th"></i> <br />
+            
+            分类
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-about">
+          <a href="/about/ZSK-Profile.pdf" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-user"></i> <br />
+            
+            简历
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-archives">
+          <a href="/archives" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-archive"></i> <br />
+            
+            归档
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-tags">
+          <a href="/tags" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-tags"></i> <br />
+            
+            标签
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-commonweal">
+          <a href="/404.html" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-heartbeat"></i> <br />
+            
+            公益404
+          </a>
+        </li>
+      
+
+      
+        <li class="menu-item menu-item-search">
+          
+            <a href="javascript:;" class="popup-trigger">
+          
+            
+              <i class="menu-item-icon fa fa-search fa-fw"></i> <br />
+            
+            搜索
+          </a>
+        </li>
+      
+    </ul>
+  
+
+  
+    <div class="site-search">
+      
+  <div class="popup">
+ <span class="search-icon fa fa-search"></span>
+ <input type="text" id="local-search-input">
+ <div id="local-search-result"></div>
+ <span class="popup-btn-close">close</span>
+</div>
+
+
+    </div>
+  
+</nav>
+
+
+
+ </div>
+    </header>
+
+    <main id="main" class="main">
+      <div class="main-inner">
+        <div class="content-wrap">
+          <div id="content" class="content">
+            
 
   <div id="posts" class="posts-expand">
-    {{ post_template.render(page) }}
+    
 
-    <div class="post-spread">
-      {% if theme.jiathis %}
-        {% include '_partials/share/jiathis.swig' %}
-      {% elseif theme.baidushare %}
-        {% include '_partials/share/baidushare.swig' %}
-      {% elseif theme.add_this_id %}
-        {% include '_partials/share/add-this.swig' %}
-      {% elseif theme.duoshuo_shortname and theme.duoshuo_share %}
-        {% include '_partials/share/duoshuo_share.swig' %}
-      {% endif %}
+  
+
+  
+  
+  
+
+  <article class="post post-type-normal " itemscope itemtype="http://schema.org/Article">
+  <link itemprop="mainEntityOfPage" href="https://zhoushuke.github.io/2020/07/01/Kubernetes-kustomize/">
+
+  <span style="display:none" itemprop="author" itemscope itemtype="http://schema.org/Person">
+    <meta itemprop="name" content="">
+    <meta itemprop="description" content="">
+    <meta itemprop="image" content="/images/avatar.gif">
+  </span>
+
+  <span style="display:none" itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+    <meta itemprop="name" content="Z.S.K.'s Records">
+    <span style="display:none" itemprop="logo" itemscope itemtype="http://schema.org/ImageObject">
+      <img style="display:none;" itemprop="url image" alt="Z.S.K.'s Records" src="">
+    </span>
+  </span>
+
+    
+      <header class="post-header">
+
+        
+        
+          <h1 class="post-title" itemprop="name headline">
+            
+            
+              
+                Kubernetes学习(使用kustomize实现不同环境的配置派生)
+              
+            
+          </h1>
+        
+
+        <div class="post-meta">
+          <span class="post-time">
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">发表于</span>
+              
+              <time title="Post created" itemprop="dateCreated datePublished" datetime="2020-07-01T15:10:53+08:00">
+                2020-07-01
+              </time>
+            
+
+            
+
+            
+          </span>
+
+          
+            <span class="post-category" >
+            
+              <span class="post-meta-divider">|</span>
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-folder-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">分类于</span>
+              
+              
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/Kubernetes/" itemprop="url" rel="index">
+                    <span itemprop="name">Kubernetes</span>
+                  </a>
+                </span>
+
+                
+                
+              
+            </span>
+          
+
+          
+            
+          
+
+          
+
+          
+          
+
+          
+
+          
+
+        </div>
+      </header>
+    
+
+
+    <div class="post-body" itemprop="articleBody">
+
+      
+      
+
+      
+        <p>最近在思考作为一个小团队来说，在没有配置管理平台的情况下怎么样的配置管理才能更好地支持多个Kubernetes环境的差异呢, 大多数的人跟我的反应一样, 使用Helm, 这也是我一直的想法，Helm对于复杂的应用来说，其实比较实用，特别是在Helm3去除了Tiller之后，可是业务中的应用基本都属于轻应用，有更优的解决方案吗?</p>
+<span id="more"></span>
+
+
+
+<p>直到我看到了kustomize，不得不说， 现在K8s都1.18的版本了， 在1.14的时候kustomize就被直接整合在kubectl里，然而，我却从来都没关注过.</p>
+<h3 id="简介"><a href="#简介" class="headerlink" title="简介"></a>简介</h3><p>官方的描述:</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">Kubernetes native configuration management</span><br><span class="line">Kustomize introduces a template-free way to customize application configuration that simplifies the use of off-the-shelf applications. Now, built into kubectl as apply -k.</span><br></pre></td></tr></table></figure>
+
+<p>Kustomize 允许用户以一个应用描述文件 （YAML 文件）为基础（Base YAML），然后通过 Overlay 的方式生成最终部署应用所需的描述文件，而不是像 Helm 那样只提供应用描述文件模板，然后通过字符替换（Templating）的方式来进行定制化</p>
+<p>既然有了helm，为何还需要kustomize，换句话说<strong>kustomize 解决了什么问题?</strong></p>
+<p>一般应用都会存在多套部署环境：开发环境、测试环境、生产环境，多套环境意味着存在多套 K8S 应用资源 YAML。而这么多套 YAML 之间只存在微小配置差异，比如镜像版本不同、Label 不同等，而这些不同环境下的YAML 经常会因为人为疏忽导致配置错误。再者，多套环境的 YAML 维护通常是通过把一个环境下的 YAML 拷贝出来然后对差异的地方进行修改。一些类似 Helm 等应用管理工具需要额外学习DSL 语法。总结以上，在 k8s 环境下存在多套环境的应用，经常遇到以下几个问题：</p>
+<ul>
+<li>如何管理不同环境或不同团队的应用的 Kubernetes YAML 资源</li>
+<li>如何以某种方式管理不同环境的微小差异，使得资源配置可以复用，减少 copy and change 的工作量</li>
+<li>如何简化维护应用的流程，<strong>不需要额外学习模板语法</strong></li>
+</ul>
+<p>Kustomize 通过以下几种方式解决了上述问题：</p>
+<ul>
+<li>kustomize 通过 Base &amp; Overlays 方式(下文会说明)方式维护不同环境的应用配置</li>
+<li>kustomize 使用 patch 方式复用 Base 配置，并在 Overlay 描述与 Base 应用配置的差异部分来实现资源复用</li>
+<li>kustomize 管理的都是 Kubernetes 原生 YAML 文件，不需要学习额外的 DSL 语法</li>
+</ul>
+<p>上面的表达引用自<a target="_blank" rel="noopener" href="https://zhuanlan.zhihu.com/p/92153378">kustomize最佳实践</a></p>
+<p>本人总结就是: <strong>不需要通过模板系统,以特定结构合并(更新)多种资源以支撑在多个环境中的部署，以消除差异.</strong></p>
+<h3 id="安装"><a href="#安装" class="headerlink" title="安装"></a>安装</h3><figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># mac</span></span><br><span class="line">brew install kustomize</span><br><span class="line"><span class="comment"># curl -s &quot;https://raw.githubusercontent.com/kubernetes-sigs/kustomize/master/hack/install_kustomize.sh&quot;  | bash</span></span><br></pre></td></tr></table></figure>
+
+
+
+<h3 id="使用"><a href="#使用" class="headerlink" title="使用"></a>使用</h3><p>kustomize的命令也比较简单, 最常用的就是下面两个命令:</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># 直接使用kustomize命令</span></span><br><span class="line">kustomize build ~/ldap/overlays/staging | kubectl apply -f -</span><br><span class="line"><span class="comment"># 在 kubernetes 1.14 版本， kustomize 已经集成到 kubectl 命令中，成为了其一个子命令，可使用 kubectl 来进行部署</span></span><br><span class="line">kubectl apply -k ~/ldap/overlays/staging</span><br></pre></td></tr></table></figure>
+
+
+
+<h3 id="术语"><a href="#术语" class="headerlink" title="术语"></a>术语</h3><p>kustomize中有几个常用的关键字术语，这里简单介绍一下，方便后续的使用</p>
+<ul>
+<li><strong>base</strong></li>
+</ul>
+<p>base 指的是一个 kustomization , 任何的 kustomization 包括 overlay (后面提到)，都可以作为另一个 kustomization 的 base (简单理解为基础目录)。base 中描述了共享的内容，如资源和常见的资源配置</p>
+<ul>
+<li><strong>overlay</strong></li>
+</ul>
+<p>overlay 是一个 kustomization, 它修改(并因此依赖于)另外一个 kustomization. overlay 中的 kustomization指的是一些其它的 kustomization, 称为其 base. 没有 base, overlay 无法使用，并且一个 overlay 可以用作 另一个 overlay 的 base(基础)。简而言之，overlay 声明了与 base 之间的差异。通过 overlay 来维护基于 base 的不同 variants(变体)，例如开发、QA 和生产环境的不同 variants</p>
+<ul>
+<li><strong>variant</strong></li>
+</ul>
+<p>variant 是在集群中将 overlay 应用于 base 的结果。例如开发和生产环境都修改了一些共同 base 以创建不同的 variant。这些 variant 使用相同的总体资源，并与简单的方式变化，例如 deployment 的副本数、ConfigMap使用的数据源等。简而言之，variant 是含有同一组 base 的不同 kustomization</p>
+<ul>
+<li><strong>patch</strong></li>
+</ul>
+<p>修改文件的一般说明。文件路径，指向一个声明了 kubernetes API patch 的 YAML 文件</p>
+<h3 id="workflows-工作流"><a href="#workflows-工作流" class="headerlink" title="workflows 工作流"></a>workflows 工作流</h3><p>kustomize 将对 Kubernetes 应用的管理转换成对 Kubernetes manifests YAML 文件的管理，而对应用的修改也通过 YAML 文件来修改。这种修改变更操作可以通过 Git 版本控制工具进行管理维护, 因此用户可以使用 Git 风格的流程来管理应用。 workflows 是使用并配置应用所使用的一系列 Git 风格流程步骤。官网提供了两种方式，一种是定制配置，另一种是现成配置</p>
+<h4 id="定制场景"><a href="#定制场景" class="headerlink" title="定制场景"></a>定制场景</h4><p><a target="_blank" rel="noopener" href="https://kubernetes-sigs.github.io/kustomize/guides/bespoke/">workflow</a>如下:</p>
+<p><img src="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20200701133434.png"></p>
+<h4 id="现成配置"><a href="#现成配置" class="headerlink" title="现成配置"></a>现成配置</h4><p>在这个工作流方式中，可从别人的 repo 中 fork kustomize 配置，并根据自己的需求来配置</p>
+<p><a target="_blank" rel="noopener" href="https://kubernetes-sigs.github.io/kustomize/guides/offtheshelf/">workflow</a>如下:</p>
+<p><img src="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20200701133953.png"></p>
+<p>流程非常地简洁，相信不需要过多解释， 个人觉得这两种方式除了源头上有区别外，在使用上没什么差别.</p>
+<h3 id="Case-Demo"><a href="#Case-Demo" class="headerlink" title="Case Demo"></a>Case Demo</h3><p>下面会通过一个小Demo来体验kustomize是如何工作的.</p>
+<h4 id="目录结构"><a href="#目录结构" class="headerlink" title="目录结构"></a>目录结构</h4><p>app-kustomize是一个代码git， 以golang为主，这里只列出了跟kustomize有关的文件,其它代码文档没有直接关系就先省略了.</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br></pre></td><td class="code"><pre><span class="line">app-kustomize</span><br><span class="line">	deploy</span><br><span class="line">		base</span><br><span class="line">			config.yaml</span><br><span class="line">			deployment.yaml</span><br><span class="line">			service.yaml</span><br><span class="line">			kustomization.yaml </span><br><span class="line">		overlay</span><br><span class="line">			1box</span><br><span class="line">				1box-custom-env.yaml</span><br><span class="line">				kustomization.yaml</span><br><span class="line">			prod</span><br><span class="line">				deployment-patch.yaml</span><br><span class="line">				kustomization.yaml</span><br></pre></td></tr></table></figure>
+
+<p>这里对上述的文件做个简要说明:</p>
+<p><code>base</code>翻译过来就是基础的意思， 里面的资源可以理解为默认的配置或者是基础配置</p>
+<p> <code>overlay</code>目录下则可以根据不同环境建立不同的文件夹, 比如我有一个测试环境,那么可以叫1box(这个名字随便), 还有一个生产环境，就叫prod, 这两个目录下都包含有<code>kustomeization.yaml</code>, 同时，两个目录下都可以通过<strong>打patch或者覆盖</strong>的方式来对base目录下对应的资源进行更新, 这也是overlay的由来.</p>
+<p>使用<code>kustomize build ~/ldap/overlays/1box</code>来生成合并后的整体配置文件</p>
+<p>再通过<code>kustomize build ~/ldap/overlays/1obx | kubectl apply -f -</code>进行发布到对应的环境中去</p>
+<p>当然,这个流程就可以跟CI&#x2F;CD进行结合使用了. 是不是非常简单.</p>
+<p>其它的配置文件不需要过多解释了.</p>
+<p><code>cat base/deployment.yaml</code></p>
+<figure class="highlight yaml"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br></pre></td><td class="code"><pre><span class="line"><span class="attr">apiVersion:</span> <span class="string">apps/v1</span></span><br><span class="line"><span class="attr">kind:</span> <span class="string">Deployment</span></span><br><span class="line"><span class="attr">metadata:</span></span><br><span class="line">  <span class="attr">name:</span> <span class="string">p-expoter-kustom</span></span><br><span class="line"><span class="attr">spec:</span></span><br><span class="line">  <span class="attr">replicas:</span> <span class="number">1</span></span><br><span class="line">  <span class="attr">template:</span></span><br><span class="line">    <span class="attr">spec:</span></span><br><span class="line">      <span class="attr">containers:</span></span><br><span class="line">      <span class="bullet">-</span> <span class="attr">args:</span></span><br><span class="line">        <span class="bullet">-</span> <span class="string">-TEST</span></span><br><span class="line">        <span class="bullet">-</span> <span class="string">&quot;789&quot;</span></span><br><span class="line">        <span class="attr">image:</span> <span class="string">localhost:5055/p-expoter:master-36cd406f</span></span><br><span class="line">        <span class="attr">imagePullPolicy:</span> <span class="string">IfNotPresent</span></span><br><span class="line">        <span class="attr">name:</span> <span class="string">p-expoter</span></span><br><span class="line">        <span class="attr">volumeMounts:</span></span><br><span class="line">        <span class="bullet">-</span> <span class="attr">mountPath:</span> <span class="string">&quot;/etc/config/config.yml&quot;</span></span><br><span class="line">          <span class="attr">name:</span> <span class="string">demo-config</span></span><br><span class="line">          <span class="attr">readOnly:</span> <span class="literal">true</span></span><br><span class="line">          <span class="attr">subPath:</span> <span class="string">config.yml</span></span><br><span class="line">      <span class="attr">imagePullSecrets:</span></span><br><span class="line">      <span class="bullet">-</span> <span class="attr">name:</span> <span class="string">realty</span></span><br><span class="line">      <span class="attr">volumes:</span></span><br><span class="line">      <span class="bullet">-</span> <span class="attr">secret:</span></span><br><span class="line">          <span class="attr">items:</span></span><br><span class="line">          <span class="bullet">-</span> <span class="attr">key:</span> <span class="string">alertmanager.yaml</span></span><br><span class="line">            <span class="attr">path:</span> <span class="string">config.yml</span></span><br><span class="line">          <span class="attr">secretName:</span> <span class="string">p-expoter-senserealty-cms</span></span><br><span class="line">        <span class="attr">name:</span> <span class="string">demo-config</span></span><br></pre></td></tr></table></figure>
+
+<p><code>cat base/service.yaml</code></p>
+<figure class="highlight yaml"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br></pre></td><td class="code"><pre><span class="line"><span class="attr">apiVersion:</span> <span class="string">v1</span></span><br><span class="line"><span class="attr">kind:</span> <span class="string">Service</span></span><br><span class="line"><span class="attr">metadata:</span></span><br><span class="line">  <span class="attr">name:</span> <span class="string">p-expoter</span></span><br><span class="line"><span class="attr">spec:</span></span><br><span class="line">  <span class="attr">ports:</span></span><br><span class="line">  <span class="bullet">-</span> <span class="attr">name:</span> <span class="string">http</span></span><br><span class="line">    <span class="attr">port:</span> <span class="number">80</span></span><br><span class="line">    <span class="attr">targetPort:</span> <span class="number">80</span></span><br><span class="line">  <span class="attr">type:</span> <span class="string">ClusterIP</span></span><br></pre></td></tr></table></figure>
+
+<p><code>cat config.yaml</code></p>
+<figure class="highlight yaml"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br></pre></td><td class="code"><pre><span class="line"><span class="attr">apiVersion:</span> <span class="string">secrets.mz.com/v1alpha1</span></span><br><span class="line"><span class="attr">kind:</span> <span class="string">ConfigMapSecret</span></span><br><span class="line"><span class="attr">metadata:</span></span><br><span class="line">  <span class="attr">name:</span> <span class="string">p-expoter-senserealty-cms</span></span><br><span class="line"><span class="attr">spec:</span></span><br><span class="line">  <span class="attr">template:</span></span><br><span class="line">    <span class="attr">metadata:</span></span><br><span class="line">      <span class="attr">name:</span> <span class="string">p-expoter-senserealty-cms</span> </span><br><span class="line">    <span class="attr">data:</span></span><br><span class="line">      <span class="attr">alertmanager.yaml:</span> <span class="string">|</span></span><br><span class="line"><span class="string">          global:</span></span><br><span class="line"><span class="string">            resolve_timeout: 5m</span></span><br><span class="line"><span class="string">            mongodb_password: $(MONGODB_PASSWORD)  # 在 Var中定义</span></span><br><span class="line"><span class="string">            redis_password: $(REDIS_PASSWORD)</span></span><br><span class="line"><span class="string">            # special_how: $(CONFIGMAP_HOW) </span></span><br><span class="line"><span class="string">            # special_type: $(CONFIGMAP_TYPE)</span></span><br><span class="line"><span class="string">          route:</span></span><br><span class="line"><span class="string">            receiver: default</span></span><br><span class="line"><span class="string">            group_by: [&quot;alertname&quot;, &quot;job&quot;, &quot;team&quot;]</span></span><br><span class="line"><span class="string">            group_wait: 30s</span></span><br><span class="line"><span class="string"></span>  <span class="attr">vars:</span></span><br><span class="line">    <span class="bullet">-</span> <span class="attr">name:</span> <span class="string">MONGODB_PASSWORD</span></span><br><span class="line">      <span class="attr">secretValue:</span> <span class="comment"># 引用secret </span></span><br><span class="line">        <span class="attr">name:</span> <span class="string">senserealty-secret-data</span> <span class="comment"># secret 名字</span></span><br><span class="line">        <span class="attr">key:</span> <span class="string">mongodb_password</span> <span class="comment"># secret key</span></span><br><span class="line">    <span class="bullet">-</span> <span class="attr">name:</span> <span class="string">REDIS_PASSWORD</span> </span><br><span class="line">      <span class="attr">secretValue:</span></span><br><span class="line">        <span class="attr">name:</span> <span class="string">senserealty-secret-data</span></span><br><span class="line">        <span class="attr">key:</span> <span class="string">redis_password</span></span><br><span class="line">    <span class="comment"># - name: CONFIGMAP_HOW # 引用configmap</span></span><br><span class="line">    <span class="comment">#   configMapValue:</span></span><br><span class="line">    <span class="comment">#     name: special-config-hmmg28f4kd</span></span><br><span class="line">    <span class="comment">#     key: special.how</span></span><br><span class="line">    <span class="comment"># - name: CONFIGMAP_TYPE</span></span><br><span class="line">    <span class="comment">#   configMapValue:</span></span><br><span class="line">    <span class="comment">#     name: special-config-hmmg28f4kd</span></span><br><span class="line">    <span class="comment">#     key: special.type</span></span><br></pre></td></tr></table></figure>
+
+<p>以上配置文件都是很常用的资源对象， 这里解释一下config.yaml并不是我们常用的configmap.yaml类型, 而是使用了CRD类型，主要是为了实现敏感信息的加密保存在git上.这块不是这篇post的重点,感兴趣的话, 大家可参考这篇<a target="_blank" rel="noopener" href="https://izsk.me/2020/06/28/Kubernetes-configmap-reference-var-from-secret/">post</a> ，目前可直接把这个当做为等同于configmap</p>
+<h4 id="kustomization-yaml"><a href="#kustomization-yaml" class="headerlink" title="kustomization.yaml"></a>kustomization.yaml</h4><p>可以发现在base目录或者是overlay目录下都有一个kustomization.yaml文件，该文件是kustomize的核心， 包含了需要部署的资源.</p>
+<p>当然它本身是有一定语法的, 详细的使用可参考<a target="_blank" rel="noopener" href="https://kubernetes-sigs.github.io/kustomize/api-reference/glossary/#kustomization">这里</a>，下面会挑选一些常用的配置来说明如何使用</p>
+<p><code>cat kustomization.yaml</code></p>
+<figure class="highlight yaml"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br></pre></td><td class="code"><pre><span class="line"><span class="attr">apiVersion:</span> <span class="string">kustomize.config.k8s.io/v1beta1</span></span><br><span class="line"><span class="attr">kind:</span> <span class="string">Kustomization</span></span><br><span class="line"></span><br><span class="line"><span class="attr">commonLabels:</span></span><br><span class="line">  <span class="attr">k8s-app:</span> <span class="string">p-expoter</span> <span class="comment"># 会在所有的资源对象上都会加上该label</span></span><br><span class="line"><span class="attr">namespace:</span> <span class="string">stage</span> <span class="comment"># 会在所有的资源对象上都指定该ns</span></span><br><span class="line"></span><br><span class="line"><span class="comment"># configMapGenerator:   # secretGenerator</span></span><br><span class="line"><span class="comment"># - name: special-config</span></span><br><span class="line"><span class="comment">#   files:</span></span><br><span class="line"><span class="comment">#     - configmap.yaml</span></span><br><span class="line"></span><br><span class="line"><span class="attr">resources:</span></span><br><span class="line">  <span class="bullet">-</span> <span class="string">config.yaml</span></span><br><span class="line">  <span class="bullet">-</span> <span class="string">service.yaml</span></span><br><span class="line">  <span class="bullet">-</span> <span class="string">deployment.yaml</span></span><br></pre></td></tr></table></figure>
+
+<h5 id="resources"><a href="#resources" class="headerlink" title="resources"></a>resources</h5><p>这个字段包含需要部署的资源文件， 这个应该很容易理解</p>
+<h5 id="commonLables-x2F-commonAnnotations"><a href="#commonLables-x2F-commonAnnotations" class="headerlink" title="commonLables&#x2F;commonAnnotations"></a>commonLables&#x2F;commonAnnotations</h5><p>指定了commonLables的话， 则会在所有的资源resources包含的对象上都会加上该label， 支持指定多个，这样就省去了对k8s的yaml中手工地指定lable</p>
+<p>commonAnnotations同理.</p>
+<h5 id="namespace"><a href="#namespace" class="headerlink" title="namespace"></a>namespace</h5><p>同上, </p>
+<h5 id="configMapGenerator-x2F-secretGenerator"><a href="#configMapGenerator-x2F-secretGenerator" class="headerlink" title="configMapGenerator&#x2F;secretGenerator"></a>configMapGenerator&#x2F;secretGenerator</h5><p>这两者具有相同的功能, 可以从文件中直接生成configmap或者是secret</p>
+<p>格式如上代码所示，这部分也会渲染到最终的yaml文件中， 因此，<strong>除了resources指定的资源外, 还能通过这种方式生成部署对象</strong></p>
+<h5 id="patchesStrategicMerge"><a href="#patchesStrategicMerge" class="headerlink" title="patchesStrategicMerge"></a>patchesStrategicMerge</h5><p>patchesStrategicMerge则主要是用于<strong>overlay下的kustomization.yaml中</strong>, 用于使用打patch的方式将该字段指定的文件合并到base目录下对应的内容上.</p>
+<p>比如, 现在需要1box环境中，在base声明的deployment.yaml的基础上，给<code>p-expoter</code>容器增加一个环境变量</p>
+<p>那么就新增overlay&#x2F;1box&#x2F;1box-custom-env.yaml</p>
+<figure class="highlight yaml"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br></pre></td><td class="code"><pre><span class="line"><span class="attr">apiVersion:</span> <span class="string">apps/v1</span></span><br><span class="line"><span class="attr">kind:</span> <span class="string">Deployment</span></span><br><span class="line"><span class="attr">metadata:</span></span><br><span class="line">  <span class="attr">name:</span> <span class="string">p-expoter-kustom</span></span><br><span class="line"><span class="attr">spec:</span></span><br><span class="line">  <span class="attr">template:</span></span><br><span class="line">    <span class="attr">spec:</span></span><br><span class="line">      <span class="attr">containers:</span></span><br><span class="line">        <span class="bullet">-</span> <span class="attr">args:</span></span><br><span class="line">          <span class="bullet">-</span> <span class="string">&quot;aaabbb&quot;</span></span><br><span class="line">          <span class="attr">name:</span> <span class="string">p-expoter</span> <span class="comment"># 由于env是在spec.template.containers下的, 因此需要保留这种树型的结构，同时容器的名字很重要，需要与base/deployment.yaml对应上，要不然，会出现env找不到容器，自然无法为对应容器添加成功.</span></span><br><span class="line">          <span class="attr">env:</span></span><br><span class="line">            <span class="bullet">-</span> <span class="attr">name:</span> <span class="string">CUSTOM_ENV_VARIABLE</span></span><br><span class="line">              <span class="attr">value:</span> <span class="string">&quot;Value defined by Kustomize&quot;</span></span><br></pre></td></tr></table></figure>
+
+<p><strong>这里需要注意的是，patch的字段都是通过Yaml的层及进行查询的, 所以要添加或者修改的东西一定要对应上层级，不然在base里是查找不到相应的字段的, 因此也无法修改, 但是不会报错</strong></p>
+<p><code>cat overlay/1box/kustomization.yaml</code></p>
+<figure class="highlight yaml"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br></pre></td><td class="code"><pre><span class="line"><span class="attr">apiVersion:</span> <span class="string">kustomize.config.k8s.io/v1beta1</span></span><br><span class="line"><span class="attr">kind:</span> <span class="string">Kustomization</span></span><br><span class="line"></span><br><span class="line"><span class="comment"># namePrefix: 1box # 所有的资源名称都会加上1box-</span></span><br><span class="line"></span><br><span class="line"><span class="comment"># replicas:  # 直接修改资源副本数</span></span><br><span class="line"><span class="comment"># - name: p-expoter-kustom</span></span><br><span class="line"><span class="comment">#   count: 2</span></span><br><span class="line"></span><br><span class="line"><span class="comment"># images:   # 直接修改镜像</span></span><br><span class="line"><span class="comment"># - name: localhost:5055/p-expoter:master-36cd406f  # name 为base/deployment中的镜像的名字</span></span><br><span class="line"><span class="comment">#   newName: p-expoter </span></span><br><span class="line"><span class="comment">#   newTag: alpine  # 最终会替换成 images: localhost:5055/p-expoter:alpine</span></span><br><span class="line"></span><br><span class="line"><span class="attr">bases:</span></span><br><span class="line"><span class="bullet">-</span> <span class="string">../../base</span></span><br><span class="line"></span><br><span class="line"><span class="attr">patchesStrategicMerge:</span></span><br><span class="line"><span class="bullet">-</span> <span class="string">1box-custom-env.yaml</span></span><br></pre></td></tr></table></figure>
+
+<p>以上的代码实现修改容器的启动参数, 同时为容器添加env的功能</p>
+<p>使用<code>kustomize build deploy/overlay/1box</code>会发现，p-expoter容器已经被加上了env环境变量了,<strong>而其它的部分保持不变</strong>.</p>
+<p>通过patchesStrategicMerge可以实现，<strong>如果指定的字段不存在,则进行添加， 如果存在，则进行覆盖的功能</strong></p>
+<p><strong>注意</strong>: 如果通过在<code>kustomization.yaml</code>修改了同时又使用<code>patchesStrategicMerge</code>进行了同一字段的修改,</p>
+<p>比如修改replicas,  如果在<code>kustomization.yaml中修改成了2， 在</code>patchesStrategicMerge&#96;又修改成了10</p>
+<p>结果以<code>kustomization.yaml</code>中的为准，也就是最终replicas &#x3D; 2</p>
+<h5 id="namePrefix-x2F-nameSuffix"><a href="#namePrefix-x2F-nameSuffix" class="headerlink" title="namePrefix&#x2F;nameSuffix"></a>namePrefix&#x2F;nameSuffix</h5><p>这两个实现给所有的资源的名字加上前缀或者后缀，以<code>-</code>进行隔离， 非常容易理解，主要用于overlay下</p>
+<p>常用的也就这些了，还有一些其它的配置就不一一介绍了，官网上都非常的详细.</p>
+<h4 id="部署"><a href="#部署" class="headerlink" title="部署"></a>部署</h4><p>通过上面的介绍，应该对kustomize有个初步的了解， 最后的工作就是根据不同的环境将资源发布到集群中</p>
+<figure class="highlight yaml"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line"><span class="string">kubectl</span> <span class="string">apply</span> <span class="string">-k</span> <span class="string">~/ldap/overlays/1box</span></span><br></pre></td></tr></table></figure>
+
+<p>注意:</p>
+<p>如果 <code>kubectl apply -k 出现error: rawResources failed to read Resources</code>的错误</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">error: rawResources failed to <span class="built_in">read</span> Resources: Load from path ../../base/ failed: <span class="string">&#x27;../../base/&#x27;</span> must be a file (got d=<span class="string">&#x27;/Users/zhoushuke/git_uni/gitlab.bj.sensetime.com/gitlabci-golang-demo/deploy/base&#x27;</span>)</span><br></pre></td></tr></table></figure>
+
+<p>出现这种情况是因为<code>kustomize</code>与<code>kubectl apply -k</code> 版本不匹配(kubectl的版本其实是跟着集群的版本走的, 而kustomize二进制可能不一定会对着kubectl的版本安装，有可能就直接安装了最新版本)</p>
+<p>可以使用<code>kustomiz build . | kubectl apply -f -</code></p>
+<p>另外一个情况下, <code>bases</code>已经在kustomize v2.1.0+ 版本中给去掉了,高版本的会直接将<code>bases</code>转换成<code>resources</code>，这个可以从渲染后的kustomization.yaml中看出</p>
+<h3 id="Helm-vs-kustomize"><a href="#Helm-vs-kustomize" class="headerlink" title="Helm vs kustomize"></a>Helm vs kustomize</h3><h4 id="Differences"><a href="#Differences" class="headerlink" title="Differences"></a>Differences</h4><p>Kustomize 自称因为去掉了模板语法，更易使用，对此我保留看法，如果仅就入门使用来看，二者差异并不大。</p>
+<p>Helm3也已经完全地抛弃了Tiller，在架构上更加的简洁， 因此在部署上，Kustomize 的优势也不是很大。</p>
+<p>我认为他们的区别主要在工作流程上：</p>
+<ul>
+<li>Helm 的基础流程比较<code>瀑布</code>：定义 Chart-&gt;填充-&gt;运行，在 Chart 中没有定义的内容是无法更改的；</li>
+<li>Kustomize 的用法比较<code>迭代</code>：Base 和 Overlay 都是可以独立运作的，增加新对象，或者对编写 Base 时未预料的内容进行变更，都不在话下</li>
+</ul>
+<h4 id="Choice"><a href="#Choice" class="headerlink" title="Choice"></a>Choice</h4><p>helm出现的时间较早, kubernetes开发&#x2F;运维大多数人或多或少都有过接触,kustomize在v1.14版本后默认集成到kubectl中大有后起之秀的能力，这两者如何选择呢?</p>
+<p>对于要公开发布一个较为复杂的应用，可能涉及较多的资源类型， 例如 <code>Istio</code>，编写良好的 Chart 能给用户很大帮助，用户在缺失一点发挥空间的情况下，通过对 <code>values.yaml</code> 的阅读，就能对这种复杂的部署产生一个较为深入的认识。</p>
+<p>如果是常见的业务应用，特别是在私有化部署场景中，这咱差异化并不是很大, 但是未必可以提前预料到变化，用 Kustomize 可能会是一个更好的选择，不过前提是需要有一点学习成本.</p>
+<p>由于Kubernetes直接把kustomize融合进了kubectl， 可见官方也是会大力推广这种声明式配置管理方式的. </p>
+<p>整体使用起来还是比较简单的, 对于小团队来说也是一个不错的选择</p>
+<h3 id="参考文章"><a href="#参考文章" class="headerlink" title="参考文章:"></a><strong>参考文章:</strong></h3><blockquote>
+<ul>
+<li><a target="_blank" rel="noopener" href="https://kubernetes-sigs.github.io/kustomize">https://kubernetes-sigs.github.io/kustomize</a></li>
+<li><a target="_blank" rel="noopener" href="https://github.com/kubernetes-sigs/kustomize">https://github.com/kubernetes-sigs/kustomize</a></li>
+<li><a target="_blank" rel="noopener" href="https://izsk.me/2020/06/28/Kubernetes-configmap-reference-var-from-secret/">https://izsk.me/2020/06/28/Kubernetes-configmap-reference-var-from-secret/</a></li>
+<li><a target="_blank" rel="noopener" href="https://kubernetes-sigs.github.io/kustomize/api-reference/glossary/#generator">https://kubernetes-sigs.github.io/kustomize/api-reference/glossary/#generator</a></li>
+<li><a target="_blank" rel="noopener" href="https://kubernetes-sigs.github.io/kustomize/guides/bespoke/">https://kubernetes-sigs.github.io/kustomize/guides/bespoke/</a></li>
+<li><a target="_blank" rel="noopener" href="https://blog.fleeto.us/post/crud-with-kustomize/">https://blog.fleeto.us/post/crud-with-kustomize/</a></li>
+<li><a target="_blank" rel="noopener" href="https://zhuanlan.zhihu.com/p/92153378">https://zhuanlan.zhihu.com/p/92153378</a></li>
+</ul>
+</blockquote>
+<h3 id="转载请注明出处https-izsk-me"><a href="#转载请注明出处https-izsk-me" class="headerlink" title="转载请注明出处https://izsk.me"></a><strong>转载请注明出处<a target="_blank" rel="noopener" href="https://izsk.me/">https://izsk.me</a></strong></h3>
+      
+    </div>
+
+    <div>
+      
+        
+<div id="wechat_subscriber" style="display: block; padding: 10px 0; margin: 20px auto; width: 100%; text-align: center">
+    <img id="wechat_subscriber_qcode" src="/images/websitecode250.png" alt=" wechat" style="width: 200px; max-width: 100%;"/>
+    <div>Scan Me To Read on Phone</div>
+</div>
+
+
+      
+    </div>
+
+    <div>
+      
+        
+  <div style="padding: 10px 0; margin: 20px auto; width: 90%; text-align: center;">
+    <div>I know you won't do this,but what if you did?</div>
+    <button id="rewardButton" disable="enable" onclick="var qr = document.getElementById('QR'); if (qr.style.display === 'none') {qr.style.display='block';} else {qr.style.display='none'}">
+      <span>赏</span>
+    </button>
+    <div id="QR" style="display: none;">
+      
+        <div id="wechat" style="display: inline-block">
+          <img id="wechat_qr" src="/images/wechatpayme.png" alt=" WeChat Pay"/>
+          <p>微信打赏</p>
+        </div>
+      
+      
+        <div id="alipay" style="display: inline-block">
+          <img id="alipay_qr" src="/images/alipayme.jpg" alt=" Alipay"/>
+          <p>支付宝打赏</p>
+        </div>
+      
     </div>
   </div>
 
-{% endblock %}
 
-{% block sidebar %}
-  {{ sidebar_template.render(true) }}
-{% endblock %}
+      
+    </div>
 
 
-{% block script_extra %}
-  {% include '_scripts/pages/post-details.swig' %}
-{% endblock %}
+    <footer class="post-footer">
+      
+        <div class="post-tags">
+          
+            <a href="/tags/Kubernetes/" rel="tag"># Kubernetes</a>
+          
+        </div>
+      
+
+      
+        <div class="post-nav">
+          <div class="post-nav-next post-nav-item">
+            
+              <a href="/2020/06/28/Kubernetes-configmap-reference-var-from-secret/" rel="next" title="Kubernetes学习(在configmap中引用secret)">
+                <i class="fa fa-chevron-left"></i> Kubernetes学习(在configmap中引用secret)
+              </a>
+            
+          </div>
+
+          <span class="post-nav-divider"></span>
+
+          <div class="post-nav-prev post-nav-item">
+            
+              <a href="/2020/07/05/gitlab-GitOps-pratice/" rel="prev" title="Gitlab学习(GitOps的最简实践)">
+                Gitlab学习(GitOps的最简实践) <i class="fa fa-chevron-right"></i>
+              </a>
+            
+          </div>
+        </div>
+      
+
+      
+      
+    </footer>
+  </article>
+
+
+
+    <div class="post-spread">
+      
+    </div>
+  </div>
+
+
+          </div>
+          
+
+
+          
+  <div class="comments" id="comments">
+    
+  </div>
+
+
+        </div>
+        
+          
+  
+  <div class="sidebar-toggle">
+    <div class="sidebar-toggle-line-wrap">
+      <span class="sidebar-toggle-line sidebar-toggle-line-first"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-middle"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-last"></span>
+    </div>
+  </div>
+
+  <aside id="sidebar" class="sidebar">
+    <div class="sidebar-inner">
+
+      
+
+      
+        <ul class="sidebar-nav motion-element">
+          <li class="sidebar-nav-toc sidebar-nav-active" data-target="post-toc-wrap" >
+            文章目录
+          </li>
+          <li class="sidebar-nav-overview" data-target="site-overview">
+            站点概览
+          </li>
+        </ul>
+      
+
+      <section class="site-overview sidebar-panel">
+        <div class="site-author motion-element" itemprop="author" itemscope itemtype="http://schema.org/Person">
+          <img class="site-author-image" itemprop="image"
+               src="/images/avatar.gif"
+               alt="" />
+          <p class="site-author-name" itemprop="name"></p>
+          <p class="site-description motion-element" itemprop="description"></p>
+        </div>
+        <nav class="site-state motion-element">
+        
+          
+            <div class="site-state-item site-state-posts">
+              <a href="/archives">
+                <span class="site-state-item-count">192</span>
+                <span class="site-state-item-name">日志</span>
+              </a>
+            </div>
+          
+
+          
+            <div class="site-state-item site-state-categories">
+              <a href="/categories">
+                <span class="site-state-item-count">14</span>
+                <span class="site-state-item-name">分类</span>
+              </a>
+            </div>
+          
+
+          
+            <div class="site-state-item site-state-tags">
+              <a href="/tags">
+                <span class="site-state-item-count">14</span>
+                <span class="site-state-item-name">标签</span>
+              </a>
+            </div>
+          
+
+        </nav>
+
+        
+
+        <div class="links-of-author motion-element">
+          
+        </div>
+
+        
+        
+
+        
+        
+
+        
+
+
+      </section>
+
+      
+      <!--noindex-->
+        <section class="post-toc-wrap motion-element sidebar-panel sidebar-panel-active">
+          <div class="post-toc">
+
+            
+              
+            
+
+            
+              <div class="post-toc-content"><ol class="nav"><li class="nav-item nav-level-3"><a class="nav-link" href="#%E7%AE%80%E4%BB%8B"><span class="nav-number">1.</span> <span class="nav-text">简介</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E5%AE%89%E8%A3%85"><span class="nav-number">2.</span> <span class="nav-text">安装</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E4%BD%BF%E7%94%A8"><span class="nav-number">3.</span> <span class="nav-text">使用</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E6%9C%AF%E8%AF%AD"><span class="nav-number">4.</span> <span class="nav-text">术语</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#workflows-%E5%B7%A5%E4%BD%9C%E6%B5%81"><span class="nav-number">5.</span> <span class="nav-text">workflows 工作流</span></a><ol class="nav-child"><li class="nav-item nav-level-4"><a class="nav-link" href="#%E5%AE%9A%E5%88%B6%E5%9C%BA%E6%99%AF"><span class="nav-number">5.1.</span> <span class="nav-text">定制场景</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#%E7%8E%B0%E6%88%90%E9%85%8D%E7%BD%AE"><span class="nav-number">5.2.</span> <span class="nav-text">现成配置</span></a></li></ol></li><li class="nav-item nav-level-3"><a class="nav-link" href="#Case-Demo"><span class="nav-number">6.</span> <span class="nav-text">Case Demo</span></a><ol class="nav-child"><li class="nav-item nav-level-4"><a class="nav-link" href="#%E7%9B%AE%E5%BD%95%E7%BB%93%E6%9E%84"><span class="nav-number">6.1.</span> <span class="nav-text">目录结构</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#kustomization-yaml"><span class="nav-number">6.2.</span> <span class="nav-text">kustomization.yaml</span></a><ol class="nav-child"><li class="nav-item nav-level-5"><a class="nav-link" href="#resources"><span class="nav-number">6.2.1.</span> <span class="nav-text">resources</span></a></li><li class="nav-item nav-level-5"><a class="nav-link" href="#commonLables-x2F-commonAnnotations"><span class="nav-number">6.2.2.</span> <span class="nav-text">commonLables&#x2F;commonAnnotations</span></a></li><li class="nav-item nav-level-5"><a class="nav-link" href="#namespace"><span class="nav-number">6.2.3.</span> <span class="nav-text">namespace</span></a></li><li class="nav-item nav-level-5"><a class="nav-link" href="#configMapGenerator-x2F-secretGenerator"><span class="nav-number">6.2.4.</span> <span class="nav-text">configMapGenerator&#x2F;secretGenerator</span></a></li><li class="nav-item nav-level-5"><a class="nav-link" href="#patchesStrategicMerge"><span class="nav-number">6.2.5.</span> <span class="nav-text">patchesStrategicMerge</span></a></li><li class="nav-item nav-level-5"><a class="nav-link" href="#namePrefix-x2F-nameSuffix"><span class="nav-number">6.2.6.</span> <span class="nav-text">namePrefix&#x2F;nameSuffix</span></a></li></ol></li><li class="nav-item nav-level-4"><a class="nav-link" href="#%E9%83%A8%E7%BD%B2"><span class="nav-number">6.3.</span> <span class="nav-text">部署</span></a></li></ol></li><li class="nav-item nav-level-3"><a class="nav-link" href="#Helm-vs-kustomize"><span class="nav-number">7.</span> <span class="nav-text">Helm vs kustomize</span></a><ol class="nav-child"><li class="nav-item nav-level-4"><a class="nav-link" href="#Differences"><span class="nav-number">7.1.</span> <span class="nav-text">Differences</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#Choice"><span class="nav-number">7.2.</span> <span class="nav-text">Choice</span></a></li></ol></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E5%8F%82%E8%80%83%E6%96%87%E7%AB%A0"><span class="nav-number">8.</span> <span class="nav-text">参考文章:</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E8%BD%AC%E8%BD%BD%E8%AF%B7%E6%B3%A8%E6%98%8E%E5%87%BA%E5%A4%84https-izsk-me"><span class="nav-number">9.</span> <span class="nav-text">转载请注明出处https:&#x2F;&#x2F;izsk.me</span></a></li></ol></div>
+            
+
+          </div>
+        </section>
+      <!--/noindex-->
+      
+
+    </div>
+  </aside>
+
+
+        
+      </div>
+    </main>
+
+    <footer id="footer" class="footer">
+      <div class="footer-inner">
+        <div class="copyright" >
+  
+  &copy; 
+  <span itemprop="copyrightYear">2022</span>
+  <span class="with-love">
+    <i class="fa fa-heart"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">Z.S.K.</span>
+</div>
+
+
+<div class="powered-by">
+  Supported by <a class="theme-link" target="_blank" rel="noopener" href="https://hexo.io">Hexo</a>
+</div>
+
+<div class="theme-info">
+  Theme -
+  <a class="theme-link" target="_blank" rel="noopener" href="https://github.com/iissnan/hexo-theme-next">
+    NexT.Mist
+  </a>
+</div>
+
+
+        
+
+        
+      </div>
+    </footer>
+
+    <div class="back-to-top">
+      <i class="fa fa-arrow-up"></i>
+    </div>
+  </div>
+
+  
+
+<script type="text/javascript">
+  if (Object.prototype.toString.call(window.Promise) !== '[object Function]') {
+    window.Promise = null;
+  }
+</script>
+
+
+
+
+
+
+
+
+
+  
+
+
+
+  
+  <script type="text/javascript" src="/lib/jquery/index.js?v=2.1.3"></script>
+
+  
+  <script type="text/javascript" src="/lib/fastclick/lib/fastclick.min.js?v=1.0.6"></script>
+
+  
+  <script type="text/javascript" src="/lib/jquery_lazyload/jquery.lazyload.js?v=1.9.7"></script>
+
+  
+  <script type="text/javascript" src="/lib/velocity/velocity.min.js?v=1.2.1"></script>
+
+  
+  <script type="text/javascript" src="/lib/velocity/velocity.ui.min.js?v=1.2.1"></script>
+
+  
+  <script type="text/javascript" src="/lib/fancybox/source/jquery.fancybox.pack.js?v=2.1.5"></script>
+
+
+  
+
+
+  <script type="text/javascript" src="/js/src/utils.js?v=5.1.0"></script>
+
+  <script type="text/javascript" src="/js/src/motion.js?v=5.1.0"></script>
+
+
+
+  
+  
+
+  
+  <script type="text/javascript" src="/js/src/scrollspy.js?v=5.1.0"></script>
+<script type="text/javascript" src="/js/src/post-details.js?v=5.1.0"></script>
+
+
+
+  
+
+
+  <script type="text/javascript" src="/js/src/bootstrap.js?v=5.1.0"></script>
+
+
+
+  
+
+
+
+  
+
+
+
+
+	
+
+
+
+
+
+  
+
+
+
+
+  
+  
+  <script type="text/javascript">
+    // Popup Window;
+    var isfetched = false;
+    // Search DB path;
+    var search_path = "search.xml";
+    if (search_path.length == 0) {
+      search_path = "search.xml";
+    }
+    var path = "/" + search_path;
+    // monitor main search box;
+
+    function proceedsearch() {
+      $("body").append('<div class="popoverlay">').css('overflow', 'hidden');
+      $('.popup').toggle();
+    }
+    // search function;
+    var searchFunc = function(path, search_id, content_id) {
+      'use strict';
+      $.ajax({
+        url: path,
+        dataType: "xml",
+        async: true,
+        success: function( xmlResponse ) {
+          // get the contents from search data
+          isfetched = true;
+          $('.popup').detach().appendTo('.header-inner');
+          var datas = $( "entry", xmlResponse ).map(function() {
+            return {
+              title: $( "title", this ).text(),
+              content: $("content",this).text(),
+              url: $( "url" , this).text()
+            };
+          }).get();
+          var $input = document.getElementById(search_id);
+          var $resultContent = document.getElementById(content_id);
+          $input.addEventListener('input', function(){
+            var matchcounts = 0;
+            var str='<ul class=\"search-result-list\">';
+            var keywords = this.value.trim().toLowerCase().split(/[\s\-]+/);
+            $resultContent.innerHTML = "";
+            if (this.value.trim().length > 1) {
+              // perform local searching
+              datas.forEach(function(data) {
+                var isMatch = false;
+                var content_index = [];
+                var data_title = data.title.trim().toLowerCase();
+                var data_content = data.content.trim().replace(/<[^>]+>/g,"").toLowerCase();
+                var data_url = decodeURIComponent(data.url);
+                var index_title = -1;
+                var index_content = -1;
+                var first_occur = -1;
+                // only match artiles with not empty titles and contents
+                if(data_title != '') {
+                  keywords.forEach(function(keyword, i) {
+                    index_title = data_title.indexOf(keyword);
+                    index_content = data_content.indexOf(keyword);
+                    if( index_title >= 0 || index_content >= 0 ){
+                      isMatch = true;
+                      if (i == 0) {
+                        first_occur = index_content;
+                      }
+                    }
+
+                  });
+                }
+                // show search results
+                if (isMatch) {
+                  matchcounts += 1;
+                  str += "<li><a href='"+ data_url +"' class='search-result-title'>"+ data_title +"</a>";
+                  var content = data.content.trim().replace(/<[^>]+>/g,"");
+                  if (first_occur >= 0) {
+                    // cut out 100 characters
+                    var start = first_occur - 20;
+                    var end = first_occur + 80;
+                    if(start < 0){
+                      start = 0;
+                    }
+                    if(start == 0){
+                      end = 50;
+                    }
+                    if(end > content.length){
+                      end = content.length;
+                    }
+                    var match_content = content.substring(start, end);
+                    // highlight all keywords
+                    keywords.forEach(function(keyword){
+                      var regS = new RegExp(keyword, "gi");
+                      match_content = match_content.replace(regS, "<b class=\"search-keyword\">"+keyword+"</b>");
+                    });
+
+                    str += "<p class=\"search-result\">" + match_content +"...</p>"
+                  }
+                  str += "</li>";
+                }
+              })};
+            str += "</ul>";
+            if (matchcounts == 0) { str = '<div id="no-result"><i class="fa fa-frown-o fa-5x" /></div>' }
+            if (keywords == "") { str = '<div id="no-result"><i class="fa fa-search fa-5x" /></div>' }
+            $resultContent.innerHTML = str;
+          });
+          proceedsearch();
+        }
+      });}
+
+    // handle and trigger popup window;
+    $('.popup-trigger').click(function(e) {
+      e.stopPropagation();
+      if (isfetched == false) {
+        searchFunc(path, 'local-search-input', 'local-search-result');
+      } else {
+        proceedsearch();
+      };
+    });
+
+    $('.popup-btn-close').click(function(e){
+      $('.popup').hide();
+      $(".popoverlay").remove();
+      $('body').css('overflow', '');
+    });
+    $('.popup').click(function(e){
+      e.stopPropagation();
+    });
+  </script>
+
+
+  
+
+  
+
+  
+
+  
+
+
+</body>
+</html>

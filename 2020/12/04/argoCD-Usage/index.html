@@ -1,38 +1,974 @@
-{% extends '_layout.swig' %}
-{% import '_macro/post.swig' as post_template %}
-{% import '_macro/sidebar.swig' as sidebar_template %}
+<!doctype html>
 
 
-{% block title %} {{ page.title }} | {{ config.title }} {% endblock %}
 
-{% block page_class %}page-post-detail{% endblock %}
+  
 
 
-{% block content %}
+<html class="theme-next mist use-motion" lang="zh-Hans">
+<head>
+  <meta charset="UTF-8"/>
+<meta http-equiv="X-UA-Compatible" content="IE=edge" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1"/>
+
+
+
+<meta http-equiv="Cache-Control" content="no-transform" />
+<meta http-equiv="Cache-Control" content="no-siteapp" />
+
+
+
+
+
+
+
+
+
+
+
+
+  
+  
+  <link href="/lib/fancybox/source/jquery.fancybox.css?v=2.1.5" rel="stylesheet" type="text/css" />
+
+
+
+
+  
+  
+  
+  
+
+  
+    
+    
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+    
+    
+    <link href="//fonts.googleapis.com/css?family=Lato:300,300italic,400,400italic,700,700italic&subset=latin,latin-ext" rel="stylesheet" type="text/css">
+  
+
+
+
+
+
+
+<link href="/lib/font-awesome/css/font-awesome.min.css?v=4.6.2" rel="stylesheet" type="text/css" />
+
+<link href="/css/main.css?v=5.1.0" rel="stylesheet" type="text/css" />
+
+
+  <meta name="keywords" content="CloudNavi," />
+
+
+
+
+
+
+
+
+  <link rel="shortcut icon" type="image/x-icon" href="/favicon.ico?v=5.1.0" />
+
+
+
+
+
+
+<meta name="description" content="运维中经常会存在多套的环境，开发、测试、stagging、prod等，这么多的环境，对于开发同学，如何通过一次部署多环境上线，打通开发与测试间的gap，而对于运维同学来说，则关心如何保障环境之间应用版本一致，而argoCD就是这样一个工具，配合GitOps思路，可以实现对多集群的应用版本管理.">
+<meta property="og:type" content="article">
+<meta property="og:title" content="argoCD学习(使用argoCD实现多集群应用同步)">
+<meta property="og:url" content="https://zhoushuke.github.io/2020/12/04/argoCD-Usage/index.html">
+<meta property="og:site_name" content="Z.S.K.&#39;s Records">
+<meta property="og:description" content="运维中经常会存在多套的环境，开发、测试、stagging、prod等，这么多的环境，对于开发同学，如何通过一次部署多环境上线，打通开发与测试间的gap，而对于运维同学来说，则关心如何保障环境之间应用版本一致，而argoCD就是这样一个工具，配合GitOps思路，可以实现对多集群的应用版本管理.">
+<meta property="og:locale">
+<meta property="og:image" content="https://argoproj.github.io/argo-cd/assets/argocd_architecture.png">
+<meta property="og:image" content="https://www.gitops.tech/images/multiple.png">
+<meta property="og:image" content="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20201121212553.png">
+<meta property="og:image" content="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20201121211926.png">
+<meta property="og:image" content="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20201121212553.png">
+<meta property="og:image" content="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20201206154807.png">
+<meta property="og:image" content="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20201122003139.png">
+<meta property="og:image" content="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20201106184926.png">
+<meta property="og:image" content="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20201106185339.png">
+<meta property="og:image" content="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20201122185428.png">
+<meta property="article:published_time" content="2020-12-04T08:30:53.000Z">
+<meta property="article:modified_time" content="2022-07-19T03:16:00.981Z">
+<meta property="article:author" content="Z.S.K.">
+<meta property="article:tag" content="CloudNavi">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:image" content="https://argoproj.github.io/argo-cd/assets/argocd_architecture.png">
+
+
+
+<script type="text/javascript" id="hexo.configurations">
+  var NexT = window.NexT || {};
+  var CONFIG = {
+    root: '',
+    scheme: 'Mist',
+    sidebar: {"position":"left","display":"post"},
+    fancybox: true,
+    motion: true,
+    duoshuo: {
+      userId: 'undefined',
+      author: '博主'
+    },
+    algolia: {
+      applicationID: '',
+      apiKey: '',
+      indexName: '',
+      hits: {"per_page":10},
+      labels: {"input_placeholder":"Search for Posts","hits_empty":"We didn't find any results for the search: ${query}","hits_stats":"${hits} results found in ${time} ms"}
+    }
+  };
+</script>
+
+
+
+  <link rel="canonical" href="https://zhoushuke.github.io/2020/12/04/argoCD-Usage/"/>
+
+
+
+
+
+  <title> argoCD学习(使用argoCD实现多集群应用同步) | Z.S.K.'s Records </title>
+<meta name="generator" content="Hexo 6.2.0"></head>
+
+<body itemscope itemtype="http://schema.org/WebPage" lang="zh-Hans">
+
+  
+
+
+
+
+
+
+
+
+
+
+  
+  
+    
+  
+
+  <div class="container one-collumn sidebar-position-left page-post-detail ">
+    <div class="headband"></div>
+
+    <header id="header" class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-meta ">
+  
+
+  <div class="custom-logo-site-title">
+    <a href="/"  class="brand" rel="start">
+      <span class="logo-line-before"><i></i></span>
+      <span class="site-title">Z.S.K.'s Records</span>
+      <span class="logo-line-after"><i></i></span>
+    </a>
+  </div>
+    
+      <p class="site-subtitle"></p>
+    
+</div>
+
+<div class="site-nav-toggle">
+  <button>
+    <span class="btn-bar"></span>
+    <span class="btn-bar"></span>
+    <span class="btn-bar"></span>
+  </button>
+</div>
+
+<nav class="site-nav">
+  
+
+  
+    <ul id="menu" class="menu">
+      
+        
+        <li class="menu-item menu-item-home">
+          <a href="/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-home"></i> <br />
+            
+            首页
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-categories">
+          <a href="/categories" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-th"></i> <br />
+            
+            分类
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-about">
+          <a href="/about/ZSK-Profile.pdf" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-user"></i> <br />
+            
+            简历
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-archives">
+          <a href="/archives" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-archive"></i> <br />
+            
+            归档
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-tags">
+          <a href="/tags" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-tags"></i> <br />
+            
+            标签
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-commonweal">
+          <a href="/404.html" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-heartbeat"></i> <br />
+            
+            公益404
+          </a>
+        </li>
+      
+
+      
+        <li class="menu-item menu-item-search">
+          
+            <a href="javascript:;" class="popup-trigger">
+          
+            
+              <i class="menu-item-icon fa fa-search fa-fw"></i> <br />
+            
+            搜索
+          </a>
+        </li>
+      
+    </ul>
+  
+
+  
+    <div class="site-search">
+      
+  <div class="popup">
+ <span class="search-icon fa fa-search"></span>
+ <input type="text" id="local-search-input">
+ <div id="local-search-result"></div>
+ <span class="popup-btn-close">close</span>
+</div>
+
+
+    </div>
+  
+</nav>
+
+
+
+ </div>
+    </header>
+
+    <main id="main" class="main">
+      <div class="main-inner">
+        <div class="content-wrap">
+          <div id="content" class="content">
+            
 
   <div id="posts" class="posts-expand">
-    {{ post_template.render(page) }}
+    
 
-    <div class="post-spread">
-      {% if theme.jiathis %}
-        {% include '_partials/share/jiathis.swig' %}
-      {% elseif theme.baidushare %}
-        {% include '_partials/share/baidushare.swig' %}
-      {% elseif theme.add_this_id %}
-        {% include '_partials/share/add-this.swig' %}
-      {% elseif theme.duoshuo_shortname and theme.duoshuo_share %}
-        {% include '_partials/share/duoshuo_share.swig' %}
-      {% endif %}
+  
+
+  
+  
+  
+
+  <article class="post post-type-normal " itemscope itemtype="http://schema.org/Article">
+  <link itemprop="mainEntityOfPage" href="https://zhoushuke.github.io/2020/12/04/argoCD-Usage/">
+
+  <span style="display:none" itemprop="author" itemscope itemtype="http://schema.org/Person">
+    <meta itemprop="name" content="">
+    <meta itemprop="description" content="">
+    <meta itemprop="image" content="/images/avatar.gif">
+  </span>
+
+  <span style="display:none" itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+    <meta itemprop="name" content="Z.S.K.'s Records">
+    <span style="display:none" itemprop="logo" itemscope itemtype="http://schema.org/ImageObject">
+      <img style="display:none;" itemprop="url image" alt="Z.S.K.'s Records" src="">
+    </span>
+  </span>
+
+    
+      <header class="post-header">
+
+        
+        
+          <h1 class="post-title" itemprop="name headline">
+            
+            
+              
+                argoCD学习(使用argoCD实现多集群应用同步)
+              
+            
+          </h1>
+        
+
+        <div class="post-meta">
+          <span class="post-time">
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">发表于</span>
+              
+              <time title="Post created" itemprop="dateCreated datePublished" datetime="2020-12-04T16:30:53+08:00">
+                2020-12-04
+              </time>
+            
+
+            
+
+            
+          </span>
+
+          
+            <span class="post-category" >
+            
+              <span class="post-meta-divider">|</span>
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-folder-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">分类于</span>
+              
+              
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/CloudNavi/" itemprop="url" rel="index">
+                    <span itemprop="name">CloudNavi</span>
+                  </a>
+                </span>
+
+                
+                
+              
+            </span>
+          
+
+          
+            
+          
+
+          
+
+          
+          
+
+          
+
+          
+
+        </div>
+      </header>
+    
+
+
+    <div class="post-body" itemprop="articleBody">
+
+      
+      
+
+      
+        <p>运维中经常会存在多套的环境，开发、测试、stagging、prod等，这么多的环境，对于开发同学，如何通过一次部署多环境上线，打通开发与测试间的gap，而对于运维同学来说，则关心如何保障环境之间应用版本一致，而argoCD就是这样一个工具，配合GitOps思路，可以实现对多集群的应用版本管理.</p>
+<span id="more"></span>
+
+<h3 id="argoCD"><a href="#argoCD" class="headerlink" title="argoCD"></a>argoCD</h3><p>Declarative GitOps CD for Kubernetes</p>
+<p>官方的说明很简单，为k8s提供GitOps能力</p>
+<h3 id="原理"><a href="#原理" class="headerlink" title="原理"></a>原理</h3><p><img src="https://argoproj.github.io/argo-cd/assets/argocd_architecture.png" alt="架构图"></p>
+<p>上面是官方的提供的架构图, 可以很清晰的看到argocd的工作机制.</p>
+<p>argoCD通过发布到k8s的crd控制器连续监视正在运行的应用程序,并将当前的活动状态与所需的目标状态（在Git存储库中指定）进行比较</p>
+<p>下面就从一个demo来体验一下，先从安装开始</p>
+<h3 id="安装"><a href="#安装" class="headerlink" title="安装"></a>安装</h3><h4 id="在线安装"><a href="#在线安装" class="headerlink" title="在线安装"></a>在线安装</h4><figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">kubectl create namespace argocd</span><br><span class="line">kubectl apply -n argocd -f https://raw.githubusercontent.com/argoproj/argo-cd/stable/manifests/install.yaml</span><br></pre></td></tr></table></figure>
+
+<h4 id="helm安装"><a href="#helm安装" class="headerlink" title="helm安装"></a>helm安装</h4><figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br></pre></td><td class="code"><pre><span class="line">helm repo add argo https://argoproj.github.io/argo-helm</span><br><span class="line">helm install argocd -n argocd argo/argo-cd --values values.yaml</span><br><span class="line"></span><br><span class="line"><span class="comment"># cat values.yaml,可以在安装的时候就指定使用ingress</span></span><br><span class="line">server:</span><br><span class="line">  ingress:</span><br><span class="line">    enabled: <span class="literal">true</span></span><br><span class="line">    annotations: </span><br><span class="line">      kubernetes.io/ingress.class: <span class="string">&quot;nginx&quot;</span></span><br><span class="line">      nginx.ingress.kubernetes.io/force-ssl-redirect: <span class="string">&quot;true&quot;</span></span><br><span class="line">      nginx.ingress.kubernetes.io/ssl-passthrough: <span class="string">&quot;true&quot;</span></span><br><span class="line">      nginx.ingress.kubernetes.io/backend-protocol: <span class="string">&quot;HTTPS&quot;</span></span><br><span class="line">    hosts:</span><br><span class="line">    - argocd.local</span><br></pre></td></tr></table></figure>
+
+<p>所有pod起来之后即可访问web页面</p>
+<p>默认的用户名为 admin，密码为 server Pod 的名称，可以通过如下所示的命令来获取：</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line">$ kubectl get pods -n argocd -l app.kubernetes.io/name=argocd-server -o name | <span class="built_in">cut</span> -d<span class="string">&#x27;/&#x27;</span> -f 2</span><br><span class="line"></span><br><span class="line"><span class="comment"># 可以使用以下命令暴露argocd ui， (不建议)</span></span><br><span class="line">kubectl port-forward service/argocd-server -n argocd 38888:443</span><br></pre></td></tr></table></figure>
+
+<h4 id="ingress"><a href="#ingress" class="headerlink" title="ingress"></a>ingress</h4><p>添加ingress用于暴露argo cd UI</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br></pre></td><td class="code"><pre><span class="line">apiVersion: extensions/v1beta1</span><br><span class="line">kind: Ingress</span><br><span class="line">metadata:</span><br><span class="line">  name: argocd-server-ingress</span><br><span class="line">  namespace: argocd</span><br><span class="line">  annotations:</span><br><span class="line">    cert-manager.io/cluster-issuer: letsencrypt-prod</span><br><span class="line">    kubernetes.io/ingress.class: nginx</span><br><span class="line">    kubernetes.io/tls-acme: <span class="string">&quot;true&quot;</span></span><br><span class="line">    nginx.ingress.kubernetes.io/ssl-passthrough: <span class="string">&quot;true&quot;</span></span><br><span class="line">    <span class="comment"># If you encounter a redirect loop or are getting a 307 response code</span></span><br><span class="line">    <span class="comment"># then you need to force the nginx ingress to connect to the backend using HTTPS.</span></span><br><span class="line">    <span class="comment">#</span></span><br><span class="line">    <span class="comment"># nginx.ingress.kubernetes.io/backend-protocol: &quot;HTTPS&quot;</span></span><br><span class="line">spec:</span><br><span class="line">  rules:</span><br><span class="line">  - host: argocd.local</span><br><span class="line">    http:</span><br><span class="line">      paths:</span><br><span class="line">      - backend:</span><br><span class="line">          serviceName: argocd-server</span><br><span class="line">          servicePort: https</span><br><span class="line">        path: /</span><br><span class="line">  tls:</span><br><span class="line">  - hosts:</span><br><span class="line">    - argocd.example.com</span><br><span class="line">    secretName: argocd-secret <span class="comment"># do not change, this is provided by Argo CD</span></span><br></pre></td></tr></table></figure>
+
+
+
+<h3 id="多集群支持"><a href="#多集群支持" class="headerlink" title="多集群支持"></a>多集群支持</h3><p>目前无法直接在UI上添加其它集群，可使用以下命令添加外部集群，这样就可<strong>使用一套argoCD来同步到多个集群环境</strong></p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># 先进行argocd的登录</span></span><br><span class="line">argocd login argocd.example.com:4433 --grpc-web</span><br><span class="line"><span class="comment"># 输入用户名密码即可，出现successfully</span></span><br><span class="line">argocd cluster add mysql-cluster --server <span class="string">&#x27;argocd.example.com:4433&#x27;</span></span><br><span class="line"><span class="comment"># 出现以下提示则说明添加成功</span></span><br><span class="line">INFO[0000] ServiceAccount <span class="string">&quot;argocd-manager&quot;</span> already exists <span class="keyword">in</span> namespace <span class="string">&quot;kube-system&quot;</span></span><br><span class="line">INFO[0000] ClusterRole <span class="string">&quot;argocd-manager-role&quot;</span> updated</span><br><span class="line">INFO[0000] ClusterRoleBinding <span class="string">&quot;argocd-manager-role-binding&quot;</span> updated</span><br><span class="line">Cluster <span class="string">&#x27;https://xxx.xxx.xxx.xxx:6443&#x27;</span> added</span><br></pre></td></tr></table></figure>
+
+<p>那么对于多集群发同步来说，最终实现的效果为:</p>
+<p><img src="https://www.gitops.tech/images/multiple.png"></p>
+<p>当然，每个集群的下的应用的触发逻辑可以在CI阶段定义, 这样可以跟测试stag更好地集成,从而实现真正的一次Push，多次发布.</p>
+<h3 id="使用"><a href="#使用" class="headerlink" title="使用"></a>使用</h3><p>通过上面的方式安装完成之后，即可访问argoCD的web页，可以按照不同的环境将app进行分类，同时argocd提供了project的概念, 可以将你认为可以属于同一个project的所有应用划为一类，这样可以避免同一个应用要在多个环境下发布需要多次添加的问题.</p>
+<h4 id="添加Project"><a href="#添加Project" class="headerlink" title="添加Project"></a>添加Project</h4><p><img src="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20201121212553.png"></p>
+<p>主要的就是sources跟destinations</p>
+<p>sources指定的是git repo的地址，可以添加多个</p>
+<p>destinations指定集群，也可以指定多个</p>
+<p>这样添加之后在新增app时即可从project中选择了</p>
+<h4 id="添加Repository"><a href="#添加Repository" class="headerlink" title="添加Repository"></a>添加Repository</h4><p>repository指的是git repo的地址，在发布时argocd会连接到该git上拉取资源, 这里需要提供git的认证方式，常用的为用户名、密码.</p>
+<p><img src="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20201121211926.png"></p>
+<p>要注意的是: <strong>repository URL需要以.gti结尾， 要不然连接的时候会提示301</strong></p>
+<p>参考 : <a target="_blank" rel="noopener" href="https://argoproj.github.io/argo-cd/user-guide/private-repositories/">https://argoproj.github.io/argo-cd/user-guide/private-repositories/</a></p>
+<h4 id="添加APP"><a href="#添加APP" class="headerlink" title="添加APP"></a>添加APP</h4><p>app做为GitOps的最小发布单元, 一个app中包含了所有的跟发布相关的资源文件，比如策略，代码，配置，甚至监控事件和版本控制等</p>
+<p><img src="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20201121212553.png"></p>
+<p>上面要指定git地址及要发布的kubernetes集群及git上的目录，这个目录用于argoCD检测是否具有<code>更新</code>.</p>
+<p>argoCD支持了目前常用的资源管理工具，比如helm， kustomize, directory, Ksonnet, Jsonnet等工具，我这里使用的是Kustomize,k8s原生就支持，没有任何依赖，非常方便.</p>
+<p><strong>最重要的是指定是自动同步还是手动同步</strong>, 不同的同步策略使用场景不同</p>
+<p>添加成功后如下图所示:</p>
+<p><img src="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20201206154807.png"></p>
+<p>应用发布成功后，效果如下:</p>
+<p><img src="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20201122003139.png"></p>
+<p>从上面可以看到应用的发布历史，出于数据存储限制，默认情况下只会保留最新的10条，如果觉得不合理可以通过修改app进行调整，同时也能看到同步的状态及发布是否成功</p>
+<p>这里要注意的是<code>Sync OK</code>只是代表从git上同步资源成功了，但能不能发布成功是通过<code>Healthy</code>来看的</p>
+<h3 id="同步策略及发布状态"><a href="#同步策略及发布状态" class="headerlink" title="同步策略及发布状态"></a>同步策略及发布状态</h3><h4 id="同步策略"><a href="#同步策略" class="headerlink" title="同步策略"></a>同步策略</h4><p>argoCD应用可以选择是自动同步还是手工同步来触发发布上线，这个就要看具体的场合了</p>
+<p>自动同步: 指的是git如果发生变化则直接触发发布,不需要人介入， 这个比较适合用于持续发布的测试环境</p>
+<p>手工同步: 指的则是人为地去页面上点击同步的方式进行,比较适合生产类稳定环境</p>
+<p>同时，还有一些同步策略，比如是否强制对线上资源进行强制删除后再更新、指定需要同步的文件、同步时间窗口等等比较人性化的策略</p>
+<p>详情可参考<a target="_blank" rel="noopener" href="https://argoproj.github.io/argo-cd/user-guide/selective_sync/">这里</a></p>
+<h4 id="发布状态"><a href="#发布状态" class="headerlink" title="发布状态"></a>发布状态</h4><p>在同步完成之后便会触发发布上线，状态分为Processing、unHealty、Healty</p>
+<p>Processing表示正在更新资源</p>
+<p>unHealty表示发布失败, 发布失败可以通过点击详情进行查看原因</p>
+<p>Healty则表示发布成功, 所有的资源都以git上的版本运行.</p>
+<h3 id="不足"><a href="#不足" class="headerlink" title="不足"></a>不足</h3><p>相信大家都有这样的需求: 同一个应用需要在多个集群中做发布，目前对于单应用多集群的部署官方支持得还不是很好，因为应用名必须唯一，官方有个issue讨论了为何不支持这种场景，主要<strong>担心多个集群的查询性能</strong>，感兴趣的可以参考<a target="_blank" rel="noopener" href="https://github.com/argoproj/argo-cd/issues/1673">support multiple clusters (destinations) for an Application</a></p>
+<h3 id="问题"><a href="#问题" class="headerlink" title="问题"></a>问题</h3><ol>
+<li>执行login 登录命令时提示:</li>
+</ol>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">argocd login argocd.local:4433</span><br></pre></td></tr></table></figure>
+
+<p>出现以下错误</p>
+<p><img src="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20201106184926.png"></p>
+<p>原因: </p>
+<p>参考: <a target="_blank" rel="noopener" href="https://github.com/argoproj/argo-cd/issues/1415">https://github.com/argoproj/argo-cd/issues/1415</a></p>
+<p>解决:</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">argocd login argocd.local:4433 --grpc-web</span><br></pre></td></tr></table></figure>
+
+<p>如果添加集群的时候提示以下错误，则需要先使用上面的命令进行登录，登录成功后再进行集群的添加操作.</p>
+<p><img src="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20201106185339.png"></p>
+<ol start="2">
+<li>创建token时提示以下错误:</li>
+</ol>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">Unable to generate new token: account <span class="string">&#x27;admin&#x27;</span> does not have apiKey capability</span><br></pre></td></tr></table></figure>
+
+<p>原因: argocd的用户也是通过角色来进行划分的，创建token的用户需要具有 apiKey的权限，这个可以从argocd部署的configmap中查看使用的用户是否具有什么权限.</p>
+<ol start="3">
+<li>回滚时提示以下错误:</li>
+</ol>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">Unable to load data: revision HEAD must be resolved</span><br></pre></td></tr></table></figure>
+
+<p><img src="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20201122185428.png"></p>
+<p>原因: 如果使用argocd命令行的方式同步应用，会导致revision没有commit值，如上图，而回滚时需要revision，因此造成上面的报错.</p>
+<h3 id="CLI常用命令"><a href="#CLI常用命令" class="headerlink" title="CLI常用命令"></a>CLI常用命令</h3><p>argoCD也提供了CLI工具，可以直接使用该工具来对argoCD进行操作，常用的命令如下:</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># 修改账号密码,然后根据提示完成</span></span><br><span class="line">argocd account update-password</span><br><span class="line"></span><br><span class="line"><span class="comment"># 登录</span></span><br><span class="line">argocd login argocd.local:4433 --grpc-web --username admin --password xxx --insecure</span><br><span class="line"></span><br><span class="line"><span class="comment"># 查看应用状态</span></span><br><span class="line">argocd app get guestbook</span><br><span class="line"></span><br><span class="line"><span class="comment"># </span></span><br><span class="line">argocd app <span class="built_in">set</span> argocd-kustomize-frontend --kustomize-image xxx/argocd-kustomize-frontend:testwithtag</span><br><span class="line"></span><br><span class="line"><span class="comment"># 同步应用</span></span><br><span class="line">argocd app <span class="built_in">sync</span> guestbook</span><br></pre></td></tr></table></figure>
+
+
+
+<p>这里只是体验了一下argoCD的使用过程，很多有趣的功能还没有介绍，下次再更.</p>
+<h3 id="参考文章"><a href="#参考文章" class="headerlink" title="参考文章:"></a><strong>参考文章:</strong></h3><blockquote>
+<ul>
+<li><a target="_blank" rel="noopener" href="https://argoproj.github.io/argo-cd/">https://argoproj.github.io/argo-cd/</a></li>
+<li><a target="_blank" rel="noopener" href="https://www.gitops.tech/#:~:text=GitOps%20is%20a%20way%20of,Git%20and%20Continuous%20Deployment%20tools">https://www.gitops.tech/#:~:text=GitOps%20is%20a%20way%20of,Git%20and%20Continuous%20Deployment%20tools</a></li>
+<li><a target="_blank" rel="noopener" href="https://www.jianshu.com/p/eec8e201b7e9">https://www.jianshu.com/p/eec8e201b7e9</a></li>
+<li><a target="_blank" rel="noopener" href="https://www.qikqiak.com/post/gitlab-ci-argo-cd-gitops/">https://www.qikqiak.com/post/gitlab-ci-argo-cd-gitops/</a></li>
+<li><a target="_blank" rel="noopener" href="https://argoproj.github.io/argo-cd/user-guide/private-repositories/">https://argoproj.github.io/argo-cd/user-guide/private-repositories/</a></li>
+<li><a target="_blank" rel="noopener" href="https://github.com/argoproj/argo-cd/issues/1673">https://github.com/argoproj/argo-cd/issues/1673</a></li>
+</ul>
+</blockquote>
+<h3 id="转载请注明出处https-izsk-me"><a href="#转载请注明出处https-izsk-me" class="headerlink" title="转载请注明出处https://izsk.me"></a><strong>转载请注明出处<a target="_blank" rel="noopener" href="https://izsk.me/">https://izsk.me</a></strong></h3>
+      
+    </div>
+
+    <div>
+      
+        
+<div id="wechat_subscriber" style="display: block; padding: 10px 0; margin: 20px auto; width: 100%; text-align: center">
+    <img id="wechat_subscriber_qcode" src="/images/websitecode250.png" alt=" wechat" style="width: 200px; max-width: 100%;"/>
+    <div>Scan Me To Read on Phone</div>
+</div>
+
+
+      
+    </div>
+
+    <div>
+      
+        
+  <div style="padding: 10px 0; margin: 20px auto; width: 90%; text-align: center;">
+    <div>I know you won't do this,but what if you did?</div>
+    <button id="rewardButton" disable="enable" onclick="var qr = document.getElementById('QR'); if (qr.style.display === 'none') {qr.style.display='block';} else {qr.style.display='none'}">
+      <span>赏</span>
+    </button>
+    <div id="QR" style="display: none;">
+      
+        <div id="wechat" style="display: inline-block">
+          <img id="wechat_qr" src="/images/wechatpayme.png" alt=" WeChat Pay"/>
+          <p>微信打赏</p>
+        </div>
+      
+      
+        <div id="alipay" style="display: inline-block">
+          <img id="alipay_qr" src="/images/alipayme.jpg" alt=" Alipay"/>
+          <p>支付宝打赏</p>
+        </div>
+      
     </div>
   </div>
 
-{% endblock %}
 
-{% block sidebar %}
-  {{ sidebar_template.render(true) }}
-{% endblock %}
+      
+    </div>
 
 
-{% block script_extra %}
-  {% include '_scripts/pages/post-details.swig' %}
-{% endblock %}
+    <footer class="post-footer">
+      
+        <div class="post-tags">
+          
+            <a href="/tags/CloudNavi/" rel="tag"># CloudNavi</a>
+          
+        </div>
+      
+
+      
+        <div class="post-nav">
+          <div class="post-nav-next post-nav-item">
+            
+              <a href="/2020/11/17/Kong-upstream-timeout-60s-and-retry-5/" rel="next" title="Kong学习(解决诡异的Kong Error超时及重试问题)">
+                <i class="fa fa-chevron-left"></i> Kong学习(解决诡异的Kong Error超时及重试问题)
+              </a>
+            
+          </div>
+
+          <span class="post-nav-divider"></span>
+
+          <div class="post-nav-prev post-nav-item">
+            
+              <a href="/2020/12/13/alpine-run-go-binary/" rel="prev" title="解决Alpine镜像的not found解决">
+                解决Alpine镜像的not found解决 <i class="fa fa-chevron-right"></i>
+              </a>
+            
+          </div>
+        </div>
+      
+
+      
+      
+    </footer>
+  </article>
+
+
+
+    <div class="post-spread">
+      
+    </div>
+  </div>
+
+
+          </div>
+          
+
+
+          
+  <div class="comments" id="comments">
+    
+  </div>
+
+
+        </div>
+        
+          
+  
+  <div class="sidebar-toggle">
+    <div class="sidebar-toggle-line-wrap">
+      <span class="sidebar-toggle-line sidebar-toggle-line-first"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-middle"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-last"></span>
+    </div>
+  </div>
+
+  <aside id="sidebar" class="sidebar">
+    <div class="sidebar-inner">
+
+      
+
+      
+        <ul class="sidebar-nav motion-element">
+          <li class="sidebar-nav-toc sidebar-nav-active" data-target="post-toc-wrap" >
+            文章目录
+          </li>
+          <li class="sidebar-nav-overview" data-target="site-overview">
+            站点概览
+          </li>
+        </ul>
+      
+
+      <section class="site-overview sidebar-panel">
+        <div class="site-author motion-element" itemprop="author" itemscope itemtype="http://schema.org/Person">
+          <img class="site-author-image" itemprop="image"
+               src="/images/avatar.gif"
+               alt="" />
+          <p class="site-author-name" itemprop="name"></p>
+          <p class="site-description motion-element" itemprop="description"></p>
+        </div>
+        <nav class="site-state motion-element">
+        
+          
+            <div class="site-state-item site-state-posts">
+              <a href="/archives">
+                <span class="site-state-item-count">192</span>
+                <span class="site-state-item-name">日志</span>
+              </a>
+            </div>
+          
+
+          
+            <div class="site-state-item site-state-categories">
+              <a href="/categories">
+                <span class="site-state-item-count">14</span>
+                <span class="site-state-item-name">分类</span>
+              </a>
+            </div>
+          
+
+          
+            <div class="site-state-item site-state-tags">
+              <a href="/tags">
+                <span class="site-state-item-count">14</span>
+                <span class="site-state-item-name">标签</span>
+              </a>
+            </div>
+          
+
+        </nav>
+
+        
+
+        <div class="links-of-author motion-element">
+          
+        </div>
+
+        
+        
+
+        
+        
+
+        
+
+
+      </section>
+
+      
+      <!--noindex-->
+        <section class="post-toc-wrap motion-element sidebar-panel sidebar-panel-active">
+          <div class="post-toc">
+
+            
+              
+            
+
+            
+              <div class="post-toc-content"><ol class="nav"><li class="nav-item nav-level-3"><a class="nav-link" href="#argoCD"><span class="nav-number">1.</span> <span class="nav-text">argoCD</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E5%8E%9F%E7%90%86"><span class="nav-number">2.</span> <span class="nav-text">原理</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E5%AE%89%E8%A3%85"><span class="nav-number">3.</span> <span class="nav-text">安装</span></a><ol class="nav-child"><li class="nav-item nav-level-4"><a class="nav-link" href="#%E5%9C%A8%E7%BA%BF%E5%AE%89%E8%A3%85"><span class="nav-number">3.1.</span> <span class="nav-text">在线安装</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#helm%E5%AE%89%E8%A3%85"><span class="nav-number">3.2.</span> <span class="nav-text">helm安装</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#ingress"><span class="nav-number">3.3.</span> <span class="nav-text">ingress</span></a></li></ol></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E5%A4%9A%E9%9B%86%E7%BE%A4%E6%94%AF%E6%8C%81"><span class="nav-number">4.</span> <span class="nav-text">多集群支持</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E4%BD%BF%E7%94%A8"><span class="nav-number">5.</span> <span class="nav-text">使用</span></a><ol class="nav-child"><li class="nav-item nav-level-4"><a class="nav-link" href="#%E6%B7%BB%E5%8A%A0Project"><span class="nav-number">5.1.</span> <span class="nav-text">添加Project</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#%E6%B7%BB%E5%8A%A0Repository"><span class="nav-number">5.2.</span> <span class="nav-text">添加Repository</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#%E6%B7%BB%E5%8A%A0APP"><span class="nav-number">5.3.</span> <span class="nav-text">添加APP</span></a></li></ol></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E5%90%8C%E6%AD%A5%E7%AD%96%E7%95%A5%E5%8F%8A%E5%8F%91%E5%B8%83%E7%8A%B6%E6%80%81"><span class="nav-number">6.</span> <span class="nav-text">同步策略及发布状态</span></a><ol class="nav-child"><li class="nav-item nav-level-4"><a class="nav-link" href="#%E5%90%8C%E6%AD%A5%E7%AD%96%E7%95%A5"><span class="nav-number">6.1.</span> <span class="nav-text">同步策略</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#%E5%8F%91%E5%B8%83%E7%8A%B6%E6%80%81"><span class="nav-number">6.2.</span> <span class="nav-text">发布状态</span></a></li></ol></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E4%B8%8D%E8%B6%B3"><span class="nav-number">7.</span> <span class="nav-text">不足</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E9%97%AE%E9%A2%98"><span class="nav-number">8.</span> <span class="nav-text">问题</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#CLI%E5%B8%B8%E7%94%A8%E5%91%BD%E4%BB%A4"><span class="nav-number">9.</span> <span class="nav-text">CLI常用命令</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E5%8F%82%E8%80%83%E6%96%87%E7%AB%A0"><span class="nav-number">10.</span> <span class="nav-text">参考文章:</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E8%BD%AC%E8%BD%BD%E8%AF%B7%E6%B3%A8%E6%98%8E%E5%87%BA%E5%A4%84https-izsk-me"><span class="nav-number">11.</span> <span class="nav-text">转载请注明出处https:&#x2F;&#x2F;izsk.me</span></a></li></ol></div>
+            
+
+          </div>
+        </section>
+      <!--/noindex-->
+      
+
+    </div>
+  </aside>
+
+
+        
+      </div>
+    </main>
+
+    <footer id="footer" class="footer">
+      <div class="footer-inner">
+        <div class="copyright" >
+  
+  &copy; 
+  <span itemprop="copyrightYear">2022</span>
+  <span class="with-love">
+    <i class="fa fa-heart"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">Z.S.K.</span>
+</div>
+
+
+<div class="powered-by">
+  Supported by <a class="theme-link" target="_blank" rel="noopener" href="https://hexo.io">Hexo</a>
+</div>
+
+<div class="theme-info">
+  Theme -
+  <a class="theme-link" target="_blank" rel="noopener" href="https://github.com/iissnan/hexo-theme-next">
+    NexT.Mist
+  </a>
+</div>
+
+
+        
+
+        
+      </div>
+    </footer>
+
+    <div class="back-to-top">
+      <i class="fa fa-arrow-up"></i>
+    </div>
+  </div>
+
+  
+
+<script type="text/javascript">
+  if (Object.prototype.toString.call(window.Promise) !== '[object Function]') {
+    window.Promise = null;
+  }
+</script>
+
+
+
+
+
+
+
+
+
+  
+
+
+
+  
+  <script type="text/javascript" src="/lib/jquery/index.js?v=2.1.3"></script>
+
+  
+  <script type="text/javascript" src="/lib/fastclick/lib/fastclick.min.js?v=1.0.6"></script>
+
+  
+  <script type="text/javascript" src="/lib/jquery_lazyload/jquery.lazyload.js?v=1.9.7"></script>
+
+  
+  <script type="text/javascript" src="/lib/velocity/velocity.min.js?v=1.2.1"></script>
+
+  
+  <script type="text/javascript" src="/lib/velocity/velocity.ui.min.js?v=1.2.1"></script>
+
+  
+  <script type="text/javascript" src="/lib/fancybox/source/jquery.fancybox.pack.js?v=2.1.5"></script>
+
+
+  
+
+
+  <script type="text/javascript" src="/js/src/utils.js?v=5.1.0"></script>
+
+  <script type="text/javascript" src="/js/src/motion.js?v=5.1.0"></script>
+
+
+
+  
+  
+
+  
+  <script type="text/javascript" src="/js/src/scrollspy.js?v=5.1.0"></script>
+<script type="text/javascript" src="/js/src/post-details.js?v=5.1.0"></script>
+
+
+
+  
+
+
+  <script type="text/javascript" src="/js/src/bootstrap.js?v=5.1.0"></script>
+
+
+
+  
+
+
+
+  
+
+
+
+
+	
+
+
+
+
+
+  
+
+
+
+
+  
+  
+  <script type="text/javascript">
+    // Popup Window;
+    var isfetched = false;
+    // Search DB path;
+    var search_path = "search.xml";
+    if (search_path.length == 0) {
+      search_path = "search.xml";
+    }
+    var path = "/" + search_path;
+    // monitor main search box;
+
+    function proceedsearch() {
+      $("body").append('<div class="popoverlay">').css('overflow', 'hidden');
+      $('.popup').toggle();
+    }
+    // search function;
+    var searchFunc = function(path, search_id, content_id) {
+      'use strict';
+      $.ajax({
+        url: path,
+        dataType: "xml",
+        async: true,
+        success: function( xmlResponse ) {
+          // get the contents from search data
+          isfetched = true;
+          $('.popup').detach().appendTo('.header-inner');
+          var datas = $( "entry", xmlResponse ).map(function() {
+            return {
+              title: $( "title", this ).text(),
+              content: $("content",this).text(),
+              url: $( "url" , this).text()
+            };
+          }).get();
+          var $input = document.getElementById(search_id);
+          var $resultContent = document.getElementById(content_id);
+          $input.addEventListener('input', function(){
+            var matchcounts = 0;
+            var str='<ul class=\"search-result-list\">';
+            var keywords = this.value.trim().toLowerCase().split(/[\s\-]+/);
+            $resultContent.innerHTML = "";
+            if (this.value.trim().length > 1) {
+              // perform local searching
+              datas.forEach(function(data) {
+                var isMatch = false;
+                var content_index = [];
+                var data_title = data.title.trim().toLowerCase();
+                var data_content = data.content.trim().replace(/<[^>]+>/g,"").toLowerCase();
+                var data_url = decodeURIComponent(data.url);
+                var index_title = -1;
+                var index_content = -1;
+                var first_occur = -1;
+                // only match artiles with not empty titles and contents
+                if(data_title != '') {
+                  keywords.forEach(function(keyword, i) {
+                    index_title = data_title.indexOf(keyword);
+                    index_content = data_content.indexOf(keyword);
+                    if( index_title >= 0 || index_content >= 0 ){
+                      isMatch = true;
+                      if (i == 0) {
+                        first_occur = index_content;
+                      }
+                    }
+
+                  });
+                }
+                // show search results
+                if (isMatch) {
+                  matchcounts += 1;
+                  str += "<li><a href='"+ data_url +"' class='search-result-title'>"+ data_title +"</a>";
+                  var content = data.content.trim().replace(/<[^>]+>/g,"");
+                  if (first_occur >= 0) {
+                    // cut out 100 characters
+                    var start = first_occur - 20;
+                    var end = first_occur + 80;
+                    if(start < 0){
+                      start = 0;
+                    }
+                    if(start == 0){
+                      end = 50;
+                    }
+                    if(end > content.length){
+                      end = content.length;
+                    }
+                    var match_content = content.substring(start, end);
+                    // highlight all keywords
+                    keywords.forEach(function(keyword){
+                      var regS = new RegExp(keyword, "gi");
+                      match_content = match_content.replace(regS, "<b class=\"search-keyword\">"+keyword+"</b>");
+                    });
+
+                    str += "<p class=\"search-result\">" + match_content +"...</p>"
+                  }
+                  str += "</li>";
+                }
+              })};
+            str += "</ul>";
+            if (matchcounts == 0) { str = '<div id="no-result"><i class="fa fa-frown-o fa-5x" /></div>' }
+            if (keywords == "") { str = '<div id="no-result"><i class="fa fa-search fa-5x" /></div>' }
+            $resultContent.innerHTML = str;
+          });
+          proceedsearch();
+        }
+      });}
+
+    // handle and trigger popup window;
+    $('.popup-trigger').click(function(e) {
+      e.stopPropagation();
+      if (isfetched == false) {
+        searchFunc(path, 'local-search-input', 'local-search-result');
+      } else {
+        proceedsearch();
+      };
+    });
+
+    $('.popup-btn-close').click(function(e){
+      $('.popup').hide();
+      $(".popoverlay").remove();
+      $('body').css('overflow', '');
+    });
+    $('.popup').click(function(e){
+      e.stopPropagation();
+    });
+  </script>
+
+
+  
+
+  
+
+  
+
+  
+
+
+</body>
+</html>

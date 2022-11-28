@@ -1,38 +1,973 @@
-{% extends '_layout.swig' %}
-{% import '_macro/post.swig' as post_template %}
-{% import '_macro/sidebar.swig' as sidebar_template %}
+<!doctype html>
 
 
-{% block title %} {{ page.title }} | {{ config.title }} {% endblock %}
 
-{% block page_class %}page-post-detail{% endblock %}
+  
 
 
-{% block content %}
+<html class="theme-next mist use-motion" lang="zh-Hans">
+<head>
+  <meta charset="UTF-8"/>
+<meta http-equiv="X-UA-Compatible" content="IE=edge" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1"/>
+
+
+
+<meta http-equiv="Cache-Control" content="no-transform" />
+<meta http-equiv="Cache-Control" content="no-siteapp" />
+
+
+
+
+
+
+
+
+
+
+
+
+  
+  
+  <link href="/lib/fancybox/source/jquery.fancybox.css?v=2.1.5" rel="stylesheet" type="text/css" />
+
+
+
+
+  
+  
+  
+  
+
+  
+    
+    
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+    
+    
+    <link href="//fonts.googleapis.com/css?family=Lato:300,300italic,400,400italic,700,700italic&subset=latin,latin-ext" rel="stylesheet" type="text/css">
+  
+
+
+
+
+
+
+<link href="/lib/font-awesome/css/font-awesome.min.css?v=4.6.2" rel="stylesheet" type="text/css" />
+
+<link href="/css/main.css?v=5.1.0" rel="stylesheet" type="text/css" />
+
+
+  <meta name="keywords" content="CloudNavi," />
+
+
+
+
+
+
+
+
+  <link rel="shortcut icon" type="image/x-icon" href="/favicon.ico?v=5.1.0" />
+
+
+
+
+
+
+<meta name="description" content="在学习prometheus的时候，相信大家也会对prometheus里的各种数据类型及内置函数有很多疑惑, 为了加深印象来记录下工作中常用到的函数，在这之前, 先来温故下prometheus中的4种metric types.">
+<meta property="og:type" content="article">
+<meta property="og:title" content="Prometheus学习(MetricTypes)">
+<meta property="og:url" content="https://zhoushuke.github.io/2019/12/28/prometheus-4-types/index.html">
+<meta property="og:site_name" content="Z.S.K.&#39;s Records">
+<meta property="og:description" content="在学习prometheus的时候，相信大家也会对prometheus里的各种数据类型及内置函数有很多疑惑, 为了加深印象来记录下工作中常用到的函数，在这之前, 先来温故下prometheus中的4种metric types.">
+<meta property="og:locale">
+<meta property="og:image" content="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20200408212749.png">
+<meta property="og:image" content="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20200408213836.png">
+<meta property="og:image" content="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20200408214317.png">
+<meta property="og:image" content="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20200408215430.png">
+<meta property="og:image" content="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/image-20200409111003966.png">
+<meta property="og:image" content="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20200409112322.png">
+<meta property="og:image" content="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20200409115919.png">
+<meta property="og:image" content="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20200409112817.png">
+<meta property="og:image" content="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20200409114922.png">
+<meta property="og:image" content="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20200409114941.png">
+<meta property="article:published_time" content="2019-12-28T11:30:53.000Z">
+<meta property="article:modified_time" content="2022-07-19T03:16:00.985Z">
+<meta property="article:author" content="Z.S.K.">
+<meta property="article:tag" content="CloudNavi">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:image" content="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20200408212749.png">
+
+
+
+<script type="text/javascript" id="hexo.configurations">
+  var NexT = window.NexT || {};
+  var CONFIG = {
+    root: '',
+    scheme: 'Mist',
+    sidebar: {"position":"left","display":"post"},
+    fancybox: true,
+    motion: true,
+    duoshuo: {
+      userId: 'undefined',
+      author: '博主'
+    },
+    algolia: {
+      applicationID: '',
+      apiKey: '',
+      indexName: '',
+      hits: {"per_page":10},
+      labels: {"input_placeholder":"Search for Posts","hits_empty":"We didn't find any results for the search: ${query}","hits_stats":"${hits} results found in ${time} ms"}
+    }
+  };
+</script>
+
+
+
+  <link rel="canonical" href="https://zhoushuke.github.io/2019/12/28/prometheus-4-types/"/>
+
+
+
+
+
+  <title> Prometheus学习(MetricTypes) | Z.S.K.'s Records </title>
+<meta name="generator" content="Hexo 6.2.0"></head>
+
+<body itemscope itemtype="http://schema.org/WebPage" lang="zh-Hans">
+
+  
+
+
+
+
+
+
+
+
+
+
+  
+  
+    
+  
+
+  <div class="container one-collumn sidebar-position-left page-post-detail ">
+    <div class="headband"></div>
+
+    <header id="header" class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-meta ">
+  
+
+  <div class="custom-logo-site-title">
+    <a href="/"  class="brand" rel="start">
+      <span class="logo-line-before"><i></i></span>
+      <span class="site-title">Z.S.K.'s Records</span>
+      <span class="logo-line-after"><i></i></span>
+    </a>
+  </div>
+    
+      <p class="site-subtitle"></p>
+    
+</div>
+
+<div class="site-nav-toggle">
+  <button>
+    <span class="btn-bar"></span>
+    <span class="btn-bar"></span>
+    <span class="btn-bar"></span>
+  </button>
+</div>
+
+<nav class="site-nav">
+  
+
+  
+    <ul id="menu" class="menu">
+      
+        
+        <li class="menu-item menu-item-home">
+          <a href="/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-home"></i> <br />
+            
+            首页
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-categories">
+          <a href="/categories" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-th"></i> <br />
+            
+            分类
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-about">
+          <a href="/about/ZSK-Profile.pdf" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-user"></i> <br />
+            
+            简历
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-archives">
+          <a href="/archives" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-archive"></i> <br />
+            
+            归档
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-tags">
+          <a href="/tags" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-tags"></i> <br />
+            
+            标签
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-commonweal">
+          <a href="/404.html" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-heartbeat"></i> <br />
+            
+            公益404
+          </a>
+        </li>
+      
+
+      
+        <li class="menu-item menu-item-search">
+          
+            <a href="javascript:;" class="popup-trigger">
+          
+            
+              <i class="menu-item-icon fa fa-search fa-fw"></i> <br />
+            
+            搜索
+          </a>
+        </li>
+      
+    </ul>
+  
+
+  
+    <div class="site-search">
+      
+  <div class="popup">
+ <span class="search-icon fa fa-search"></span>
+ <input type="text" id="local-search-input">
+ <div id="local-search-result"></div>
+ <span class="popup-btn-close">close</span>
+</div>
+
+
+    </div>
+  
+</nav>
+
+
+
+ </div>
+    </header>
+
+    <main id="main" class="main">
+      <div class="main-inner">
+        <div class="content-wrap">
+          <div id="content" class="content">
+            
 
   <div id="posts" class="posts-expand">
-    {{ post_template.render(page) }}
+    
 
-    <div class="post-spread">
-      {% if theme.jiathis %}
-        {% include '_partials/share/jiathis.swig' %}
-      {% elseif theme.baidushare %}
-        {% include '_partials/share/baidushare.swig' %}
-      {% elseif theme.add_this_id %}
-        {% include '_partials/share/add-this.swig' %}
-      {% elseif theme.duoshuo_shortname and theme.duoshuo_share %}
-        {% include '_partials/share/duoshuo_share.swig' %}
-      {% endif %}
+  
+
+  
+  
+  
+
+  <article class="post post-type-normal " itemscope itemtype="http://schema.org/Article">
+  <link itemprop="mainEntityOfPage" href="https://zhoushuke.github.io/2019/12/28/prometheus-4-types/">
+
+  <span style="display:none" itemprop="author" itemscope itemtype="http://schema.org/Person">
+    <meta itemprop="name" content="">
+    <meta itemprop="description" content="">
+    <meta itemprop="image" content="/images/avatar.gif">
+  </span>
+
+  <span style="display:none" itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+    <meta itemprop="name" content="Z.S.K.'s Records">
+    <span style="display:none" itemprop="logo" itemscope itemtype="http://schema.org/ImageObject">
+      <img style="display:none;" itemprop="url image" alt="Z.S.K.'s Records" src="">
+    </span>
+  </span>
+
+    
+      <header class="post-header">
+
+        
+        
+          <h1 class="post-title" itemprop="name headline">
+            
+            
+              
+                Prometheus学习(MetricTypes)
+              
+            
+          </h1>
+        
+
+        <div class="post-meta">
+          <span class="post-time">
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">发表于</span>
+              
+              <time title="Post created" itemprop="dateCreated datePublished" datetime="2019-12-28T19:30:53+08:00">
+                2019-12-28
+              </time>
+            
+
+            
+
+            
+          </span>
+
+          
+            <span class="post-category" >
+            
+              <span class="post-meta-divider">|</span>
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-folder-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">分类于</span>
+              
+              
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/CloudNavi/" itemprop="url" rel="index">
+                    <span itemprop="name">CloudNavi</span>
+                  </a>
+                </span>
+
+                
+                
+              
+            </span>
+          
+
+          
+            
+          
+
+          
+
+          
+          
+
+          
+
+          
+
+        </div>
+      </header>
+    
+
+
+    <div class="post-body" itemprop="articleBody">
+
+      
+      
+
+      
+        <p>在学习prometheus的时候，相信大家也会对prometheus里的各种数据类型及内置函数有很多疑惑, 为了加深印象来记录下工作中常用到的函数，在这之前, 先来温故下prometheus中的4种metric types.</p>
+<span id="more"></span>
+
+
+
+<h3 id="数据模型"><a href="#数据模型" class="headerlink" title="数据模型"></a>数据模型</h3><p>prometheus中所有的数据都是时序流, 我们在prometheus的ui中看到的数据虽然没有看到时间戳, 但在prometheus底层存储中是存在时间戳与之对应, 简单来说, prometheus的数据模型就是<code>Metrics+labels+timestamp</code></p>
+<p><img src="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20200408212749.png"></p>
+<p><code>alertmanager_alerts</code>为<code>metrics key</code></p>
+<p><code>instance</code>、<code>job</code>等这些都是<code>labels</code>，可以理解为查询时的条件</p>
+<p><code>value</code>为这条metric的值</p>
+<p>注意: <strong>在prometheus中value只能是float类型的数值, 不可以是其它值</strong></p>
+<h3 id="监控项类型"><a href="#监控项类型" class="headerlink" title="监控项类型"></a>监控项类型</h3><p>虽然prometheus的value只能是float类型的数值, 但是这个value是有一种数据类型与之对应的, prometheus中存在4种监控项类型, 官方文档在<a target="_blank" rel="noopener" href="https://prometheus.io/docs/concepts/metric_types/">这里</a></p>
+<h4 id="gauge"><a href="#gauge" class="headerlink" title="gauge"></a>gauge</h4><p>gauge表示<strong>可以任意波动的单一值, 没有规律</strong>, 直观的例子就是可以表示机器的网卡流量, 因为你无法预料在下一秒的有多少入口流量 或多或少.</p>
+<p><img src="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20200408213836.png"></p>
+<h4 id="counter"><a href="#counter" class="headerlink" title="counter"></a>counter</h4><p>counter为<strong>计数器,只增不减</strong> 用于只增不减的场合,直观的例子机器的开机时t、长nginx的请求数等, 在某个时刻之后, 这个数只会一直增长而不会减少, 但是可以允许被重置为0</p>
+<p><img src="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20200408214317.png"></p>
+<p>上面两个类型比较好理解, 难理解的histogram与summary.</p>
+<h4 id="histogram"><a href="#histogram" class="headerlink" title="histogram"></a>histogram</h4><p>histogram表示<strong>累积直方图</strong>， 主要用于表示一段时间范围内对数据进行采样（通常是请求持续时间或响应大小),并将其计入可配置的存储桶（bucket）中，并能够对其指定区间以及总数进行统计</p>
+<p>所以, 在很多的metric key中如果看到xxx_bucket时, 大部分表示这条记录的类型为histogram.</p>
+<p>很直观的一个例子, 统计ingress_nginx中请求的响应时间(单位:秒)</p>
+<p><code>nginx_ingress_controller_response_duration_seconds_bucket</code></p>
+<p><img src="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20200408215430.png"></p>
+<p>看到这可能会有人问, 这个结果是不是有问题, 这个<code>le</code>是什么意思?</p>
+<p>首先说一下这个<code>le</code>,它并不是一个单位,而是表示bucket的一个区间, 这个le是在ingress_nginx的代码中定义的.</p>
+<p>另一个要明白的是, histogram是<code>累积直方图</code></p>
+<p>因此上图就很容易理解了</p>
+<p>Ingress_nginx代码中定义了所有bucket的区间值(当然，作者可以随便定义), 所有请求产生的响应时间都会落在这些区间之内。</p>
+<ol>
+<li>响应时间&lt;0.005的请求个数为24</li>
+<li>响应时间&lt;0.01的请求个数为24, 包括&lt;0.005,也就是说没有请求的响应时间在 0.005与0.01之间</li>
+<li>响应时间&lt;0.025的请求个数为24,包含&lt;0.01的区间, 也就是说没有请求的响应时间在0.01与0.025之间</li>
+<li>响应时间&lt;0.05的请求个数为30, 包含&lt;0.025的区间, 也就是说请求的响应时间有6个落在0.025与0.05之间</li>
+<li>…</li>
+<li>响应时间&lt;0.25的请求个数为27034, 包含&lt;0.1的区间</li>
+<li>…</li>
+</ol>
+<p>从这个过程就可以知道为什么叫<code>累积直方图了</code>, 从上面的例子来总结,<strong>大部分的请求都落在0.1s到0.25s之间</strong></p>
+<p>这里要注意一下<code>le=+lnf</code>这条记录, 这个其实表示所有的记录, <code>lnf</code>表示最大的bucket的往上, 这里是10s以上的记录,从上图可以看到, 不存在响应时间大于10s, 正常也不应该有</p>
+<p>同时histogram也提供&lt;basename&gt;_sum，&lt;basename&gt;_count这两个指标</p>
+<p>总结来就: </p>
+<p><strong>&lt;basename&gt;_count就是一个计数器, 它只会增加,表示次数</strong></p>
+<p><strong>&lt;basename&gt;_sum也可以是一个计数器,它表示监控项对应的值的总和</strong></p>
+<p>先来看一下<code>nginx_ingress_controller_response_duration_seconds_count</code></p>
+<p><img src="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/image-20200409111003966.png"></p>
+<p> 会发现这3条记录value之和与<code>le=&#123;+lnf&#125;</code>的值是相等的, 因此count表示<code>对采样点的次数累计和</code>,这里也就是请求总数</p>
+<p>而&#96;&#96;nginx_ingress_controller_response_duration_seconds_sum&#96;</p>
+<p><img src="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20200409112322.png"></p>
+<p>sum表示的是<code>所有value的总和</code>,这个很好理解</p>
+<p>因此，如果想计算最近5分钟内的平均请求持续时间</p>
+<p>可以使用以下表达式:</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">rate(nginx_ingress_controller_response_duration_seconds_sum[5m]) / rate(nginx_ingress_controller_response_duration_seconds_count[5m])</span><br></pre></td></tr></table></figure>
+
+
+
+<p>同时 histogram也是可以计算分位数, 使用<code>histogram_quantile</code></p>
+<p>Prometheus 通过 <code>histogram_quantile</code> 函数来计算分位数（quantile），而且是一个预估值，并不完全准确，因为这个函数是假定每个区间内的样本分布是线性分布来计算结果值的。预估的准确度取决于 bucket 区间划分的粒度，粒度越大，准确度越低</p>
+<p><code>histogram_quantile(φ float, b instant-vector)</code></p>
+<p>假如，要计算95%的响应时间落在哪个区间可以使用以下命令</p>
+<p><code>histogram_quantile(0.95, sum(rate(nginx_ingress_controller_response_duration_seconds_bucket&#123;path=~&quot;/sensego/v2.0/mingyuan&quot;,status=&quot;200&quot;&#125;[1800m])) by (le))</code></p>
+<p><img src="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20200409115919.png"></p>
+<p>会发现大约在0.23s</p>
+<p>注意: 在数据量大的情况下，<code>histogram_quantile</code>计算可能会消耗大量CPU, 因为它是在服务端实时计算的.</p>
+<p>这个函数的源码在<a target="_blank" rel="noopener" href="https://github.com/prometheus/prometheus/blob/master/promql/quantile.go">这里</a></p>
+<h4 id="summary"><a href="#summary" class="headerlink" title="summary"></a>summary</h4><p>summary表示摘要数据, 这个跟histogram比较想像, 反映的都是统计类数据</p>
+<p>summary主要用于表示一段时间内数据采样结果（通常是请求持续时间或响应大小），<code>它直接存储了 quantile 数据，而不是根据统计区间计算出来的</code>。</p>
+<p><code>prometheus_target_interval_length_seconds</code>表示目标抓取所用时间</p>
+<p><img src="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20200409112817.png"></p>
+<p>很大的一个区别是<code>quantile</code>, 翻译过来就是分位数, 这个区间也是在源码里定义</p>
+<p>上面的图表示的含义是:</p>
+<ol>
+<li>有1%的目标抓取时间为19.936946996</li>
+<li>有5%的目标抓取时间为19.999956628</li>
+<li>有50%的目标抓取时间为20.000021361</li>
+<li>有90%的目标抓取时间为20.00006137</li>
+<li>有99%的目标抓取时间为20.071892568</li>
+</ol>
+<p>从这里可以看出,99%的时间都是20s内, 跟设置的interval&#x3D;20s基本符合.</p>
+<p>同时summary也提供&lt;basename&gt;_sum，&lt;basename&gt;_count这两个指标,这个跟histogram差不多</p>
+<p><code>prometheus_target_interval_length_seconds_sum</code></p>
+<p><img src="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20200409114922.png"></p>
+<p><code>prometheus_target_interval_length_seconds_count</code></p>
+<p><img src="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20200409114941.png"></p>
+<p>需要注意的是: <strong>不能对Summary产生的quantile值进行aggregation运算（例如sum, avg等）</strong></p>
+<h4 id="summary与histogram区别"><a href="#summary与histogram区别" class="headerlink" title="summary与histogram区别"></a>summary与histogram区别</h4><p>从上面可以发现Summary和histogram是比较类似，在使用上要如何区分呢？prometheus上有篇post专门解释了这两个的区别, <a target="_blank" rel="noopener" href="https://prometheus.io/docs/practices/histograms/">详情</a></p>
+<p>首先要明白是Summary的quantile计算是在数据上报的时候(简单来说就是在客户端就计算好的)就已经计算好的，需要在定义数据指标的时候就指定quantile的值，因为是数据上报计算的quantile，所以不支持包含数据过滤和聚合的quantile计算</p>
+<p>因此对于分位数的计算而言，Summary在通过PromQL进行查询时有更好的性能表现，而Histogram则会消耗更多的资源。反之对于客户端而言Histogram消耗的资源更少。在选择这两种方式时用户应该按照自己的实际场景进行选择.  Summary 结构有频繁的全局锁操作，对高并发程序性能存在一定影响。histogram仅仅是给每个桶做一个原子变量的计数就可以了，而summary要每次执行算法计算出最新的X分位value是多少，算法需要并发保护。会占用客户端的cpu和内存</p>
+<p>histogram不能得到精确的分为数，设置的bucket不合理的话，误差会非常大</p>
+<p>两条经验法则：</p>
+<ol>
+<li>如果需要汇总，请选择直方图。</li>
+<li>否则，如果您对将要观察的值的范围和分布有所了解，请选择直方图。无论值的范围和分布如何，如果需要准确的分位数，请选择摘要</li>
+</ol>
+<h3 id="参考文章"><a href="#参考文章" class="headerlink" title="参考文章:"></a><strong>参考文章:</strong></h3><blockquote>
+<ul>
+<li><a target="_blank" rel="noopener" href="https://prometheus.io/docs/concepts/metric_types/">https://prometheus.io/docs/concepts/metric_types/</a></li>
+<li><a target="_blank" rel="noopener" href="https://prometheus.io/docs/practices/histograms/">https://prometheus.io/docs/practices/histograms/</a></li>
+<li><a target="_blank" rel="noopener" href="https://www.yangcs.net/posts/prometheus-histograms/">https://www.yangcs.net/posts/prometheus-histograms/</a></li>
+<li><a target="_blank" rel="noopener" href="https://cloud.tencent.com/developer/news/319419">https://cloud.tencent.com/developer/news/319419</a></li>
+<li><a target="_blank" rel="noopener" href="https://github.com/prometheus/prometheus/blob/master/promql/quantile.go">https://github.com/prometheus/prometheus/blob/master/promql/quantile.go</a></li>
+</ul>
+</blockquote>
+<h3 id="转载请注明出处https-izsk-me"><a href="#转载请注明出处https-izsk-me" class="headerlink" title="转载请注明出处https://izsk.me"></a><strong>转载请注明出处<a target="_blank" rel="noopener" href="https://izsk.me/">https://izsk.me</a></strong></h3>
+      
+    </div>
+
+    <div>
+      
+        
+<div id="wechat_subscriber" style="display: block; padding: 10px 0; margin: 20px auto; width: 100%; text-align: center">
+    <img id="wechat_subscriber_qcode" src="/images/websitecode250.png" alt=" wechat" style="width: 200px; max-width: 100%;"/>
+    <div>Scan Me To Read on Phone</div>
+</div>
+
+
+      
+    </div>
+
+    <div>
+      
+        
+  <div style="padding: 10px 0; margin: 20px auto; width: 90%; text-align: center;">
+    <div>I know you won't do this,but what if you did?</div>
+    <button id="rewardButton" disable="enable" onclick="var qr = document.getElementById('QR'); if (qr.style.display === 'none') {qr.style.display='block';} else {qr.style.display='none'}">
+      <span>赏</span>
+    </button>
+    <div id="QR" style="display: none;">
+      
+        <div id="wechat" style="display: inline-block">
+          <img id="wechat_qr" src="/images/wechatpayme.png" alt=" WeChat Pay"/>
+          <p>微信打赏</p>
+        </div>
+      
+      
+        <div id="alipay" style="display: inline-block">
+          <img id="alipay_qr" src="/images/alipayme.jpg" alt=" Alipay"/>
+          <p>支付宝打赏</p>
+        </div>
+      
     </div>
   </div>
 
-{% endblock %}
 
-{% block sidebar %}
-  {{ sidebar_template.render(true) }}
-{% endblock %}
+      
+    </div>
 
 
-{% block script_extra %}
-  {% include '_scripts/pages/post-details.swig' %}
-{% endblock %}
+    <footer class="post-footer">
+      
+        <div class="post-tags">
+          
+            <a href="/tags/CloudNavi/" rel="tag"># CloudNavi</a>
+          
+        </div>
+      
+
+      
+        <div class="post-nav">
+          <div class="post-nav-next post-nav-item">
+            
+              <a href="/2019/12/27/Kubernetes-about-deployment-ports/" rel="next" title="Kubernetes学习(关于deployment中的port定义)">
+                <i class="fa fa-chevron-left"></i> Kubernetes学习(关于deployment中的port定义)
+              </a>
+            
+          </div>
+
+          <span class="post-nav-divider"></span>
+
+          <div class="post-nav-prev post-nav-item">
+            
+              <a href="/2019/12/31/2020-%E5%8A%AA%E5%8A%9B%E5%A5%8B%E6%96%97/" rel="prev" title="2020-努力奋斗">
+                2020-努力奋斗 <i class="fa fa-chevron-right"></i>
+              </a>
+            
+          </div>
+        </div>
+      
+
+      
+      
+    </footer>
+  </article>
+
+
+
+    <div class="post-spread">
+      
+    </div>
+  </div>
+
+
+          </div>
+          
+
+
+          
+  <div class="comments" id="comments">
+    
+  </div>
+
+
+        </div>
+        
+          
+  
+  <div class="sidebar-toggle">
+    <div class="sidebar-toggle-line-wrap">
+      <span class="sidebar-toggle-line sidebar-toggle-line-first"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-middle"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-last"></span>
+    </div>
+  </div>
+
+  <aside id="sidebar" class="sidebar">
+    <div class="sidebar-inner">
+
+      
+
+      
+        <ul class="sidebar-nav motion-element">
+          <li class="sidebar-nav-toc sidebar-nav-active" data-target="post-toc-wrap" >
+            文章目录
+          </li>
+          <li class="sidebar-nav-overview" data-target="site-overview">
+            站点概览
+          </li>
+        </ul>
+      
+
+      <section class="site-overview sidebar-panel">
+        <div class="site-author motion-element" itemprop="author" itemscope itemtype="http://schema.org/Person">
+          <img class="site-author-image" itemprop="image"
+               src="/images/avatar.gif"
+               alt="" />
+          <p class="site-author-name" itemprop="name"></p>
+          <p class="site-description motion-element" itemprop="description"></p>
+        </div>
+        <nav class="site-state motion-element">
+        
+          
+            <div class="site-state-item site-state-posts">
+              <a href="/archives">
+                <span class="site-state-item-count">192</span>
+                <span class="site-state-item-name">日志</span>
+              </a>
+            </div>
+          
+
+          
+            <div class="site-state-item site-state-categories">
+              <a href="/categories">
+                <span class="site-state-item-count">14</span>
+                <span class="site-state-item-name">分类</span>
+              </a>
+            </div>
+          
+
+          
+            <div class="site-state-item site-state-tags">
+              <a href="/tags">
+                <span class="site-state-item-count">14</span>
+                <span class="site-state-item-name">标签</span>
+              </a>
+            </div>
+          
+
+        </nav>
+
+        
+
+        <div class="links-of-author motion-element">
+          
+        </div>
+
+        
+        
+
+        
+        
+
+        
+
+
+      </section>
+
+      
+      <!--noindex-->
+        <section class="post-toc-wrap motion-element sidebar-panel sidebar-panel-active">
+          <div class="post-toc">
+
+            
+              
+            
+
+            
+              <div class="post-toc-content"><ol class="nav"><li class="nav-item nav-level-3"><a class="nav-link" href="#%E6%95%B0%E6%8D%AE%E6%A8%A1%E5%9E%8B"><span class="nav-number">1.</span> <span class="nav-text">数据模型</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E7%9B%91%E6%8E%A7%E9%A1%B9%E7%B1%BB%E5%9E%8B"><span class="nav-number">2.</span> <span class="nav-text">监控项类型</span></a><ol class="nav-child"><li class="nav-item nav-level-4"><a class="nav-link" href="#gauge"><span class="nav-number">2.1.</span> <span class="nav-text">gauge</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#counter"><span class="nav-number">2.2.</span> <span class="nav-text">counter</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#histogram"><span class="nav-number">2.3.</span> <span class="nav-text">histogram</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#summary"><span class="nav-number">2.4.</span> <span class="nav-text">summary</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#summary%E4%B8%8Ehistogram%E5%8C%BA%E5%88%AB"><span class="nav-number">2.5.</span> <span class="nav-text">summary与histogram区别</span></a></li></ol></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E5%8F%82%E8%80%83%E6%96%87%E7%AB%A0"><span class="nav-number">3.</span> <span class="nav-text">参考文章:</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E8%BD%AC%E8%BD%BD%E8%AF%B7%E6%B3%A8%E6%98%8E%E5%87%BA%E5%A4%84https-izsk-me"><span class="nav-number">4.</span> <span class="nav-text">转载请注明出处https:&#x2F;&#x2F;izsk.me</span></a></li></ol></div>
+            
+
+          </div>
+        </section>
+      <!--/noindex-->
+      
+
+    </div>
+  </aside>
+
+
+        
+      </div>
+    </main>
+
+    <footer id="footer" class="footer">
+      <div class="footer-inner">
+        <div class="copyright" >
+  
+  &copy; 
+  <span itemprop="copyrightYear">2022</span>
+  <span class="with-love">
+    <i class="fa fa-heart"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">Z.S.K.</span>
+</div>
+
+
+<div class="powered-by">
+  Supported by <a class="theme-link" target="_blank" rel="noopener" href="https://hexo.io">Hexo</a>
+</div>
+
+<div class="theme-info">
+  Theme -
+  <a class="theme-link" target="_blank" rel="noopener" href="https://github.com/iissnan/hexo-theme-next">
+    NexT.Mist
+  </a>
+</div>
+
+
+        
+
+        
+      </div>
+    </footer>
+
+    <div class="back-to-top">
+      <i class="fa fa-arrow-up"></i>
+    </div>
+  </div>
+
+  
+
+<script type="text/javascript">
+  if (Object.prototype.toString.call(window.Promise) !== '[object Function]') {
+    window.Promise = null;
+  }
+</script>
+
+
+
+
+
+
+
+
+
+  
+
+
+
+  
+  <script type="text/javascript" src="/lib/jquery/index.js?v=2.1.3"></script>
+
+  
+  <script type="text/javascript" src="/lib/fastclick/lib/fastclick.min.js?v=1.0.6"></script>
+
+  
+  <script type="text/javascript" src="/lib/jquery_lazyload/jquery.lazyload.js?v=1.9.7"></script>
+
+  
+  <script type="text/javascript" src="/lib/velocity/velocity.min.js?v=1.2.1"></script>
+
+  
+  <script type="text/javascript" src="/lib/velocity/velocity.ui.min.js?v=1.2.1"></script>
+
+  
+  <script type="text/javascript" src="/lib/fancybox/source/jquery.fancybox.pack.js?v=2.1.5"></script>
+
+
+  
+
+
+  <script type="text/javascript" src="/js/src/utils.js?v=5.1.0"></script>
+
+  <script type="text/javascript" src="/js/src/motion.js?v=5.1.0"></script>
+
+
+
+  
+  
+
+  
+  <script type="text/javascript" src="/js/src/scrollspy.js?v=5.1.0"></script>
+<script type="text/javascript" src="/js/src/post-details.js?v=5.1.0"></script>
+
+
+
+  
+
+
+  <script type="text/javascript" src="/js/src/bootstrap.js?v=5.1.0"></script>
+
+
+
+  
+
+
+
+  
+
+
+
+
+	
+
+
+
+
+
+  
+
+
+
+
+  
+  
+  <script type="text/javascript">
+    // Popup Window;
+    var isfetched = false;
+    // Search DB path;
+    var search_path = "search.xml";
+    if (search_path.length == 0) {
+      search_path = "search.xml";
+    }
+    var path = "/" + search_path;
+    // monitor main search box;
+
+    function proceedsearch() {
+      $("body").append('<div class="popoverlay">').css('overflow', 'hidden');
+      $('.popup').toggle();
+    }
+    // search function;
+    var searchFunc = function(path, search_id, content_id) {
+      'use strict';
+      $.ajax({
+        url: path,
+        dataType: "xml",
+        async: true,
+        success: function( xmlResponse ) {
+          // get the contents from search data
+          isfetched = true;
+          $('.popup').detach().appendTo('.header-inner');
+          var datas = $( "entry", xmlResponse ).map(function() {
+            return {
+              title: $( "title", this ).text(),
+              content: $("content",this).text(),
+              url: $( "url" , this).text()
+            };
+          }).get();
+          var $input = document.getElementById(search_id);
+          var $resultContent = document.getElementById(content_id);
+          $input.addEventListener('input', function(){
+            var matchcounts = 0;
+            var str='<ul class=\"search-result-list\">';
+            var keywords = this.value.trim().toLowerCase().split(/[\s\-]+/);
+            $resultContent.innerHTML = "";
+            if (this.value.trim().length > 1) {
+              // perform local searching
+              datas.forEach(function(data) {
+                var isMatch = false;
+                var content_index = [];
+                var data_title = data.title.trim().toLowerCase();
+                var data_content = data.content.trim().replace(/<[^>]+>/g,"").toLowerCase();
+                var data_url = decodeURIComponent(data.url);
+                var index_title = -1;
+                var index_content = -1;
+                var first_occur = -1;
+                // only match artiles with not empty titles and contents
+                if(data_title != '') {
+                  keywords.forEach(function(keyword, i) {
+                    index_title = data_title.indexOf(keyword);
+                    index_content = data_content.indexOf(keyword);
+                    if( index_title >= 0 || index_content >= 0 ){
+                      isMatch = true;
+                      if (i == 0) {
+                        first_occur = index_content;
+                      }
+                    }
+
+                  });
+                }
+                // show search results
+                if (isMatch) {
+                  matchcounts += 1;
+                  str += "<li><a href='"+ data_url +"' class='search-result-title'>"+ data_title +"</a>";
+                  var content = data.content.trim().replace(/<[^>]+>/g,"");
+                  if (first_occur >= 0) {
+                    // cut out 100 characters
+                    var start = first_occur - 20;
+                    var end = first_occur + 80;
+                    if(start < 0){
+                      start = 0;
+                    }
+                    if(start == 0){
+                      end = 50;
+                    }
+                    if(end > content.length){
+                      end = content.length;
+                    }
+                    var match_content = content.substring(start, end);
+                    // highlight all keywords
+                    keywords.forEach(function(keyword){
+                      var regS = new RegExp(keyword, "gi");
+                      match_content = match_content.replace(regS, "<b class=\"search-keyword\">"+keyword+"</b>");
+                    });
+
+                    str += "<p class=\"search-result\">" + match_content +"...</p>"
+                  }
+                  str += "</li>";
+                }
+              })};
+            str += "</ul>";
+            if (matchcounts == 0) { str = '<div id="no-result"><i class="fa fa-frown-o fa-5x" /></div>' }
+            if (keywords == "") { str = '<div id="no-result"><i class="fa fa-search fa-5x" /></div>' }
+            $resultContent.innerHTML = str;
+          });
+          proceedsearch();
+        }
+      });}
+
+    // handle and trigger popup window;
+    $('.popup-trigger').click(function(e) {
+      e.stopPropagation();
+      if (isfetched == false) {
+        searchFunc(path, 'local-search-input', 'local-search-result');
+      } else {
+        proceedsearch();
+      };
+    });
+
+    $('.popup-btn-close').click(function(e){
+      $('.popup').hide();
+      $(".popoverlay").remove();
+      $('body').css('overflow', '');
+    });
+    $('.popup').click(function(e){
+      e.stopPropagation();
+    });
+  </script>
+
+
+  
+
+  
+
+  
+
+  
+
+
+</body>
+</html>

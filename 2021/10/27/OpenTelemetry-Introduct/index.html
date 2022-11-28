@@ -1,38 +1,947 @@
-{% extends '_layout.swig' %}
-{% import '_macro/post.swig' as post_template %}
-{% import '_macro/sidebar.swig' as sidebar_template %}
+<!doctype html>
 
 
-{% block title %} {{ page.title }} | {{ config.title }} {% endblock %}
 
-{% block page_class %}page-post-detail{% endblock %}
+  
 
 
-{% block content %}
+<html class="theme-next mist use-motion" lang="zh-Hans">
+<head>
+  <meta charset="UTF-8"/>
+<meta http-equiv="X-UA-Compatible" content="IE=edge" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1"/>
+
+
+
+<meta http-equiv="Cache-Control" content="no-transform" />
+<meta http-equiv="Cache-Control" content="no-siteapp" />
+
+
+
+
+
+
+
+
+
+
+
+
+  
+  
+  <link href="/lib/fancybox/source/jquery.fancybox.css?v=2.1.5" rel="stylesheet" type="text/css" />
+
+
+
+
+  
+  
+  
+  
+
+  
+    
+    
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+    
+    
+    <link href="//fonts.googleapis.com/css?family=Lato:300,300italic,400,400italic,700,700italic&subset=latin,latin-ext" rel="stylesheet" type="text/css">
+  
+
+
+
+
+
+
+<link href="/lib/font-awesome/css/font-awesome.min.css?v=4.6.2" rel="stylesheet" type="text/css" />
+
+<link href="/css/main.css?v=5.1.0" rel="stylesheet" type="text/css" />
+
+
+  <meta name="keywords" content="CloudNavi," />
+
+
+
+
+
+
+
+
+  <link rel="shortcut icon" type="image/x-icon" href="/favicon.ico?v=5.1.0" />
+
+
+
+
+
+
+<meta name="description" content="历史文章: 可观测性到底在说什么 上文简单说了下可观测性，然后引出了主角: opentelemetry 可观测性一个很重要的领域Trace有两个业界标杆: 一个是OpenTracing，另一个OpenCensus，OpenTracing其实是一个规范，jeager就是基于opentracing实现的开源工具，而OpenCensus则是由google开源的度量工具，简单来说，这两者在可观测性领域功能">
+<meta property="og:type" content="article">
+<meta property="og:title" content="Opentelemetry调研实践二(opentelemetry架构及名词介绍)">
+<meta property="og:url" content="https://zhoushuke.github.io/2021/10/27/OpenTelemetry-Introduct/index.html">
+<meta property="og:site_name" content="Z.S.K.&#39;s Records">
+<meta property="og:description" content="历史文章: 可观测性到底在说什么 上文简单说了下可观测性，然后引出了主角: opentelemetry 可观测性一个很重要的领域Trace有两个业界标杆: 一个是OpenTracing，另一个OpenCensus，OpenTracing其实是一个规范，jeager就是基于opentracing实现的开源工具，而OpenCensus则是由google开源的度量工具，简单来说，这两者在可观测性领域功能">
+<meta property="og:locale">
+<meta property="og:image" content="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20210930101301.png">
+<meta property="og:image" content="https://raw.github.com/open-telemetry/opentelemetry.io/main/iconography/Otel_Collector.svg">
+<meta property="article:published_time" content="2021-10-27T08:30:53.000Z">
+<meta property="article:modified_time" content="2022-07-19T03:16:00.971Z">
+<meta property="article:author" content="Z.S.K.">
+<meta property="article:tag" content="CloudNavi">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:image" content="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20210930101301.png">
+
+
+
+<script type="text/javascript" id="hexo.configurations">
+  var NexT = window.NexT || {};
+  var CONFIG = {
+    root: '',
+    scheme: 'Mist',
+    sidebar: {"position":"left","display":"post"},
+    fancybox: true,
+    motion: true,
+    duoshuo: {
+      userId: 'undefined',
+      author: '博主'
+    },
+    algolia: {
+      applicationID: '',
+      apiKey: '',
+      indexName: '',
+      hits: {"per_page":10},
+      labels: {"input_placeholder":"Search for Posts","hits_empty":"We didn't find any results for the search: ${query}","hits_stats":"${hits} results found in ${time} ms"}
+    }
+  };
+</script>
+
+
+
+  <link rel="canonical" href="https://zhoushuke.github.io/2021/10/27/OpenTelemetry-Introduct/"/>
+
+
+
+
+
+  <title> Opentelemetry调研实践二(opentelemetry架构及名词介绍) | Z.S.K.'s Records </title>
+<meta name="generator" content="Hexo 6.2.0"></head>
+
+<body itemscope itemtype="http://schema.org/WebPage" lang="zh-Hans">
+
+  
+
+
+
+
+
+
+
+
+
+
+  
+  
+    
+  
+
+  <div class="container one-collumn sidebar-position-left page-post-detail ">
+    <div class="headband"></div>
+
+    <header id="header" class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-meta ">
+  
+
+  <div class="custom-logo-site-title">
+    <a href="/"  class="brand" rel="start">
+      <span class="logo-line-before"><i></i></span>
+      <span class="site-title">Z.S.K.'s Records</span>
+      <span class="logo-line-after"><i></i></span>
+    </a>
+  </div>
+    
+      <p class="site-subtitle"></p>
+    
+</div>
+
+<div class="site-nav-toggle">
+  <button>
+    <span class="btn-bar"></span>
+    <span class="btn-bar"></span>
+    <span class="btn-bar"></span>
+  </button>
+</div>
+
+<nav class="site-nav">
+  
+
+  
+    <ul id="menu" class="menu">
+      
+        
+        <li class="menu-item menu-item-home">
+          <a href="/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-home"></i> <br />
+            
+            首页
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-categories">
+          <a href="/categories" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-th"></i> <br />
+            
+            分类
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-about">
+          <a href="/about/ZSK-Profile.pdf" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-user"></i> <br />
+            
+            简历
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-archives">
+          <a href="/archives" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-archive"></i> <br />
+            
+            归档
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-tags">
+          <a href="/tags" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-tags"></i> <br />
+            
+            标签
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-commonweal">
+          <a href="/404.html" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-heartbeat"></i> <br />
+            
+            公益404
+          </a>
+        </li>
+      
+
+      
+        <li class="menu-item menu-item-search">
+          
+            <a href="javascript:;" class="popup-trigger">
+          
+            
+              <i class="menu-item-icon fa fa-search fa-fw"></i> <br />
+            
+            搜索
+          </a>
+        </li>
+      
+    </ul>
+  
+
+  
+    <div class="site-search">
+      
+  <div class="popup">
+ <span class="search-icon fa fa-search"></span>
+ <input type="text" id="local-search-input">
+ <div id="local-search-result"></div>
+ <span class="popup-btn-close">close</span>
+</div>
+
+
+    </div>
+  
+</nav>
+
+
+
+ </div>
+    </header>
+
+    <main id="main" class="main">
+      <div class="main-inner">
+        <div class="content-wrap">
+          <div id="content" class="content">
+            
 
   <div id="posts" class="posts-expand">
-    {{ post_template.render(page) }}
+    
 
-    <div class="post-spread">
-      {% if theme.jiathis %}
-        {% include '_partials/share/jiathis.swig' %}
-      {% elseif theme.baidushare %}
-        {% include '_partials/share/baidushare.swig' %}
-      {% elseif theme.add_this_id %}
-        {% include '_partials/share/add-this.swig' %}
-      {% elseif theme.duoshuo_shortname and theme.duoshuo_share %}
-        {% include '_partials/share/duoshuo_share.swig' %}
-      {% endif %}
+  
+
+  
+  
+  
+
+  <article class="post post-type-normal " itemscope itemtype="http://schema.org/Article">
+  <link itemprop="mainEntityOfPage" href="https://zhoushuke.github.io/2021/10/27/OpenTelemetry-Introduct/">
+
+  <span style="display:none" itemprop="author" itemscope itemtype="http://schema.org/Person">
+    <meta itemprop="name" content="">
+    <meta itemprop="description" content="">
+    <meta itemprop="image" content="/images/avatar.gif">
+  </span>
+
+  <span style="display:none" itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+    <meta itemprop="name" content="Z.S.K.'s Records">
+    <span style="display:none" itemprop="logo" itemscope itemtype="http://schema.org/ImageObject">
+      <img style="display:none;" itemprop="url image" alt="Z.S.K.'s Records" src="">
+    </span>
+  </span>
+
+    
+      <header class="post-header">
+
+        
+        
+          <h1 class="post-title" itemprop="name headline">
+            
+            
+              
+                Opentelemetry调研实践二(opentelemetry架构及名词介绍)
+              
+            
+          </h1>
+        
+
+        <div class="post-meta">
+          <span class="post-time">
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">发表于</span>
+              
+              <time title="Post created" itemprop="dateCreated datePublished" datetime="2021-10-27T16:30:53+08:00">
+                2021-10-27
+              </time>
+            
+
+            
+
+            
+          </span>
+
+          
+            <span class="post-category" >
+            
+              <span class="post-meta-divider">|</span>
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-folder-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">分类于</span>
+              
+              
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/CloudNavi/" itemprop="url" rel="index">
+                    <span itemprop="name">CloudNavi</span>
+                  </a>
+                </span>
+
+                
+                
+              
+            </span>
+          
+
+          
+            
+          
+
+          
+
+          
+          
+
+          
+
+          
+
+        </div>
+      </header>
+    
+
+
+    <div class="post-body" itemprop="articleBody">
+
+      
+      
+
+      
+        <p>历史文章:</p>
+<p><a target="_blank" rel="noopener" href="https://izsk.me/2021/10/19/OpenTelemetry-what-is-observability/">可观测性到底在说什么</a></p>
+<p><a target="_blank" rel="noopener" href="https://izsk.me/2021/10/19/OpenTelemetry-what-is-observability/">上文</a>简单说了下可观测性，然后引出了<strong>主角: opentelemetry</strong></p>
+<p>可观测性一个很重要的领域<code>Trace</code>有两个业界标杆: 一个是<a target="_blank" rel="noopener" href="https://opentracing.io/">OpenTracing</a>，另一个<a target="_blank" rel="noopener" href="https://opencensus.io/">OpenCensus</a>，OpenTracing其实是一个规范，jeager就是基于opentracing实现的开源工具，而OpenCensus则是由google开源的度量工具，简单来说，这两者在可观测性领域功能高度重合，因此，在CNCF主导下进行了合并形成opentelemetry项目，OpenTracing跟penCensus共同推进opentelemetry，两者的官网也赫赫表达基本不再维护，同时opentelemetry也致力于trace、logging、metrics间的关联性.</p>
+<span id="more"></span>
+
+
+
+<h3 id="OpenTelemetry核心工作"><a href="#OpenTelemetry核心工作" class="headerlink" title="OpenTelemetry核心工作"></a>OpenTelemetry核心工作</h3><blockquote>
+<ul>
+<li>1.规范的制定和协议的统一，规范包含数据传输、API的规范，协议的统一包含：HTTP W3C的标准支持及GRPC等框架的协议标准</li>
+<li>2.多语言SDK的实现和集成，用户可以使用SDK进行代码自动注入和手动埋点，同时对其他三方库（Log4j、LogBack等）进行集成支持</li>
+<li>3.数据收集系统的实现，当前是基于OpenCensus Service的收集系统，包括Agent和Collector。</li>
+</ul>
+</blockquote>
+<p>由此可见，OpenTelemetry的自身定位很明确：数据采集和标准规范的统一，对于数据如何去使用、存储、展示、告警，官方是不涉及的</p>
+<h3 id="OpenTelemetry状态"><a href="#OpenTelemetry状态" class="headerlink" title="OpenTelemetry状态"></a>OpenTelemetry状态</h3><p>OpenTelemetry要解决的<strong>是对可观测性的大一统</strong>，它提供了一组API和SDK来标准化遥测数据的采集和传输，opentelemetry并不想对所有的组件都进行重写，而是最大程度复用目前业界在各大领域常用工具，通过提供了一个安全，厂商中立的能用协议、组件，这样就可以按照需要形成pipeline将数据发往不同的后端。</p>
+<p>由于opentelemetry提出时间并不长，大家可以从<a target="_blank" rel="noopener" href="https://opentelemetry.io/status/">status</a>中可以看到最新的状态，可以看到，目前只有Tracing实现了1.0的release，而Metrics处于<a target="_blank" rel="noopener" href="https://github.com/open-telemetry/opentelemetry-specification/blob/main/specification/document-status.md#feature-freeze">feature-freeze</a>，这个状态说的是metrics目前暂不接受在metrics中添加新的功能，以便技术委员会优先实现其它功能，还未达到stable状态，而在Logging则还处于草案阶段，opentelemetry官方的解释是日志相对存在体量大，延时高的问题，相对棘手且优先级对比另两者不高。</p>
+<p>tracing已经在2021上半年实现了stable,目前官方给出的时间线是在2021下半年实现metrics的stable，在2022实现logging的stable.</p>
+<p>为什么tracing是首先stable的，作者个人感觉可能是tracing目前在业界普及度还不够吧，而像metrics方面，prometheus早已成了业务标准</p>
+<h3 id="OpenTelemetry架构"><a href="#OpenTelemetry架构" class="headerlink" title="OpenTelemetry架构"></a>OpenTelemetry架构</h3><p>这里作者还要重点说明的是，就算是Service Mesh中对于链路追踪也普遍有一个问题: 就是无论你在数据平面如何做流量劫持，如何透传信息，以及如何生成或者继承Span，<strong>入口流量和出口流量之间的链路都存在无法串联的问题</strong>， 这个问题要解决还是需要服务来埋点透传，将链路信息透传到下一次请求当中去，这个问题是无法避免的，而OpenTelemetry的后续推行，可以解决这方面的标准化问题。</p>
+<p>来看一张图:</p>
+<p><img src="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20210930101301.png"></p>
+<p>注: 由于logging还处于草案状态，这里没有描述出来。</p>
+<p>opentelemetry也是个插件式的架构，针对不同的开发语言会有相应的Client组件，叫<strong>Instrumenttation</strong>，也就是在代码中埋点调用的api&#x2F;sdk采集telemetry数据</p>
+<p>将获取到的数据pull&#x2F;push到上图中定义好的<strong>pipeline</strong>中,这部分是可高度定制的, opentelemetry提供统一的<a target="_blank" rel="noopener" href="https://github.com/open-telemetry/opentelemetry-specification">Specification</a></p>
+<p><strong>pipeline</strong>就是<strong>Collection</strong>的实现，大概分为3部分，这里简单介绍一下，后期在详解collection的配置文件时再进行展开:</p>
+<blockquote>
+<ul>
+<li>receivers(接收者): 定义从client端的数据要以何种数据模型进行接收, 支持很多种数据模型.</li>
+<li>processors: 将receivers的数据进行某些处理，比如批量、性能分析等.</li>
+<li>exporters: 将processors后的数据导出到特定的后端，比如metrics数据存储到prometheus中.</li>
+</ul>
+</blockquote>
+<p>整个流程是pipeline式的,可以根据实际情况自定义pipeline,所以说collector定制性很高.</p>
+<p>这里要说明的是receivers、processors、exporters有官方的定义<a target="_blank" rel="noopener" href="https://github.com/open-telemetry/opentelemetry-collector">opentelemetry-collector</a></p>
+<p>但是也有很多开源产品基于opentelemetry-collector提供相应的实现,详细列表参考<a target="_blank" rel="noopener" href="https://github.com/open-telemetry/opentelemetry-collector-contrib">opentelemetry-collector-contrib</a></p>
+<p>总结一下，opentelemetry按功能分层来说,可以分为：采集器（Instrument）、发送器（TransPort）、收集器（Collector）、存储（Srotage）、展示（API&amp;UI）,这跟其它APM系统是类似的，只是opentelemetry在很多组件上选择了利用而不是重新造轮子.</p>
+<p>在opentelemetry里面的名词也是非常多的，有必要把一些常用的名词给大家解释一下.</p>
+<p>建议大家多多阅读官方文档，也可参考<a target="_blank" rel="noopener" href="https://jckling.github.io/2021/04/02/Jaeger/OpenTelemetry%20%E8%A7%84%E8%8C%83%E9%98%85%E8%AF%BB/">OpenTelemetry 规范阅读</a>，里面详细介绍了各个名词的含义，对大家理解有帮助</p>
+<h3 id="OpenTelemetry核心概念"><a href="#OpenTelemetry核心概念" class="headerlink" title="OpenTelemetry核心概念"></a>OpenTelemetry核心概念</h3><p>以下名词引用官方文档<a target="_blank" rel="noopener" href="https://opentelemetry.io/docs/concepts/components/">components</a>的翻译</p>
+<h4 id="Proto"><a href="#Proto" class="headerlink" title="Proto"></a>Proto</h4><p>语言无关的接口类型。描述很多下文组件的定义。</p>
+<p>####Client</p>
+<p>其实就是client, 应用调用OpenTelemetry API的client, 语言相关的代码封装库，引入trace、metrics、log等</p>
+<h4 id="API-x2F-SDK"><a href="#API-x2F-SDK" class="headerlink" title="API&#x2F;SDK"></a>API&#x2F;SDK</h4><p>API 包由用于检测的横切公共接口组成，导入到第三方库和应用程序代码的 OpenTelemetry 客户端的任何部分都被认为是 API 的一部分,</p>
+<p>而SDK是API的具体实现，这部分是语言相关的.</p>
+<h4 id="Specification"><a href="#Specification" class="headerlink" title="Specification"></a>Specification</h4><p>Specification则是定义了API&#x2F;SDK及数据模型，所有包含第三方实现的都需要遵循spec定义的规范</p>
+<h4 id="Semantic-Conventions"><a href="#Semantic-Conventions" class="headerlink" title="Semantic Conventions"></a>Semantic Conventions</h4><p>OpenTelemetry 项目保证所有的instrumentation(不论任何语言)都包含相同的语义信息</p>
+<h4 id="Resource"><a href="#Resource" class="headerlink" title="Resource"></a>Resource</h4><p>resource附加于某个process产生的所有trace的键值对，在初始化阶段指定并传递到collector中</p>
+<h4 id="Baggage"><a href="#Baggage" class="headerlink" title="Baggage"></a>Baggage</h4><p>为添加在metrics、log、traces中的注解信息，键值对需要唯一，无法更改</p>
+<h4 id="Propagators"><a href="#Propagators" class="headerlink" title="Propagators"></a>Propagators</h4><p>传播器，比如在多进程的调用中，开启传播器用于跨服务传播spanContext</p>
+<h4 id="Attributes"><a href="#Attributes" class="headerlink" title="Attributes"></a>Attributes</h4><p>其实就是tag, 可以给span添加metadata数据,<code>SetAttributes</code>属性可以多次添加，不存在就添加，存在就覆盖</p>
+<h4 id="Events"><a href="#Events" class="headerlink" title="Events"></a>Events</h4><p>类似于日志, 比如在trace中嵌入请求体跟响应体</p>
+<h4 id="Collector"><a href="#Collector" class="headerlink" title="Collector"></a>Collector</h4><p>虽然Collector翻译过来叫接收，但它负责遥测数据源的接收、处理和导出三部分，提供了与供应商无关的实现</p>
+<p>collector是个实体组件，有两个部署方案，可以ds进行部署，各个host负责该host上的遥测数据</p>
+<p>或者以deployment的方式部署，接收所有遥测数据</p>
+<p>其中，Metrics、Logging、Trace、Baggage叫<strong>Signal</strong>,以上的对象中除了<strong>Collector</strong>,其它几个由于没有具体部署对象，名词一多理解起来还是比较费劲，需要多翻官方文档</p>
+<p>这里重点介绍Collector，在介绍Collector前，先来介绍一个协议。</p>
+<h3 id="OpenTelemetry协议-OTLP"><a href="#OpenTelemetry协议-OTLP" class="headerlink" title="OpenTelemetry协议-OTLP"></a>OpenTelemetry协议-OTLP</h3><p><a target="_blank" rel="noopener" href="https://github.com/open-telemetry/opentelemetry-specification/tree/main/specification/protocol">OTLP(OpenTelemetry Protocol)</a>是一种协议，该此协议用于将应用产生的遥感数据发送到 OpenTelemetry Collector.</p>
+<p><img src="https://raw.github.com/open-telemetry/opentelemetry.io/main/iconography/Otel_Collector.svg"></p>
+<p>otlp是opentelemetry中比较核心的存在，在遥测数据及Collector之间制定了包括编码(encoding)、传输(transport)、传递(delivery)等协议</p>
+<p>目前OTLP协议在数据源的状态也是不一样的.</p>
+<ul>
+<li>Tracing: <strong>Stable</strong></li>
+<li>Metrics: <strong>Stable</strong></li>
+<li>Logs: <strong>Beta</strong></li>
+</ul>
+<p>otlp也对http、grpc进行了较好的开箱即用的封装.</p>
+<p>另外，OTEP(OpenTelemetry Enhancement Proposal)是加强版的otlp, 目前处于不稳定状态，这里不展开.</p>
+<h3 id="参考文章"><a href="#参考文章" class="headerlink" title="参考文章:"></a>参考文章:</h3><blockquote>
+<ul>
+<li><a target="_blank" rel="noopener" href="https://codingnote.cc/p/246692">https://codingnote.cc/p/246692</a></li>
+<li><a target="_blank" rel="noopener" href="https://opentelemetry.io/registry">https://opentelemetry.io/registry</a></li>
+<li><a target="_blank" rel="noopener" href="https://opentelemetry.io/docs/concepts/components">https://opentelemetry.io/docs/concepts/components</a></li>
+<li><a target="_blank" rel="noopener" href="https://signoz.io/blog/opentelemetry-kubernetes">https://signoz.io/blog/opentelemetry-kubernetes</a></li>
+<li><a target="_blank" rel="noopener" href="https://www.infoq.cn/article/pky4szfhbvifxrcriqcr">https://www.infoq.cn/article/pky4szfhbvifxrcriqcr</a></li>
+<li><a target="_blank" rel="noopener" href="https://github.com/open-telemetry/opentelemetry-collector">https://github.com/open-telemetry/opentelemetry-collector</a></li>
+<li><a target="_blank" rel="noopener" href="https://github.com/open-telemetry/opentelemetry-collector-contrib">https://github.com/open-telemetry/opentelemetry-collector-contrib</a></li>
+<li><a target="_blank" rel="noopener" href="https://tech.ipalfish.com/blog/2020/12/29/design-dimensions-of-tracing-systems">https://tech.ipalfish.com/blog/2020/12/29/design-dimensions-of-tracing-systems</a></li>
+<li><a target="_blank" rel="noopener" href="https://github.com/open-telemetry/opentelemetry-specification/tree/main/specification/protocol">https://github.com/open-telemetry/opentelemetry-specification/tree/main/specification/protocol</a></li>
+<li><a target="_blank" rel="noopener" href="https://jckling.github.io/2021/04/02/Jaeger/OpenTelemetry%20%E8%A7%84%E8%8C%83%E9%98%85%E8%AF%BB">https://jckling.github.io/2021/04/02/Jaeger/OpenTelemetry%20%E8%A7%84%E8%8C%83%E9%98%85%E8%AF%BB</a></li>
+</ul>
+</blockquote>
+<h3 id="转载请注明出处https-izsk-me"><a href="#转载请注明出处https-izsk-me" class="headerlink" title="转载请注明出处https://izsk.me"></a><strong>转载请注明出处<a target="_blank" rel="noopener" href="https://izsk.me/">https://izsk.me</a></strong></h3>
+      
+    </div>
+
+    <div>
+      
+        
+<div id="wechat_subscriber" style="display: block; padding: 10px 0; margin: 20px auto; width: 100%; text-align: center">
+    <img id="wechat_subscriber_qcode" src="/images/websitecode250.png" alt=" wechat" style="width: 200px; max-width: 100%;"/>
+    <div>Scan Me To Read on Phone</div>
+</div>
+
+
+      
+    </div>
+
+    <div>
+      
+        
+  <div style="padding: 10px 0; margin: 20px auto; width: 90%; text-align: center;">
+    <div>I know you won't do this,but what if you did?</div>
+    <button id="rewardButton" disable="enable" onclick="var qr = document.getElementById('QR'); if (qr.style.display === 'none') {qr.style.display='block';} else {qr.style.display='none'}">
+      <span>赏</span>
+    </button>
+    <div id="QR" style="display: none;">
+      
+        <div id="wechat" style="display: inline-block">
+          <img id="wechat_qr" src="/images/wechatpayme.png" alt=" WeChat Pay"/>
+          <p>微信打赏</p>
+        </div>
+      
+      
+        <div id="alipay" style="display: inline-block">
+          <img id="alipay_qr" src="/images/alipayme.jpg" alt=" Alipay"/>
+          <p>支付宝打赏</p>
+        </div>
+      
     </div>
   </div>
 
-{% endblock %}
 
-{% block sidebar %}
-  {{ sidebar_template.render(true) }}
-{% endblock %}
+      
+    </div>
 
 
-{% block script_extra %}
-  {% include '_scripts/pages/post-details.swig' %}
-{% endblock %}
+    <footer class="post-footer">
+      
+        <div class="post-tags">
+          
+            <a href="/tags/CloudNavi/" rel="tag"># CloudNavi</a>
+          
+        </div>
+      
+
+      
+        <div class="post-nav">
+          <div class="post-nav-next post-nav-item">
+            
+              <a href="/2021/10/19/OpenTelemetry-what-is-observability/" rel="next" title="Opentelemetry调研实践一(可观测性到底在说什么)">
+                <i class="fa fa-chevron-left"></i> Opentelemetry调研实践一(可观测性到底在说什么)
+              </a>
+            
+          </div>
+
+          <span class="post-nav-divider"></span>
+
+          <div class="post-nav-prev post-nav-item">
+            
+              <a href="/2021/10/31/OpenTelemetry-Trace/" rel="prev" title="Opentelemetry调研实践三(全链路追踪的TraceID与SpanID)">
+                Opentelemetry调研实践三(全链路追踪的TraceID与SpanID) <i class="fa fa-chevron-right"></i>
+              </a>
+            
+          </div>
+        </div>
+      
+
+      
+      
+    </footer>
+  </article>
+
+
+
+    <div class="post-spread">
+      
+    </div>
+  </div>
+
+
+          </div>
+          
+
+
+          
+  <div class="comments" id="comments">
+    
+  </div>
+
+
+        </div>
+        
+          
+  
+  <div class="sidebar-toggle">
+    <div class="sidebar-toggle-line-wrap">
+      <span class="sidebar-toggle-line sidebar-toggle-line-first"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-middle"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-last"></span>
+    </div>
+  </div>
+
+  <aside id="sidebar" class="sidebar">
+    <div class="sidebar-inner">
+
+      
+
+      
+        <ul class="sidebar-nav motion-element">
+          <li class="sidebar-nav-toc sidebar-nav-active" data-target="post-toc-wrap" >
+            文章目录
+          </li>
+          <li class="sidebar-nav-overview" data-target="site-overview">
+            站点概览
+          </li>
+        </ul>
+      
+
+      <section class="site-overview sidebar-panel">
+        <div class="site-author motion-element" itemprop="author" itemscope itemtype="http://schema.org/Person">
+          <img class="site-author-image" itemprop="image"
+               src="/images/avatar.gif"
+               alt="" />
+          <p class="site-author-name" itemprop="name"></p>
+          <p class="site-description motion-element" itemprop="description"></p>
+        </div>
+        <nav class="site-state motion-element">
+        
+          
+            <div class="site-state-item site-state-posts">
+              <a href="/archives">
+                <span class="site-state-item-count">192</span>
+                <span class="site-state-item-name">日志</span>
+              </a>
+            </div>
+          
+
+          
+            <div class="site-state-item site-state-categories">
+              <a href="/categories">
+                <span class="site-state-item-count">14</span>
+                <span class="site-state-item-name">分类</span>
+              </a>
+            </div>
+          
+
+          
+            <div class="site-state-item site-state-tags">
+              <a href="/tags">
+                <span class="site-state-item-count">14</span>
+                <span class="site-state-item-name">标签</span>
+              </a>
+            </div>
+          
+
+        </nav>
+
+        
+
+        <div class="links-of-author motion-element">
+          
+        </div>
+
+        
+        
+
+        
+        
+
+        
+
+
+      </section>
+
+      
+      <!--noindex-->
+        <section class="post-toc-wrap motion-element sidebar-panel sidebar-panel-active">
+          <div class="post-toc">
+
+            
+              
+            
+
+            
+              <div class="post-toc-content"><ol class="nav"><li class="nav-item nav-level-3"><a class="nav-link" href="#OpenTelemetry%E6%A0%B8%E5%BF%83%E5%B7%A5%E4%BD%9C"><span class="nav-number">1.</span> <span class="nav-text">OpenTelemetry核心工作</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#OpenTelemetry%E7%8A%B6%E6%80%81"><span class="nav-number">2.</span> <span class="nav-text">OpenTelemetry状态</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#OpenTelemetry%E6%9E%B6%E6%9E%84"><span class="nav-number">3.</span> <span class="nav-text">OpenTelemetry架构</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#OpenTelemetry%E6%A0%B8%E5%BF%83%E6%A6%82%E5%BF%B5"><span class="nav-number">4.</span> <span class="nav-text">OpenTelemetry核心概念</span></a><ol class="nav-child"><li class="nav-item nav-level-4"><a class="nav-link" href="#Proto"><span class="nav-number">4.1.</span> <span class="nav-text">Proto</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#API-x2F-SDK"><span class="nav-number">4.2.</span> <span class="nav-text">API&#x2F;SDK</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#Specification"><span class="nav-number">4.3.</span> <span class="nav-text">Specification</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#Semantic-Conventions"><span class="nav-number">4.4.</span> <span class="nav-text">Semantic Conventions</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#Resource"><span class="nav-number">4.5.</span> <span class="nav-text">Resource</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#Baggage"><span class="nav-number">4.6.</span> <span class="nav-text">Baggage</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#Propagators"><span class="nav-number">4.7.</span> <span class="nav-text">Propagators</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#Attributes"><span class="nav-number">4.8.</span> <span class="nav-text">Attributes</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#Events"><span class="nav-number">4.9.</span> <span class="nav-text">Events</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#Collector"><span class="nav-number">4.10.</span> <span class="nav-text">Collector</span></a></li></ol></li><li class="nav-item nav-level-3"><a class="nav-link" href="#OpenTelemetry%E5%8D%8F%E8%AE%AE-OTLP"><span class="nav-number">5.</span> <span class="nav-text">OpenTelemetry协议-OTLP</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E5%8F%82%E8%80%83%E6%96%87%E7%AB%A0"><span class="nav-number">6.</span> <span class="nav-text">参考文章:</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E8%BD%AC%E8%BD%BD%E8%AF%B7%E6%B3%A8%E6%98%8E%E5%87%BA%E5%A4%84https-izsk-me"><span class="nav-number">7.</span> <span class="nav-text">转载请注明出处https:&#x2F;&#x2F;izsk.me</span></a></li></ol></div>
+            
+
+          </div>
+        </section>
+      <!--/noindex-->
+      
+
+    </div>
+  </aside>
+
+
+        
+      </div>
+    </main>
+
+    <footer id="footer" class="footer">
+      <div class="footer-inner">
+        <div class="copyright" >
+  
+  &copy; 
+  <span itemprop="copyrightYear">2022</span>
+  <span class="with-love">
+    <i class="fa fa-heart"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">Z.S.K.</span>
+</div>
+
+
+<div class="powered-by">
+  Supported by <a class="theme-link" target="_blank" rel="noopener" href="https://hexo.io">Hexo</a>
+</div>
+
+<div class="theme-info">
+  Theme -
+  <a class="theme-link" target="_blank" rel="noopener" href="https://github.com/iissnan/hexo-theme-next">
+    NexT.Mist
+  </a>
+</div>
+
+
+        
+
+        
+      </div>
+    </footer>
+
+    <div class="back-to-top">
+      <i class="fa fa-arrow-up"></i>
+    </div>
+  </div>
+
+  
+
+<script type="text/javascript">
+  if (Object.prototype.toString.call(window.Promise) !== '[object Function]') {
+    window.Promise = null;
+  }
+</script>
+
+
+
+
+
+
+
+
+
+  
+
+
+
+  
+  <script type="text/javascript" src="/lib/jquery/index.js?v=2.1.3"></script>
+
+  
+  <script type="text/javascript" src="/lib/fastclick/lib/fastclick.min.js?v=1.0.6"></script>
+
+  
+  <script type="text/javascript" src="/lib/jquery_lazyload/jquery.lazyload.js?v=1.9.7"></script>
+
+  
+  <script type="text/javascript" src="/lib/velocity/velocity.min.js?v=1.2.1"></script>
+
+  
+  <script type="text/javascript" src="/lib/velocity/velocity.ui.min.js?v=1.2.1"></script>
+
+  
+  <script type="text/javascript" src="/lib/fancybox/source/jquery.fancybox.pack.js?v=2.1.5"></script>
+
+
+  
+
+
+  <script type="text/javascript" src="/js/src/utils.js?v=5.1.0"></script>
+
+  <script type="text/javascript" src="/js/src/motion.js?v=5.1.0"></script>
+
+
+
+  
+  
+
+  
+  <script type="text/javascript" src="/js/src/scrollspy.js?v=5.1.0"></script>
+<script type="text/javascript" src="/js/src/post-details.js?v=5.1.0"></script>
+
+
+
+  
+
+
+  <script type="text/javascript" src="/js/src/bootstrap.js?v=5.1.0"></script>
+
+
+
+  
+
+
+
+  
+
+
+
+
+	
+
+
+
+
+
+  
+
+
+
+
+  
+  
+  <script type="text/javascript">
+    // Popup Window;
+    var isfetched = false;
+    // Search DB path;
+    var search_path = "search.xml";
+    if (search_path.length == 0) {
+      search_path = "search.xml";
+    }
+    var path = "/" + search_path;
+    // monitor main search box;
+
+    function proceedsearch() {
+      $("body").append('<div class="popoverlay">').css('overflow', 'hidden');
+      $('.popup').toggle();
+    }
+    // search function;
+    var searchFunc = function(path, search_id, content_id) {
+      'use strict';
+      $.ajax({
+        url: path,
+        dataType: "xml",
+        async: true,
+        success: function( xmlResponse ) {
+          // get the contents from search data
+          isfetched = true;
+          $('.popup').detach().appendTo('.header-inner');
+          var datas = $( "entry", xmlResponse ).map(function() {
+            return {
+              title: $( "title", this ).text(),
+              content: $("content",this).text(),
+              url: $( "url" , this).text()
+            };
+          }).get();
+          var $input = document.getElementById(search_id);
+          var $resultContent = document.getElementById(content_id);
+          $input.addEventListener('input', function(){
+            var matchcounts = 0;
+            var str='<ul class=\"search-result-list\">';
+            var keywords = this.value.trim().toLowerCase().split(/[\s\-]+/);
+            $resultContent.innerHTML = "";
+            if (this.value.trim().length > 1) {
+              // perform local searching
+              datas.forEach(function(data) {
+                var isMatch = false;
+                var content_index = [];
+                var data_title = data.title.trim().toLowerCase();
+                var data_content = data.content.trim().replace(/<[^>]+>/g,"").toLowerCase();
+                var data_url = decodeURIComponent(data.url);
+                var index_title = -1;
+                var index_content = -1;
+                var first_occur = -1;
+                // only match artiles with not empty titles and contents
+                if(data_title != '') {
+                  keywords.forEach(function(keyword, i) {
+                    index_title = data_title.indexOf(keyword);
+                    index_content = data_content.indexOf(keyword);
+                    if( index_title >= 0 || index_content >= 0 ){
+                      isMatch = true;
+                      if (i == 0) {
+                        first_occur = index_content;
+                      }
+                    }
+
+                  });
+                }
+                // show search results
+                if (isMatch) {
+                  matchcounts += 1;
+                  str += "<li><a href='"+ data_url +"' class='search-result-title'>"+ data_title +"</a>";
+                  var content = data.content.trim().replace(/<[^>]+>/g,"");
+                  if (first_occur >= 0) {
+                    // cut out 100 characters
+                    var start = first_occur - 20;
+                    var end = first_occur + 80;
+                    if(start < 0){
+                      start = 0;
+                    }
+                    if(start == 0){
+                      end = 50;
+                    }
+                    if(end > content.length){
+                      end = content.length;
+                    }
+                    var match_content = content.substring(start, end);
+                    // highlight all keywords
+                    keywords.forEach(function(keyword){
+                      var regS = new RegExp(keyword, "gi");
+                      match_content = match_content.replace(regS, "<b class=\"search-keyword\">"+keyword+"</b>");
+                    });
+
+                    str += "<p class=\"search-result\">" + match_content +"...</p>"
+                  }
+                  str += "</li>";
+                }
+              })};
+            str += "</ul>";
+            if (matchcounts == 0) { str = '<div id="no-result"><i class="fa fa-frown-o fa-5x" /></div>' }
+            if (keywords == "") { str = '<div id="no-result"><i class="fa fa-search fa-5x" /></div>' }
+            $resultContent.innerHTML = str;
+          });
+          proceedsearch();
+        }
+      });}
+
+    // handle and trigger popup window;
+    $('.popup-trigger').click(function(e) {
+      e.stopPropagation();
+      if (isfetched == false) {
+        searchFunc(path, 'local-search-input', 'local-search-result');
+      } else {
+        proceedsearch();
+      };
+    });
+
+    $('.popup-btn-close').click(function(e){
+      $('.popup').hide();
+      $(".popoverlay").remove();
+      $('body').css('overflow', '');
+    });
+    $('.popup').click(function(e){
+      e.stopPropagation();
+    });
+  </script>
+
+
+  
+
+  
+
+  
+
+  
+
+
+</body>
+</html>

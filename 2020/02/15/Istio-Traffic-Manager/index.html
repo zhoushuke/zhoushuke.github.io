@@ -1,38 +1,1115 @@
-{% extends '_layout.swig' %}
-{% import '_macro/post.swig' as post_template %}
-{% import '_macro/sidebar.swig' as sidebar_template %}
+<!doctype html>
 
 
-{% block title %} {{ page.title }} | {{ config.title }} {% endblock %}
 
-{% block page_class %}page-post-detail{% endblock %}
+  
 
 
-{% block content %}
+<html class="theme-next mist use-motion" lang="zh-Hans">
+<head>
+  <meta charset="UTF-8"/>
+<meta http-equiv="X-UA-Compatible" content="IE=edge" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1"/>
+
+
+
+<meta http-equiv="Cache-Control" content="no-transform" />
+<meta http-equiv="Cache-Control" content="no-siteapp" />
+
+
+
+
+
+
+
+
+
+
+
+
+  
+  
+  <link href="/lib/fancybox/source/jquery.fancybox.css?v=2.1.5" rel="stylesheet" type="text/css" />
+
+
+
+
+  
+  
+  
+  
+
+  
+    
+    
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+    
+    
+    <link href="//fonts.googleapis.com/css?family=Lato:300,300italic,400,400italic,700,700italic&subset=latin,latin-ext" rel="stylesheet" type="text/css">
+  
+
+
+
+
+
+
+<link href="/lib/font-awesome/css/font-awesome.min.css?v=4.6.2" rel="stylesheet" type="text/css" />
+
+<link href="/css/main.css?v=5.1.0" rel="stylesheet" type="text/css" />
+
+
+  <meta name="keywords" content="ServiceMesh," />
+
+
+
+
+
+
+
+
+  <link rel="shortcut icon" type="image/x-icon" href="/favicon.ico?v=5.1.0" />
+
+
+
+
+
+
+<meta name="description" content="前面大致学习了下Istio的整体架构, 没有涉及它里面的细节, 这次主要说明一下istio是如何将请求进行转发的. 信息量确实比较大.">
+<meta property="og:type" content="article">
+<meta property="og:title" content="Istio学习(请求路由分析)">
+<meta property="og:url" content="https://zhoushuke.github.io/2020/02/15/Istio-Traffic-Manager/index.html">
+<meta property="og:site_name" content="Z.S.K.&#39;s Records">
+<meta property="og:description" content="前面大致学习了下Istio的整体架构, 没有涉及它里面的细节, 这次主要说明一下istio是如何将请求进行转发的. 信息量确实比较大.">
+<meta property="og:locale">
+<meta property="og:image" content="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20200209212447.png">
+<meta property="og:image" content="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20200209214241.png">
+<meta property="og:image" content="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20200209223637.png">
+<meta property="og:image" content="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20200210101851.png">
+<meta property="og:image" content="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20200210125921.png">
+<meta property="og:image" content="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20200210130019.png">
+<meta property="og:image" content="https://zhaohuabing.com/img/2019-12-05-istio-traffic-management-impl-intro/envoy-config-init.png">
+<meta property="og:image" content="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20200210160835.png">
+<meta property="og:image" content="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20200210161308.png">
+<meta property="og:image" content="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20200210161421.png">
+<meta property="og:image" content="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/image-20200107164542498.png">
+<meta property="og:image" content="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20200210162331.png">
+<meta property="og:image" content="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20200210163918.png">
+<meta property="og:image" content="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20200210163031.png">
+<meta property="og:image" content="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20200210163343.png">
+<meta property="og:image" content="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20200210162221.png">
+<meta property="og:image" content="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/image-20200109143222173.png">
+<meta property="article:published_time" content="2020-02-15T05:30:53.000Z">
+<meta property="article:modified_time" content="2022-07-19T03:16:00.987Z">
+<meta property="article:author" content="Z.S.K.">
+<meta property="article:tag" content="ServiceMesh">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:image" content="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20200209212447.png">
+
+
+
+<script type="text/javascript" id="hexo.configurations">
+  var NexT = window.NexT || {};
+  var CONFIG = {
+    root: '',
+    scheme: 'Mist',
+    sidebar: {"position":"left","display":"post"},
+    fancybox: true,
+    motion: true,
+    duoshuo: {
+      userId: 'undefined',
+      author: '博主'
+    },
+    algolia: {
+      applicationID: '',
+      apiKey: '',
+      indexName: '',
+      hits: {"per_page":10},
+      labels: {"input_placeholder":"Search for Posts","hits_empty":"We didn't find any results for the search: ${query}","hits_stats":"${hits} results found in ${time} ms"}
+    }
+  };
+</script>
+
+
+
+  <link rel="canonical" href="https://zhoushuke.github.io/2020/02/15/Istio-Traffic-Manager/"/>
+
+
+
+
+
+  <title> Istio学习(请求路由分析) | Z.S.K.'s Records </title>
+<meta name="generator" content="Hexo 6.2.0"></head>
+
+<body itemscope itemtype="http://schema.org/WebPage" lang="zh-Hans">
+
+  
+
+
+
+
+
+
+
+
+
+
+  
+  
+    
+  
+
+  <div class="container one-collumn sidebar-position-left page-post-detail ">
+    <div class="headband"></div>
+
+    <header id="header" class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-meta ">
+  
+
+  <div class="custom-logo-site-title">
+    <a href="/"  class="brand" rel="start">
+      <span class="logo-line-before"><i></i></span>
+      <span class="site-title">Z.S.K.'s Records</span>
+      <span class="logo-line-after"><i></i></span>
+    </a>
+  </div>
+    
+      <p class="site-subtitle"></p>
+    
+</div>
+
+<div class="site-nav-toggle">
+  <button>
+    <span class="btn-bar"></span>
+    <span class="btn-bar"></span>
+    <span class="btn-bar"></span>
+  </button>
+</div>
+
+<nav class="site-nav">
+  
+
+  
+    <ul id="menu" class="menu">
+      
+        
+        <li class="menu-item menu-item-home">
+          <a href="/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-home"></i> <br />
+            
+            首页
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-categories">
+          <a href="/categories" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-th"></i> <br />
+            
+            分类
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-about">
+          <a href="/about/ZSK-Profile.pdf" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-user"></i> <br />
+            
+            简历
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-archives">
+          <a href="/archives" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-archive"></i> <br />
+            
+            归档
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-tags">
+          <a href="/tags" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-tags"></i> <br />
+            
+            标签
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-commonweal">
+          <a href="/404.html" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-heartbeat"></i> <br />
+            
+            公益404
+          </a>
+        </li>
+      
+
+      
+        <li class="menu-item menu-item-search">
+          
+            <a href="javascript:;" class="popup-trigger">
+          
+            
+              <i class="menu-item-icon fa fa-search fa-fw"></i> <br />
+            
+            搜索
+          </a>
+        </li>
+      
+    </ul>
+  
+
+  
+    <div class="site-search">
+      
+  <div class="popup">
+ <span class="search-icon fa fa-search"></span>
+ <input type="text" id="local-search-input">
+ <div id="local-search-result"></div>
+ <span class="popup-btn-close">close</span>
+</div>
+
+
+    </div>
+  
+</nav>
+
+
+
+ </div>
+    </header>
+
+    <main id="main" class="main">
+      <div class="main-inner">
+        <div class="content-wrap">
+          <div id="content" class="content">
+            
 
   <div id="posts" class="posts-expand">
-    {{ post_template.render(page) }}
+    
 
-    <div class="post-spread">
-      {% if theme.jiathis %}
-        {% include '_partials/share/jiathis.swig' %}
-      {% elseif theme.baidushare %}
-        {% include '_partials/share/baidushare.swig' %}
-      {% elseif theme.add_this_id %}
-        {% include '_partials/share/add-this.swig' %}
-      {% elseif theme.duoshuo_shortname and theme.duoshuo_share %}
-        {% include '_partials/share/duoshuo_share.swig' %}
-      {% endif %}
+  
+
+  
+  
+  
+
+  <article class="post post-type-normal " itemscope itemtype="http://schema.org/Article">
+  <link itemprop="mainEntityOfPage" href="https://zhoushuke.github.io/2020/02/15/Istio-Traffic-Manager/">
+
+  <span style="display:none" itemprop="author" itemscope itemtype="http://schema.org/Person">
+    <meta itemprop="name" content="">
+    <meta itemprop="description" content="">
+    <meta itemprop="image" content="/images/avatar.gif">
+  </span>
+
+  <span style="display:none" itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+    <meta itemprop="name" content="Z.S.K.'s Records">
+    <span style="display:none" itemprop="logo" itemscope itemtype="http://schema.org/ImageObject">
+      <img style="display:none;" itemprop="url image" alt="Z.S.K.'s Records" src="">
+    </span>
+  </span>
+
+    
+      <header class="post-header">
+
+        
+        
+          <h1 class="post-title" itemprop="name headline">
+            
+            
+              
+                Istio学习(请求路由分析)
+              
+            
+          </h1>
+        
+
+        <div class="post-meta">
+          <span class="post-time">
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">发表于</span>
+              
+              <time title="Post created" itemprop="dateCreated datePublished" datetime="2020-02-15T13:30:53+08:00">
+                2020-02-15
+              </time>
+            
+
+            
+
+            
+          </span>
+
+          
+            <span class="post-category" >
+            
+              <span class="post-meta-divider">|</span>
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-folder-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">分类于</span>
+              
+              
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/ServiceMesh/" itemprop="url" rel="index">
+                    <span itemprop="name">ServiceMesh</span>
+                  </a>
+                </span>
+
+                
+                
+              
+            </span>
+          
+
+          
+            
+          
+
+          
+
+          
+          
+
+          
+
+          
+
+        </div>
+      </header>
+    
+
+
+    <div class="post-body" itemprop="articleBody">
+
+      
+      
+
+      
+        <p>前面大致学习了下Istio的整体架构, 没有涉及它里面的细节, 这次主要说明一下istio是如何将请求进行转发的. 信息量确实比较大.</p>
+<span id="more"></span>
+
+
+
+<h3 id="整体架构"><a href="#整体架构" class="headerlink" title="整体架构"></a>整体架构</h3><p>还是放一下Istio整体架构图</p>
+<p>各个组件的说明, 请参考<a target="_blank" rel="noopener" href="https://izsk.me/2020/02/09/Istio-Struct/">这里</a></p>
+<p><img src="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20200209212447.png"></p>
+<h3 id="请求路由"><a href="#请求路由" class="headerlink" title="请求路由"></a>请求路由</h3><p><img src="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20200209214241.png"></p>
+<p>同其它的云原生工具一样, <code>Istio中做服务发现也是基于Kubernetes的List/Watch机制来做</code></p>
+<p>Pilot中会保存两大类信息</p>
+<ol>
+<li>静态信息: 诸如Pilot实例的地址, mixer对接的后端实例地址等信息</li>
+<li>动态信息: 所有跟应用相关的动态变化信息, 如cluster, endpoint等</li>
+</ol>
+<p>这两类信息会被Pilot转化成Pod中的envoy所能识别的Manifest, 通过XDS协议进行下发到envoy中</p>
+<p>为了更好地说明路由之间的转发, 在Istio中常用到的CRD概念说明如下</p>
+<h3 id="名词解释"><a href="#名词解释" class="headerlink" title="名词解释"></a>名词解释</h3><ul>
+<li><p><a target="_blank" rel="noopener" href="https://istio.io/docs/reference/config/networking/sidecar/"><strong>Sidecar</strong></a>：缺省情况下，Pilot将会把和Envoy Sidecar所在namespace的所有services的相关配置，包括inbound和outbound listenter, cluster, route等，都下发给Enovy。使用Sidecar可以对Pilot向Envoy Sidcar下发的配置进行更细粒度的调整，例如只向其下发该Sidecar 所在服务需要访问的那些外部服务的相关outbound配置。</p>
+</li>
+<li><p><a target="_blank" rel="noopener" href="https://istio.io/docs/reference/config/networking/virtual-service/"><strong>Virtualservice</strong></a>：用于定义路由规则，如根据来源或 Header 制定规则，或在不同服务版本之间分拆流量。</p>
+</li>
+<li><p><a target="_blank" rel="noopener" href="https://istio.io/docs/reference/config/networking/destination-rule/"><strong>DestinationRule</strong></a>：定义目的服务的配置策略以及可路由子集。策略包括断路器、负载均衡以及 TLS 等。</p>
+</li>
+<li><p><a target="_blank" rel="noopener" href="https://jimmysong.io/istio-handbook/data-plane/envoy-xds-protocol.html"><strong>xDS</strong></a>: 这里的x是个泛指, xDS是一类发现服务的总称，包含LDS，RDS，CDS，EDS，ADS以及 SDS。Envoy通过xDS API可以动态获取Listener(监听器)， Route(路由)，Cluster(集群)，Endpoint(集群成员)以 及Secret(证书)配置</p>
+</li>
+<li><p><a target="_blank" rel="noopener" href="https://istio.io/docs/reference/config/networking/service-entry/"><strong>ServiceEntry</strong></a>：可以使用ServiceEntry向Istio中加入附加的服务条目，以使网格内可以向istio 服务网格之外的服务发出请求。</p>
+</li>
+<li><p><a target="_blank" rel="noopener" href="https://istio.io/docs/reference/config/networking/gateway/"><strong>Gateway</strong></a>：为网格配置网关，以允许一个服务可以被网格外部访问。</p>
+<p>这里要说明一下Istio gateway vs kubernetes ingress:</p>
+<p>ingress只支持http，无法配置4层协议， gateway支持4-6层的协议，且支持7层的设置与virtualservice绑定</p>
+</li>
+<li><p><a target="_blank" rel="noopener" href="https://istio.io/docs/reference/config/networking/envoy-filter/"><strong>EnvoyFilter</strong></a>：可以为Envoy配置过滤器。由于Envoy已经支持Lua过滤器，因此可以通过EnvoyFilter启用Lua过滤器，动态改变Envoy的过滤链行为。我之前一直在考虑如何才能动态扩展Envoy的能力，EnvoyFilter提供了很灵活的扩展性。</p>
+</li>
+</ul>
+<p>今天讲路由转发主要会聚焦在前四个概念上, 后面几个后续再更, 这里不过多介绍.</p>
+<h3 id="sidecar注入"><a href="#sidecar注入" class="headerlink" title="sidecar注入"></a>sidecar注入</h3><h4 id="自动注入"><a href="#自动注入" class="headerlink" title="自动注入"></a>自动注入</h4><p>默认情况下，istio开启了自动注入功能，但namespace是disabled的，可以通过给ns打label，使istio的sidecar自动注入到pod中.</p>
+<p><img src="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20200209223637.png"></p>
+<p>同时, 需要apiserver启动参数–enable-admission -plugins需要开启<a target="_blank" rel="noopener" href="https://kubernetes.io/docs/reference/access-authn-authz/admission-controllers/">MutatingAdmissionWebhook</a></p>
+<p>这里简单说明下MutatingAdmissionWebhook的流程</p>
+<p><img src="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20200210101851.png"></p>
+<p>Istio 和 sidecar 配置保存在 <code>istio</code> 和 <code>istio-sidecar-injector</code> 这两个 ConfigMap 中，其中包含了 Go template,自动 sidecar 注入就是将生成 Pod 配置从应用 YAML 文件期间转移MutatingAdmissionWebhook 中</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">#apiserver </span></span><br><span class="line">--enable-admission-plugins=NodeRestriction,MutatingAdmissionWebhook</span><br><span class="line"></span><br><span class="line">kubectl label namespace default istio-injection=enabled</span><br><span class="line"> </span><br><span class="line"><span class="comment">#如要禁止defaule namespace自动注入sidecar功能，则使用</span></span><br><span class="line">kubectl label namespace default istio-injection</span><br></pre></td></tr></table></figure>
+
+<p>自动注入功能开启之后，在ns中生成的deploy，statefulset, rs等对象都将会自动添加envoy-proxy容器(用于流量代理)及initcontainer(用于生成iptables规则)</p>
+<h4 id="手动注入"><a href="#手动注入" class="headerlink" title="手动注入"></a>手动注入</h4><p>如果不开启自动注入的话，在需要的时候也可以手动注入，方法如下</p>
+<p><code>istioctl kube-inject -f &lt;your-app-spec&gt;.yaml | kubectl apply -f -</code></p>
+<p><code>sidecar 默认不能被注入到 kube-system 和 kube-public，istio-system 这三个 namespace</code></p>
+<p><strong>下面所提到的一些静态配置都是由注入模块生成的,大家可使用kubectl get cm -nistio-system查看具体内容</strong></p>
+<h3 id="Example-Bookinfo"><a href="#Example-Bookinfo" class="headerlink" title="Example Bookinfo"></a>Example Bookinfo</h3><p>这里使用istio官网使用的例子进行分析,这里已经事先将gateway中的loadbalance改成了NodePort类型代理出来.</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br></pre></td><td class="code"><pre><span class="line">kubectl apply -f samples/bookinfo/platform/kube/bookinfo.yaml</span><br><span class="line"></span><br><span class="line">kubectl apply -f samples/bookinfo/networking/bookinfo-gateway.yaml</span><br><span class="line"></span><br><span class="line">curl -o /dev/null -s -w <span class="string">&quot;%&#123;http_code&#125;\n&quot;</span> http://10.4.97.112:30732/productpage</span><br><span class="line"><span class="comment"># 返回200</span></span><br><span class="line"><span class="comment"># 这里为了简单，没有使用域名.直接通过宿主机ip访问.</span></span><br><span class="line"><span class="comment"># 其中 10.4.97.112为宿主机ip</span></span><br><span class="line"><span class="comment"># 30732为宿主机的随机端口</span></span><br></pre></td></tr></table></figure>
+
+
+
+<h3 id="Istio-agent容器启动"><a href="#Istio-agent容器启动" class="headerlink" title="Istio-agent容器启动"></a>Istio-agent容器启动</h3><p>最后生成的pod yaml文件如下:</p>
+<details> <summary>pod yaml</summary>
+<pre><code>
+<figure class="highlight yaml"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br><span class="line">58</span><br><span class="line">59</span><br><span class="line">60</span><br><span class="line">61</span><br><span class="line">62</span><br><span class="line">63</span><br><span class="line">64</span><br><span class="line">65</span><br><span class="line">66</span><br><span class="line">67</span><br><span class="line">68</span><br><span class="line">69</span><br><span class="line">70</span><br><span class="line">71</span><br><span class="line">72</span><br><span class="line">73</span><br><span class="line">74</span><br><span class="line">75</span><br><span class="line">76</span><br><span class="line">77</span><br><span class="line">78</span><br><span class="line">79</span><br><span class="line">80</span><br><span class="line">81</span><br><span class="line">82</span><br><span class="line">83</span><br><span class="line">84</span><br><span class="line">85</span><br><span class="line">86</span><br><span class="line">87</span><br><span class="line">88</span><br><span class="line">89</span><br><span class="line">90</span><br><span class="line">91</span><br><span class="line">92</span><br><span class="line">93</span><br><span class="line">94</span><br><span class="line">95</span><br><span class="line">96</span><br><span class="line">97</span><br><span class="line">98</span><br><span class="line">99</span><br><span class="line">100</span><br><span class="line">101</span><br><span class="line">102</span><br><span class="line">103</span><br><span class="line">104</span><br><span class="line">105</span><br><span class="line">106</span><br><span class="line">107</span><br><span class="line">108</span><br><span class="line">109</span><br><span class="line">110</span><br><span class="line">111</span><br><span class="line">112</span><br><span class="line">113</span><br><span class="line">114</span><br><span class="line">115</span><br><span class="line">116</span><br><span class="line">117</span><br><span class="line">118</span><br><span class="line">119</span><br><span class="line">120</span><br><span class="line">121</span><br><span class="line">122</span><br><span class="line">123</span><br><span class="line">124</span><br><span class="line">125</span><br><span class="line">126</span><br><span class="line">127</span><br><span class="line">128</span><br><span class="line">129</span><br><span class="line">130</span><br><span class="line">131</span><br><span class="line">132</span><br><span class="line">133</span><br><span class="line">134</span><br><span class="line">135</span><br><span class="line">136</span><br><span class="line">137</span><br><span class="line">138</span><br><span class="line">139</span><br><span class="line">140</span><br><span class="line">141</span><br><span class="line">142</span><br><span class="line">143</span><br><span class="line">144</span><br><span class="line">145</span><br><span class="line">146</span><br><span class="line">147</span><br><span class="line">148</span><br><span class="line">149</span><br><span class="line">150</span><br><span class="line">151</span><br><span class="line">152</span><br><span class="line">153</span><br><span class="line">154</span><br><span class="line">155</span><br><span class="line">156</span><br><span class="line">157</span><br><span class="line">158</span><br><span class="line">159</span><br><span class="line">160</span><br><span class="line">161</span><br><span class="line">162</span><br><span class="line">163</span><br><span class="line">164</span><br><span class="line">165</span><br><span class="line">166</span><br><span class="line">167</span><br><span class="line">168</span><br><span class="line">169</span><br><span class="line">170</span><br><span class="line">171</span><br><span class="line">172</span><br><span class="line">173</span><br><span class="line">174</span><br><span class="line">175</span><br><span class="line">176</span><br><span class="line">177</span><br><span class="line">178</span><br><span class="line">179</span><br><span class="line">180</span><br><span class="line">181</span><br><span class="line">182</span><br><span class="line">183</span><br><span class="line">184</span><br><span class="line">185</span><br><span class="line">186</span><br><span class="line">187</span><br><span class="line">188</span><br><span class="line">189</span><br><span class="line">190</span><br><span class="line">191</span><br><span class="line">192</span><br><span class="line">193</span><br><span class="line">194</span><br><span class="line">195</span><br><span class="line">196</span><br><span class="line">197</span><br><span class="line">198</span><br><span class="line">199</span><br><span class="line">200</span><br><span class="line">201</span><br><span class="line">202</span><br><span class="line">203</span><br><span class="line">204</span><br><span class="line">205</span><br><span class="line">206</span><br><span class="line">207</span><br><span class="line">208</span><br><span class="line">209</span><br><span class="line">210</span><br><span class="line">211</span><br><span class="line">212</span><br><span class="line">213</span><br><span class="line">214</span><br><span class="line">215</span><br><span class="line">216</span><br><span class="line">217</span><br><span class="line">218</span><br><span class="line">219</span><br><span class="line">220</span><br><span class="line">221</span><br><span class="line">222</span><br><span class="line">223</span><br><span class="line">224</span><br><span class="line">225</span><br><span class="line">226</span><br><span class="line">227</span><br><span class="line">228</span><br><span class="line">229</span><br><span class="line">230</span><br><span class="line">231</span><br><span class="line">232</span><br><span class="line">233</span><br><span class="line">234</span><br><span class="line">235</span><br><span class="line">236</span><br><span class="line">237</span><br><span class="line">238</span><br><span class="line">239</span><br><span class="line">240</span><br><span class="line">241</span><br><span class="line">242</span><br><span class="line">243</span><br><span class="line">244</span><br><span class="line">245</span><br><span class="line">246</span><br><span class="line">247</span><br><span class="line">248</span><br></pre></td><td class="code"><pre><span class="line"><span class="attr">apiVersion:</span> <span class="string">v1</span></span><br><span class="line"><span class="attr">kind:</span> <span class="string">Pod</span></span><br><span class="line"><span class="attr">metadata:</span></span><br><span class="line">  <span class="attr">annotations:</span></span><br><span class="line">    <span class="attr">sidecar.istio.io/status:</span> <span class="string">&#x27;&#123;&quot;version&quot;:&quot;8d80e9685defcc00b0d8c9274b60071ba8810537e0ed310ea96c1de0785272c7&quot;,&quot;initContainers&quot;:[&quot;istio-init&quot;],&quot;containers&quot;:[&quot;istio-proxy&quot;],&quot;volumes&quot;:[&quot;istio-envoy&quot;,&quot;istio-certs&quot;],&quot;imagePullSecrets&quot;:null&#125;&#x27;</span></span><br><span class="line">  <span class="attr">creationTimestamp:</span> <span class="string">&quot;2020-01-02T11:18:50Z&quot;</span></span><br><span class="line">  <span class="attr">generateName:</span> <span class="string">sleep-f8cbf5b76-</span></span><br><span class="line">  <span class="attr">labels:</span></span><br><span class="line">    <span class="attr">app:</span> <span class="string">sleep</span></span><br><span class="line">    <span class="attr">pod-template-hash:</span> <span class="string">f8cbf5b76</span></span><br><span class="line">    <span class="attr">security.istio.io/tlsMode:</span> <span class="string">istio</span></span><br><span class="line">  <span class="attr">name:</span> <span class="string">sleep-f8cbf5b76-z4g5w</span></span><br><span class="line">  <span class="attr">namespace:</span> <span class="string">default</span></span><br><span class="line">  <span class="attr">ownerReferences:</span></span><br><span class="line">  <span class="bullet">-</span> <span class="attr">apiVersion:</span> <span class="string">apps/v1</span></span><br><span class="line">    <span class="attr">blockOwnerDeletion:</span> <span class="literal">true</span></span><br><span class="line">    <span class="attr">controller:</span> <span class="literal">true</span></span><br><span class="line">    <span class="attr">kind:</span> <span class="string">ReplicaSet</span></span><br><span class="line">    <span class="attr">name:</span> <span class="string">sleep-f8cbf5b76</span></span><br><span class="line">    <span class="attr">uid:</span> <span class="string">8fbae215-c254-4795-b316-cbe15c72da5f</span></span><br><span class="line">  <span class="attr">resourceVersion:</span> <span class="string">&quot;409671&quot;</span></span><br><span class="line">  <span class="attr">selfLink:</span> <span class="string">/api/v1/namespaces/default/pods/sleep-f8cbf5b76-z4g5w</span></span><br><span class="line">  <span class="attr">uid:</span> <span class="string">352f3bbb-d77d-4133-9bcd-55e18374f667</span></span><br><span class="line"><span class="attr">spec:</span></span><br><span class="line">  <span class="attr">containers:</span></span><br><span class="line">  <span class="bullet">-</span> <span class="attr">command:</span></span><br><span class="line">    <span class="bullet">-</span> <span class="string">/bin/sleep</span></span><br><span class="line">    <span class="bullet">-</span> <span class="string">3650d</span></span><br><span class="line">    <span class="attr">image:</span> <span class="string">governmentpaas/curl-ssl</span></span><br><span class="line">    <span class="attr">imagePullPolicy:</span> <span class="string">IfNotPresent</span></span><br><span class="line">    <span class="attr">name:</span> <span class="string">sleep</span></span><br><span class="line">    <span class="attr">resources:</span> &#123;&#125;</span><br><span class="line">    <span class="attr">terminationMessagePath:</span> <span class="string">/dev/termination-log</span></span><br><span class="line">    <span class="attr">terminationMessagePolicy:</span> <span class="string">File</span></span><br><span class="line">    <span class="attr">volumeMounts:</span></span><br><span class="line">    <span class="bullet">-</span> <span class="attr">mountPath:</span> <span class="string">/etc/sleep/tls</span></span><br><span class="line">      <span class="attr">name:</span> <span class="string">secret-volume</span></span><br><span class="line">    <span class="bullet">-</span> <span class="attr">mountPath:</span> <span class="string">/var/run/secrets/kubernetes.io/serviceaccount</span></span><br><span class="line">      <span class="attr">name:</span> <span class="string">sleep-token-t2xgb</span></span><br><span class="line">      <span class="attr">readOnly:</span> <span class="literal">true</span></span><br><span class="line">  <span class="bullet">-</span> <span class="attr">args:</span></span><br><span class="line">    <span class="bullet">-</span> <span class="string">proxy</span></span><br><span class="line">    <span class="bullet">-</span> <span class="string">sidecar</span></span><br><span class="line">    <span class="bullet">-</span> <span class="string">--domain</span></span><br><span class="line">    <span class="bullet">-</span> <span class="string">$(POD_NAMESPACE).svc.cluster.local</span></span><br><span class="line">    <span class="bullet">-</span> <span class="string">--configPath</span></span><br><span class="line">    <span class="bullet">-</span> <span class="string">/etc/istio/proxy</span></span><br><span class="line">    <span class="bullet">-</span> <span class="string">--binaryPath</span></span><br><span class="line">    <span class="bullet">-</span> <span class="string">/usr/local/bin/envoy</span></span><br><span class="line">    <span class="bullet">-</span> <span class="string">--serviceCluster</span></span><br><span class="line">    <span class="bullet">-</span> <span class="string">sleep.$(POD_NAMESPACE)</span></span><br><span class="line">    <span class="bullet">-</span> <span class="string">--drainDuration</span></span><br><span class="line">    <span class="bullet">-</span> <span class="string">45s</span></span><br><span class="line">    <span class="bullet">-</span> <span class="string">--parentShutdownDuration</span></span><br><span class="line">    <span class="bullet">-</span> <span class="string">1m0s</span></span><br><span class="line">    <span class="bullet">-</span> <span class="string">--discoveryAddress</span></span><br><span class="line">    <span class="bullet">-</span> <span class="string">istio-pilot.istio-system:15010</span></span><br><span class="line">    <span class="bullet">-</span> <span class="string">--zipkinAddress</span></span><br><span class="line">    <span class="bullet">-</span> <span class="string">zipkin.istio-system:9411</span></span><br><span class="line">    <span class="bullet">-</span> <span class="string">--proxyLogLevel=warning</span></span><br><span class="line">    <span class="bullet">-</span> <span class="string">--proxyComponentLogLevel=misc:error</span></span><br><span class="line">    <span class="bullet">-</span> <span class="string">--connectTimeout</span></span><br><span class="line">    <span class="bullet">-</span> <span class="string">10s</span></span><br><span class="line">    <span class="bullet">-</span> <span class="string">--proxyAdminPort</span></span><br><span class="line">    <span class="bullet">-</span> <span class="string">&quot;15000&quot;</span></span><br><span class="line">    <span class="bullet">-</span> <span class="string">--concurrency</span></span><br><span class="line">    <span class="bullet">-</span> <span class="string">&quot;2&quot;</span></span><br><span class="line">    <span class="bullet">-</span> <span class="string">--controlPlaneAuthPolicy</span></span><br><span class="line">    <span class="bullet">-</span> <span class="string">NONE</span></span><br><span class="line">    <span class="bullet">-</span> <span class="string">--dnsRefreshRate</span></span><br><span class="line">    <span class="bullet">-</span> <span class="string">300s</span></span><br><span class="line">    <span class="bullet">-</span> <span class="string">--statusPort</span></span><br><span class="line">    <span class="bullet">-</span> <span class="string">&quot;15020&quot;</span></span><br><span class="line">    <span class="bullet">-</span> <span class="string">--applicationPorts</span></span><br><span class="line">    <span class="bullet">-</span> <span class="string">&quot;&quot;</span></span><br><span class="line">    <span class="bullet">-</span> <span class="string">--trust-domain=cluster.local</span></span><br><span class="line">    <span class="attr">env:</span></span><br><span class="line">    <span class="bullet">-</span> <span class="attr">name:</span> <span class="string">POD_NAME</span></span><br><span class="line">      <span class="attr">valueFrom:</span></span><br><span class="line">        <span class="attr">fieldRef:</span></span><br><span class="line">          <span class="attr">apiVersion:</span> <span class="string">v1</span></span><br><span class="line">          <span class="attr">fieldPath:</span> <span class="string">metadata.name</span></span><br><span class="line">    <span class="bullet">-</span> <span class="attr">name:</span> <span class="string">POD_NAMESPACE</span></span><br><span class="line">      <span class="attr">valueFrom:</span></span><br><span class="line">        <span class="attr">fieldRef:</span></span><br><span class="line">          <span class="attr">apiVersion:</span> <span class="string">v1</span></span><br><span class="line">          <span class="attr">fieldPath:</span> <span class="string">metadata.namespace</span></span><br><span class="line">    <span class="bullet">-</span> <span class="attr">name:</span> <span class="string">INSTANCE_IP</span></span><br><span class="line">      <span class="attr">valueFrom:</span></span><br><span class="line">        <span class="attr">fieldRef:</span></span><br><span class="line">          <span class="attr">apiVersion:</span> <span class="string">v1</span></span><br><span class="line">          <span class="attr">fieldPath:</span> <span class="string">status.podIP</span></span><br><span class="line">    <span class="bullet">-</span> <span class="attr">name:</span> <span class="string">SERVICE_ACCOUNT</span></span><br><span class="line">      <span class="attr">valueFrom:</span></span><br><span class="line">        <span class="attr">fieldRef:</span></span><br><span class="line">          <span class="attr">apiVersion:</span> <span class="string">v1</span></span><br><span class="line">          <span class="attr">fieldPath:</span> <span class="string">spec.serviceAccountName</span></span><br><span class="line">    <span class="bullet">-</span> <span class="attr">name:</span> <span class="string">HOST_IP</span></span><br><span class="line">      <span class="attr">valueFrom:</span></span><br><span class="line">        <span class="attr">fieldRef:</span></span><br><span class="line">          <span class="attr">apiVersion:</span> <span class="string">v1</span></span><br><span class="line">          <span class="attr">fieldPath:</span> <span class="string">status.hostIP</span></span><br><span class="line">    <span class="bullet">-</span> <span class="attr">name:</span> <span class="string">ISTIO_META_POD_PORTS</span></span><br><span class="line">      <span class="attr">value:</span> <span class="string">|-</span></span><br><span class="line"><span class="string">        [</span></span><br><span class="line"><span class="string">        ]</span></span><br><span class="line"><span class="string"></span>    <span class="bullet">-</span> <span class="attr">name:</span> <span class="string">ISTIO_META_CLUSTER_ID</span></span><br><span class="line">      <span class="attr">value:</span> <span class="string">Kubernetes</span></span><br><span class="line">    <span class="bullet">-</span> <span class="attr">name:</span> <span class="string">ISTIO_META_POD_NAME</span></span><br><span class="line">      <span class="attr">valueFrom:</span></span><br><span class="line">        <span class="attr">fieldRef:</span></span><br><span class="line">          <span class="attr">apiVersion:</span> <span class="string">v1</span></span><br><span class="line">          <span class="attr">fieldPath:</span> <span class="string">metadata.name</span></span><br><span class="line">    <span class="bullet">-</span> <span class="attr">name:</span> <span class="string">ISTIO_META_CONFIG_NAMESPACE</span></span><br><span class="line">      <span class="attr">valueFrom:</span></span><br><span class="line">        <span class="attr">fieldRef:</span></span><br><span class="line">          <span class="attr">apiVersion:</span> <span class="string">v1</span></span><br><span class="line">          <span class="attr">fieldPath:</span> <span class="string">metadata.namespace</span></span><br><span class="line">    <span class="bullet">-</span> <span class="attr">name:</span> <span class="string">SDS_ENABLED</span></span><br><span class="line">      <span class="attr">value:</span> <span class="string">&quot;false&quot;</span></span><br><span class="line">    <span class="bullet">-</span> <span class="attr">name:</span> <span class="string">ISTIO_META_INTERCEPTION_MODE</span></span><br><span class="line">      <span class="attr">value:</span> <span class="string">REDIRECT</span></span><br><span class="line">    <span class="bullet">-</span> <span class="attr">name:</span> <span class="string">ISTIO_META_INCLUDE_INBOUND_PORTS</span></span><br><span class="line">    <span class="bullet">-</span> <span class="attr">name:</span> <span class="string">ISTIO_METAJSON_LABELS</span></span><br><span class="line">      <span class="attr">value:</span> <span class="string">|</span></span><br><span class="line"><span class="string">        &#123;&quot;app&quot;:&quot;sleep&quot;,&quot;pod-template-hash&quot;:&quot;f8cbf5b76&quot;&#125;</span></span><br><span class="line"><span class="string"></span>    <span class="bullet">-</span> <span class="attr">name:</span> <span class="string">ISTIO_META_WORKLOAD_NAME</span></span><br><span class="line">      <span class="attr">value:</span> <span class="string">sleep</span></span><br><span class="line">    <span class="bullet">-</span> <span class="attr">name:</span> <span class="string">ISTIO_META_OWNER</span></span><br><span class="line">      <span class="attr">value:</span> <span class="string">kubernetes://api/apps/v1/namespaces/default/deployments/sleep</span></span><br><span class="line">    <span class="bullet">-</span> <span class="attr">name:</span> <span class="string">ISTIO_META_MESH_ID</span></span><br><span class="line">      <span class="attr">value:</span> <span class="string">cluster.local</span></span><br><span class="line">    <span class="attr">image:</span> <span class="string">docker.io/istio/proxyv2:1.4.2</span></span><br><span class="line">    <span class="attr">imagePullPolicy:</span> <span class="string">IfNotPresent</span></span><br><span class="line">    <span class="attr">name:</span> <span class="string">istio-proxy</span></span><br><span class="line">    <span class="attr">ports:</span></span><br><span class="line">    <span class="bullet">-</span> <span class="attr">containerPort:</span> <span class="number">15090</span></span><br><span class="line">      <span class="attr">name:</span> <span class="string">http-envoy-prom</span></span><br><span class="line">      <span class="attr">protocol:</span> <span class="string">TCP</span></span><br><span class="line">    <span class="attr">readinessProbe:</span></span><br><span class="line">      <span class="attr">failureThreshold:</span> <span class="number">30</span></span><br><span class="line">      <span class="attr">httpGet:</span></span><br><span class="line">        <span class="attr">path:</span> <span class="string">/healthz/ready</span></span><br><span class="line">        <span class="attr">port:</span> <span class="number">15020</span></span><br><span class="line">        <span class="attr">scheme:</span> <span class="string">HTTP</span></span><br><span class="line">      <span class="attr">initialDelaySeconds:</span> <span class="number">1</span></span><br><span class="line">      <span class="attr">periodSeconds:</span> <span class="number">2</span></span><br><span class="line">      <span class="attr">successThreshold:</span> <span class="number">1</span></span><br><span class="line">      <span class="attr">timeoutSeconds:</span> <span class="number">1</span></span><br><span class="line">    <span class="attr">resources:</span></span><br><span class="line">      <span class="attr">limits:</span></span><br><span class="line">        <span class="attr">cpu:</span> <span class="string">&quot;2&quot;</span></span><br><span class="line">        <span class="attr">memory:</span> <span class="string">1Gi</span></span><br><span class="line">      <span class="attr">requests:</span></span><br><span class="line">        <span class="attr">cpu:</span> <span class="string">10m</span></span><br><span class="line">        <span class="attr">memory:</span> <span class="string">40Mi</span></span><br><span class="line">    <span class="attr">securityContext:</span></span><br><span class="line">      <span class="attr">readOnlyRootFilesystem:</span> <span class="literal">true</span></span><br><span class="line">      <span class="attr">runAsUser:</span> <span class="number">1337</span></span><br><span class="line">    <span class="attr">terminationMessagePath:</span> <span class="string">/dev/termination-log</span></span><br><span class="line">    <span class="attr">terminationMessagePolicy:</span> <span class="string">File</span></span><br><span class="line">    <span class="attr">volumeMounts:</span></span><br><span class="line">    <span class="bullet">-</span> <span class="attr">mountPath:</span> <span class="string">/etc/istio/proxy</span></span><br><span class="line">      <span class="attr">name:</span> <span class="string">istio-envoy</span></span><br><span class="line">    <span class="bullet">-</span> <span class="attr">mountPath:</span> <span class="string">/etc/certs/</span></span><br><span class="line">      <span class="attr">name:</span> <span class="string">istio-certs</span></span><br><span class="line">      <span class="attr">readOnly:</span> <span class="literal">true</span></span><br><span class="line">    <span class="bullet">-</span> <span class="attr">mountPath:</span> <span class="string">/var/run/secrets/kubernetes.io/serviceaccount</span></span><br><span class="line">      <span class="attr">name:</span> <span class="string">sleep-token-t2xgb</span></span><br><span class="line">      <span class="attr">readOnly:</span> <span class="literal">true</span></span><br><span class="line">  <span class="attr">dnsPolicy:</span> <span class="string">ClusterFirst</span></span><br><span class="line">  <span class="attr">enableServiceLinks:</span> <span class="literal">true</span></span><br><span class="line">  <span class="attr">initContainers:</span></span><br><span class="line">  <span class="bullet">-</span> <span class="attr">command:</span></span><br><span class="line">    <span class="bullet">-</span> <span class="string">istio-iptables</span></span><br><span class="line">    <span class="bullet">-</span> <span class="string">-p</span></span><br><span class="line">    <span class="bullet">-</span> <span class="string">&quot;15001&quot;</span></span><br><span class="line">    <span class="bullet">-</span> <span class="string">-z</span></span><br><span class="line">    <span class="bullet">-</span> <span class="string">&quot;15006&quot;</span></span><br><span class="line">    <span class="bullet">-</span> <span class="string">-u</span></span><br><span class="line">    <span class="bullet">-</span> <span class="string">&quot;1337&quot;</span></span><br><span class="line">    <span class="bullet">-</span> <span class="string">-m</span></span><br><span class="line">    <span class="bullet">-</span> <span class="string">REDIRECT</span></span><br><span class="line">    <span class="bullet">-</span> <span class="string">-i</span></span><br><span class="line">    <span class="bullet">-</span> <span class="string">&#x27;*&#x27;</span></span><br><span class="line">    <span class="bullet">-</span> <span class="string">-x</span></span><br><span class="line">    <span class="bullet">-</span> <span class="string">&quot;&quot;</span></span><br><span class="line">    <span class="bullet">-</span> <span class="string">-b</span></span><br><span class="line">    <span class="bullet">-</span> <span class="string">&#x27;*&#x27;</span></span><br><span class="line">    <span class="bullet">-</span> <span class="string">-d</span></span><br><span class="line">    <span class="bullet">-</span> <span class="string">&quot;15020&quot;</span></span><br><span class="line">    <span class="attr">image:</span> <span class="string">docker.io/istio/proxyv2:1.4.2</span></span><br><span class="line">    <span class="attr">imagePullPolicy:</span> <span class="string">IfNotPresent</span></span><br><span class="line">    <span class="attr">name:</span> <span class="string">istio-init</span></span><br><span class="line">    <span class="attr">resources:</span></span><br><span class="line">      <span class="attr">limits:</span></span><br><span class="line">        <span class="attr">cpu:</span> <span class="string">100m</span></span><br><span class="line">        <span class="attr">memory:</span> <span class="string">50Mi</span></span><br><span class="line">      <span class="attr">requests:</span></span><br><span class="line">        <span class="attr">cpu:</span> <span class="string">10m</span></span><br><span class="line">        <span class="attr">memory:</span> <span class="string">10Mi</span></span><br><span class="line">    <span class="attr">securityContext:</span></span><br><span class="line">      <span class="attr">capabilities:</span></span><br><span class="line">        <span class="attr">add:</span></span><br><span class="line">        <span class="bullet">-</span> <span class="string">NET_ADMIN</span></span><br><span class="line">      <span class="attr">runAsNonRoot:</span> <span class="literal">false</span></span><br><span class="line">      <span class="attr">runAsUser:</span> <span class="number">0</span></span><br><span class="line">    <span class="attr">terminationMessagePath:</span> <span class="string">/dev/termination-log</span></span><br><span class="line">    <span class="attr">terminationMessagePolicy:</span> <span class="string">File</span></span><br><span class="line">    <span class="attr">volumeMounts:</span></span><br><span class="line">    <span class="bullet">-</span> <span class="attr">mountPath:</span> <span class="string">/var/run/secrets/kubernetes.io/serviceaccount</span></span><br><span class="line">      <span class="attr">name:</span> <span class="string">sleep-token-t2xgb</span></span><br><span class="line">      <span class="attr">readOnly:</span> <span class="literal">true</span></span><br><span class="line">  <span class="attr">nodeName:</span> <span class="string">g105e1900156</span></span><br><span class="line">  <span class="attr">priority:</span> <span class="number">0</span></span><br><span class="line">  <span class="attr">restartPolicy:</span> <span class="string">Always</span></span><br><span class="line">  <span class="attr">schedulerName:</span> <span class="string">default-scheduler</span></span><br><span class="line">  <span class="attr">securityContext:</span> &#123;&#125;</span><br><span class="line">  <span class="attr">serviceAccount:</span> <span class="string">sleep</span></span><br><span class="line">  <span class="attr">serviceAccountName:</span> <span class="string">sleep</span></span><br><span class="line">  <span class="attr">terminationGracePeriodSeconds:</span> <span class="number">30</span></span><br><span class="line">  <span class="attr">tolerations:</span></span><br><span class="line">  <span class="bullet">-</span> <span class="attr">effect:</span> <span class="string">NoExecute</span></span><br><span class="line">    <span class="attr">key:</span> <span class="string">node.kubernetes.io/not-ready</span></span><br><span class="line">    <span class="attr">operator:</span> <span class="string">Exists</span></span><br><span class="line">    <span class="attr">tolerationSeconds:</span> <span class="number">300</span></span><br><span class="line">  <span class="bullet">-</span> <span class="attr">effect:</span> <span class="string">NoExecute</span></span><br><span class="line">    <span class="attr">key:</span> <span class="string">node.kubernetes.io/unreachable</span></span><br><span class="line">    <span class="attr">operator:</span> <span class="string">Exists</span></span><br><span class="line">    <span class="attr">tolerationSeconds:</span> <span class="number">300</span></span><br><span class="line">  <span class="attr">volumes:</span></span><br><span class="line">  <span class="bullet">-</span> <span class="attr">name:</span> <span class="string">secret-volume</span></span><br><span class="line">    <span class="attr">secret:</span></span><br><span class="line">      <span class="attr">defaultMode:</span> <span class="number">420</span></span><br><span class="line">      <span class="attr">optional:</span> <span class="literal">true</span></span><br><span class="line">      <span class="attr">secretName:</span> <span class="string">sleep-secret</span></span><br><span class="line">  <span class="bullet">-</span> <span class="attr">name:</span> <span class="string">sleep-token-t2xgb</span></span><br><span class="line">    <span class="attr">secret:</span></span><br><span class="line">      <span class="attr">defaultMode:</span> <span class="number">420</span></span><br><span class="line">      <span class="attr">secretName:</span> <span class="string">sleep-token-t2xgb</span></span><br><span class="line">  <span class="bullet">-</span> <span class="attr">emptyDir:</span></span><br><span class="line">      <span class="attr">medium:</span> <span class="string">Memory</span></span><br><span class="line">    <span class="attr">name:</span> <span class="string">istio-envoy</span></span><br><span class="line">  <span class="bullet">-</span> <span class="attr">name:</span> <span class="string">istio-certs</span></span><br><span class="line">    <span class="attr">secret:</span></span><br><span class="line">      <span class="attr">defaultMode:</span> <span class="number">420</span></span><br><span class="line">      <span class="attr">optional:</span> <span class="literal">true</span></span><br><span class="line">      <span class="attr">secretName:</span> <span class="string">istio.sleep</span></span><br></pre></td></tr></table></figure>
+</code></pre>
+</details>
+
+<h4 id="istio-proxy-envoy"><a href="#istio-proxy-envoy" class="headerlink" title="istio-proxy(envoy)"></a>istio-proxy(envoy)</h4><p>从上面的pod中可以看到, 其中 envoy的启动命令，涉及的端口如下:</p>
+<ul>
+<li>9080: productpage进程对外提供的服务端口</li>
+<li>15001: Envoy的Virtual Outbound监听器，iptable会将productpage服务发出的出向流量导入该端口中由Envoy进行处理</li>
+<li>15006: Envoy的Virtual Inbound监听器，iptable会将发到productpage的入向流量导入该端口中由Envoy进行处理</li>
+<li>15000: Envoy管理端口，该端口绑定在本地环回地址上，只能在Pod内访问。</li>
+<li>15090: 指向127.0.0.1:15000&#x2F;stats&#x2F;prometheus, 用于对外提供Envoy的性能统计指标</li>
+<li>15020: 监测envoy的健康状态的端口. 在iptables中已经将该端口排除，不对该端口的流量进行操作.</li>
+</ul>
+<p><img src="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20200210125921.png"></p>
+<h4 id="istio-init"><a href="#istio-init" class="headerlink" title="istio-init"></a>istio-init</h4><p>其中, <code>init容器 istio-init中生成一系列iptables规则后退出, 这些规则用于将流量劫持到envoy容器</code>，详细过程可查看<a target="_blank" rel="noopener" href="https://jimmysong.io/posts/envoy-sidecar-injection-in-istio-service-mesh-deep-dive/">这里</a></p>
+<p>而istio-proxy容器的Dockerfile启动entrypoint为&#x2F;usr&#x2F;local&#x2F;bin&#x2F;pilot-agent, 加上上述参数形成了istio-proxy容器的启动命令, pid&#x3D;1的进程为pilot-agent，该进程又启动了&#x2F;usr&#x2F;local&#x2F;bin&#x2F;envoy，envoy的配置文件为&#x2F;etc&#x2F;istio&#x2F;proxy&#x2F;envoy-rev0.json</p>
+<p>&#x2F;etc&#x2F;istio&#x2F;proxy&#x2F;envoy-rev0.json的内容里主要定义了各种服务的配置信息.在envoy进行流量转发时会按照这些配置对流量进行处理.</p>
+<h4 id="envoy-rev0-json"><a href="#envoy-rev0-json" class="headerlink" title="envoy-rev0.json"></a>envoy-rev0.json</h4><details> <summary>envoy-rev0.json</summary> <pre><code>
+<figure class="highlight yaml"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br><span class="line">58</span><br><span class="line">59</span><br><span class="line">60</span><br><span class="line">61</span><br><span class="line">62</span><br><span class="line">63</span><br><span class="line">64</span><br><span class="line">65</span><br><span class="line">66</span><br><span class="line">67</span><br><span class="line">68</span><br><span class="line">69</span><br><span class="line">70</span><br><span class="line">71</span><br><span class="line">72</span><br><span class="line">73</span><br><span class="line">74</span><br><span class="line">75</span><br><span class="line">76</span><br><span class="line">77</span><br><span class="line">78</span><br><span class="line">79</span><br><span class="line">80</span><br><span class="line">81</span><br><span class="line">82</span><br><span class="line">83</span><br><span class="line">84</span><br><span class="line">85</span><br><span class="line">86</span><br><span class="line">87</span><br><span class="line">88</span><br><span class="line">89</span><br><span class="line">90</span><br><span class="line">91</span><br><span class="line">92</span><br><span class="line">93</span><br><span class="line">94</span><br><span class="line">95</span><br><span class="line">96</span><br><span class="line">97</span><br><span class="line">98</span><br><span class="line">99</span><br><span class="line">100</span><br><span class="line">101</span><br><span class="line">102</span><br><span class="line">103</span><br><span class="line">104</span><br><span class="line">105</span><br><span class="line">106</span><br><span class="line">107</span><br><span class="line">108</span><br><span class="line">109</span><br><span class="line">110</span><br><span class="line">111</span><br><span class="line">112</span><br><span class="line">113</span><br><span class="line">114</span><br><span class="line">115</span><br><span class="line">116</span><br><span class="line">117</span><br><span class="line">118</span><br><span class="line">119</span><br><span class="line">120</span><br><span class="line">121</span><br><span class="line">122</span><br><span class="line">123</span><br><span class="line">124</span><br><span class="line">125</span><br><span class="line">126</span><br><span class="line">127</span><br><span class="line">128</span><br><span class="line">129</span><br><span class="line">130</span><br><span class="line">131</span><br><span class="line">132</span><br><span class="line">133</span><br><span class="line">134</span><br><span class="line">135</span><br><span class="line">136</span><br><span class="line">137</span><br><span class="line">138</span><br><span class="line">139</span><br><span class="line">140</span><br><span class="line">141</span><br><span class="line">142</span><br><span class="line">143</span><br><span class="line">144</span><br><span class="line">145</span><br><span class="line">146</span><br><span class="line">147</span><br><span class="line">148</span><br><span class="line">149</span><br><span class="line">150</span><br><span class="line">151</span><br><span class="line">152</span><br><span class="line">153</span><br><span class="line">154</span><br><span class="line">155</span><br><span class="line">156</span><br><span class="line">157</span><br><span class="line">158</span><br><span class="line">159</span><br><span class="line">160</span><br><span class="line">161</span><br><span class="line">162</span><br><span class="line">163</span><br><span class="line">164</span><br><span class="line">165</span><br><span class="line">166</span><br><span class="line">167</span><br><span class="line">168</span><br><span class="line">169</span><br><span class="line">170</span><br><span class="line">171</span><br><span class="line">172</span><br><span class="line">173</span><br><span class="line">174</span><br><span class="line">175</span><br><span class="line">176</span><br><span class="line">177</span><br><span class="line">178</span><br><span class="line">179</span><br><span class="line">180</span><br><span class="line">181</span><br><span class="line">182</span><br><span class="line">183</span><br><span class="line">184</span><br><span class="line">185</span><br><span class="line">186</span><br><span class="line">187</span><br><span class="line">188</span><br><span class="line">189</span><br><span class="line">190</span><br><span class="line">191</span><br><span class="line">192</span><br><span class="line">193</span><br><span class="line">194</span><br><span class="line">195</span><br><span class="line">196</span><br><span class="line">197</span><br><span class="line">198</span><br><span class="line">199</span><br><span class="line">200</span><br><span class="line">201</span><br><span class="line">202</span><br><span class="line">203</span><br><span class="line">204</span><br><span class="line">205</span><br><span class="line">206</span><br><span class="line">207</span><br><span class="line">208</span><br><span class="line">209</span><br><span class="line">210</span><br><span class="line">211</span><br><span class="line">212</span><br><span class="line">213</span><br><span class="line">214</span><br><span class="line">215</span><br><span class="line">216</span><br><span class="line">217</span><br><span class="line">218</span><br><span class="line">219</span><br><span class="line">220</span><br><span class="line">221</span><br><span class="line">222</span><br><span class="line">223</span><br><span class="line">224</span><br><span class="line">225</span><br><span class="line">226</span><br><span class="line">227</span><br><span class="line">228</span><br><span class="line">229</span><br><span class="line">230</span><br><span class="line">231</span><br><span class="line">232</span><br><span class="line">233</span><br><span class="line">234</span><br><span class="line">235</span><br><span class="line">236</span><br><span class="line">237</span><br><span class="line">238</span><br><span class="line">239</span><br><span class="line">240</span><br><span class="line">241</span><br><span class="line">242</span><br><span class="line">243</span><br><span class="line">244</span><br><span class="line">245</span><br><span class="line">246</span><br><span class="line">247</span><br><span class="line">248</span><br><span class="line">249</span><br><span class="line">250</span><br><span class="line">251</span><br><span class="line">252</span><br><span class="line">253</span><br><span class="line">254</span><br><span class="line">255</span><br><span class="line">256</span><br><span class="line">257</span><br><span class="line">258</span><br><span class="line">259</span><br><span class="line">260</span><br><span class="line">261</span><br><span class="line">262</span><br><span class="line">263</span><br><span class="line">264</span><br><span class="line">265</span><br><span class="line">266</span><br><span class="line">267</span><br><span class="line">268</span><br><span class="line">269</span><br><span class="line">270</span><br><span class="line">271</span><br><span class="line">272</span><br><span class="line">273</span><br><span class="line">274</span><br><span class="line">275</span><br><span class="line">276</span><br><span class="line">277</span><br><span class="line">278</span><br><span class="line">279</span><br><span class="line">280</span><br><span class="line">281</span><br><span class="line">282</span><br><span class="line">283</span><br><span class="line">284</span><br><span class="line">285</span><br><span class="line">286</span><br><span class="line">287</span><br><span class="line">288</span><br><span class="line">289</span><br><span class="line">290</span><br><span class="line">291</span><br><span class="line">292</span><br><span class="line">293</span><br><span class="line">294</span><br><span class="line">295</span><br><span class="line">296</span><br><span class="line">297</span><br><span class="line">298</span><br><span class="line">299</span><br><span class="line">300</span><br><span class="line">301</span><br><span class="line">302</span><br><span class="line">303</span><br><span class="line">304</span><br><span class="line">305</span><br><span class="line">306</span><br><span class="line">307</span><br><span class="line">308</span><br><span class="line">309</span><br><span class="line">310</span><br><span class="line">311</span><br><span class="line">312</span><br><span class="line">313</span><br><span class="line">314</span><br><span class="line">315</span><br><span class="line">316</span><br><span class="line">317</span><br><span class="line">318</span><br><span class="line">319</span><br><span class="line">320</span><br><span class="line">321</span><br><span class="line">322</span><br><span class="line">323</span><br><span class="line">324</span><br><span class="line">325</span><br><span class="line">326</span><br><span class="line">327</span><br><span class="line">328</span><br><span class="line">329</span><br></pre></td><td class="code"><pre><span class="line">&#123;</span><br><span class="line">  <span class="attr">&quot;node&quot;:</span> &#123;</span><br><span class="line">    <span class="attr">&quot;id&quot;:</span> <span class="string">&quot;sidecar~10.244.0.21~sleep-f8cbf5b76-z4g5w.default~default.svc.cluster.local&quot;</span>,</span><br><span class="line">    <span class="attr">&quot;cluster&quot;:</span> <span class="string">&quot;sleep.default&quot;</span>,</span><br><span class="line">    <span class="attr">&quot;locality&quot;:</span> &#123;</span><br><span class="line">    &#125;,</span><br><span class="line">    <span class="attr">&quot;metadata&quot;:</span> &#123;<span class="string">&quot;CLUSTER_ID&quot;</span><span class="string">:&quot;Kubernetes&quot;</span>,<span class="string">&quot;CONFIG_NAMESPACE&quot;</span><span class="string">:&quot;default&quot;</span>,<span class="string">&quot;EXCHANGE_KEYS&quot;</span><span class="string">:&quot;NAME</span>,<span class="string">NAMESPACE</span>,<span class="string">INSTANCE_IPS</span>,<span class="string">LABELS</span>,<span class="string">OWNER</span>,<span class="string">PLATFORM_METADATA</span>,<span class="string">WORKLOAD_NAME</span>,<span class="string">CANONICAL_TELEMETRY_SERVICE</span>,<span class="string">MESH_ID</span>,<span class="string">SERVICE_ACCOUNT&quot;</span>,<span class="string">&quot;INCLUDE_INBOUND_PORTS&quot;</span><span class="string">:&quot;&quot;</span>,<span class="string">&quot;INSTANCE_IPS&quot;</span><span class="string">:&quot;10.244.0.21&quot;</span>,<span class="string">&quot;INTERCEPTION_MODE&quot;</span><span class="string">:&quot;REDIRECT&quot;</span>,<span class="string">&quot;ISTIO_PROXY_SHA&quot;</span><span class="string">:&quot;istio-proxy:a7b2578494d79fe098f0e99282e0236946562fa0&quot;</span>,<span class="string">&quot;ISTIO_VERSION&quot;</span><span class="string">:&quot;1.4.2&quot;</span>,<span class="string">&quot;LABELS&quot;</span><span class="string">:</span>&#123;<span class="string">&quot;app&quot;</span><span class="string">:&quot;sleep&quot;</span>,<span class="string">&quot;pod-template-hash&quot;</span><span class="string">:&quot;f8cbf5b76&quot;</span>&#125;,<span class="string">&quot;MESH_ID&quot;</span><span class="string">:&quot;cluster.local&quot;</span>,<span class="string">&quot;NAME&quot;</span><span class="string">:&quot;sleep-f8cbf5b76-z4g5w&quot;</span>,<span class="string">&quot;NAMESPACE&quot;</span><span class="string">:&quot;default&quot;</span>,<span class="string">&quot;OWNER&quot;</span><span class="string">:&quot;kubernetes://api/apps/v1/namespaces/default/deployments/sleep&quot;</span>,<span class="string">&quot;POD_NAME&quot;</span><span class="string">:&quot;sleep-f8cbf5b76-z4g5w&quot;</span>,<span class="string">&quot;POD_PORTS&quot;</span><span class="string">:&quot;</span>[<span class="string">\n</span>]<span class="string">&quot;,&quot;</span><span class="string">SERVICE_ACCOUNT&quot;:&quot;sleep&quot;</span>,<span class="string">&quot;WORKLOAD_NAME&quot;</span><span class="string">:&quot;sleep&quot;</span>,<span class="string">&quot;app&quot;</span><span class="string">:&quot;sleep&quot;</span>,<span class="string">&quot;pod-template-hash&quot;</span><span class="string">:&quot;f8cbf5b76&quot;</span>&#125;</span><br><span class="line">  &#125;,</span><br><span class="line">  <span class="attr">&quot;stats_config&quot;:</span> &#123;</span><br><span class="line">    <span class="attr">&quot;use_all_default_tags&quot;:</span> <span class="literal">false</span>,</span><br><span class="line">    <span class="attr">&quot;stats_tags&quot;:</span> [</span><br><span class="line">      &#123;</span><br><span class="line">        <span class="attr">&quot;tag_name&quot;:</span> <span class="string">&quot;cluster_name&quot;</span>,</span><br><span class="line">        <span class="attr">&quot;regex&quot;:</span> <span class="string">&quot;^cluster\\.((.+?(\\..+?\\.svc\\.cluster\\.local)?)\\.)&quot;</span></span><br><span class="line">      &#125;,</span><br><span class="line">      &#123;</span><br><span class="line">        <span class="attr">&quot;tag_name&quot;:</span> <span class="string">&quot;tcp_prefix&quot;</span>,</span><br><span class="line">        <span class="attr">&quot;regex&quot;:</span> <span class="string">&quot;^tcp\\.((.*?)\\.)\\w+?$&quot;</span></span><br><span class="line">      &#125;,</span><br><span class="line">      &#123;</span><br><span class="line">          <span class="attr">&quot;regex&quot;:</span> <span class="string">&quot;(response_code=\\.=(.+?);\\.;)|_rq(_(\\.d&#123;3&#125;))$&quot;</span>,</span><br><span class="line">          <span class="attr">&quot;tag_name&quot;:</span> <span class="string">&quot;response_code&quot;</span></span><br><span class="line">      &#125;,</span><br><span class="line">      &#123;</span><br><span class="line">        <span class="attr">&quot;tag_name&quot;:</span> <span class="string">&quot;response_code_class&quot;</span>,</span><br><span class="line">        <span class="attr">&quot;regex&quot;:</span> <span class="string">&quot;_rq(_(\\dxx))$&quot;</span></span><br><span class="line">      &#125;,</span><br><span class="line">      &#123;</span><br><span class="line">        <span class="attr">&quot;tag_name&quot;:</span> <span class="string">&quot;http_conn_manager_listener_prefix&quot;</span>,</span><br><span class="line">        <span class="attr">&quot;regex&quot;:</span> <span class="string">&quot;^listener(?=\\.).*?\\.http\\.(((?:[_.[:digit:]]*|[_\\[\\]aAbBcCdDeEfF[:digit:]]*))\\.)&quot;</span></span><br><span class="line">      &#125;,</span><br><span class="line">      &#123;</span><br><span class="line">        <span class="attr">&quot;tag_name&quot;:</span> <span class="string">&quot;http_conn_manager_prefix&quot;</span>,</span><br><span class="line">        <span class="attr">&quot;regex&quot;:</span> <span class="string">&quot;^http\\.(((?:[_.[:digit:]]*|[_\\[\\]aAbBcCdDeEfF[:digit:]]*))\\.)&quot;</span></span><br><span class="line">      &#125;,</span><br><span class="line">      &#123;</span><br><span class="line">        <span class="attr">&quot;tag_name&quot;:</span> <span class="string">&quot;listener_address&quot;</span>,</span><br><span class="line">        <span class="attr">&quot;regex&quot;:</span> <span class="string">&quot;^listener\\.(((?:[_.[:digit:]]*|[_\\[\\]aAbBcCdDeEfF[:digit:]]*))\\.)&quot;</span></span><br><span class="line">      &#125;,</span><br><span class="line">      &#123;</span><br><span class="line">        <span class="attr">&quot;tag_name&quot;:</span> <span class="string">&quot;mongo_prefix&quot;</span>,</span><br><span class="line">        <span class="attr">&quot;regex&quot;:</span> <span class="string">&quot;^mongo\\.(.+?)\\.(collection|cmd|cx_|op_|delays_|decoding_)(.*?)$&quot;</span></span><br><span class="line">      &#125;,</span><br><span class="line">      &#123;</span><br><span class="line">          <span class="attr">&quot;regex&quot;:</span> <span class="string">&quot;(reporter=\\.=(.+?);\\.;)&quot;</span>,</span><br><span class="line">          <span class="attr">&quot;tag_name&quot;:</span> <span class="string">&quot;reporter&quot;</span></span><br><span class="line">      &#125;,</span><br><span class="line">      &#123;</span><br><span class="line">          <span class="attr">&quot;regex&quot;:</span> <span class="string">&quot;(source_namespace=\\.=(.+?);\\.;)&quot;</span>,</span><br><span class="line">          <span class="attr">&quot;tag_name&quot;:</span> <span class="string">&quot;source_namespace&quot;</span></span><br><span class="line">      &#125;,</span><br><span class="line">      &#123;</span><br><span class="line">          <span class="attr">&quot;regex&quot;:</span> <span class="string">&quot;(source_workload=\\.=(.+?);\\.;)&quot;</span>,</span><br><span class="line">          <span class="attr">&quot;tag_name&quot;:</span> <span class="string">&quot;source_workload&quot;</span></span><br><span class="line">      &#125;,</span><br><span class="line">      &#123;</span><br><span class="line">          <span class="attr">&quot;regex&quot;:</span> <span class="string">&quot;(source_workload_namespace=\\.=(.+?);\\.;)&quot;</span>,</span><br><span class="line">          <span class="attr">&quot;tag_name&quot;:</span> <span class="string">&quot;source_workload_namespace&quot;</span></span><br><span class="line">      &#125;,</span><br><span class="line">      &#123;</span><br><span class="line">          <span class="attr">&quot;regex&quot;:</span> <span class="string">&quot;(source_principal=\\.=(.+?);\\.;)&quot;</span>,</span><br><span class="line">          <span class="attr">&quot;tag_name&quot;:</span> <span class="string">&quot;source_principal&quot;</span></span><br><span class="line">      &#125;,</span><br><span class="line">      &#123;</span><br><span class="line">          <span class="attr">&quot;regex&quot;:</span> <span class="string">&quot;(source_app=\\.=(.+?);\\.;)&quot;</span>,</span><br><span class="line">          <span class="attr">&quot;tag_name&quot;:</span> <span class="string">&quot;source_app&quot;</span></span><br><span class="line">      &#125;,</span><br><span class="line">      &#123;</span><br><span class="line">          <span class="attr">&quot;regex&quot;:</span> <span class="string">&quot;(source_version=\\.=(.+?);\\.;)&quot;</span>,</span><br><span class="line">          <span class="attr">&quot;tag_name&quot;:</span> <span class="string">&quot;source_version&quot;</span></span><br><span class="line">      &#125;,</span><br><span class="line">      &#123;</span><br><span class="line">          <span class="attr">&quot;regex&quot;:</span> <span class="string">&quot;(destination_namespace=\\.=(.+?);\\.;)&quot;</span>,</span><br><span class="line">          <span class="attr">&quot;tag_name&quot;:</span> <span class="string">&quot;destination_namespace&quot;</span></span><br><span class="line">      &#125;,</span><br><span class="line">      &#123;</span><br><span class="line">          <span class="attr">&quot;regex&quot;:</span> <span class="string">&quot;(destination_workload=\\.=(.+?);\\.;)&quot;</span>,</span><br><span class="line">          <span class="attr">&quot;tag_name&quot;:</span> <span class="string">&quot;destination_workload&quot;</span></span><br><span class="line">      &#125;,</span><br><span class="line">      &#123;</span><br><span class="line">          <span class="attr">&quot;regex&quot;:</span> <span class="string">&quot;(destination_workload_namespace=\\.=(.+?);\\.;)&quot;</span>,</span><br><span class="line">          <span class="attr">&quot;tag_name&quot;:</span> <span class="string">&quot;destination_workload_namespace&quot;</span></span><br><span class="line">      &#125;,</span><br><span class="line">      &#123;</span><br><span class="line">          <span class="attr">&quot;regex&quot;:</span> <span class="string">&quot;(destination_principal=\\.=(.+?);\\.;)&quot;</span>,</span><br><span class="line">          <span class="attr">&quot;tag_name&quot;:</span> <span class="string">&quot;destination_principal&quot;</span></span><br><span class="line">      &#125;,</span><br><span class="line">      &#123;</span><br><span class="line">          <span class="attr">&quot;regex&quot;:</span> <span class="string">&quot;(destination_app=\\.=(.+?);\\.;)&quot;</span>,</span><br><span class="line">          <span class="attr">&quot;tag_name&quot;:</span> <span class="string">&quot;destination_app&quot;</span></span><br><span class="line">      &#125;,</span><br><span class="line">      &#123;</span><br><span class="line">          <span class="attr">&quot;regex&quot;:</span> <span class="string">&quot;(destination_version=\\.=(.+?);\\.;)&quot;</span>,</span><br><span class="line">          <span class="attr">&quot;tag_name&quot;:</span> <span class="string">&quot;destination_version&quot;</span></span><br><span class="line">      &#125;,</span><br><span class="line">      &#123;</span><br><span class="line">          <span class="attr">&quot;regex&quot;:</span> <span class="string">&quot;(destination_service=\\.=(.+?);\\.;)&quot;</span>,</span><br><span class="line">          <span class="attr">&quot;tag_name&quot;:</span> <span class="string">&quot;destination_service&quot;</span></span><br><span class="line">      &#125;,</span><br><span class="line">      &#123;</span><br><span class="line">          <span class="attr">&quot;regex&quot;:</span> <span class="string">&quot;(destination_service_name=\\.=(.+?);\\.;)&quot;</span>,</span><br><span class="line">          <span class="attr">&quot;tag_name&quot;:</span> <span class="string">&quot;destination_service_name&quot;</span></span><br><span class="line">      &#125;,</span><br><span class="line">      &#123;</span><br><span class="line">          <span class="attr">&quot;regex&quot;:</span> <span class="string">&quot;(destination_service_namespace=\\.=(.+?);\\.;)&quot;</span>,</span><br><span class="line">          <span class="attr">&quot;tag_name&quot;:</span> <span class="string">&quot;destination_service_namespace&quot;</span></span><br><span class="line">      &#125;,</span><br><span class="line">      &#123;</span><br><span class="line">          <span class="attr">&quot;regex&quot;:</span> <span class="string">&quot;(request_protocol=\\.=(.+?);\\.;)&quot;</span>,</span><br><span class="line">          <span class="attr">&quot;tag_name&quot;:</span> <span class="string">&quot;request_protocol&quot;</span></span><br><span class="line">      &#125;,</span><br><span class="line">      &#123;</span><br><span class="line">          <span class="attr">&quot;regex&quot;:</span> <span class="string">&quot;(response_flags=\\.=(.+?);\\.;)&quot;</span>,</span><br><span class="line">          <span class="attr">&quot;tag_name&quot;:</span> <span class="string">&quot;response_flags&quot;</span></span><br><span class="line">      &#125;,</span><br><span class="line">      &#123;</span><br><span class="line">          <span class="attr">&quot;regex&quot;:</span> <span class="string">&quot;(connection_security_policy=\\.=(.+?);\\.;)&quot;</span>,</span><br><span class="line">          <span class="attr">&quot;tag_name&quot;:</span> <span class="string">&quot;connection_security_policy&quot;</span></span><br><span class="line">      &#125;,</span><br><span class="line">      &#123;</span><br><span class="line">          <span class="attr">&quot;regex&quot;:</span> <span class="string">&quot;(permissive_response_code=\\.=(.+?);\\.;)&quot;</span>,</span><br><span class="line">          <span class="attr">&quot;tag_name&quot;:</span> <span class="string">&quot;permissive_response_code&quot;</span></span><br><span class="line">      &#125;,</span><br><span class="line">      &#123;</span><br><span class="line">          <span class="attr">&quot;regex&quot;:</span> <span class="string">&quot;(permissive_response_policyid=\\.=(.+?);\\.;)&quot;</span>,</span><br><span class="line">          <span class="attr">&quot;tag_name&quot;:</span> <span class="string">&quot;permissive_response_policyid&quot;</span></span><br><span class="line">      &#125;,</span><br><span class="line">      &#123;</span><br><span class="line">          <span class="attr">&quot;regex&quot;:</span> <span class="string">&quot;(cache\\.(.+?)\\.)&quot;</span>,</span><br><span class="line">          <span class="attr">&quot;tag_name&quot;:</span> <span class="string">&quot;cache&quot;</span></span><br><span class="line">      &#125;,</span><br><span class="line">      &#123;</span><br><span class="line">          <span class="attr">&quot;regex&quot;:</span> <span class="string">&quot;(component\\.(.+?)\\.)&quot;</span>,</span><br><span class="line">          <span class="attr">&quot;tag_name&quot;:</span> <span class="string">&quot;component&quot;</span></span><br><span class="line">      &#125;,</span><br><span class="line">      &#123;</span><br><span class="line">          <span class="attr">&quot;regex&quot;:</span> <span class="string">&quot;(tag\\.(.+?)\\.)&quot;</span>,</span><br><span class="line">          <span class="attr">&quot;tag_name&quot;:</span> <span class="string">&quot;tag&quot;</span></span><br><span class="line">      &#125;</span><br><span class="line">    ],</span><br><span class="line">    <span class="attr">&quot;stats_matcher&quot;:</span> &#123;</span><br><span class="line">      <span class="attr">&quot;inclusion_list&quot;:</span> &#123;</span><br><span class="line">        <span class="attr">&quot;patterns&quot;:</span> [</span><br><span class="line">          &#123;</span><br><span class="line">          <span class="attr">&quot;prefix&quot;:</span> <span class="string">&quot;reporter=&quot;</span></span><br><span class="line">          &#125;,</span><br><span class="line">          &#123;</span><br><span class="line">          <span class="attr">&quot;prefix&quot;:</span> <span class="string">&quot;component&quot;</span></span><br><span class="line">          &#125;,</span><br><span class="line">          &#123;</span><br><span class="line">          <span class="attr">&quot;prefix&quot;:</span> <span class="string">&quot;cluster_manager&quot;</span></span><br><span class="line">          &#125;,</span><br><span class="line">          &#123;</span><br><span class="line">          <span class="attr">&quot;prefix&quot;:</span> <span class="string">&quot;listener_manager&quot;</span></span><br><span class="line">          &#125;,</span><br><span class="line">          &#123;</span><br><span class="line">          <span class="attr">&quot;prefix&quot;:</span> <span class="string">&quot;http_mixer_filter&quot;</span></span><br><span class="line">          &#125;,</span><br><span class="line">          &#123;</span><br><span class="line">          <span class="attr">&quot;prefix&quot;:</span> <span class="string">&quot;tcp_mixer_filter&quot;</span></span><br><span class="line">          &#125;,</span><br><span class="line">          &#123;</span><br><span class="line">          <span class="attr">&quot;prefix&quot;:</span> <span class="string">&quot;server&quot;</span></span><br><span class="line">          &#125;,</span><br><span class="line">          &#123;</span><br><span class="line">          <span class="attr">&quot;prefix&quot;:</span> <span class="string">&quot;cluster.xds-grpc&quot;</span></span><br><span class="line">          &#125;,</span><br><span class="line">          &#123;</span><br><span class="line">          <span class="attr">&quot;suffix&quot;:</span> <span class="string">&quot;ssl_context_update_by_sds&quot;</span></span><br><span class="line">          &#125;,</span><br><span class="line">        ]</span><br><span class="line">      &#125;</span><br><span class="line">    &#125;</span><br><span class="line">  &#125;,</span><br><span class="line">  <span class="attr">&quot;admin&quot;:</span> &#123;</span><br><span class="line">    <span class="attr">&quot;access_log_path&quot;:</span> <span class="string">&quot;/dev/null&quot;</span>,</span><br><span class="line">    <span class="attr">&quot;address&quot;:</span> &#123;</span><br><span class="line">      <span class="attr">&quot;socket_address&quot;:</span> &#123;</span><br><span class="line">        <span class="attr">&quot;address&quot;:</span> <span class="string">&quot;127.0.0.1&quot;</span>,</span><br><span class="line">        <span class="attr">&quot;port_value&quot;:</span> <span class="number">15000</span></span><br><span class="line">      &#125;</span><br><span class="line">    &#125;</span><br><span class="line">  &#125;,</span><br><span class="line">  <span class="attr">&quot;dynamic_resources&quot;:</span> &#123;</span><br><span class="line">    <span class="attr">&quot;lds_config&quot;:</span> &#123;</span><br><span class="line">      <span class="attr">&quot;ads&quot;:</span> &#123;&#125;</span><br><span class="line">    &#125;,</span><br><span class="line">    <span class="attr">&quot;cds_config&quot;:</span> &#123;</span><br><span class="line">      <span class="attr">&quot;ads&quot;:</span> &#123;&#125;</span><br><span class="line">    &#125;,</span><br><span class="line">    <span class="attr">&quot;ads_config&quot;:</span> &#123;</span><br><span class="line">      <span class="attr">&quot;api_type&quot;:</span> <span class="string">&quot;GRPC&quot;</span>,</span><br><span class="line">      <span class="attr">&quot;grpc_services&quot;:</span> [</span><br><span class="line">        &#123;</span><br><span class="line">          <span class="attr">&quot;envoy_grpc&quot;:</span> &#123;</span><br><span class="line">            <span class="attr">&quot;cluster_name&quot;:</span> <span class="string">&quot;xds-grpc&quot;</span></span><br><span class="line">          &#125;</span><br><span class="line">        &#125;</span><br><span class="line">      ]</span><br><span class="line">    &#125;</span><br><span class="line">  &#125;,</span><br><span class="line">  <span class="attr">&quot;static_resources&quot;:</span> &#123;</span><br><span class="line">    <span class="attr">&quot;clusters&quot;:</span> [</span><br><span class="line">      &#123;</span><br><span class="line">        <span class="attr">&quot;name&quot;:</span> <span class="string">&quot;prometheus_stats&quot;</span>,</span><br><span class="line">        <span class="attr">&quot;type&quot;:</span> <span class="string">&quot;STATIC&quot;</span>,</span><br><span class="line">        <span class="attr">&quot;connect_timeout&quot;:</span> <span class="string">&quot;0.250s&quot;</span>,</span><br><span class="line">        <span class="attr">&quot;lb_policy&quot;:</span> <span class="string">&quot;ROUND_ROBIN&quot;</span>,</span><br><span class="line">        <span class="attr">&quot;hosts&quot;:</span> [</span><br><span class="line">          &#123;</span><br><span class="line">            <span class="attr">&quot;socket_address&quot;:</span> &#123;</span><br><span class="line">              <span class="attr">&quot;protocol&quot;:</span> <span class="string">&quot;TCP&quot;</span>,</span><br><span class="line">              <span class="attr">&quot;address&quot;:</span> <span class="string">&quot;127.0.0.1&quot;</span>,</span><br><span class="line">              <span class="attr">&quot;port_value&quot;:</span> <span class="number">15000</span></span><br><span class="line">            &#125;</span><br><span class="line">          &#125;</span><br><span class="line">        ]</span><br><span class="line">      &#125;,</span><br><span class="line">      &#123;</span><br><span class="line">        <span class="attr">&quot;name&quot;:</span> <span class="string">&quot;xds-grpc&quot;</span>,</span><br><span class="line">        <span class="attr">&quot;type&quot;:</span> <span class="string">&quot;STRICT_DNS&quot;</span>,</span><br><span class="line">        <span class="attr">&quot;dns_refresh_rate&quot;:</span> <span class="string">&quot;300s&quot;</span>,</span><br><span class="line">        <span class="attr">&quot;dns_lookup_family&quot;:</span> <span class="string">&quot;V4_ONLY&quot;</span>,</span><br><span class="line">        <span class="attr">&quot;connect_timeout&quot;:</span> <span class="string">&quot;10s&quot;</span>,</span><br><span class="line">        <span class="attr">&quot;lb_policy&quot;:</span> <span class="string">&quot;ROUND_ROBIN&quot;</span>,</span><br><span class="line">        <span class="attr">&quot;hosts&quot;:</span> [</span><br><span class="line">          &#123;</span><br><span class="line">            <span class="attr">&quot;socket_address&quot;:</span> &#123;<span class="attr">&quot;address&quot;:</span> <span class="string">&quot;istio-pilot.istio-system&quot;</span>, <span class="attr">&quot;port_value&quot;:</span> <span class="number">15010</span>&#125;</span><br><span class="line">          &#125;</span><br><span class="line">        ],</span><br><span class="line">        <span class="attr">&quot;circuit_breakers&quot;:</span> &#123;</span><br><span class="line">          <span class="attr">&quot;thresholds&quot;:</span> [</span><br><span class="line">            &#123;</span><br><span class="line">              <span class="attr">&quot;priority&quot;:</span> <span class="string">&quot;DEFAULT&quot;</span>,</span><br><span class="line">              <span class="attr">&quot;max_connections&quot;:</span> <span class="number">100000</span>,</span><br><span class="line">              <span class="attr">&quot;max_pending_requests&quot;:</span> <span class="number">100000</span>,</span><br><span class="line">              <span class="attr">&quot;max_requests&quot;:</span> <span class="number">100000</span></span><br><span class="line">            &#125;,</span><br><span class="line">            &#123;</span><br><span class="line">              <span class="attr">&quot;priority&quot;:</span> <span class="string">&quot;HIGH&quot;</span>,</span><br><span class="line">              <span class="attr">&quot;max_connections&quot;:</span> <span class="number">100000</span>,</span><br><span class="line">              <span class="attr">&quot;max_pending_requests&quot;:</span> <span class="number">100000</span>,</span><br><span class="line">              <span class="attr">&quot;max_requests&quot;:</span> <span class="number">100000</span></span><br><span class="line">            &#125;</span><br><span class="line">          ]</span><br><span class="line">        &#125;,</span><br><span class="line">        <span class="attr">&quot;upstream_connection_options&quot;:</span> &#123;</span><br><span class="line">          <span class="attr">&quot;tcp_keepalive&quot;:</span> &#123;</span><br><span class="line">            <span class="attr">&quot;keepalive_time&quot;:</span> <span class="number">300</span></span><br><span class="line">          &#125;</span><br><span class="line">        &#125;,</span><br><span class="line">        <span class="attr">&quot;http2_protocol_options&quot;:</span> &#123; &#125;</span><br><span class="line">      &#125;</span><br><span class="line">      ,</span><br><span class="line">      &#123;</span><br><span class="line">        <span class="attr">&quot;name&quot;:</span> <span class="string">&quot;zipkin&quot;</span>,</span><br><span class="line">        <span class="attr">&quot;type&quot;:</span> <span class="string">&quot;STRICT_DNS&quot;</span>,</span><br><span class="line">        <span class="attr">&quot;dns_refresh_rate&quot;:</span> <span class="string">&quot;300s&quot;</span>,</span><br><span class="line">        <span class="attr">&quot;dns_lookup_family&quot;:</span> <span class="string">&quot;V4_ONLY&quot;</span>,</span><br><span class="line">        <span class="attr">&quot;connect_timeout&quot;:</span> <span class="string">&quot;1s&quot;</span>,</span><br><span class="line">        <span class="attr">&quot;lb_policy&quot;:</span> <span class="string">&quot;ROUND_ROBIN&quot;</span>,</span><br><span class="line">        <span class="attr">&quot;hosts&quot;:</span> [</span><br><span class="line">          &#123;</span><br><span class="line">            <span class="attr">&quot;socket_address&quot;:</span> &#123;<span class="attr">&quot;address&quot;:</span> <span class="string">&quot;zipkin.istio-system&quot;</span>, <span class="attr">&quot;port_value&quot;:</span> <span class="number">9411</span>&#125;</span><br><span class="line">          &#125;</span><br><span class="line">        ]</span><br><span class="line">      &#125;</span><br><span class="line">    ],</span><br><span class="line">    <span class="string">&quot;listeners&quot;</span><span class="string">:</span>[</span><br><span class="line">      &#123;</span><br><span class="line">        <span class="attr">&quot;address&quot;:</span> &#123;</span><br><span class="line">          <span class="attr">&quot;socket_address&quot;:</span> &#123;</span><br><span class="line">            <span class="attr">&quot;protocol&quot;:</span> <span class="string">&quot;TCP&quot;</span>,</span><br><span class="line">            <span class="attr">&quot;address&quot;:</span> <span class="string">&quot;0.0.0.0&quot;</span>,</span><br><span class="line">            <span class="attr">&quot;port_value&quot;:</span> <span class="number">15090</span></span><br><span class="line">          &#125;</span><br><span class="line">        &#125;,</span><br><span class="line">        <span class="attr">&quot;filter_chains&quot;:</span> [</span><br><span class="line">          &#123;</span><br><span class="line">            <span class="attr">&quot;filters&quot;:</span> [</span><br><span class="line">              &#123;</span><br><span class="line">                <span class="attr">&quot;name&quot;:</span> <span class="string">&quot;envoy.http_connection_manager&quot;</span>,</span><br><span class="line">                <span class="attr">&quot;config&quot;:</span> &#123;</span><br><span class="line">                  <span class="attr">&quot;codec_type&quot;:</span> <span class="string">&quot;AUTO&quot;</span>,</span><br><span class="line">                  <span class="attr">&quot;stat_prefix&quot;:</span> <span class="string">&quot;stats&quot;</span>,</span><br><span class="line">                  <span class="attr">&quot;route_config&quot;:</span> &#123;</span><br><span class="line">                    <span class="attr">&quot;virtual_hosts&quot;:</span> [</span><br><span class="line">                      &#123;</span><br><span class="line">                        <span class="attr">&quot;name&quot;:</span> <span class="string">&quot;backend&quot;</span>,</span><br><span class="line">                        <span class="attr">&quot;domains&quot;:</span> [</span><br><span class="line">                          <span class="string">&quot;*&quot;</span></span><br><span class="line">                        ],</span><br><span class="line">                        <span class="attr">&quot;routes&quot;:</span> [</span><br><span class="line">                          &#123;</span><br><span class="line">                            <span class="attr">&quot;match&quot;:</span> &#123;</span><br><span class="line">                              <span class="attr">&quot;prefix&quot;:</span> <span class="string">&quot;/stats/prometheus&quot;</span></span><br><span class="line">                            &#125;,</span><br><span class="line">                            <span class="attr">&quot;route&quot;:</span> &#123;</span><br><span class="line">                              <span class="attr">&quot;cluster&quot;:</span> <span class="string">&quot;prometheus_stats&quot;</span></span><br><span class="line">                            &#125;</span><br><span class="line">                          &#125;</span><br><span class="line">                        ]</span><br><span class="line">                      &#125;</span><br><span class="line">                    ]</span><br><span class="line">                  &#125;,</span><br><span class="line">                  <span class="attr">&quot;http_filters&quot;:</span> &#123;</span><br><span class="line">                    <span class="attr">&quot;name&quot;:</span> <span class="string">&quot;envoy.router&quot;</span></span><br><span class="line">                  &#125;</span><br><span class="line">                &#125;</span><br><span class="line">              &#125;</span><br><span class="line">            ]</span><br><span class="line">          &#125;</span><br><span class="line">        ]</span><br><span class="line">      &#125;</span><br><span class="line">    ]</span><br><span class="line">  &#125;</span><br><span class="line">  ,</span><br><span class="line">  <span class="attr">&quot;tracing&quot;:</span> &#123;</span><br><span class="line">    <span class="attr">&quot;http&quot;:</span> &#123;</span><br><span class="line">      <span class="attr">&quot;name&quot;:</span> <span class="string">&quot;envoy.zipkin&quot;</span>,</span><br><span class="line">      <span class="attr">&quot;config&quot;:</span> &#123;</span><br><span class="line">        <span class="attr">&quot;collector_cluster&quot;:</span> <span class="string">&quot;zipkin&quot;</span>,</span><br><span class="line">        <span class="attr">&quot;collector_endpoint&quot;:</span> <span class="string">&quot;/api/v1/spans&quot;</span>,</span><br><span class="line">        <span class="attr">&quot;trace_id_128bit&quot;:</span> <span class="string">&quot;true&quot;</span>,</span><br><span class="line">        <span class="attr">&quot;shared_span_context&quot;:</span> <span class="string">&quot;false&quot;</span></span><br><span class="line">      &#125;</span><br><span class="line">    &#125;</span><br><span class="line">  &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+</code></pre>
+</details>
+
+<p>从Envoy初始化配置文件中，我们可以大致看到Istio通过Envoy来实现服务发现和流量管理的基本原理。<strong>即控制面将xDS server信息通过static resource的方式配置到Envoy的初始化配置文件中，Envoy启动后，控制面通过xDS将dynamic resource下发给envoy，包括网格中的service信息及路由规则</strong></p>
+<p>可以看一下容器中打开的端口:</p>
+<p><img src="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20200210130019.png"></p>
+<p>从图中可以看到，连着几个控制面应用的端口.</p>
+<h4 id="Envoy配置初始化流程"><a href="#Envoy配置初始化流程" class="headerlink" title="Envoy配置初始化流程"></a>Envoy配置初始化流程</h4><p><img src="https://zhaohuabing.com/img/2019-12-05-istio-traffic-management-impl-intro/envoy-config-init.png" alt="img"></p>
+<blockquote>
+<ul>
+<li>Pilot-agent根据启动参数和K8S API Server中的配置信息生成Envoy的初始配置文件envoy-rev0.json，该文件告诉Envoy从xDS server中获取动态配置信息，并配置了xDS server的地址信息，即控制面的Pilot。</li>
+<li>Pilot-agent使用envoy-rev0.json启动Envoy进程。</li>
+<li>Envoy根据初始配置获得Pilot地址，采用xDS接口从Pilot获取到Listener，Cluster，Route等动态配置信息。</li>
+<li>Envoy根据获取到的动态配置启动Listener，并根据Listener的配置，结合Route和Cluster对拦截到的流量进行处理</li>
+</ul>
+</blockquote>
+<h3 id="VirtualService、DestinationRule"><a href="#VirtualService、DestinationRule" class="headerlink" title="VirtualService、DestinationRule"></a>VirtualService、DestinationRule</h3><p>这两个是istio中最核心的两个东西, 鉴于本篇的篇幅已经很好, 就不在这里展开说明了,后续再更</p>
+<p>这里贴个两者的配置格式</p>
+<figure class="highlight yaml"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br></pre></td><td class="code"><pre><span class="line"><span class="attr">apiVersion:</span> <span class="string">networking.istio.io/v1alpha3</span></span><br><span class="line"><span class="attr">kind:</span> <span class="string">VirtualService</span></span><br><span class="line"><span class="attr">metadata:</span></span><br><span class="line">  <span class="attr">name:</span> <span class="string">my-namespace</span></span><br><span class="line">  <span class="attr">namespace:</span> <span class="string">istio</span></span><br><span class="line"><span class="attr">spec:</span></span><br><span class="line">  <span class="attr">hosts:</span></span><br><span class="line">  <span class="bullet">-</span> <span class="string">my-svc</span>  <span class="comment">#virtualservice 中的规则只影响与 hosts 匹配的请求。hosts可以是通配符前缀或 CIDR 前缀的 DNS 名称,在kubernetes中，全称为my-svc.istio.svc.cluster.local</span></span><br><span class="line">  <span class="comment">#注意: 这里的namespace是以virtualservice所在的ns为准，而不是pod所在的ns.</span></span><br><span class="line">  <span class="comment">#所以建议写服务完整的fqns以免产生歧义.</span></span><br><span class="line">  <span class="attr">http:</span></span><br><span class="line">  <span class="bullet">-</span> <span class="attr">match:</span></span><br><span class="line">    <span class="bullet">-</span> <span class="attr">uri:</span></span><br><span class="line">        <span class="attr">prefix:</span> <span class="string">/svc-1</span></span><br><span class="line">    <span class="attr">route:</span></span><br><span class="line">    <span class="bullet">-</span> <span class="attr">destination:</span></span><br><span class="line">        <span class="attr">host:</span> <span class="string">svc-1.my-namespace.svc.cluster.local</span></span><br><span class="line">  <span class="bullet">-</span> <span class="attr">match:</span></span><br><span class="line">    <span class="bullet">-</span> <span class="attr">uri:</span></span><br><span class="line">        <span class="attr">prefix:</span> <span class="string">/svc-2</span></span><br><span class="line">    <span class="attr">route:</span></span><br><span class="line">    <span class="bullet">-</span> <span class="attr">destination:</span></span><br><span class="line">        <span class="attr">host:</span> <span class="string">svc-2.my-namespace.svc.cluster.local</span></span><br><span class="line">        </span><br><span class="line"><span class="attr">apiVersion:</span> <span class="string">networking.istio.io/v1alpha3</span></span><br><span class="line"><span class="attr">kind:</span> <span class="string">DestinationRule</span></span><br><span class="line"><span class="attr">metadata:</span></span><br><span class="line">  <span class="attr">name:</span> <span class="string">my-destination-rule</span></span><br><span class="line"><span class="attr">spec:</span></span><br><span class="line">  <span class="attr">host:</span> <span class="string">svc-1.my-namespace.svc.cluster.local</span></span><br><span class="line">  <span class="attr">trafficPolicy:</span></span><br><span class="line">    <span class="attr">loadBalancer:</span></span><br><span class="line">      <span class="attr">simple:</span> <span class="string">RANDOM</span></span><br><span class="line">  <span class="attr">subsets:</span></span><br><span class="line">  <span class="bullet">-</span> <span class="attr">name:</span> <span class="string">v1</span></span><br><span class="line">    <span class="attr">labels:</span></span><br><span class="line">      <span class="attr">version:</span> <span class="string">v1</span></span><br><span class="line">  <span class="bullet">-</span> <span class="attr">name:</span> <span class="string">v2</span></span><br><span class="line">    <span class="attr">labels:</span></span><br><span class="line">      <span class="attr">version:</span> <span class="string">v2</span></span><br><span class="line">    <span class="attr">trafficPolicy:</span></span><br><span class="line">      <span class="attr">loadBalancer:</span></span><br><span class="line">        <span class="attr">simple:</span> <span class="string">ROUND_ROBIN</span></span><br><span class="line">  <span class="bullet">-</span> <span class="attr">name:</span> <span class="string">v3</span></span><br><span class="line">    <span class="attr">labels:</span></span><br><span class="line">      <span class="attr">version:</span> <span class="string">v3</span></span><br></pre></td></tr></table></figure>
+
+
+
+<h3 id="xDS"><a href="#xDS" class="headerlink" title="xDS"></a>xDS</h3><p>Xds是istio控制面实现的协议，主要为数据面(envoy, pilot-agent)提供配置中心和服务中心两个功能，并把配置发现和服务发现以一组统一的 <code>xDS</code> 接口提供出来，数据面的 Envoy 通过 xDS 获取需要的信息来做服务间通信和服务治理, 分为以下几种</p>
+<blockquote>
+<ul>
+<li>cds(cluster discovery service):  提供相同服务的一组pod(pod中不同的版本为不同的集群)在istio中为一个集群, 类似k8s中的service</li>
+<li>lds(listener discovery service)：</li>
+<li>rds(route discovery service): 当我们做灰度发布、金丝雀发布时，同一个服务会同时运行多个版本，每个版本对应一个 cluster。这时需要通过 <code>route</code> 规则规定请求如何路由到其中的某个版本的 cluster 上</li>
+<li>eds(endpoint discovery service)：一个具体的「应用实例」，对应 ip 和端口号，类似 Kubernetes 中的一个 Pod</li>
+<li>ads(aggregated discovery service): 可以通过ads实现在同一个 gRPC 连接上实现多种 xds 来下发配置，从而节省网络连接，ads 还有一个非常重要的作用是解决 <code>cds</code>、<code>rds</code> 信息更新顺序依赖的问题，从而保证以一定的顺序同步各类配置信息</li>
+</ul>
+</blockquote>
+<p>通过istio-pilot接口查看xds数据:</p>
+<p>获取istio-pilot的svc的ip，8080是pilot http端口，15010是pilot向envoy提供配置下发端口(grpc协议端口, 会与envoy保持长连接)，已不支持curl操作.</p>
+<p>不过我们也可以从envoy提供的管理端口15000查询，15000是绑定在envoy容器里回环地址上的端口，因为只能从容器内访问:</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line"><span class="built_in">export</span> PILOT_SVC_IP=$(kubectl -n istio-system get svc istio-pilot -o go-template=<span class="string">&#x27;&#123;&#123;.spec.clusterI&#x27;</span>)&#125;<span class="string">&#x27;</span></span><br><span class="line"><span class="string"># 通过envoy管理端口访问</span></span><br><span class="line"><span class="string">kubectl exec -it productpage-v1-6d8bc58dd7-ts8kw -c istio-proxy curl http://127.0.0.1:15000/config_dump &gt; config_dump</span></span><br></pre></td></tr></table></figure>
+
+<p>查看eds</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">curl -s http://<span class="variable">$PILOT_SVC_IP</span>:8080/debug/edsz|grep -A100  <span class="string">&quot;outbound|9080||reviews.default.svc.clusterlocal&quot;</span></span><br></pre></td></tr></table></figure>
+
+<p>查看cds:</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">curl http://<span class="variable">$PILOT_SVC_IP</span>:8080/debug/cdsz</span><br></pre></td></tr></table></figure>
+
+<p>查看ads:</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">curl http://<span class="variable">$PILOT_SVC_IP</span>:8080/debug/adsz</span><br></pre></td></tr></table></figure>
+
+
+
+<h3 id="envoy配置文件详解"><a href="#envoy配置文件详解" class="headerlink" title="envoy配置文件详解"></a>envoy配置文件详解</h3><p>envoy的配置文件非常长, 因为包含了整个集群的静态及动态信息, 主要有用的信息分为以下几个红框标识出来的:</p>
+<blockquote>
+<ul>
+<li>Bootstrap</li>
+<li>clusters</li>
+<li>listeners</li>
+<li>Routes</li>
+</ul>
+</blockquote>
+<p><img src="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20200210160835.png"></p>
+<h4 id="bootstrap"><a href="#bootstrap" class="headerlink" title="bootstrap"></a>bootstrap</h4><p>文件中的内容和之前介绍的envoy-rev0.json是一致的, 是envoy初始化的配置, 主要包含了如Piolt, prometheus等后端实例的静态地址信息, 分为以下几部分:</p>
+<p><img src="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20200210161308.png"></p>
+<ul>
+<li><p>node: 部分描述了pod相关信息</p>
+</li>
+<li><p>static_resources: 描述了一些静态地址，主要是cluster部分涉及zipkin, prometheus,等路由地址，特别重要的是指定了pilot的地址，如上图红框中所示.</p>
+</li>
+<li><p>Dynamic_resources: 则是envoy启动后,pilot下发的动态配置, 这里主要注意ads_config, 这里指定了ads指向的cluster_name为xds-grpc, 就是上图中的pilot地址.</p>
+<p><img src="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20200210161421.png"></p>
+</li>
+</ul>
+<h4 id="clusters"><a href="#clusters" class="headerlink" title="clusters"></a>clusters</h4><p>Clusters是一个服务集群（类比kubernetes对应serivce的概念），包含一个到多个endpoint，每个endpoint都可以提供服务，Envoy根据负载均衡算法将请求发送到这些endpoint中。</p>
+<ul>
+<li><p>static_clusters: 同bootstrap中的static_resources。</p>
+</li>
+<li><p>dynamic_active_clusters : 是通过xDS接口从Istio控制面获取的动态服务信息。</p>
+<p><img src="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/image-20200107164542498.png"></p>
+</li>
+</ul>
+<p>​     对于一个风格服务来说，比如这里的productpage服务，其它的服务对它来说就是网格外的服务，如果productpage请求review, 这条请求对于productpage来就是出口流量(outbound),所以的出口流量都会先被envoy拦截(iptables定义所有的出口流量都被envoy的15001监听器拦截转发到envoy)，对于productpage来说入口(iptables定义所有的入口流量都被envoy的15006监听器拦截转发到envoy)流量只有一个，就是别的服务请求它自己，所以在上面我们只会看到一个(inbound), 它的地址是127.0.0.1，而127.0.0.1上的请求被iptables指定不会经过envoy处理，直接被转到productpage本身了.</p>
+<p>​    同时，对于outbound来说，比如上图中的cluster: outbound|14250||jaeger-collector.istio-system.svc.cluster.local, 则会dymanic_routing_config中找出最终服务的svc ip.</p>
+<p>​    因为outbound|14250||jaeger-collector.istio-system.svc.cluster.local为动态资源，需要通过eds查询得到该cluster中有几个endpoint , 类似使用pilot的debug端口查看cluster的endpoint，当然实际情况会使用缓存</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">curl 10.96.255.184:8080/debug/edsz|grep <span class="string">&#x27;outbound|9080||reviews.default.svc.cluster.local&#x27;</span></span><br></pre></td></tr></table></figure>
+
+<p><img src="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20200210162331.png"></p>
+<h4 id="listeners"><a href="#listeners" class="headerlink" title="listeners"></a>listeners</h4><p>listeners: Envoy采用listener来接收并处理downstream发过来的请求，listener的处理逻辑是插件式的，可以通过配置不同的filter来插入不同的处理逻辑。</p>
+<ul>
+<li>static_listeners</li>
+<li>dynamic_active_listeners</li>
+</ul>
+<p><img src="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20200210163918.png"></p>
+<h4 id="routes"><a href="#routes" class="headerlink" title="routes"></a>routes</h4><p><code>routes: 配置Envoy的路由规则。Istio下发的缺省路由规则中对每个端口设置了一个路由规则，根据host来对请求进行路由分发。</code></p>
+<ul>
+<li><p>static_route_configs</p>
+<p><img src="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20200210163031.png"></p>
+</li>
+<li><p>dynamic_route_configs</p>
+<p><img src="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20200210163343.png"></p>
+</li>
+</ul>
+<h4 id="endpoint"><a href="#endpoint" class="headerlink" title="endpoint"></a>endpoint</h4><p>endpoint对应的就是cluster后端的所有实例列表中的一个了, 这个概念跟kubernetes中的endpoint打平</p>
+<p>endpoin是动态获取的,当请求转到cluster时，通过xDS动态查找cluster后端的ep list, 然后根据配置的负载均衡策略选择一个将请求直接转发过去, 而不是像kubernetes中一样需要经过kube-proxy.</p>
+<p>具体流程参考下面端到端分析.</p>
+<h3 id="envoy端到端调用分析"><a href="#envoy端到端调用分析" class="headerlink" title="envoy端到端调用分析"></a>envoy端到端调用分析</h3><p>下图描述了istio对于服务间端到端调用链流量分析.</p>
+<p>Productpage服务调用Reviews服务的请求流程</p>
+<p><img src="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20200210162221.png"></p>
+<p>详细分析过程:</p>
+<p>当 productpage请求reviews时，(get <a target="_blank" rel="noopener" href="http://reviews:9080/reviews/0">http://reviews:9080/reviews/0</a>)</p>
+<ol>
+<li><p>对于productpage业说， 这个请求为向外请求(outbound)，所有的outbound请求都会被iptables设置的规则捕获(envoy init容器设置)，重新定位到15001端口，在15001端口上监听的Envoy Virtual Outbound Listener收到了该请求</p>
+<figure class="highlight json"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br></pre></td><td class="code"><pre><span class="line"><span class="punctuation">&#123;</span></span><br><span class="line">    <span class="attr">&quot;version_info&quot;</span><span class="punctuation">:</span> <span class="string">&quot;2019-12-04T03:08:06Z/13&quot;</span><span class="punctuation">,</span></span><br><span class="line">    <span class="attr">&quot;listener&quot;</span><span class="punctuation">:</span> <span class="punctuation">&#123;</span></span><br><span class="line">        <span class="attr">&quot;name&quot;</span><span class="punctuation">:</span> <span class="string">&quot;virtualOutbound&quot;</span><span class="punctuation">,</span></span><br><span class="line">        <span class="attr">&quot;address&quot;</span><span class="punctuation">:</span> <span class="punctuation">&#123;</span></span><br><span class="line">            <span class="attr">&quot;socket_address&quot;</span><span class="punctuation">:</span> <span class="punctuation">&#123;</span></span><br><span class="line">                <span class="attr">&quot;address&quot;</span><span class="punctuation">:</span> <span class="string">&quot;0.0.0.0&quot;</span><span class="punctuation">,</span> <span class="comment">//接受所有15001端口来的流量</span></span><br><span class="line">                <span class="attr">&quot;port_value&quot;</span><span class="punctuation">:</span> <span class="number">15001</span></span><br><span class="line">            <span class="punctuation">&#125;</span></span><br><span class="line">        <span class="punctuation">&#125;</span><span class="punctuation">,</span></span><br><span class="line">        ......</span><br><span class="line"></span><br><span class="line">         <span class="attr">&quot;use_original_dst&quot;</span><span class="punctuation">:</span> <span class="literal"><span class="keyword">true</span></span> <span class="comment">//请求转发给和原始目的IP:Port匹配的listener,而不是直接处理</span></span><br><span class="line">    <span class="punctuation">&#125;</span><span class="punctuation">,</span></span><br><span class="line">    <span class="attr">&quot;last_updated&quot;</span><span class="punctuation">:</span> <span class="string">&quot;2019-12-04T03:08:22.919Z&quot;</span></span><br><span class="line"><span class="punctuation">&#125;</span></span><br></pre></td></tr></table></figure>
+
+<p>“use_original_dst”: true 参数的主要用途是，Envoy 通过监听 15001 端口将应用的流量截取后再转发给由其他最符合请求原始目标的监听器(如果找不到任何匹配的虚拟监听器，它会将请求发送给返回 404 的 <code>BlackHoleCluster</code>) 处理而不是直接转发出去.默认为false, 后续该参数会被废弃</p>
+</li>
+<li><p>请求被Virtual Outbound Listener根据”use_original_dst”: true配置进行转发，根据原目标IP（通配所有的ipv4地址）和端口9080(该端口是请求review应用带的端口),转发到name为0.0.0.0_9080这个outbound listener（这条规则是envoy启动之后动态获取的）</p>
+<figure class="highlight json"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br></pre></td><td class="code"><pre><span class="line"><span class="punctuation">&#123;</span></span><br><span class="line">    <span class="attr">&quot;version_info&quot;</span><span class="punctuation">:</span> <span class="string">&quot;2019-12-04T03:08:06Z/13&quot;</span><span class="punctuation">,</span></span><br><span class="line">    <span class="attr">&quot;listener&quot;</span><span class="punctuation">:</span> <span class="punctuation">&#123;</span></span><br><span class="line">        <span class="attr">&quot;name&quot;</span><span class="punctuation">:</span> <span class="string">&quot;0.0.0.0_9080&quot;</span><span class="punctuation">,</span></span><br><span class="line">        <span class="attr">&quot;address&quot;</span><span class="punctuation">:</span> <span class="punctuation">&#123;</span></span><br><span class="line">            <span class="attr">&quot;socket_address&quot;</span><span class="punctuation">:</span> <span class="punctuation">&#123;</span></span><br><span class="line">                <span class="attr">&quot;address&quot;</span><span class="punctuation">:</span> <span class="string">&quot;0.0.0.0&quot;</span><span class="punctuation">,</span>  <span class="comment">//通配所有的ipv4地址</span></span><br><span class="line">                <span class="attr">&quot;port_value&quot;</span><span class="punctuation">:</span> <span class="number">9080</span></span><br><span class="line">            <span class="punctuation">&#125;</span></span><br><span class="line">        <span class="punctuation">&#125;</span><span class="punctuation">,</span></span><br><span class="line">        <span class="attr">&quot;filter_chains&quot;</span><span class="punctuation">:</span> <span class="punctuation">[</span></span><br><span class="line">            <span class="punctuation">&#123;</span></span><br><span class="line">                <span class="attr">&quot;filters&quot;</span><span class="punctuation">:</span> <span class="punctuation">[</span></span><br><span class="line">                    <span class="punctuation">&#123;</span></span><br><span class="line">                        <span class="attr">&quot;name&quot;</span><span class="punctuation">:</span> <span class="string">&quot;envoy.http_connection_manager&quot;</span><span class="punctuation">,</span></span><br><span class="line">                        <span class="attr">&quot;typed_config&quot;</span><span class="punctuation">:</span> <span class="punctuation">&#123;</span></span><br><span class="line">                            <span class="attr">&quot;@type&quot;</span><span class="punctuation">:</span> <span class="string">&quot;type.googleapis.com/envoy.config.filter.network.http_connection_manager.v2.HttpConnectionManager&quot;</span><span class="punctuation">,</span></span><br><span class="line">                            <span class="attr">&quot;stat_prefix&quot;</span><span class="punctuation">:</span> <span class="string">&quot;outbound_0.0.0.0_9080&quot;</span><span class="punctuation">,</span></span><br><span class="line">                            <span class="attr">&quot;http_filters&quot;</span><span class="punctuation">:</span> <span class="punctuation">[</span></span><br><span class="line">                                <span class="punctuation">&#123;</span></span><br><span class="line">                                    <span class="attr">&quot;name&quot;</span><span class="punctuation">:</span> <span class="string">&quot;mixer&quot;</span><span class="punctuation">,</span></span><br><span class="line">                                    ......</span><br><span class="line">                                <span class="punctuation">&#125;</span><span class="punctuation">,</span></span><br><span class="line">                                <span class="punctuation">&#123;</span></span><br><span class="line">                                    <span class="attr">&quot;name&quot;</span><span class="punctuation">:</span> <span class="string">&quot;envoy.cors&quot;</span></span><br><span class="line">                                <span class="punctuation">&#125;</span><span class="punctuation">,</span></span><br><span class="line">                                <span class="punctuation">&#123;</span></span><br><span class="line">                                    <span class="attr">&quot;name&quot;</span><span class="punctuation">:</span> <span class="string">&quot;envoy.fault&quot;</span></span><br><span class="line">                                <span class="punctuation">&#125;</span><span class="punctuation">,</span></span><br><span class="line">                                <span class="punctuation">&#123;</span></span><br><span class="line">                                    <span class="attr">&quot;name&quot;</span><span class="punctuation">:</span> <span class="string">&quot;envoy.router&quot;</span></span><br><span class="line">                                <span class="punctuation">&#125;</span></span><br><span class="line">                            <span class="punctuation">]</span><span class="punctuation">,</span></span><br><span class="line">                            ......</span><br><span class="line">                            </span><br><span class="line">                            <span class="attr">&quot;rds&quot;</span><span class="punctuation">:</span> <span class="punctuation">&#123;</span></span><br><span class="line">                                <span class="attr">&quot;config_source&quot;</span><span class="punctuation">:</span> <span class="punctuation">&#123;</span></span><br><span class="line">                                    <span class="attr">&quot;ads&quot;</span><span class="punctuation">:</span> <span class="punctuation">&#123;</span><span class="punctuation">&#125;</span>    <span class="comment">//表明是动态获取的</span></span><br><span class="line">                                <span class="punctuation">&#125;</span><span class="punctuation">,</span></span><br><span class="line">                                <span class="attr">&quot;route_config_name&quot;</span><span class="punctuation">:</span> <span class="string">&quot;9080&quot;</span> <span class="comment">//采用“9080” route进行分发</span></span><br><span class="line">                            <span class="punctuation">&#125;</span></span><br><span class="line">                        <span class="punctuation">&#125;</span></span><br><span class="line">                    <span class="punctuation">&#125;</span></span><br><span class="line">                <span class="punctuation">]</span></span><br><span class="line">            <span class="punctuation">&#125;</span></span><br><span class="line">        <span class="punctuation">]</span><span class="punctuation">,</span></span><br><span class="line">        <span class="attr">&quot;deprecated_v1&quot;</span><span class="punctuation">:</span> <span class="punctuation">&#123;</span></span><br><span class="line">            <span class="attr">&quot;bind_to_port&quot;</span><span class="punctuation">:</span> <span class="literal"><span class="keyword">false</span></span></span><br><span class="line">        <span class="punctuation">&#125;</span><span class="punctuation">,</span></span><br><span class="line">        <span class="attr">&quot;listener_filters_timeout&quot;</span><span class="punctuation">:</span> <span class="string">&quot;0.100s&quot;</span><span class="punctuation">,</span></span><br><span class="line">        <span class="attr">&quot;traffic_direction&quot;</span><span class="punctuation">:</span> <span class="string">&quot;OUTBOUND&quot;</span><span class="punctuation">,</span></span><br><span class="line">        <span class="attr">&quot;continue_on_listener_filters_timeout&quot;</span><span class="punctuation">:</span> <span class="literal"><span class="keyword">true</span></span></span><br><span class="line">    <span class="punctuation">&#125;</span><span class="punctuation">,</span></span><br><span class="line">    <span class="attr">&quot;last_updated&quot;</span><span class="punctuation">:</span> <span class="string">&quot;2019-12-04T03:08:22.822Z&quot;</span></span><br><span class="line"><span class="punctuation">&#125;</span>   </span><br></pre></td></tr></table></figure>
+
+<p>从上面可以看到，这个outbound listener的路由转到了”route_config_name”: “9080”，名为9080的route config name.</p>
+</li>
+<li><p>找到”route_config_name”&#x3D; “9080”</p>
+<p><img src="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/image-20200109143222173.png"></p>
+</li>
+</ol>
+<p>​		从route_config_name&#x3D;9080来看，下面有好多个virtual_hosts，这说明，存在多个应用是通过9080提供服务，然后根据请求的域名为reviews，可发现route为 “outbound|9080||reviews.default.svc.cluster.local”</p>
+<p>​        这里简单说一下<code>outbound|9080||reviews.default.svc.cluster.local</code>格式</p>
+<figure class="highlight yaml"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line"><span class="string">outbound说明是出向流量</span></span><br><span class="line"><span class="number">9080</span><span class="string">为端口</span></span><br><span class="line"><span class="string">||之间其实是subset的key，这个是在配置的destinatiorule中定义，如果没有，则为空</span></span><br><span class="line"><span class="string">reviews.default.svc.cluster.local即是kubernetes中完整的svc的域名.</span> </span><br></pre></td></tr></table></figure>
+
+
+
+<ol start="4">
+<li><p>route&#x3D; “outbound|9080||reviews.default.svc.cluster.local”</p>
+<p>cluster为动态资源，通过eds查询得到该cluster中有3个endpoint</p>
+<figure class="highlight json"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br><span class="line">58</span><br><span class="line">59</span><br><span class="line">60</span><br><span class="line">61</span><br><span class="line">62</span><br><span class="line">63</span><br><span class="line">64</span><br><span class="line">65</span><br><span class="line">66</span><br><span class="line">67</span><br><span class="line">68</span><br><span class="line">69</span><br><span class="line">70</span><br><span class="line">71</span><br><span class="line">72</span><br><span class="line">73</span><br></pre></td><td class="code"><pre><span class="line"><span class="punctuation">&#123;</span></span><br><span class="line">    <span class="attr">&quot;clusterName&quot;</span><span class="punctuation">:</span> <span class="string">&quot;outbound|9080||reviews.default.svc.cluster.local&quot;</span><span class="punctuation">,</span></span><br><span class="line">    <span class="attr">&quot;endpoints&quot;</span><span class="punctuation">:</span> <span class="punctuation">[</span></span><br><span class="line">        <span class="punctuation">&#123;</span></span><br><span class="line">            <span class="attr">&quot;lbEndpoints&quot;</span><span class="punctuation">:</span> <span class="punctuation">[</span></span><br><span class="line">                <span class="punctuation">&#123;</span></span><br><span class="line">                    <span class="attr">&quot;endpoint&quot;</span><span class="punctuation">:</span> <span class="punctuation">&#123;</span></span><br><span class="line">                        <span class="attr">&quot;address&quot;</span><span class="punctuation">:</span> <span class="punctuation">&#123;</span></span><br><span class="line">                            <span class="attr">&quot;socketAddress&quot;</span><span class="punctuation">:</span> <span class="punctuation">&#123;</span></span><br><span class="line">                                <span class="attr">&quot;address&quot;</span><span class="punctuation">:</span> <span class="string">&quot;10.40.0.15&quot;</span><span class="punctuation">,</span></span><br><span class="line">                                <span class="attr">&quot;portValue&quot;</span><span class="punctuation">:</span> <span class="number">9080</span></span><br><span class="line">                            <span class="punctuation">&#125;</span></span><br><span class="line">                        <span class="punctuation">&#125;</span></span><br><span class="line">                    <span class="punctuation">&#125;</span><span class="punctuation">,</span></span><br><span class="line">                    <span class="attr">&quot;metadata&quot;</span><span class="punctuation">:</span> <span class="punctuation">&#123;</span></span><br><span class="line">                        <span class="attr">&quot;filterMetadata&quot;</span><span class="punctuation">:</span> <span class="punctuation">&#123;</span></span><br><span class="line">                            <span class="attr">&quot;envoy.transport_socket_match&quot;</span><span class="punctuation">:</span> <span class="punctuation">&#123;</span></span><br><span class="line">                                <span class="attr">&quot;tlsMode&quot;</span><span class="punctuation">:</span> <span class="string">&quot;istio&quot;</span></span><br><span class="line">                            <span class="punctuation">&#125;</span><span class="punctuation">,</span></span><br><span class="line">                            <span class="attr">&quot;istio&quot;</span><span class="punctuation">:</span> <span class="punctuation">&#123;</span></span><br><span class="line">                                <span class="attr">&quot;uid&quot;</span><span class="punctuation">:</span> <span class="string">&quot;kubernetes://reviews-v1-75b979578c-pw8zs.default&quot;</span></span><br><span class="line">                            <span class="punctuation">&#125;</span></span><br><span class="line">                        <span class="punctuation">&#125;</span></span><br><span class="line">                    <span class="punctuation">&#125;</span><span class="punctuation">,</span></span><br><span class="line">                    <span class="attr">&quot;loadBalancingWeight&quot;</span><span class="punctuation">:</span> <span class="number">1</span></span><br><span class="line">                <span class="punctuation">&#125;</span><span class="punctuation">,</span></span><br><span class="line">                <span class="punctuation">&#123;</span></span><br><span class="line">                    <span class="attr">&quot;endpoint&quot;</span><span class="punctuation">:</span> <span class="punctuation">&#123;</span></span><br><span class="line">                        <span class="attr">&quot;address&quot;</span><span class="punctuation">:</span> <span class="punctuation">&#123;</span></span><br><span class="line">                            <span class="attr">&quot;socketAddress&quot;</span><span class="punctuation">:</span> <span class="punctuation">&#123;</span></span><br><span class="line">                                <span class="attr">&quot;address&quot;</span><span class="punctuation">:</span> <span class="string">&quot;10.40.0.16&quot;</span><span class="punctuation">,</span></span><br><span class="line">                                <span class="attr">&quot;portValue&quot;</span><span class="punctuation">:</span> <span class="number">9080</span></span><br><span class="line">                            <span class="punctuation">&#125;</span></span><br><span class="line">                        <span class="punctuation">&#125;</span></span><br><span class="line">                    <span class="punctuation">&#125;</span><span class="punctuation">,</span></span><br><span class="line">                    <span class="attr">&quot;metadata&quot;</span><span class="punctuation">:</span> <span class="punctuation">&#123;</span></span><br><span class="line">                        <span class="attr">&quot;filterMetadata&quot;</span><span class="punctuation">:</span> <span class="punctuation">&#123;</span></span><br><span class="line">                            <span class="attr">&quot;envoy.transport_socket_match&quot;</span><span class="punctuation">:</span> <span class="punctuation">&#123;</span></span><br><span class="line">                                <span class="attr">&quot;tlsMode&quot;</span><span class="punctuation">:</span> <span class="string">&quot;istio&quot;</span></span><br><span class="line">                            <span class="punctuation">&#125;</span><span class="punctuation">,</span></span><br><span class="line">                            <span class="attr">&quot;istio&quot;</span><span class="punctuation">:</span> <span class="punctuation">&#123;</span></span><br><span class="line">                                <span class="attr">&quot;uid&quot;</span><span class="punctuation">:</span> <span class="string">&quot;kubernetes://reviews-v3-54c6c64795-wbls7.default&quot;</span></span><br><span class="line">                            <span class="punctuation">&#125;</span></span><br><span class="line">                        <span class="punctuation">&#125;</span></span><br><span class="line">                    <span class="punctuation">&#125;</span><span class="punctuation">,</span></span><br><span class="line">                    <span class="attr">&quot;loadBalancingWeight&quot;</span><span class="punctuation">:</span> <span class="number">1</span></span><br><span class="line">                <span class="punctuation">&#125;</span><span class="punctuation">,</span></span><br><span class="line">                <span class="punctuation">&#123;</span></span><br><span class="line">                    <span class="attr">&quot;endpoint&quot;</span><span class="punctuation">:</span> <span class="punctuation">&#123;</span></span><br><span class="line">                        <span class="attr">&quot;address&quot;</span><span class="punctuation">:</span> <span class="punctuation">&#123;</span></span><br><span class="line">                            <span class="attr">&quot;socketAddress&quot;</span><span class="punctuation">:</span> <span class="punctuation">&#123;</span></span><br><span class="line">                                <span class="attr">&quot;address&quot;</span><span class="punctuation">:</span> <span class="string">&quot;10.40.0.17&quot;</span><span class="punctuation">,</span></span><br><span class="line">                                <span class="attr">&quot;portValue&quot;</span><span class="punctuation">:</span> <span class="number">9080</span></span><br><span class="line">                            <span class="punctuation">&#125;</span></span><br><span class="line">                        <span class="punctuation">&#125;</span></span><br><span class="line">                    <span class="punctuation">&#125;</span><span class="punctuation">,</span></span><br><span class="line">                    <span class="attr">&quot;metadata&quot;</span><span class="punctuation">:</span> <span class="punctuation">&#123;</span></span><br><span class="line">                        <span class="attr">&quot;filterMetadata&quot;</span><span class="punctuation">:</span> <span class="punctuation">&#123;</span></span><br><span class="line">                            <span class="attr">&quot;envoy.transport_socket_match&quot;</span><span class="punctuation">:</span> <span class="punctuation">&#123;</span></span><br><span class="line">                                <span class="attr">&quot;tlsMode&quot;</span><span class="punctuation">:</span> <span class="string">&quot;istio&quot;</span></span><br><span class="line">                            <span class="punctuation">&#125;</span><span class="punctuation">,</span></span><br><span class="line">                            <span class="attr">&quot;istio&quot;</span><span class="punctuation">:</span> <span class="punctuation">&#123;</span></span><br><span class="line">                                <span class="attr">&quot;uid&quot;</span><span class="punctuation">:</span> <span class="string">&quot;kubernetes://reviews-v2-597bf96c8f-l2fp8.default&quot;</span></span><br><span class="line">                            <span class="punctuation">&#125;</span></span><br><span class="line">                        <span class="punctuation">&#125;</span></span><br><span class="line">                    <span class="punctuation">&#125;</span><span class="punctuation">,</span></span><br><span class="line">                    <span class="attr">&quot;loadBalancingWeight&quot;</span><span class="punctuation">:</span> <span class="number">1</span></span><br><span class="line">                <span class="punctuation">&#125;</span></span><br><span class="line">            <span class="punctuation">]</span><span class="punctuation">,</span></span><br><span class="line">            <span class="attr">&quot;loadBalancingWeight&quot;</span><span class="punctuation">:</span> <span class="number">3</span></span><br><span class="line">        <span class="punctuation">&#125;</span></span><br><span class="line">    <span class="punctuation">]</span></span><br><span class="line"><span class="punctuation">&#125;</span></span><br></pre></td></tr></table></figure>
+
+<p>请求被转发到其中一个endpoint 10.40.0.15，即Reviews-v1所在的Pod。</p>
+<p>在reviews端，该请求被iptable规则拦截，所有的入向请求(inbound)都被重定向到本地的15006端口。</p>
+<p>在15006端口上监听的Envoy Virtual Inbound Listener收到了该请求。</p>
+<p>根据匹配条件，请求被Virtual Inbound Listener内部配置的Http connection manager filter处理，该filter设置的路由配置为将其发送给inbound|9080|http|reviews.default.svc.cluster.local这个inbound cluster</p>
+<figure class="highlight json"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br><span class="line">58</span><br><span class="line">59</span><br><span class="line">60</span><br><span class="line">61</span><br><span class="line">62</span><br><span class="line">63</span><br><span class="line">64</span><br><span class="line">65</span><br><span class="line">66</span><br><span class="line">67</span><br><span class="line">68</span><br><span class="line">69</span><br><span class="line">70</span><br><span class="line">71</span><br><span class="line">72</span><br><span class="line">73</span><br><span class="line">74</span><br><span class="line">75</span><br><span class="line">76</span><br><span class="line">77</span><br><span class="line">78</span><br></pre></td><td class="code"><pre><span class="line"><span class="punctuation">&#123;</span></span><br><span class="line">    <span class="attr">&quot;version_info&quot;</span><span class="punctuation">:</span> <span class="string">&quot;2019-12-04T03:07:44Z/12&quot;</span><span class="punctuation">,</span></span><br><span class="line">    <span class="attr">&quot;listener&quot;</span><span class="punctuation">:</span> <span class="punctuation">&#123;</span></span><br><span class="line">        <span class="attr">&quot;name&quot;</span><span class="punctuation">:</span> <span class="string">&quot;virtualInbound&quot;</span><span class="punctuation">,</span></span><br><span class="line">        <span class="attr">&quot;address&quot;</span><span class="punctuation">:</span> <span class="punctuation">&#123;</span></span><br><span class="line">            <span class="attr">&quot;socket_address&quot;</span><span class="punctuation">:</span> <span class="punctuation">&#123;</span></span><br><span class="line">                <span class="attr">&quot;address&quot;</span><span class="punctuation">:</span> <span class="string">&quot;0.0.0.0&quot;</span><span class="punctuation">,</span></span><br><span class="line">                <span class="attr">&quot;port_value&quot;</span><span class="punctuation">:</span> <span class="number">15006</span></span><br><span class="line">            <span class="punctuation">&#125;</span></span><br><span class="line">        <span class="punctuation">&#125;</span><span class="punctuation">,</span></span><br><span class="line">        <span class="attr">&quot;filter_chains&quot;</span><span class="punctuation">:</span> <span class="punctuation">[</span></span><br><span class="line">            ......</span><br><span class="line">            <span class="punctuation">&#123;</span></span><br><span class="line">                <span class="attr">&quot;filter_chain_match&quot;</span><span class="punctuation">:</span> <span class="punctuation">&#123;</span></span><br><span class="line">                    <span class="attr">&quot;prefix_ranges&quot;</span><span class="punctuation">:</span> <span class="punctuation">[</span></span><br><span class="line">                        <span class="punctuation">&#123;</span></span><br><span class="line">                            <span class="attr">&quot;address_prefix&quot;</span><span class="punctuation">:</span> <span class="string">&quot;10.40.0.15&quot;</span><span class="punctuation">,</span></span><br><span class="line">                            <span class="attr">&quot;prefix_len&quot;</span><span class="punctuation">:</span> <span class="number">32</span></span><br><span class="line">                        <span class="punctuation">&#125;</span></span><br><span class="line">                    <span class="punctuation">]</span><span class="punctuation">,</span></span><br><span class="line">                    <span class="attr">&quot;destination_port&quot;</span><span class="punctuation">:</span> <span class="number">9080</span></span><br><span class="line">                <span class="punctuation">&#125;</span><span class="punctuation">,</span></span><br><span class="line">                <span class="attr">&quot;filters&quot;</span><span class="punctuation">:</span> <span class="punctuation">[</span></span><br><span class="line">                    <span class="punctuation">&#123;</span></span><br><span class="line">                        <span class="attr">&quot;name&quot;</span><span class="punctuation">:</span> <span class="string">&quot;envoy.http_connection_manager&quot;</span><span class="punctuation">,</span></span><br><span class="line">                        <span class="attr">&quot;typed_config&quot;</span><span class="punctuation">:</span> <span class="punctuation">&#123;</span></span><br><span class="line">                            <span class="attr">&quot;@type&quot;</span><span class="punctuation">:</span> <span class="string">&quot;type.googleapis.com/envoy.config.filter.network.http_connection_manager.v2.HttpConnectionManager&quot;</span><span class="punctuation">,</span></span><br><span class="line">                            <span class="attr">&quot;stat_prefix&quot;</span><span class="punctuation">:</span> <span class="string">&quot;inbound_10.40.0.15_9080&quot;</span><span class="punctuation">,</span></span><br><span class="line">                            <span class="attr">&quot;http_filters&quot;</span><span class="punctuation">:</span> <span class="punctuation">[</span></span><br><span class="line">                                <span class="punctuation">&#123;</span></span><br><span class="line">                                    <span class="attr">&quot;name&quot;</span><span class="punctuation">:</span> <span class="string">&quot;istio_authn&quot;</span><span class="punctuation">,</span></span><br><span class="line">                                    ......</span><br><span class="line">                                <span class="punctuation">&#125;</span><span class="punctuation">,</span></span><br><span class="line">                                <span class="punctuation">&#123;</span></span><br><span class="line">                                    <span class="attr">&quot;name&quot;</span><span class="punctuation">:</span> <span class="string">&quot;mixer&quot;</span><span class="punctuation">,</span></span><br><span class="line">                                    ......</span><br><span class="line">                                <span class="punctuation">&#125;</span><span class="punctuation">,</span></span><br><span class="line">                                <span class="punctuation">&#123;</span></span><br><span class="line">                                    <span class="attr">&quot;name&quot;</span><span class="punctuation">:</span> <span class="string">&quot;envoy.cors&quot;</span></span><br><span class="line">                                <span class="punctuation">&#125;</span><span class="punctuation">,</span></span><br><span class="line">                                <span class="punctuation">&#123;</span></span><br><span class="line">                                    <span class="attr">&quot;name&quot;</span><span class="punctuation">:</span> <span class="string">&quot;envoy.fault&quot;</span></span><br><span class="line">                                <span class="punctuation">&#125;</span><span class="punctuation">,</span></span><br><span class="line">                                <span class="punctuation">&#123;</span></span><br><span class="line">                                    <span class="attr">&quot;name&quot;</span><span class="punctuation">:</span> <span class="string">&quot;envoy.router&quot;</span></span><br><span class="line">                                <span class="punctuation">&#125;</span></span><br><span class="line">                            <span class="punctuation">]</span><span class="punctuation">,</span></span><br><span class="line">                            ......</span><br><span class="line">                            <span class="attr">&quot;route_config&quot;</span><span class="punctuation">:</span> <span class="punctuation">&#123;</span></span><br><span class="line">                                <span class="attr">&quot;name&quot;</span><span class="punctuation">:</span> <span class="string">&quot;inbound|9080|http|reviews.default.svc.cluster.local&quot;</span><span class="punctuation">,</span></span><br><span class="line">                                <span class="attr">&quot;virtual_hosts&quot;</span><span class="punctuation">:</span> <span class="punctuation">[</span></span><br><span class="line">                                    <span class="punctuation">&#123;</span></span><br><span class="line">                                        <span class="attr">&quot;name&quot;</span><span class="punctuation">:</span> <span class="string">&quot;inbound|http|9080&quot;</span><span class="punctuation">,</span></span><br><span class="line">                                        <span class="attr">&quot;domains&quot;</span><span class="punctuation">:</span> <span class="punctuation">[</span></span><br><span class="line">                                            <span class="string">&quot;*&quot;</span></span><br><span class="line">                                        <span class="punctuation">]</span><span class="punctuation">,</span></span><br><span class="line">                                        <span class="attr">&quot;routes&quot;</span><span class="punctuation">:</span> <span class="punctuation">[</span></span><br><span class="line">                                            <span class="punctuation">&#123;</span></span><br><span class="line">                                                <span class="attr">&quot;match&quot;</span><span class="punctuation">:</span> <span class="punctuation">&#123;</span></span><br><span class="line">                                                    <span class="attr">&quot;prefix&quot;</span><span class="punctuation">:</span> <span class="string">&quot;/&quot;</span></span><br><span class="line">                                                <span class="punctuation">&#125;</span><span class="punctuation">,</span></span><br><span class="line">                                                ......</span><br><span class="line">                                                <span class="attr">&quot;route&quot;</span><span class="punctuation">:</span> <span class="punctuation">&#123;</span></span><br><span class="line">                                                    <span class="attr">&quot;timeout&quot;</span><span class="punctuation">:</span> <span class="string">&quot;0s&quot;</span><span class="punctuation">,</span></span><br><span class="line">                                                    <span class="attr">&quot;max_grpc_timeout&quot;</span><span class="punctuation">:</span> <span class="string">&quot;0s&quot;</span><span class="punctuation">,</span></span><br><span class="line">                                                    <span class="attr">&quot;cluster&quot;</span><span class="punctuation">:</span> <span class="string">&quot;inbound|9080|http|reviews.default.svc.cluster.local&quot;</span> <span class="comment">//对应的inbound cluster</span></span><br><span class="line">                                                <span class="punctuation">&#125;</span></span><br><span class="line">                                            <span class="punctuation">&#125;</span></span><br><span class="line">                                        <span class="punctuation">]</span></span><br><span class="line">                                    <span class="punctuation">&#125;</span></span><br><span class="line">                                <span class="punctuation">]</span><span class="punctuation">,</span></span><br><span class="line">                                <span class="attr">&quot;validate_clusters&quot;</span><span class="punctuation">:</span> <span class="literal"><span class="keyword">false</span></span></span><br><span class="line">                            <span class="punctuation">&#125;</span></span><br><span class="line">                        <span class="punctuation">&#125;</span></span><br><span class="line">                    <span class="punctuation">&#125;</span></span><br><span class="line">                <span class="punctuation">]</span><span class="punctuation">,</span></span><br><span class="line">                ......</span><br><span class="line"><span class="punctuation">&#125;</span></span><br></pre></td></tr></table></figure>
+
+<ol start="5">
+<li><p>“route_config_name”&#x3D;”inbound|9080|http|reviews.default.svc.cluster.local”</p>
+<figure class="highlight json"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br></pre></td><td class="code"><pre><span class="line"><span class="punctuation">&#123;</span></span><br><span class="line">    <span class="attr">&quot;version_info&quot;</span><span class="punctuation">:</span> <span class="string">&quot;2019-12-04T03:08:06Z/13&quot;</span><span class="punctuation">,</span></span><br><span class="line">    <span class="attr">&quot;cluster&quot;</span><span class="punctuation">:</span> <span class="punctuation">&#123;</span></span><br><span class="line">        <span class="attr">&quot;name&quot;</span><span class="punctuation">:</span> <span class="string">&quot;inbound|9080|http|productpage.default.svc.cluster.local&quot;</span><span class="punctuation">,</span></span><br><span class="line">        <span class="attr">&quot;type&quot;</span><span class="punctuation">:</span> <span class="string">&quot;STATIC&quot;</span><span class="punctuation">,</span></span><br><span class="line">        <span class="attr">&quot;connect_timeout&quot;</span><span class="punctuation">:</span> <span class="string">&quot;1s&quot;</span><span class="punctuation">,</span></span><br><span class="line">        <span class="attr">&quot;circuit_breakers&quot;</span><span class="punctuation">:</span> <span class="punctuation">&#123;</span></span><br><span class="line">            <span class="attr">&quot;thresholds&quot;</span><span class="punctuation">:</span> <span class="punctuation">[</span></span><br><span class="line">                <span class="punctuation">&#123;</span></span><br><span class="line">                    <span class="attr">&quot;max_connections&quot;</span><span class="punctuation">:</span> <span class="number">4294967295</span><span class="punctuation">,</span></span><br><span class="line">                    <span class="attr">&quot;max_pending_requests&quot;</span><span class="punctuation">:</span> <span class="number">4294967295</span><span class="punctuation">,</span></span><br><span class="line">                    <span class="attr">&quot;max_requests&quot;</span><span class="punctuation">:</span> <span class="number">4294967295</span><span class="punctuation">,</span></span><br><span class="line">                    <span class="attr">&quot;max_retries&quot;</span><span class="punctuation">:</span> <span class="number">4294967295</span></span><br><span class="line">                <span class="punctuation">&#125;</span></span><br><span class="line">            <span class="punctuation">]</span></span><br><span class="line">        <span class="punctuation">&#125;</span><span class="punctuation">,</span></span><br><span class="line">        <span class="attr">&quot;load_assignment&quot;</span><span class="punctuation">:</span> <span class="punctuation">&#123;</span></span><br><span class="line">            <span class="attr">&quot;cluster_name&quot;</span><span class="punctuation">:</span> <span class="string">&quot;inbound|9080|http|productpage.default.svc.cluster.local&quot;</span><span class="punctuation">,</span></span><br><span class="line">            <span class="attr">&quot;endpoints&quot;</span><span class="punctuation">:</span> <span class="punctuation">[</span></span><br><span class="line">                <span class="punctuation">&#123;</span></span><br><span class="line">                    <span class="attr">&quot;lb_endpoints&quot;</span><span class="punctuation">:</span> <span class="punctuation">[</span></span><br><span class="line">                        <span class="punctuation">&#123;</span></span><br><span class="line">                            <span class="attr">&quot;endpoint&quot;</span><span class="punctuation">:</span> <span class="punctuation">&#123;</span></span><br><span class="line">                                <span class="attr">&quot;address&quot;</span><span class="punctuation">:</span> <span class="punctuation">&#123;</span></span><br><span class="line">                                    <span class="attr">&quot;socket_address&quot;</span><span class="punctuation">:</span> <span class="punctuation">&#123;</span></span><br><span class="line">                                        <span class="attr">&quot;address&quot;</span><span class="punctuation">:</span> <span class="string">&quot;127.0.0.1&quot;</span><span class="punctuation">,</span> <span class="comment">//cluster配置的endpoint地址</span></span><br><span class="line">                                        <span class="attr">&quot;port_value&quot;</span><span class="punctuation">:</span> <span class="number">9080</span></span><br><span class="line">                                    <span class="punctuation">&#125;</span></span><br><span class="line">                                <span class="punctuation">&#125;</span></span><br><span class="line">                            <span class="punctuation">&#125;</span></span><br><span class="line">                        <span class="punctuation">&#125;</span></span><br><span class="line">                    <span class="punctuation">]</span></span><br><span class="line">                <span class="punctuation">&#125;</span></span><br><span class="line">            <span class="punctuation">]</span></span><br><span class="line">        <span class="punctuation">&#125;</span></span><br><span class="line">    <span class="punctuation">&#125;</span><span class="punctuation">,</span></span><br><span class="line">    <span class="attr">&quot;last_updated&quot;</span><span class="punctuation">:</span> <span class="string">&quot;2019-12-04T03:08:22.658Z&quot;</span></span><br></pre></td></tr></table></figure>
+
+<p>到此，一条完整的调用链分析完成.</p>
+<p>当然，以上过程除了可以从配置文件分析而来， 也可以通过Istioctl命令行的方式获取, 这里不展开说明, 后续有时间单独更新.</p>
+<p><strong>需要注意的是，服务网格内的应用仍然通过 ClusterIP 与网格外的应用通信，但有一点需要注意：这里并没有 <code>kube-proxy</code> 的参与！Envoy 自己实现了一套流量转发机制，当你访问 ClusterIP 时，Envoy 就把流量转发到具体的 Pod 上去，不需要借助 kube-proxy 的 <code>iptables</code> 或 <code>ipvs</code> 规则</strong></p>
+<p><strong>可以看出请求首先到达 <code>Listener</code>，然后通过 <code>Http Route Table(HTTP 的路由规则，例如请求的域名，Path 符合什么规则【envoy会将domain中的字符串与请求中的header进行匹配】，从而决定转发给哪个 Cluster)</code> 转到具体的 <code>Cluster</code>，再通过cluster动态查询ep list,最后由具体的某个ep pod对请求做出响应</strong></p>
+</li>
+</ol>
+</li>
+</ol>
+<h3 id="Istio缺点"><a href="#Istio缺点" class="headerlink" title="Istio缺点"></a>Istio缺点</h3><p>从上面的流量分析来看，最影响性能的就是一但集群中的实例数太多, 当有某个实例有更新都要<code>全量的</code>下发整个集群的配置给envoy,envoy需要重启等, 一旦更新的比较频繁, 这必然会影响性能, 所以这块社区也一直在想办法解决, 比如如何按需下发配置、限定只在同一个namespace下的工作负载下发更新配置等,相信不久的将来会有更完美的解决方案.</p>
+<h3 id="参考文章"><a href="#参考文章" class="headerlink" title="参考文章:"></a><strong>参考文章:</strong></h3><blockquote>
+<ul>
+<li><a target="_blank" rel="noopener" href="https://jimmysong.io/istio-handbook/data-plane/envoy-xds-protocol.html">https://jimmysong.io/istio-handbook/data-plane/envoy-xds-protocol.html</a></li>
+<li><a target="_blank" rel="noopener" href="https://jimmysong.io/posts/envoy-sidecar-injection-in-istio-service-mesh-deep-dive/">https://jimmysong.io/posts/envoy-sidecar-injection-in-istio-service-mesh-deep-dive/</a></li>
+<li><a target="_blank" rel="noopener" href="https://kubernetes.io/docs/reference/access-authn-authz/admission-controllers/">https://kubernetes.io/docs/reference/access-authn-authz/admission-controllers/</a></li>
+<li><a target="_blank" rel="noopener" href="https://jimmysong.io/posts/istio-traffic-management-basic-concepts/">https://jimmysong.io/posts/istio-traffic-management-basic-concepts/</a></li>
+<li><a target="_blank" rel="noopener" href="https://zhaohuabing.com/post/2018-09-25-istio-traffic-management-impl-intro/">https://zhaohuabing.com/post/2018-09-25-istio-traffic-management-impl-intro/</a></li>
+</ul>
+</blockquote>
+<h3 id="转载请注明出处https-izsk-me"><a href="#转载请注明出处https-izsk-me" class="headerlink" title="转载请注明出处https://izsk.me"></a><strong>转载请注明出处<a target="_blank" rel="noopener" href="https://izsk.me/">https://izsk.me</a></strong></h3>
+      
+    </div>
+
+    <div>
+      
+        
+<div id="wechat_subscriber" style="display: block; padding: 10px 0; margin: 20px auto; width: 100%; text-align: center">
+    <img id="wechat_subscriber_qcode" src="/images/websitecode250.png" alt=" wechat" style="width: 200px; max-width: 100%;"/>
+    <div>Scan Me To Read on Phone</div>
+</div>
+
+
+      
+    </div>
+
+    <div>
+      
+        
+  <div style="padding: 10px 0; margin: 20px auto; width: 90%; text-align: center;">
+    <div>I know you won't do this,but what if you did?</div>
+    <button id="rewardButton" disable="enable" onclick="var qr = document.getElementById('QR'); if (qr.style.display === 'none') {qr.style.display='block';} else {qr.style.display='none'}">
+      <span>赏</span>
+    </button>
+    <div id="QR" style="display: none;">
+      
+        <div id="wechat" style="display: inline-block">
+          <img id="wechat_qr" src="/images/wechatpayme.png" alt=" WeChat Pay"/>
+          <p>微信打赏</p>
+        </div>
+      
+      
+        <div id="alipay" style="display: inline-block">
+          <img id="alipay_qr" src="/images/alipayme.jpg" alt=" Alipay"/>
+          <p>支付宝打赏</p>
+        </div>
+      
     </div>
   </div>
 
-{% endblock %}
 
-{% block sidebar %}
-  {{ sidebar_template.render(true) }}
-{% endblock %}
+      
+    </div>
 
 
-{% block script_extra %}
-  {% include '_scripts/pages/post-details.swig' %}
-{% endblock %}
+    <footer class="post-footer">
+      
+        <div class="post-tags">
+          
+            <a href="/tags/ServiceMesh/" rel="tag"># ServiceMesh</a>
+          
+        </div>
+      
+
+      
+        <div class="post-nav">
+          <div class="post-nav-next post-nav-item">
+            
+              <a href="/2020/02/14/Istio-istioctl/" rel="next" title="Istio学习(istioctl常用命令)">
+                <i class="fa fa-chevron-left"></i> Istio学习(istioctl常用命令)
+              </a>
+            
+          </div>
+
+          <span class="post-nav-divider"></span>
+
+          <div class="post-nav-prev post-nav-item">
+            
+              <a href="/2020/02/16/Istio-Gateway/" rel="prev" title="Istio学习(Gateway)">
+                Istio学习(Gateway) <i class="fa fa-chevron-right"></i>
+              </a>
+            
+          </div>
+        </div>
+      
+
+      
+      
+    </footer>
+  </article>
+
+
+
+    <div class="post-spread">
+      
+    </div>
+  </div>
+
+
+          </div>
+          
+
+
+          
+  <div class="comments" id="comments">
+    
+  </div>
+
+
+        </div>
+        
+          
+  
+  <div class="sidebar-toggle">
+    <div class="sidebar-toggle-line-wrap">
+      <span class="sidebar-toggle-line sidebar-toggle-line-first"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-middle"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-last"></span>
+    </div>
+  </div>
+
+  <aside id="sidebar" class="sidebar">
+    <div class="sidebar-inner">
+
+      
+
+      
+        <ul class="sidebar-nav motion-element">
+          <li class="sidebar-nav-toc sidebar-nav-active" data-target="post-toc-wrap" >
+            文章目录
+          </li>
+          <li class="sidebar-nav-overview" data-target="site-overview">
+            站点概览
+          </li>
+        </ul>
+      
+
+      <section class="site-overview sidebar-panel">
+        <div class="site-author motion-element" itemprop="author" itemscope itemtype="http://schema.org/Person">
+          <img class="site-author-image" itemprop="image"
+               src="/images/avatar.gif"
+               alt="" />
+          <p class="site-author-name" itemprop="name"></p>
+          <p class="site-description motion-element" itemprop="description"></p>
+        </div>
+        <nav class="site-state motion-element">
+        
+          
+            <div class="site-state-item site-state-posts">
+              <a href="/archives">
+                <span class="site-state-item-count">192</span>
+                <span class="site-state-item-name">日志</span>
+              </a>
+            </div>
+          
+
+          
+            <div class="site-state-item site-state-categories">
+              <a href="/categories">
+                <span class="site-state-item-count">14</span>
+                <span class="site-state-item-name">分类</span>
+              </a>
+            </div>
+          
+
+          
+            <div class="site-state-item site-state-tags">
+              <a href="/tags">
+                <span class="site-state-item-count">14</span>
+                <span class="site-state-item-name">标签</span>
+              </a>
+            </div>
+          
+
+        </nav>
+
+        
+
+        <div class="links-of-author motion-element">
+          
+        </div>
+
+        
+        
+
+        
+        
+
+        
+
+
+      </section>
+
+      
+      <!--noindex-->
+        <section class="post-toc-wrap motion-element sidebar-panel sidebar-panel-active">
+          <div class="post-toc">
+
+            
+              
+            
+
+            
+              <div class="post-toc-content"><ol class="nav"><li class="nav-item nav-level-3"><a class="nav-link" href="#%E6%95%B4%E4%BD%93%E6%9E%B6%E6%9E%84"><span class="nav-number">1.</span> <span class="nav-text">整体架构</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E8%AF%B7%E6%B1%82%E8%B7%AF%E7%94%B1"><span class="nav-number">2.</span> <span class="nav-text">请求路由</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E5%90%8D%E8%AF%8D%E8%A7%A3%E9%87%8A"><span class="nav-number">3.</span> <span class="nav-text">名词解释</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#sidecar%E6%B3%A8%E5%85%A5"><span class="nav-number">4.</span> <span class="nav-text">sidecar注入</span></a><ol class="nav-child"><li class="nav-item nav-level-4"><a class="nav-link" href="#%E8%87%AA%E5%8A%A8%E6%B3%A8%E5%85%A5"><span class="nav-number">4.1.</span> <span class="nav-text">自动注入</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#%E6%89%8B%E5%8A%A8%E6%B3%A8%E5%85%A5"><span class="nav-number">4.2.</span> <span class="nav-text">手动注入</span></a></li></ol></li><li class="nav-item nav-level-3"><a class="nav-link" href="#Example-Bookinfo"><span class="nav-number">5.</span> <span class="nav-text">Example Bookinfo</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#Istio-agent%E5%AE%B9%E5%99%A8%E5%90%AF%E5%8A%A8"><span class="nav-number">6.</span> <span class="nav-text">Istio-agent容器启动</span></a><ol class="nav-child"><li class="nav-item nav-level-4"><a class="nav-link" href="#istio-proxy-envoy"><span class="nav-number">6.1.</span> <span class="nav-text">istio-proxy(envoy)</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#istio-init"><span class="nav-number">6.2.</span> <span class="nav-text">istio-init</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#envoy-rev0-json"><span class="nav-number">6.3.</span> <span class="nav-text">envoy-rev0.json</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#Envoy%E9%85%8D%E7%BD%AE%E5%88%9D%E5%A7%8B%E5%8C%96%E6%B5%81%E7%A8%8B"><span class="nav-number">6.4.</span> <span class="nav-text">Envoy配置初始化流程</span></a></li></ol></li><li class="nav-item nav-level-3"><a class="nav-link" href="#VirtualService%E3%80%81DestinationRule"><span class="nav-number">7.</span> <span class="nav-text">VirtualService、DestinationRule</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#xDS"><span class="nav-number">8.</span> <span class="nav-text">xDS</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#envoy%E9%85%8D%E7%BD%AE%E6%96%87%E4%BB%B6%E8%AF%A6%E8%A7%A3"><span class="nav-number">9.</span> <span class="nav-text">envoy配置文件详解</span></a><ol class="nav-child"><li class="nav-item nav-level-4"><a class="nav-link" href="#bootstrap"><span class="nav-number">9.1.</span> <span class="nav-text">bootstrap</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#clusters"><span class="nav-number">9.2.</span> <span class="nav-text">clusters</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#listeners"><span class="nav-number">9.3.</span> <span class="nav-text">listeners</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#routes"><span class="nav-number">9.4.</span> <span class="nav-text">routes</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#endpoint"><span class="nav-number">9.5.</span> <span class="nav-text">endpoint</span></a></li></ol></li><li class="nav-item nav-level-3"><a class="nav-link" href="#envoy%E7%AB%AF%E5%88%B0%E7%AB%AF%E8%B0%83%E7%94%A8%E5%88%86%E6%9E%90"><span class="nav-number">10.</span> <span class="nav-text">envoy端到端调用分析</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#Istio%E7%BC%BA%E7%82%B9"><span class="nav-number">11.</span> <span class="nav-text">Istio缺点</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E5%8F%82%E8%80%83%E6%96%87%E7%AB%A0"><span class="nav-number">12.</span> <span class="nav-text">参考文章:</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E8%BD%AC%E8%BD%BD%E8%AF%B7%E6%B3%A8%E6%98%8E%E5%87%BA%E5%A4%84https-izsk-me"><span class="nav-number">13.</span> <span class="nav-text">转载请注明出处https:&#x2F;&#x2F;izsk.me</span></a></li></ol></div>
+            
+
+          </div>
+        </section>
+      <!--/noindex-->
+      
+
+    </div>
+  </aside>
+
+
+        
+      </div>
+    </main>
+
+    <footer id="footer" class="footer">
+      <div class="footer-inner">
+        <div class="copyright" >
+  
+  &copy; 
+  <span itemprop="copyrightYear">2022</span>
+  <span class="with-love">
+    <i class="fa fa-heart"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">Z.S.K.</span>
+</div>
+
+
+<div class="powered-by">
+  Supported by <a class="theme-link" target="_blank" rel="noopener" href="https://hexo.io">Hexo</a>
+</div>
+
+<div class="theme-info">
+  Theme -
+  <a class="theme-link" target="_blank" rel="noopener" href="https://github.com/iissnan/hexo-theme-next">
+    NexT.Mist
+  </a>
+</div>
+
+
+        
+
+        
+      </div>
+    </footer>
+
+    <div class="back-to-top">
+      <i class="fa fa-arrow-up"></i>
+    </div>
+  </div>
+
+  
+
+<script type="text/javascript">
+  if (Object.prototype.toString.call(window.Promise) !== '[object Function]') {
+    window.Promise = null;
+  }
+</script>
+
+
+
+
+
+
+
+
+
+  
+
+
+
+  
+  <script type="text/javascript" src="/lib/jquery/index.js?v=2.1.3"></script>
+
+  
+  <script type="text/javascript" src="/lib/fastclick/lib/fastclick.min.js?v=1.0.6"></script>
+
+  
+  <script type="text/javascript" src="/lib/jquery_lazyload/jquery.lazyload.js?v=1.9.7"></script>
+
+  
+  <script type="text/javascript" src="/lib/velocity/velocity.min.js?v=1.2.1"></script>
+
+  
+  <script type="text/javascript" src="/lib/velocity/velocity.ui.min.js?v=1.2.1"></script>
+
+  
+  <script type="text/javascript" src="/lib/fancybox/source/jquery.fancybox.pack.js?v=2.1.5"></script>
+
+
+  
+
+
+  <script type="text/javascript" src="/js/src/utils.js?v=5.1.0"></script>
+
+  <script type="text/javascript" src="/js/src/motion.js?v=5.1.0"></script>
+
+
+
+  
+  
+
+  
+  <script type="text/javascript" src="/js/src/scrollspy.js?v=5.1.0"></script>
+<script type="text/javascript" src="/js/src/post-details.js?v=5.1.0"></script>
+
+
+
+  
+
+
+  <script type="text/javascript" src="/js/src/bootstrap.js?v=5.1.0"></script>
+
+
+
+  
+
+
+
+  
+
+
+
+
+	
+
+
+
+
+
+  
+
+
+
+
+  
+  
+  <script type="text/javascript">
+    // Popup Window;
+    var isfetched = false;
+    // Search DB path;
+    var search_path = "search.xml";
+    if (search_path.length == 0) {
+      search_path = "search.xml";
+    }
+    var path = "/" + search_path;
+    // monitor main search box;
+
+    function proceedsearch() {
+      $("body").append('<div class="popoverlay">').css('overflow', 'hidden');
+      $('.popup').toggle();
+    }
+    // search function;
+    var searchFunc = function(path, search_id, content_id) {
+      'use strict';
+      $.ajax({
+        url: path,
+        dataType: "xml",
+        async: true,
+        success: function( xmlResponse ) {
+          // get the contents from search data
+          isfetched = true;
+          $('.popup').detach().appendTo('.header-inner');
+          var datas = $( "entry", xmlResponse ).map(function() {
+            return {
+              title: $( "title", this ).text(),
+              content: $("content",this).text(),
+              url: $( "url" , this).text()
+            };
+          }).get();
+          var $input = document.getElementById(search_id);
+          var $resultContent = document.getElementById(content_id);
+          $input.addEventListener('input', function(){
+            var matchcounts = 0;
+            var str='<ul class=\"search-result-list\">';
+            var keywords = this.value.trim().toLowerCase().split(/[\s\-]+/);
+            $resultContent.innerHTML = "";
+            if (this.value.trim().length > 1) {
+              // perform local searching
+              datas.forEach(function(data) {
+                var isMatch = false;
+                var content_index = [];
+                var data_title = data.title.trim().toLowerCase();
+                var data_content = data.content.trim().replace(/<[^>]+>/g,"").toLowerCase();
+                var data_url = decodeURIComponent(data.url);
+                var index_title = -1;
+                var index_content = -1;
+                var first_occur = -1;
+                // only match artiles with not empty titles and contents
+                if(data_title != '') {
+                  keywords.forEach(function(keyword, i) {
+                    index_title = data_title.indexOf(keyword);
+                    index_content = data_content.indexOf(keyword);
+                    if( index_title >= 0 || index_content >= 0 ){
+                      isMatch = true;
+                      if (i == 0) {
+                        first_occur = index_content;
+                      }
+                    }
+
+                  });
+                }
+                // show search results
+                if (isMatch) {
+                  matchcounts += 1;
+                  str += "<li><a href='"+ data_url +"' class='search-result-title'>"+ data_title +"</a>";
+                  var content = data.content.trim().replace(/<[^>]+>/g,"");
+                  if (first_occur >= 0) {
+                    // cut out 100 characters
+                    var start = first_occur - 20;
+                    var end = first_occur + 80;
+                    if(start < 0){
+                      start = 0;
+                    }
+                    if(start == 0){
+                      end = 50;
+                    }
+                    if(end > content.length){
+                      end = content.length;
+                    }
+                    var match_content = content.substring(start, end);
+                    // highlight all keywords
+                    keywords.forEach(function(keyword){
+                      var regS = new RegExp(keyword, "gi");
+                      match_content = match_content.replace(regS, "<b class=\"search-keyword\">"+keyword+"</b>");
+                    });
+
+                    str += "<p class=\"search-result\">" + match_content +"...</p>"
+                  }
+                  str += "</li>";
+                }
+              })};
+            str += "</ul>";
+            if (matchcounts == 0) { str = '<div id="no-result"><i class="fa fa-frown-o fa-5x" /></div>' }
+            if (keywords == "") { str = '<div id="no-result"><i class="fa fa-search fa-5x" /></div>' }
+            $resultContent.innerHTML = str;
+          });
+          proceedsearch();
+        }
+      });}
+
+    // handle and trigger popup window;
+    $('.popup-trigger').click(function(e) {
+      e.stopPropagation();
+      if (isfetched == false) {
+        searchFunc(path, 'local-search-input', 'local-search-result');
+      } else {
+        proceedsearch();
+      };
+    });
+
+    $('.popup-btn-close').click(function(e){
+      $('.popup').hide();
+      $(".popoverlay").remove();
+      $('body').css('overflow', '');
+    });
+    $('.popup').click(function(e){
+      e.stopPropagation();
+    });
+  </script>
+
+
+  
+
+  
+
+  
+
+  
+
+
+</body>
+</html>

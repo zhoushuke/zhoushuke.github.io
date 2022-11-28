@@ -1,38 +1,944 @@
-{% extends '_layout.swig' %}
-{% import '_macro/post.swig' as post_template %}
-{% import '_macro/sidebar.swig' as sidebar_template %}
+<!doctype html>
 
 
-{% block title %} {{ page.title }} | {{ config.title }} {% endblock %}
 
-{% block page_class %}page-post-detail{% endblock %}
+  
 
 
-{% block content %}
+<html class="theme-next mist use-motion" lang="zh-Hans">
+<head>
+  <meta charset="UTF-8"/>
+<meta http-equiv="X-UA-Compatible" content="IE=edge" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1"/>
+
+
+
+<meta http-equiv="Cache-Control" content="no-transform" />
+<meta http-equiv="Cache-Control" content="no-siteapp" />
+
+
+
+
+
+
+
+
+
+
+
+
+  
+  
+  <link href="/lib/fancybox/source/jquery.fancybox.css?v=2.1.5" rel="stylesheet" type="text/css" />
+
+
+
+
+  
+  
+  
+  
+
+  
+    
+    
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+    
+    
+    <link href="//fonts.googleapis.com/css?family=Lato:300,300italic,400,400italic,700,700italic&subset=latin,latin-ext" rel="stylesheet" type="text/css">
+  
+
+
+
+
+
+
+<link href="/lib/font-awesome/css/font-awesome.min.css?v=4.6.2" rel="stylesheet" type="text/css" />
+
+<link href="/css/main.css?v=5.1.0" rel="stylesheet" type="text/css" />
+
+
+  <meta name="keywords" content="Kubernetes," />
+
+
+
+
+
+
+
+
+  <link rel="shortcut icon" type="image/x-icon" href="/favicon.ico?v=5.1.0" />
+
+
+
+
+
+
+<meta name="description" content="Kind(kubernetes in docker的缩写)， 用于快速地在本地部署kubernetes集群,顾名思义，就是将 Kubernetes 所需要的所有组件，全部部署在一个 Docker 容器中，可以很方便的搭建 Kubernetes 集群。 Kind 已经广泛的应用于 Kubernetes 上游及相关项目的 CI 环境中">
+<meta property="og:type" content="article">
+<meta property="og:title" content="Kubernetes学习(kind实践)">
+<meta property="og:url" content="https://zhoushuke.github.io/2020/08/07/Kubernetes-Kind/index.html">
+<meta property="og:site_name" content="Z.S.K.&#39;s Records">
+<meta property="og:description" content="Kind(kubernetes in docker的缩写)， 用于快速地在本地部署kubernetes集群,顾名思义，就是将 Kubernetes 所需要的所有组件，全部部署在一个 Docker 容器中，可以很方便的搭建 Kubernetes 集群。 Kind 已经广泛的应用于 Kubernetes 上游及相关项目的 CI 环境中">
+<meta property="og:locale">
+<meta property="og:image" content="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20200808214319.png">
+<meta property="article:published_time" content="2020-08-07T00:10:53.000Z">
+<meta property="article:modified_time" content="2022-07-19T03:16:00.958Z">
+<meta property="article:author" content="Z.S.K.">
+<meta property="article:tag" content="Kubernetes">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:image" content="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20200808214319.png">
+
+
+
+<script type="text/javascript" id="hexo.configurations">
+  var NexT = window.NexT || {};
+  var CONFIG = {
+    root: '',
+    scheme: 'Mist',
+    sidebar: {"position":"left","display":"post"},
+    fancybox: true,
+    motion: true,
+    duoshuo: {
+      userId: 'undefined',
+      author: '博主'
+    },
+    algolia: {
+      applicationID: '',
+      apiKey: '',
+      indexName: '',
+      hits: {"per_page":10},
+      labels: {"input_placeholder":"Search for Posts","hits_empty":"We didn't find any results for the search: ${query}","hits_stats":"${hits} results found in ${time} ms"}
+    }
+  };
+</script>
+
+
+
+  <link rel="canonical" href="https://zhoushuke.github.io/2020/08/07/Kubernetes-Kind/"/>
+
+
+
+
+
+  <title> Kubernetes学习(kind实践) | Z.S.K.'s Records </title>
+<meta name="generator" content="Hexo 6.2.0"></head>
+
+<body itemscope itemtype="http://schema.org/WebPage" lang="zh-Hans">
+
+  
+
+
+
+
+
+
+
+
+
+
+  
+  
+    
+  
+
+  <div class="container one-collumn sidebar-position-left page-post-detail ">
+    <div class="headband"></div>
+
+    <header id="header" class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-meta ">
+  
+
+  <div class="custom-logo-site-title">
+    <a href="/"  class="brand" rel="start">
+      <span class="logo-line-before"><i></i></span>
+      <span class="site-title">Z.S.K.'s Records</span>
+      <span class="logo-line-after"><i></i></span>
+    </a>
+  </div>
+    
+      <p class="site-subtitle"></p>
+    
+</div>
+
+<div class="site-nav-toggle">
+  <button>
+    <span class="btn-bar"></span>
+    <span class="btn-bar"></span>
+    <span class="btn-bar"></span>
+  </button>
+</div>
+
+<nav class="site-nav">
+  
+
+  
+    <ul id="menu" class="menu">
+      
+        
+        <li class="menu-item menu-item-home">
+          <a href="/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-home"></i> <br />
+            
+            首页
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-categories">
+          <a href="/categories" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-th"></i> <br />
+            
+            分类
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-about">
+          <a href="/about/ZSK-Profile.pdf" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-user"></i> <br />
+            
+            简历
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-archives">
+          <a href="/archives" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-archive"></i> <br />
+            
+            归档
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-tags">
+          <a href="/tags" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-tags"></i> <br />
+            
+            标签
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-commonweal">
+          <a href="/404.html" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-heartbeat"></i> <br />
+            
+            公益404
+          </a>
+        </li>
+      
+
+      
+        <li class="menu-item menu-item-search">
+          
+            <a href="javascript:;" class="popup-trigger">
+          
+            
+              <i class="menu-item-icon fa fa-search fa-fw"></i> <br />
+            
+            搜索
+          </a>
+        </li>
+      
+    </ul>
+  
+
+  
+    <div class="site-search">
+      
+  <div class="popup">
+ <span class="search-icon fa fa-search"></span>
+ <input type="text" id="local-search-input">
+ <div id="local-search-result"></div>
+ <span class="popup-btn-close">close</span>
+</div>
+
+
+    </div>
+  
+</nav>
+
+
+
+ </div>
+    </header>
+
+    <main id="main" class="main">
+      <div class="main-inner">
+        <div class="content-wrap">
+          <div id="content" class="content">
+            
 
   <div id="posts" class="posts-expand">
-    {{ post_template.render(page) }}
+    
 
-    <div class="post-spread">
-      {% if theme.jiathis %}
-        {% include '_partials/share/jiathis.swig' %}
-      {% elseif theme.baidushare %}
-        {% include '_partials/share/baidushare.swig' %}
-      {% elseif theme.add_this_id %}
-        {% include '_partials/share/add-this.swig' %}
-      {% elseif theme.duoshuo_shortname and theme.duoshuo_share %}
-        {% include '_partials/share/duoshuo_share.swig' %}
-      {% endif %}
+  
+
+  
+  
+  
+
+  <article class="post post-type-normal " itemscope itemtype="http://schema.org/Article">
+  <link itemprop="mainEntityOfPage" href="https://zhoushuke.github.io/2020/08/07/Kubernetes-Kind/">
+
+  <span style="display:none" itemprop="author" itemscope itemtype="http://schema.org/Person">
+    <meta itemprop="name" content="">
+    <meta itemprop="description" content="">
+    <meta itemprop="image" content="/images/avatar.gif">
+  </span>
+
+  <span style="display:none" itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+    <meta itemprop="name" content="Z.S.K.'s Records">
+    <span style="display:none" itemprop="logo" itemscope itemtype="http://schema.org/ImageObject">
+      <img style="display:none;" itemprop="url image" alt="Z.S.K.'s Records" src="">
+    </span>
+  </span>
+
+    
+      <header class="post-header">
+
+        
+        
+          <h1 class="post-title" itemprop="name headline">
+            
+            
+              
+                Kubernetes学习(kind实践)
+              
+            
+          </h1>
+        
+
+        <div class="post-meta">
+          <span class="post-time">
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">发表于</span>
+              
+              <time title="Post created" itemprop="dateCreated datePublished" datetime="2020-08-07T08:10:53+08:00">
+                2020-08-07
+              </time>
+            
+
+            
+
+            
+          </span>
+
+          
+            <span class="post-category" >
+            
+              <span class="post-meta-divider">|</span>
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-folder-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">分类于</span>
+              
+              
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/Kubernetes/" itemprop="url" rel="index">
+                    <span itemprop="name">Kubernetes</span>
+                  </a>
+                </span>
+
+                
+                
+              
+            </span>
+          
+
+          
+            
+          
+
+          
+
+          
+          
+
+          
+
+          
+
+        </div>
+      </header>
+    
+
+
+    <div class="post-body" itemprop="articleBody">
+
+      
+      
+
+      
+        <p>Kind(kubernetes in docker的缩写)， 用于快速地在本地部署kubernetes集群,顾名思义，就是将 <code>Kubernetes</code> 所需要的所有组件，全部部署在一个 <code>Docker</code> 容器中，可以很方便的搭建 <code>Kubernetes</code> 集群。</p>
+<p><code>Kind</code> 已经广泛的应用于 <code>Kubernetes</code> 上游及相关项目的 <code>CI</code> 环境中</p>
+<span id="more"></span>
+
+
+
+<h3 id="优势"><a href="#优势" class="headerlink" title="优势"></a>优势</h3><ol>
+<li>最小的安装依赖，仅需要安装 <code>Docker</code> 即可</li>
+<li>使用方法简单，只需 <code>Kind Cli</code> 工具即可快速创建集群</li>
+<li><strong>使用容器来模似 <code>Kubernetes</code> 节点</strong></li>
+<li>内部使用 <code>Kubeadm</code> 的官方主流部署工具</li>
+</ol>
+<h3 id="架构"><a href="#架构" class="headerlink" title="架构"></a>架构</h3><p><code>Kind</code> 使用容器来模拟每一个 <code>Kubernetes</code> 节点，并在容器里面运行 <code>Systemd</code>。 容器里的 <code>Systemd</code> 托管了 <code>Kubelet</code> 和 <code>Containerd</code>，然后容器内部的 <code>Kubelet</code> 把其它 <code>Kubernetes</code> 组件：<code>Kube-Apiserver</code>、<code>Etcd</code>、<code>CNI</code> 等等组件运行起来。</p>
+<p>Kind<code>内部使用了</code>Kubeadm<code>这个工具来做集群的部署，包括高可用集群也是借助</code>Kubeadm<code>提供的特性来完成的。在高用集群下还会额外部署了一个</code>Nginx来提供VIP</p>
+<p>这是官方一张图, 可以很形象的说明上面的观点.</p>
+<p><img src="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20200808214319.png"></p>
+<h3 id="使用"><a href="#使用" class="headerlink" title="使用"></a>使用</h3><h4 id="Kind安装"><a href="#Kind安装" class="headerlink" title="Kind安装"></a>Kind安装</h4><p>kind是以golang开发的，因此直接下载对应平台的二进制包即可，我是mac，因此直接brew安装即可</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">$ brew install kind</span><br></pre></td></tr></table></figure>
+
+<p>可以来看一下kind支持的参数</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br></pre></td><td class="code"><pre><span class="line">$ kind -h</span><br><span class="line">kind creates and manages <span class="built_in">local</span> Kubernetes clusters using Docker container <span class="string">&#x27;nodes&#x27;</span></span><br><span class="line"></span><br><span class="line">Usage:</span><br><span class="line">  kind [<span class="built_in">command</span>]</span><br><span class="line"></span><br><span class="line">Available Commands:</span><br><span class="line">  build       Build one of [node-image]</span><br><span class="line">  completion  Output shell completion code <span class="keyword">for</span> the specified shell (bash, zsh or fish)</span><br><span class="line">  create      Creates one of [cluster]</span><br><span class="line">  delete      Deletes one of [cluster]</span><br><span class="line">  <span class="built_in">export</span>      Exports one of [kubeconfig, logs]</span><br><span class="line">  get         Gets one of [clusters, nodes, kubeconfig]</span><br><span class="line">  <span class="built_in">help</span>        Help about any <span class="built_in">command</span></span><br><span class="line">  load        Loads images into nodes</span><br><span class="line">  version     Prints the kind CLI version</span><br><span class="line"></span><br><span class="line">Flags:</span><br><span class="line">  -h, --<span class="built_in">help</span>              <span class="built_in">help</span> <span class="keyword">for</span> kind</span><br><span class="line">      --loglevel string   DEPRECATED: see -v instead</span><br><span class="line">  -q, --quiet             silence all stderr output</span><br><span class="line">  -v, --verbosity int32   info <span class="built_in">log</span> verbosity</span><br><span class="line">      --version           version <span class="keyword">for</span> kind</span><br><span class="line"></span><br><span class="line">Use <span class="string">&quot;kind [command] --help&quot;</span> <span class="keyword">for</span> more information about a <span class="built_in">command</span></span><br></pre></td></tr></table></figure>
+
+
+
+<h4 id="单节点"><a href="#单节点" class="headerlink" title="单节点"></a>单节点</h4><p>搭建单节点集群是 <code>Kind</code> 最基础的功能，当然使用起来也很简单，仅需一条指令即可完成。</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br></pre></td><td class="code"><pre><span class="line">$ kind create cluster --name my-cluster --image kindest/node:v1.15.3</span><br><span class="line">Creating cluster <span class="string">&quot;my-cluster&quot;</span> ...</span><br><span class="line"> ✓ Ensuring node image (kindest/node:v1.15.3) ?</span><br><span class="line"> ✓ Preparing nodes ?</span><br><span class="line"> ✓ Creating kubeadm config ?</span><br><span class="line"> ✓ Starting control-plane ?️</span><br><span class="line">Cluster creation complete. You can now use the cluster with:</span><br><span class="line"></span><br><span class="line"><span class="built_in">export</span> KUBECONFIG=<span class="string">&quot;<span class="subst">$(kind get kubeconfig-path --name=<span class="string">&quot;my-cluster&quot;</span>)</span>&quot;</span></span><br><span class="line">kubectl cluster-info</span><br></pre></td></tr></table></figure>
+
+<p>以上命令中 <code>--name</code> 是可选参数。如果不指定，默认创建出来的集群名字为 <code>kind</code>。</p>
+<p>使用默认安装的方式时，我们没有指定任何配置文件。从安装过程的输出来看，一共分为 4 步：</p>
+<ul>
+<li>检查本地环境是否存在一个基础的安装镜像，默认是 <code>kindest/node:v1.15.3</code>，该镜像里面包含了所有需要安装的东西，包括：<code>kubectl</code>、<code>kubeadm</code>、<code>kubelet</code> 的二进制文件，以及安装对应版本 <code>Kubernetes</code> 所需要的镜像。</li>
+<li>准备 <code>Kubernetes</code> 节点，主要就是启动容器、解压镜像这类的操作。</li>
+<li>建立对应的 <code>kubeadm</code> 的配置，完成之后就通过 <code>kubeadm</code> 进行安装。安装完成后还会做一些清理操作，比如：删掉主节点上的污点，否则对于没有容忍的 <code>Pod</code> 无法完成部署。</li>
+<li>上面所有操作都完成后，就成功启动了一个 <code>Kubernetes</code> 集群并输出一些操作集群的提示信息。</li>
+</ul>
+<p>默认情况下，<code>Kind</code> 会先下载 <code>kindest/node:v1.15.3</code> 镜像。如果你想指定不同版本，可以使用 <code>--image</code> 参数，类似这样：<code>kind create cluster --image kindest/node:v1.15.3</code> </p>
+<p>kindest&#x2F;node<code>这个镜像目前托管于 Docker Hub 上，下载时可能会较慢。同样的问题</code>Kind<code> 进行集群的创建也是存在的，</code>Kind<code>实际使用</code>Kubeadm<code>进行集群的创建。对</code>Kubeadm&#96; 有所了解的同学都知道它默认使用的镜像在国内是不能访问的，所以一样需要自行解决网络问题。</p>
+<p>可以来验证一下:</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br></pre></td><td class="code"><pre><span class="line"><span class="built_in">export</span> KUBECONFIG=<span class="string">&quot;<span class="subst">$(kind get kubeconfig-path --name=<span class="string">&quot;my-cluster&quot;</span>)</span>&quot;</span></span><br><span class="line"></span><br><span class="line">$ kubectl get nodes</span><br><span class="line">NAME                       STATUS    ROLES     AGE       VERSION</span><br><span class="line">my-cluster-control-plane   Ready     master    2m        v1.15.3</span><br><span class="line"></span><br><span class="line">$ kubectl get po -n kube-system</span><br><span class="line">NAME                                                  READY   STATUS    RESTARTS   AGE</span><br><span class="line">coredns-86c58d9df4-6g66f                              1/1     Running   0          21m</span><br><span class="line">coredns-86c58d9df4-pqcc4                              1/1     Running   0          21m</span><br><span class="line">etcd-my-cluster-control-plane                         1/1     Running   0          20m</span><br><span class="line">kube-apiserver-my-cluster-control-plane               1/1     Running   0          20m</span><br><span class="line">kube-controller-manager-my-cluster-control-plane      1/1     Running   0          20m</span><br><span class="line">kube-proxy-cjgnt                                      1/1     Running   0          21m</span><br><span class="line">kube-scheduler-my-cluster-control-plane               1/1     Running   0          21m</span><br><span class="line">weave-net-ls2v8                                       2/2     Running   0          21m</span><br></pre></td></tr></table></figure>
+
+<p>从上面可以看出，对于使用kind部署一个单节点来说，单节点集群默认方式启动的节点类型是 <code>control-plane</code>，该节点包含了所有的组件。这些组件分别是：<code>2*Coredns</code>、<code>Etcd</code>、<code>Api-Server</code>、<code>Controller-Manager</code>、<code>Kube-Proxy</code>、<code>Sheduler</code> 和网络插件 <code>Weave</code></p>
+<p>单节点的只有一个Node容器，如果想部署多个节点呢?</p>
+<h4 id="多节点"><a href="#多节点" class="headerlink" title="多节点"></a>多节点</h4><p>多节点的集群可以使用配置文件来指定，<code>Kind</code> 在创建集群的时候，支持通过 <code>--config</code> 参数传递配置文件给 <code>Kind</code>，配置文件可修改的内容主要有 role 和 节点使用的镜像</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line">$ vim my-cluster-multi-node.yaml</span><br><span class="line">kind: Cluster</span><br><span class="line">apiVersion: kind.sigs.k8s.io/v1alpha3</span><br><span class="line">nodes:</span><br><span class="line">- role: control-plane <span class="comment"># 一个控制节点</span></span><br><span class="line">- role: worker <span class="comment"># 一个工作节点</span></span><br><span class="line"></span><br><span class="line">$ kind create cluster --config my-cluster-multi-node.yaml --name my-cluster-multi-node --image kindest/node:v1.15.3</span><br></pre></td></tr></table></figure>
+
+<p>可以发现这个配置文件的形式跟kubeadm的配置文件非常的类似, 更多的参数可以参考<a target="_blank" rel="noopener" href="https://kind.sigs.k8s.io/docs/user/configuration/">这里</a></p>
+<p>验证</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br></pre></td><td class="code"><pre><span class="line">kubectl get nodes</span><br><span class="line">NAME                                  STATUS   ROLES    AGE     VERSION</span><br><span class="line">my-cluster-multi-node-control-plane   Ready    master   3m20s   v1.15.3</span><br><span class="line">my-cluster-multi-node-worker          Ready    &lt;none&gt;   3m8s    v1.15.3</span><br><span class="line"></span><br><span class="line">$ kubectl get po -n kube-system</span><br><span class="line">NAME                                                          READY   STATUS    RESTARTS   AGE</span><br><span class="line">coredns-86c58d9df4-cnqhc                                      1/1     Running   0          5m29s</span><br><span class="line">coredns-86c58d9df4-hn9mv                                      1/1     Running   0          5m29s</span><br><span class="line">etcd-my-cluster-multi-node-control-plane                      1/1     Running   0          4m24s</span><br><span class="line">kube-apiserver-my-cluster-multi-node-control-plane            1/1     Running   0          4m17s</span><br><span class="line">kube-controller-manager-my-cluster-multi-node-control-plane   1/1     Running   0          4m21s</span><br><span class="line">kube-proxy-8t4xt                                              1/1     Running   0          5m27s</span><br><span class="line">kube-proxy-skd5v                                              1/1     Running   0          5m29s</span><br><span class="line">kube-scheduler-my-cluster-multi-node-control-plane            1/1     Running   0          4m18s</span><br><span class="line">weave-net-nmfq2                                               2/2     Running   0          5m27s</span><br><span class="line">weave-net-srdfw                                               2/2     Running   0          5m29s</span><br></pre></td></tr></table></figure>
+
+
+
+<h4 id="高可用"><a href="#高可用" class="headerlink" title="高可用"></a>高可用</h4><p>高可用的集群跟多节点类似, 只不过<code>control-plane</code>的角色需要至少需要3个Node</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br></pre></td><td class="code"><pre><span class="line">$ vim my-cluster-ha.yaml</span><br><span class="line"></span><br><span class="line">kind: Cluster</span><br><span class="line">apiVersion: kind.sigs.k8s.io/v1alpha3</span><br><span class="line">kubeadmConfigPatches:</span><br><span class="line">- |</span><br><span class="line">  apiVersion: kubeadm.k8s.io/v1beta2</span><br><span class="line">  kind: ClusterConfiguration</span><br><span class="line">  metadata:</span><br><span class="line">    name: config</span><br><span class="line">  networking:</span><br><span class="line">    serviceSubnet: 10.0.0.0/16</span><br><span class="line">  imageRepository: registry.aliyuncs.com/google_containers</span><br><span class="line">  nodeRegistration:</span><br><span class="line">    kubeletExtraArgs:</span><br><span class="line">      pod-infra-container-image: registry.aliyuncs.com/google_containers/pause:3.1</span><br><span class="line">- |</span><br><span class="line">  apiVersion: kubeadm.k8s.io/v1beta2</span><br><span class="line">  kind: InitConfiguration</span><br><span class="line">  metadata:</span><br><span class="line">    name: config</span><br><span class="line">  networking:</span><br><span class="line">    serviceSubnet: 10.0.0.0/16</span><br><span class="line">  imageRepository: registry.aliyuncs.com/google_containers</span><br><span class="line">nodes:</span><br><span class="line">- role: control-plane	<span class="comment"># 三个 control-plane 节点</span></span><br><span class="line">- role: control-plane</span><br><span class="line">- role: control-plane</span><br><span class="line">- role: worker	<span class="comment"># 三个work节点</span></span><br><span class="line">- role: worker</span><br><span class="line">- role: worker</span><br><span class="line"></span><br><span class="line"></span><br><span class="line">$ kind create cluster --name my-cluster-ha --config my-cluster-ha.yaml --image kindest/node:v1.15.3</span><br><span class="line"></span><br></pre></td></tr></table></figure>
+
+<p>验证</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line">$ kubectl get nodes</span><br><span class="line">NAME                           STATUS   ROLES    AGE     VERSION</span><br><span class="line">my-cluster-ha-control-plane    Ready    master   3m42s   v1.15.3</span><br><span class="line">my-cluster-ha-control-plane2   Ready    master   3m24s   v1.15.3</span><br><span class="line">my-cluster-ha-control-plane3   Ready    master   2m13s   v1.15.3</span><br><span class="line">my-cluster-ha-worker           Ready    &lt;none&gt;   96s     v1.15.3</span><br><span class="line">my-cluster-ha-worker2          Ready    &lt;none&gt;   98s     v1.15.3</span><br><span class="line">my-cluster-ha-worker3          Ready    &lt;none&gt;   95s     v1.15.3</span><br></pre></td></tr></table></figure>
+
+<h4 id="删除集群"><a href="#删除集群" class="headerlink" title="删除集群"></a>删除集群</h4><figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">$ kind delete  cluster --name my-cluster</span><br></pre></td></tr></table></figure>
+
+<p><strong>从集群的部署来看, 使用kind部署出来的集群除了把容器当Node使用之外, 其它的差别并不大</strong></p>
+<h3 id="Image"><a href="#Image" class="headerlink" title="Image"></a>Image</h3><p>Kind中使用到了两种image， base image以及Node image</p>
+<h4 id="baseImage"><a href="#baseImage" class="headerlink" title="baseImage"></a><a target="_blank" rel="noopener" href="https://kind.sigs.k8s.io/docs/design/base-image/">baseImage</a></h4><p>baseimage主要是安装一些systemd,kubernetes需要的依赖，基于ubuntu.</p>
+<h4 id="NodeImage"><a href="#NodeImage" class="headerlink" title="NodeImage"></a>NodeImage</h4><p><code>Node</code> 镜像的构建比较复杂，目前是通过运行 <code>Base</code> 镜像并在 <code>Base</code> 镜像内执行操作，再保存此容器内容为镜像的方式来构建的，包含的操作有：</p>
+<ul>
+<li>构建 <code>Kubernetes</code> 相关资源，比如：二进制文件和镜像。</li>
+<li>运行一个用于构建的容器</li>
+<li>把构建的 <code>Kubernetes</code> 相关资源复制到容器里</li>
+<li>调整部分组件配置参数，以支持在容器内运行</li>
+<li>预先拉去运行环境需要的镜像</li>
+<li>通过 <code>docker commit</code> 方式保存当前的构建容器为 <code>Node</code> 镜像</li>
+</ul>
+<p><strong>最后再强调一下: kind部署出来的集群是不适用生产环境的,官方推荐只是用于需要一个k8s集群用于ci或者testing.</strong></p>
+<h3 id="参考文章"><a href="#参考文章" class="headerlink" title="参考文章:"></a><strong>参考文章:</strong></h3><blockquote>
+<ul>
+<li><a target="_blank" rel="noopener" href="https://github.com/kubernetes-sigs/kind/">https://github.com/kubernetes-sigs/kind/</a></li>
+<li><a target="_blank" rel="noopener" href="https://kind.sigs.k8s.io/docs/design/initial">https://kind.sigs.k8s.io/docs/design/initial</a></li>
+<li><a target="_blank" rel="noopener" href="https://kind.sigs.k8s.io/docs/user/configuration/">https://kind.sigs.k8s.io/docs/user/configuration/</a></li>
+<li><a target="_blank" rel="noopener" href="https://kind.sigs.k8s.io/docs/design/base-image/">https://kind.sigs.k8s.io/docs/design/base-image/</a></li>
+<li><a target="_blank" rel="noopener" href="https://cloud.tencent.com/developer/article/1512777">https://cloud.tencent.com/developer/article/1512777</a></li>
+</ul>
+</blockquote>
+<h3 id="转载请注明出处https-izsk-me"><a href="#转载请注明出处https-izsk-me" class="headerlink" title="转载请注明出处https://izsk.me"></a><strong>转载请注明出处<a target="_blank" rel="noopener" href="https://izsk.me/">https://izsk.me</a></strong></h3>
+      
+    </div>
+
+    <div>
+      
+        
+<div id="wechat_subscriber" style="display: block; padding: 10px 0; margin: 20px auto; width: 100%; text-align: center">
+    <img id="wechat_subscriber_qcode" src="/images/websitecode250.png" alt=" wechat" style="width: 200px; max-width: 100%;"/>
+    <div>Scan Me To Read on Phone</div>
+</div>
+
+
+      
+    </div>
+
+    <div>
+      
+        
+  <div style="padding: 10px 0; margin: 20px auto; width: 90%; text-align: center;">
+    <div>I know you won't do this,but what if you did?</div>
+    <button id="rewardButton" disable="enable" onclick="var qr = document.getElementById('QR'); if (qr.style.display === 'none') {qr.style.display='block';} else {qr.style.display='none'}">
+      <span>赏</span>
+    </button>
+    <div id="QR" style="display: none;">
+      
+        <div id="wechat" style="display: inline-block">
+          <img id="wechat_qr" src="/images/wechatpayme.png" alt=" WeChat Pay"/>
+          <p>微信打赏</p>
+        </div>
+      
+      
+        <div id="alipay" style="display: inline-block">
+          <img id="alipay_qr" src="/images/alipayme.jpg" alt=" Alipay"/>
+          <p>支付宝打赏</p>
+        </div>
+      
     </div>
   </div>
 
-{% endblock %}
 
-{% block sidebar %}
-  {{ sidebar_template.render(true) }}
-{% endblock %}
+      
+    </div>
 
 
-{% block script_extra %}
-  {% include '_scripts/pages/post-details.swig' %}
-{% endblock %}
+    <footer class="post-footer">
+      
+        <div class="post-tags">
+          
+            <a href="/tags/Kubernetes/" rel="tag"># Kubernetes</a>
+          
+        </div>
+      
+
+      
+        <div class="post-nav">
+          <div class="post-nav-next post-nav-item">
+            
+              <a href="/2020/08/04/influx-single-transfer-to-relay/" rel="next" title="使用Influxdb-relay实现Influxdb高可用">
+                <i class="fa fa-chevron-left"></i> 使用Influxdb-relay实现Influxdb高可用
+              </a>
+            
+          </div>
+
+          <span class="post-nav-divider"></span>
+
+          <div class="post-nav-prev post-nav-item">
+            
+              <a href="/2020/08/11/Kubernetes-nfs-provisioner/" rel="prev" title="Kubernetes学习(NFS如何实现 Volume Dynamic Provisioning)">
+                Kubernetes学习(NFS如何实现 Volume Dynamic Provisioning) <i class="fa fa-chevron-right"></i>
+              </a>
+            
+          </div>
+        </div>
+      
+
+      
+      
+    </footer>
+  </article>
+
+
+
+    <div class="post-spread">
+      
+    </div>
+  </div>
+
+
+          </div>
+          
+
+
+          
+  <div class="comments" id="comments">
+    
+  </div>
+
+
+        </div>
+        
+          
+  
+  <div class="sidebar-toggle">
+    <div class="sidebar-toggle-line-wrap">
+      <span class="sidebar-toggle-line sidebar-toggle-line-first"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-middle"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-last"></span>
+    </div>
+  </div>
+
+  <aside id="sidebar" class="sidebar">
+    <div class="sidebar-inner">
+
+      
+
+      
+        <ul class="sidebar-nav motion-element">
+          <li class="sidebar-nav-toc sidebar-nav-active" data-target="post-toc-wrap" >
+            文章目录
+          </li>
+          <li class="sidebar-nav-overview" data-target="site-overview">
+            站点概览
+          </li>
+        </ul>
+      
+
+      <section class="site-overview sidebar-panel">
+        <div class="site-author motion-element" itemprop="author" itemscope itemtype="http://schema.org/Person">
+          <img class="site-author-image" itemprop="image"
+               src="/images/avatar.gif"
+               alt="" />
+          <p class="site-author-name" itemprop="name"></p>
+          <p class="site-description motion-element" itemprop="description"></p>
+        </div>
+        <nav class="site-state motion-element">
+        
+          
+            <div class="site-state-item site-state-posts">
+              <a href="/archives">
+                <span class="site-state-item-count">192</span>
+                <span class="site-state-item-name">日志</span>
+              </a>
+            </div>
+          
+
+          
+            <div class="site-state-item site-state-categories">
+              <a href="/categories">
+                <span class="site-state-item-count">14</span>
+                <span class="site-state-item-name">分类</span>
+              </a>
+            </div>
+          
+
+          
+            <div class="site-state-item site-state-tags">
+              <a href="/tags">
+                <span class="site-state-item-count">14</span>
+                <span class="site-state-item-name">标签</span>
+              </a>
+            </div>
+          
+
+        </nav>
+
+        
+
+        <div class="links-of-author motion-element">
+          
+        </div>
+
+        
+        
+
+        
+        
+
+        
+
+
+      </section>
+
+      
+      <!--noindex-->
+        <section class="post-toc-wrap motion-element sidebar-panel sidebar-panel-active">
+          <div class="post-toc">
+
+            
+              
+            
+
+            
+              <div class="post-toc-content"><ol class="nav"><li class="nav-item nav-level-3"><a class="nav-link" href="#%E4%BC%98%E5%8A%BF"><span class="nav-number">1.</span> <span class="nav-text">优势</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E6%9E%B6%E6%9E%84"><span class="nav-number">2.</span> <span class="nav-text">架构</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E4%BD%BF%E7%94%A8"><span class="nav-number">3.</span> <span class="nav-text">使用</span></a><ol class="nav-child"><li class="nav-item nav-level-4"><a class="nav-link" href="#Kind%E5%AE%89%E8%A3%85"><span class="nav-number">3.1.</span> <span class="nav-text">Kind安装</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#%E5%8D%95%E8%8A%82%E7%82%B9"><span class="nav-number">3.2.</span> <span class="nav-text">单节点</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#%E5%A4%9A%E8%8A%82%E7%82%B9"><span class="nav-number">3.3.</span> <span class="nav-text">多节点</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#%E9%AB%98%E5%8F%AF%E7%94%A8"><span class="nav-number">3.4.</span> <span class="nav-text">高可用</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#%E5%88%A0%E9%99%A4%E9%9B%86%E7%BE%A4"><span class="nav-number">3.5.</span> <span class="nav-text">删除集群</span></a></li></ol></li><li class="nav-item nav-level-3"><a class="nav-link" href="#Image"><span class="nav-number">4.</span> <span class="nav-text">Image</span></a><ol class="nav-child"><li class="nav-item nav-level-4"><a class="nav-link" href="#baseImage"><span class="nav-number">4.1.</span> <span class="nav-text">baseImage</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#NodeImage"><span class="nav-number">4.2.</span> <span class="nav-text">NodeImage</span></a></li></ol></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E5%8F%82%E8%80%83%E6%96%87%E7%AB%A0"><span class="nav-number">5.</span> <span class="nav-text">参考文章:</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E8%BD%AC%E8%BD%BD%E8%AF%B7%E6%B3%A8%E6%98%8E%E5%87%BA%E5%A4%84https-izsk-me"><span class="nav-number">6.</span> <span class="nav-text">转载请注明出处https:&#x2F;&#x2F;izsk.me</span></a></li></ol></div>
+            
+
+          </div>
+        </section>
+      <!--/noindex-->
+      
+
+    </div>
+  </aside>
+
+
+        
+      </div>
+    </main>
+
+    <footer id="footer" class="footer">
+      <div class="footer-inner">
+        <div class="copyright" >
+  
+  &copy; 
+  <span itemprop="copyrightYear">2022</span>
+  <span class="with-love">
+    <i class="fa fa-heart"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">Z.S.K.</span>
+</div>
+
+
+<div class="powered-by">
+  Supported by <a class="theme-link" target="_blank" rel="noopener" href="https://hexo.io">Hexo</a>
+</div>
+
+<div class="theme-info">
+  Theme -
+  <a class="theme-link" target="_blank" rel="noopener" href="https://github.com/iissnan/hexo-theme-next">
+    NexT.Mist
+  </a>
+</div>
+
+
+        
+
+        
+      </div>
+    </footer>
+
+    <div class="back-to-top">
+      <i class="fa fa-arrow-up"></i>
+    </div>
+  </div>
+
+  
+
+<script type="text/javascript">
+  if (Object.prototype.toString.call(window.Promise) !== '[object Function]') {
+    window.Promise = null;
+  }
+</script>
+
+
+
+
+
+
+
+
+
+  
+
+
+
+  
+  <script type="text/javascript" src="/lib/jquery/index.js?v=2.1.3"></script>
+
+  
+  <script type="text/javascript" src="/lib/fastclick/lib/fastclick.min.js?v=1.0.6"></script>
+
+  
+  <script type="text/javascript" src="/lib/jquery_lazyload/jquery.lazyload.js?v=1.9.7"></script>
+
+  
+  <script type="text/javascript" src="/lib/velocity/velocity.min.js?v=1.2.1"></script>
+
+  
+  <script type="text/javascript" src="/lib/velocity/velocity.ui.min.js?v=1.2.1"></script>
+
+  
+  <script type="text/javascript" src="/lib/fancybox/source/jquery.fancybox.pack.js?v=2.1.5"></script>
+
+
+  
+
+
+  <script type="text/javascript" src="/js/src/utils.js?v=5.1.0"></script>
+
+  <script type="text/javascript" src="/js/src/motion.js?v=5.1.0"></script>
+
+
+
+  
+  
+
+  
+  <script type="text/javascript" src="/js/src/scrollspy.js?v=5.1.0"></script>
+<script type="text/javascript" src="/js/src/post-details.js?v=5.1.0"></script>
+
+
+
+  
+
+
+  <script type="text/javascript" src="/js/src/bootstrap.js?v=5.1.0"></script>
+
+
+
+  
+
+
+
+  
+
+
+
+
+	
+
+
+
+
+
+  
+
+
+
+
+  
+  
+  <script type="text/javascript">
+    // Popup Window;
+    var isfetched = false;
+    // Search DB path;
+    var search_path = "search.xml";
+    if (search_path.length == 0) {
+      search_path = "search.xml";
+    }
+    var path = "/" + search_path;
+    // monitor main search box;
+
+    function proceedsearch() {
+      $("body").append('<div class="popoverlay">').css('overflow', 'hidden');
+      $('.popup').toggle();
+    }
+    // search function;
+    var searchFunc = function(path, search_id, content_id) {
+      'use strict';
+      $.ajax({
+        url: path,
+        dataType: "xml",
+        async: true,
+        success: function( xmlResponse ) {
+          // get the contents from search data
+          isfetched = true;
+          $('.popup').detach().appendTo('.header-inner');
+          var datas = $( "entry", xmlResponse ).map(function() {
+            return {
+              title: $( "title", this ).text(),
+              content: $("content",this).text(),
+              url: $( "url" , this).text()
+            };
+          }).get();
+          var $input = document.getElementById(search_id);
+          var $resultContent = document.getElementById(content_id);
+          $input.addEventListener('input', function(){
+            var matchcounts = 0;
+            var str='<ul class=\"search-result-list\">';
+            var keywords = this.value.trim().toLowerCase().split(/[\s\-]+/);
+            $resultContent.innerHTML = "";
+            if (this.value.trim().length > 1) {
+              // perform local searching
+              datas.forEach(function(data) {
+                var isMatch = false;
+                var content_index = [];
+                var data_title = data.title.trim().toLowerCase();
+                var data_content = data.content.trim().replace(/<[^>]+>/g,"").toLowerCase();
+                var data_url = decodeURIComponent(data.url);
+                var index_title = -1;
+                var index_content = -1;
+                var first_occur = -1;
+                // only match artiles with not empty titles and contents
+                if(data_title != '') {
+                  keywords.forEach(function(keyword, i) {
+                    index_title = data_title.indexOf(keyword);
+                    index_content = data_content.indexOf(keyword);
+                    if( index_title >= 0 || index_content >= 0 ){
+                      isMatch = true;
+                      if (i == 0) {
+                        first_occur = index_content;
+                      }
+                    }
+
+                  });
+                }
+                // show search results
+                if (isMatch) {
+                  matchcounts += 1;
+                  str += "<li><a href='"+ data_url +"' class='search-result-title'>"+ data_title +"</a>";
+                  var content = data.content.trim().replace(/<[^>]+>/g,"");
+                  if (first_occur >= 0) {
+                    // cut out 100 characters
+                    var start = first_occur - 20;
+                    var end = first_occur + 80;
+                    if(start < 0){
+                      start = 0;
+                    }
+                    if(start == 0){
+                      end = 50;
+                    }
+                    if(end > content.length){
+                      end = content.length;
+                    }
+                    var match_content = content.substring(start, end);
+                    // highlight all keywords
+                    keywords.forEach(function(keyword){
+                      var regS = new RegExp(keyword, "gi");
+                      match_content = match_content.replace(regS, "<b class=\"search-keyword\">"+keyword+"</b>");
+                    });
+
+                    str += "<p class=\"search-result\">" + match_content +"...</p>"
+                  }
+                  str += "</li>";
+                }
+              })};
+            str += "</ul>";
+            if (matchcounts == 0) { str = '<div id="no-result"><i class="fa fa-frown-o fa-5x" /></div>' }
+            if (keywords == "") { str = '<div id="no-result"><i class="fa fa-search fa-5x" /></div>' }
+            $resultContent.innerHTML = str;
+          });
+          proceedsearch();
+        }
+      });}
+
+    // handle and trigger popup window;
+    $('.popup-trigger').click(function(e) {
+      e.stopPropagation();
+      if (isfetched == false) {
+        searchFunc(path, 'local-search-input', 'local-search-result');
+      } else {
+        proceedsearch();
+      };
+    });
+
+    $('.popup-btn-close').click(function(e){
+      $('.popup').hide();
+      $(".popoverlay").remove();
+      $('body').css('overflow', '');
+    });
+    $('.popup').click(function(e){
+      e.stopPropagation();
+    });
+  </script>
+
+
+  
+
+  
+
+  
+
+  
+
+
+</body>
+</html>

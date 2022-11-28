@@ -1,38 +1,1016 @@
-{% extends '_layout.swig' %}
-{% import '_macro/post.swig' as post_template %}
-{% import '_macro/sidebar.swig' as sidebar_template %}
+<!doctype html>
 
 
-{% block title %} {{ page.title }} | {{ config.title }} {% endblock %}
 
-{% block page_class %}page-post-detail{% endblock %}
+  
 
 
-{% block content %}
+<html class="theme-next mist use-motion" lang="zh-Hans">
+<head>
+  <meta charset="UTF-8"/>
+<meta http-equiv="X-UA-Compatible" content="IE=edge" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1"/>
+
+
+
+<meta http-equiv="Cache-Control" content="no-transform" />
+<meta http-equiv="Cache-Control" content="no-siteapp" />
+
+
+
+
+
+
+
+
+
+
+
+
+  
+  
+  <link href="/lib/fancybox/source/jquery.fancybox.css?v=2.1.5" rel="stylesheet" type="text/css" />
+
+
+
+
+  
+  
+  
+  
+
+  
+    
+    
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+    
+    
+    <link href="//fonts.googleapis.com/css?family=Lato:300,300italic,400,400italic,700,700italic&subset=latin,latin-ext" rel="stylesheet" type="text/css">
+  
+
+
+
+
+
+
+<link href="/lib/font-awesome/css/font-awesome.min.css?v=4.6.2" rel="stylesheet" type="text/css" />
+
+<link href="/css/main.css?v=5.1.0" rel="stylesheet" type="text/css" />
+
+
+  <meta name="keywords" content="Kubernetes," />
+
+
+
+
+
+
+
+
+  <link rel="shortcut icon" type="image/x-icon" href="/favicon.ico?v=5.1.0" />
+
+
+
+
+
+
+<meta name="description" content="得益于社区的繁荣, 包括部署工具的完善, 现在几乎没人会从0去搭建kubernetes集群, 随便拿起一个开源工具, 几乎都是一条命令, 喝个咖啡, 然后整个集群就能用了, 非常快捷, 但是方便的时候, 也容易遗漏掉其中的一些知识点, 有些对整个kubernetes的了解及生态还是非常有必要的. 由于社区可选的CNI成熟方案非常的多, 而flannel是kubernetes默认的容器网络模型, 还">
+<meta property="og:type" content="article">
+<meta property="og:title" content="Kubernetes学习(flannel深入学习)">
+<meta property="og:url" content="https://zhoushuke.github.io/2020/01/05/Kubernetes-flannel-details/index.html">
+<meta property="og:site_name" content="Z.S.K.&#39;s Records">
+<meta property="og:description" content="得益于社区的繁荣, 包括部署工具的完善, 现在几乎没人会从0去搭建kubernetes集群, 随便拿起一个开源工具, 几乎都是一条命令, 喝个咖啡, 然后整个集群就能用了, 非常快捷, 但是方便的时候, 也容易遗漏掉其中的一些知识点, 有些对整个kubernetes的了解及生态还是非常有必要的. 由于社区可选的CNI成熟方案非常的多, 而flannel是kubernetes默认的容器网络模型, 还">
+<meta property="og:locale">
+<meta property="og:image" content="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20200413131106.png">
+<meta property="og:image" content="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/image-20200413131329691.png">
+<meta property="og:image" content="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20200413131222.png">
+<meta property="og:image" content="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20200413131838.png">
+<meta property="og:image" content="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20200413131511.png">
+<meta property="og:image" content="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20200413121335.png">
+<meta property="og:image" content="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20200413173855.png">
+<meta property="og:image" content="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20200411211019.png">
+<meta property="og:image" content="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20200411215227.png">
+<meta property="og:image" content="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20200413192311.png">
+<meta property="og:image" content="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20200413193513.png">
+<meta property="og:image" content="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20200413181732.png">
+<meta property="og:image" content="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20200413181908.png">
+<meta property="og:image" content="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20200413185816.png">
+<meta property="article:published_time" content="2020-01-05T05:30:53.000Z">
+<meta property="article:modified_time" content="2022-07-19T03:16:00.950Z">
+<meta property="article:author" content="Z.S.K.">
+<meta property="article:tag" content="Kubernetes">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:image" content="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20200413131106.png">
+
+
+
+<script type="text/javascript" id="hexo.configurations">
+  var NexT = window.NexT || {};
+  var CONFIG = {
+    root: '',
+    scheme: 'Mist',
+    sidebar: {"position":"left","display":"post"},
+    fancybox: true,
+    motion: true,
+    duoshuo: {
+      userId: 'undefined',
+      author: '博主'
+    },
+    algolia: {
+      applicationID: '',
+      apiKey: '',
+      indexName: '',
+      hits: {"per_page":10},
+      labels: {"input_placeholder":"Search for Posts","hits_empty":"We didn't find any results for the search: ${query}","hits_stats":"${hits} results found in ${time} ms"}
+    }
+  };
+</script>
+
+
+
+  <link rel="canonical" href="https://zhoushuke.github.io/2020/01/05/Kubernetes-flannel-details/"/>
+
+
+
+
+
+  <title> Kubernetes学习(flannel深入学习) | Z.S.K.'s Records </title>
+<meta name="generator" content="Hexo 6.2.0"></head>
+
+<body itemscope itemtype="http://schema.org/WebPage" lang="zh-Hans">
+
+  
+
+
+
+
+
+
+
+
+
+
+  
+  
+    
+  
+
+  <div class="container one-collumn sidebar-position-left page-post-detail ">
+    <div class="headband"></div>
+
+    <header id="header" class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-meta ">
+  
+
+  <div class="custom-logo-site-title">
+    <a href="/"  class="brand" rel="start">
+      <span class="logo-line-before"><i></i></span>
+      <span class="site-title">Z.S.K.'s Records</span>
+      <span class="logo-line-after"><i></i></span>
+    </a>
+  </div>
+    
+      <p class="site-subtitle"></p>
+    
+</div>
+
+<div class="site-nav-toggle">
+  <button>
+    <span class="btn-bar"></span>
+    <span class="btn-bar"></span>
+    <span class="btn-bar"></span>
+  </button>
+</div>
+
+<nav class="site-nav">
+  
+
+  
+    <ul id="menu" class="menu">
+      
+        
+        <li class="menu-item menu-item-home">
+          <a href="/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-home"></i> <br />
+            
+            首页
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-categories">
+          <a href="/categories" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-th"></i> <br />
+            
+            分类
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-about">
+          <a href="/about/ZSK-Profile.pdf" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-user"></i> <br />
+            
+            简历
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-archives">
+          <a href="/archives" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-archive"></i> <br />
+            
+            归档
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-tags">
+          <a href="/tags" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-tags"></i> <br />
+            
+            标签
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-commonweal">
+          <a href="/404.html" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-heartbeat"></i> <br />
+            
+            公益404
+          </a>
+        </li>
+      
+
+      
+        <li class="menu-item menu-item-search">
+          
+            <a href="javascript:;" class="popup-trigger">
+          
+            
+              <i class="menu-item-icon fa fa-search fa-fw"></i> <br />
+            
+            搜索
+          </a>
+        </li>
+      
+    </ul>
+  
+
+  
+    <div class="site-search">
+      
+  <div class="popup">
+ <span class="search-icon fa fa-search"></span>
+ <input type="text" id="local-search-input">
+ <div id="local-search-result"></div>
+ <span class="popup-btn-close">close</span>
+</div>
+
+
+    </div>
+  
+</nav>
+
+
+
+ </div>
+    </header>
+
+    <main id="main" class="main">
+      <div class="main-inner">
+        <div class="content-wrap">
+          <div id="content" class="content">
+            
 
   <div id="posts" class="posts-expand">
-    {{ post_template.render(page) }}
+    
 
-    <div class="post-spread">
-      {% if theme.jiathis %}
-        {% include '_partials/share/jiathis.swig' %}
-      {% elseif theme.baidushare %}
-        {% include '_partials/share/baidushare.swig' %}
-      {% elseif theme.add_this_id %}
-        {% include '_partials/share/add-this.swig' %}
-      {% elseif theme.duoshuo_shortname and theme.duoshuo_share %}
-        {% include '_partials/share/duoshuo_share.swig' %}
-      {% endif %}
+  
+
+  
+  
+  
+
+  <article class="post post-type-normal " itemscope itemtype="http://schema.org/Article">
+  <link itemprop="mainEntityOfPage" href="https://zhoushuke.github.io/2020/01/05/Kubernetes-flannel-details/">
+
+  <span style="display:none" itemprop="author" itemscope itemtype="http://schema.org/Person">
+    <meta itemprop="name" content="">
+    <meta itemprop="description" content="">
+    <meta itemprop="image" content="/images/avatar.gif">
+  </span>
+
+  <span style="display:none" itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+    <meta itemprop="name" content="Z.S.K.'s Records">
+    <span style="display:none" itemprop="logo" itemscope itemtype="http://schema.org/ImageObject">
+      <img style="display:none;" itemprop="url image" alt="Z.S.K.'s Records" src="">
+    </span>
+  </span>
+
+    
+      <header class="post-header">
+
+        
+        
+          <h1 class="post-title" itemprop="name headline">
+            
+            
+              
+                Kubernetes学习(flannel深入学习)
+              
+            
+          </h1>
+        
+
+        <div class="post-meta">
+          <span class="post-time">
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">发表于</span>
+              
+              <time title="Post created" itemprop="dateCreated datePublished" datetime="2020-01-05T13:30:53+08:00">
+                2020-01-05
+              </time>
+            
+
+            
+
+            
+          </span>
+
+          
+            <span class="post-category" >
+            
+              <span class="post-meta-divider">|</span>
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-folder-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">分类于</span>
+              
+              
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/Kubernetes/" itemprop="url" rel="index">
+                    <span itemprop="name">Kubernetes</span>
+                  </a>
+                </span>
+
+                
+                
+              
+            </span>
+          
+
+          
+            
+          
+
+          
+
+          
+          
+
+          
+
+          
+
+        </div>
+      </header>
+    
+
+
+    <div class="post-body" itemprop="articleBody">
+
+      
+      
+
+      
+        <p>得益于社区的繁荣, 包括部署工具的完善, 现在几乎没人会从0去搭建kubernetes集群, 随便拿起一个开源工具, 几乎都是一条命令, 喝个咖啡, 然后整个集群就能用了, 非常快捷, 但是方便的时候, 也容易遗漏掉其中的一些知识点, 有些对整个kubernetes的了解及生态还是非常有必要的.</p>
+<p>由于社区可选的CNI成熟方案非常的多, 而flannel是kubernetes默认的容器网络模型, 还是要重点深入学习下</p>
+<p>由于flannel涉及到CNI相关的知识, CNI也不会在这里深入探讨, 有机会跟CRI一起更.</p>
+<span id="more"></span>
+
+
+
+<p>比如有以下涉及容器网络的问题? </p>
+<ol>
+<li>kubernetes如何知道集群中采用了哪种CNI, 处理逻辑是什么?</li>
+<li>使用ip addr看到一个docker0、cni0、flannel.1它们有什么作用, docker0在flannel中扮演什么角色?</li>
+<li>flannel的通信方式？</li>
+<li>从使用kubectl创建了一个pod后，期间发生了什么？</li>
+</ol>
+<h3 id="如何知道使用了哪种CNI-处理逻辑是什么？"><a href="#如何知道使用了哪种CNI-处理逻辑是什么？" class="headerlink" title="如何知道使用了哪种CNI,处理逻辑是什么？"></a>如何知道使用了哪种CNI,处理逻辑是什么？</h3><p>这里并不会对CNI的规范做一个说明, 简单总结来说就是:</p>
+<p><code>CNI旨在为容器平台提供网络的标准化，它 本身并不是实现或者代码，可以理解成一个协议，这个协议连接了两个组件：容器管理系统和网络插件。它们之间通过 JSON 格式的文件进行通信，实现容器的网络功能。具体的事情都是插件来实现的，包括：创建容器网络空间（network namespace）、把网络接口（interface）放到对应的网络空间、给网络接口分配 IP 等等</code>。</p>
+<p>要知道一个集群使用了哪种CNI, 最好的办法就是顺序数据流向一步一步分析.</p>
+<p>从上面对CNI的总结看, CNI的相关配置一定是在容器运行时这一端, 因为要创建容器网络空间, 自然是要在client端，那么对于kubernetes来说就是kubelet, 查看kubelet参数(这里kubelet是以容器启动的)</p>
+<p><img src="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20200413131106.png"></p>
+<p>这3个参数决定了集群使用的哪种CNI, 其中第2个参数指定了使用CNI来组件容器网络, 现在来逐一的查看这些目录</p>
+<h4 id="x2F-etc-x2F-cni-x2F-net-d"><a href="#x2F-etc-x2F-cni-x2F-net-d" class="headerlink" title="&#x2F;etc&#x2F;cni&#x2F;net.d"></a>&#x2F;etc&#x2F;cni&#x2F;net.d</h4><p>该文件下只有一个文件<code>10-flannel.conflist</code></p>
+<p><img src="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/image-20200413131329691.png"></p>
+<p>注意<code>type: flannel</code>, 那么这里就指定了使用的是flannel, 而不是calico, macvlan等其它CNI</p>
+<h4 id="x2F-opt-x2F-cni-x2F-bin"><a href="#x2F-opt-x2F-cni-x2F-bin" class="headerlink" title="&#x2F;opt&#x2F;cni&#x2F;bin"></a>&#x2F;opt&#x2F;cni&#x2F;bin</h4><p>这个目录下放置着CNI的二进制文件, 因为CNI协议规则，所有实现了CNI的都必须提交二进制的文件供kubelet调用, 并且会调用后端的网络插件</p>
+<p><img src="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20200413131222.png"></p>
+<p>因此通过指定<code>type: flannel</code>来这个目录下调用<code>flannel</code></p>
+<p>这里要区分一下flannel跟flanneld这两个</p>
+<h4 id="flannel"><a href="#flannel" class="headerlink" title="flannel"></a>flannel</h4><p>平时大家说的flannel指的是&#x2F;opt&#x2F;cni&#x2F;bin&#x2F;flannel, 但是这个二进制的github源码是在<a target="_blank" rel="noopener" href="https://github.com/containernetworking/plugins">plugins</a>, 并不是指的flanneld.</p>
+<p>这个flannel才是真正做为CNI插件实现了<code>CNI_COMMAND ADD/DEL</code>方法</p>
+<h4 id="flanneld"><a href="#flanneld" class="headerlink" title="flanneld"></a>flanneld</h4><p>这个flanneld的github源码在<a target="_blank" rel="noopener" href="https://github.com/coreos/flannel">flannel</a>, 这个flanneld主要实现overlay网络, 包含给所有node分配subset段, 同步节点间的网络信息等.</p>
+<p>flanneld可以以容器的方式(daemonset)运行, 查看下配置文件</p>
+<p><img src="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20200413131838.png"></p>
+<p>从配置文件可以到有两个配置文件</p>
+<h5 id="cni-conf-json"><a href="#cni-conf-json" class="headerlink" title="cni-conf.json"></a>cni-conf.json</h5><p>这个文件就是&#x2F;etc&#x2F;cni&#x2F;net.d&#x2F;10-flannel.conflist， 指定backend使用flannel</p>
+<h5 id="net-conf-json"><a href="#net-conf-json" class="headerlink" title="net-conf.json"></a>net-conf.json</h5><p>这个文件指定了整个kubernetes网络能够使用的ip地址段(在部署时可以被覆盖), 且指定了flannel使用vxlan模式(flannel本身提供多种模式), 最终这个文件会挂载到<code>/etc/kube-flannel/net-conf.json</code>, 提供给cni使用</p>
+<h5 id="subset-env"><a href="#subset-env" class="headerlink" title="subset.env"></a>subset.env</h5><p>还有一个很关键的文件就是<code>/run/flannel/subnet.env</code>, 该文件记录了某个node上的flanneld启动后在etcd端分配的ip子段, 也就是说, 这个node上的所有pod只能在这个ip段内分配</p>
+<p><img src="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20200413131511.png"></p>
+<p>从这里可以看出, 每台机器上最多能够使用的ip有254个, 这个是远远够的, 一般情况下一台机器的pod数不会过百</p>
+<h5 id="flannel-cni容器"><a href="#flannel-cni容器" class="headerlink" title="flannel-cni容器"></a>flannel-cni容器</h5><p>细心的可能会发现flannel的yaml文件还包含了install-cni.sh的容器, 这个容器的逻辑比较简单, 大家可自行查看源码<a target="_blank" rel="noopener" href="https://github.com/coreos/flannel-cni">github</a></p>
+<h5 id="etcd"><a href="#etcd" class="headerlink" title="etcd"></a>etcd</h5><p>flanneld的启动参数中指定了etcd, etcd在flannel充当数据的角色, 同时使用etcd做为服务注册、 发现, 所有pod&#x2F;node的ip&#x2F;mac信息都存储在etcd中, 所有flanneld节点共享， 通过这种方式来避免ip重复分配.</p>
+<h4 id="处理逻辑"><a href="#处理逻辑" class="headerlink" title="处理逻辑"></a>处理逻辑</h4><p>因此, 如果集群中使用了flannel做为CNI, 完整的处理逻辑如上分析, 简单说的话就是:</p>
+<blockquote>
+<ul>
+<li>指定整个集群pod的ip CIDR</li>
+<li>每个node上都会启动flanneld进行, 通过etcd分配该node上所有pod的使用地址, 后续会在整个集群内共享各个node上的pod ip信息, 生成路由信息.</li>
+<li>所有node通过flannel overlay网络进行通信</li>
+</ul>
+</blockquote>
+<h3 id="docker0、cni0、flannel-1"><a href="#docker0、cni0、flannel-1" class="headerlink" title="docker0、cni0、flannel.1"></a>docker0、cni0、flannel.1</h3><p>如果在一台node上使用<code>ip addr</code>, 会发现有docker0、cni0、flannel.1这些网络接口</p>
+<p>这三者充当什么角色.</p>
+<p>首先docker0这个跟flannel及docker的部署顺序有关系, 如果是docker先部署了, 后再部署flannel,部署完成之后也没有重启docker, 那么这种情况docker0是不做为node与pod之间的bridege, 而是使用了默认的cni0来组成veth对</p>
+<p>可以使用<code>brctl show</code>来查看, 会发现该node上所有的pod都是绑定在cni0上</p>
+<p><img src="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20200413121335.png"></p>
+<p>而如何在部署flannel时修改了docker的启动参数, docker使用了flannel的bip参数的话,那就会默认使用docker0来组vth对, 即pod都会通过docker0通信.</p>
+<p><img src="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20200413173855.png"></p>
+<p>而flannel.1则是flanneld组成的overlay网络的通道, 它本质上是个VXLAN Tunnel End Point，如上图所示</p>
+<p>具体的细节下面使用flannel的通信来说明</p>
+<h3 id="flannel通信方式"><a href="#flannel通信方式" class="headerlink" title="flannel通信方式"></a>flannel通信方式</h3><h4 id="Kube-dns"><a href="#Kube-dns" class="headerlink" title="Kube-dns"></a>Kube-dns</h4><p>这里简单提一下kube-dns, kube-dns负责集群内的域名解析, 因此在集群内访问时才能使用<code>xxx.namespace.svc.cluster.local</code>这种形式访问.</p>
+<p>kube-dns也支持上游dns, kube-dns集群内解析不了的可交由上游dns解析. </p>
+<p>如在kube-dns的pod中挂载宿主要的&#x2F;etc&#x2F;resolv.conf文件.</p>
+<p><img src="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20200411211019.png"></p>
+<h3 id="路由规则"><a href="#路由规则" class="headerlink" title="路由规则"></a>路由规则</h3><p>kubernets的网络，从设计上来讲是“扁平、直接”的，要实现kubernetes的cni模型, 需要实现3点要求:</p>
+<blockquote>
+<ul>
+<li>所有容器可以不使用NAT技术就可以与其他容器通信</li>
+<li>所有节点(物理机 虚拟机 容器)都可以不使用NAT同容器通信</li>
+<li>容器看到的IP地址和别的机器看到的IP是一致的</li>
+</ul>
+</blockquote>
+<p>那么一条网络报文是怎么从一个容器发送到另外一个容器的呢(跨主机) ？</p>
+<p>这里以<code>vxlan</code>为例</p>
+<ol>
+<li>容器直接使用目标容器的 ip 访问，默认通过容器内部的 eth0 发送出去</li>
+<li>报文通过 veth pair 被发送到 vethXXX</li>
+<li>vethXXX 是直接连接到虚拟交换机 cni0 的，报文通过虚拟 bridge cni0 发送出去</li>
+<li>查找路由表，外部容器 ip 的报文都会转发到 flannel.1 虚拟网卡，这是一个 P2P 的虚拟网卡,然后报文就被转发到监听在另一端的 flanneld</li>
+<li>flanneld 通过 etcd 维护了各个节点之间的路由表，把原来的报文 UDP 封装一层，通过配置的 <code>iface</code> 发送出去</li>
+<li>报文通过主机之间的网络找到目标主机</li>
+<li>报文继续往上，到传输层，交给监听在 8285 端口的 flanneld 程序处理</li>
+<li>数据被解包，然后发送给 flannel.1 虚拟网卡</li>
+<li>查找路由表，发现对应容器的报文要交给 cni0</li>
+<li>cni0 找到连到自己的容器，把报文发送过去</li>
+</ol>
+<p>如果是同一node上pod通信, 则直接通过cni0就可以, </p>
+<p>查看node上的路由信息:</p>
+<p><code>route -n</code></p>
+<p><img src="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20200411215227.png"></p>
+<p>从这里可以看到, <code>10.42.xx</code>的使用flannel.1 iface转发, 这也是集群pod的网段.</p>
+<p>而如果是访问的其它ip,则是通过eth0 iface</p>
+<h4 id="VXLAN"><a href="#VXLAN" class="headerlink" title="VXLAN"></a>VXLAN</h4><p>vxlan是Linux上支持的一个隧道的技术，隧道也就是点到点，端到端的两个设备的通信，其实vxlan实现是有一个vtep的设备做数据包的封装与解封装，而现在已经封装到flannel.1这个进程里面了，也就是这个虚拟网卡包含了veth对使用对这个vxlan进行封装和解封装</p>
+<h4 id="为何需要封装"><a href="#为何需要封装" class="headerlink" title="为何需要封装"></a>为何需要封装</h4><p>为什么需要封装呢? 从上面的图可以看到</p>
+<p>假如现在有如下请求.podA –&gt; podB(<code>如果是serviceB的clusterIP,则会通过kube-proxy机制随机得到一个后端ip</code>)</p>
+<p><img src="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20200413192311.png"></p>
+<p>则根据路由信息, 知道需要从flannel.1网口转发, 但是flannel.1要发送到哪呢？按照常规逻辑, 这个请求包中只包含有如下信息：</p>
+<p><code>src: podA地址</code></p>
+<p><code>dst: podB地址</code></p>
+<p>通过flannel生成的路由信息可以知道需要通过NodeA上的flannel.1进行转发.</p>
+<p>如果仅仅知道上面这些信息是无法将请求转发到NodeB的, 因为现在还不知道NodeB的IP,就无法路由</p>
+<p>因此, 需要一种机制把NodeB的IP封装到原始包中, 进行路由, 同时NodeB需要支持解封装</p>
+<p>这就是需要封装的原因, 而vxlan是内核原生支持的特性.性能也比较高</p>
+<p>当然也许有人会问不是可以通过api-server根据podip来查找所属的NodeIP吗？</p>
+<p>这完全是没问题的, 但这会交付网络寻址的问题融入到kubernetes的代码中,将会变得异常复杂,同时也违背了<code>插件化</code>的理念, 因此路由寻址问题必须在容器网络插件层面解决.</p>
+<h4 id="封包格式"><a href="#封包格式" class="headerlink" title="封包格式"></a>封包格式</h4><p>如上图所示，当NodeB加入flannel网络时，和其他所有backend一样，它会将自己的subnet 10.1.16.0&#x2F;24和Public IP 192.168.0.101写入etcd中，和其他backend不一样的是，它<code>还会将vtep设备flannel.1的mac地址也写入etcd中</code>。</p>
+<p>之后，NodeA会得到EventAdded事件，并从中获取NodeB添加至etcd的各种信息。这个时候，它会在本机上添加三条信息：</p>
+<ol>
+<li><p>路由信息：所有通往目的地址10.1.16.0&#x2F;24的封包都通过vtep设备flannel.1设备发出，发往的网关地址为10.1.16.0，即NodeB中的flannel.1设备</p>
+</li>
+<li><p>fdb信息：MAC地址为MAC B的封包，都将通过vxlan首先发往目的地址192.168.0.101，即NodeB</p>
+</li>
+<li><p>arp信息：网关地址10.1.16.0的地址为MAC B</p>
+</li>
+</ol>
+<p>最终生成的封装包如下:</p>
+<p><img src="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20200413193513.png"></p>
+<p>可以查看其它机器的flannel.1设备的mac地址</p>
+<p><code>bridge fdb show  dev flannel.1</code></p>
+<p><img src="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20200413181732.png"></p>
+<p>通过mac地址查找ip地址</p>
+<p><code>bridge fdb show  dev flannel.1|grep &#39;46:2f:09:f1&#39;</code></p>
+<p><img src="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20200413181908.png"></p>
+<h4 id="完整流程"><a href="#完整流程" class="headerlink" title="完整流程"></a>完整流程</h4><p>有一个容器网络封包要从A发往容器B，封包首先通过网桥转发到NodeA中。此时通过，查找路由表，该封包应当通过设备flannel.1发往网关10.1.16.0。通过进一步查找arp表，我们知道目的地址10.1.16.0的mac地址为MAC B。到现在为止，vxlan负载部分的数据已经封装完成。由于<code>flannel.1是vtep设备</code>，会对通过它发出的数据进行vxlan封装（这一步是由内核完成的），通过查询fdb获取目的mac地址为MAC B的ip地址为192.168.0.101</p>
+<p>封包到达主机B的eth0，通过内核的vxlan模块解包，容器数据封包将到达vxlan设备flannel.1，封包的目的以太网地址和flannel.1的以太网地址相等，三层封包最终将进入主机B并通过路由转发达到目的容器</p>
+<p><code>先通过NodeB的IP在三层网络进行路由, 到达NodeB后, 再在二层网络使用MAC地址发现NodeB上的flannel.1设备, 最终通过PodB的IP进行转发完成整个流程</code></p>
+<p>整个流程如下:</p>
+<p><img src="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20200413185816.png"></p>
+<p><strong>flannel不需要Nodes之间在同一个子网, 只需要能够互通就行.</strong></p>
+<h4 id="host-gw"><a href="#host-gw" class="headerlink" title="host-gw"></a>host-gw</h4><p>hostgw是最简单的backend，它的原理非常简单，直接添加路由，将目的主机当做网关，直接路由原始封包。例如，我们从etcd中监听到一个EventAdded事件：subnet为10.1.15.0&#x2F;24被分配给主机Public IP 192.168.0.100，hostgw要做的工作非常简单，在本主机上添加一条目的地址为10.1.15.0&#x2F;24，网关地址为192.168.0.100，输出设备为上文中选择的集群间交互的网卡即可。对于EventRemoved事件，删除对应的路由即可</p>
+<p><strong>Host-gw有一定的限制，就是要求所有的主机都在一个子网内，即二层可达(不需要经过路由)，否则就无法将目的主机当做网关，直接路由</strong></p>
+<p>至于选择vxlan还是host-gw, 根据实际情况吧, 性能上host-gw肯定是高一点, 但网络上有限制, 而vxlan如果集群规则不是很大的话, 基本跟host-gw的性能差不多.</p>
+<h3 id="参考文章"><a href="#参考文章" class="headerlink" title="参考文章:"></a><strong>参考文章:</strong></h3><blockquote>
+<ul>
+<li><a target="_blank" rel="noopener" href="https://kubernetes.io/">https://kubernetes.io</a></li>
+<li><a target="_blank" rel="noopener" href="https://github.com/containernetworking/plugins">https://github.com/containernetworking/plugins</a></li>
+<li><a target="_blank" rel="noopener" href="https://github.com/coreos/flannel-cni">https://github.com/coreos/flannel-cni</a></li>
+<li><a target="_blank" rel="noopener" href="https://blog.51cto.com/14143894/2462379">https://blog.51cto.com/14143894/2462379</a></li>
+<li><a target="_blank" rel="noopener" href="https://www.cnblogs.com/YaoDD/p/7681811.html">https://www.cnblogs.com/YaoDD/p/7681811.html</a></li>
+<li><a target="_blank" rel="noopener" href="https://blog.51cto.com/14143894/2462379">https://blog.51cto.com/14143894/2462379</a></li>
+<li><a target="_blank" rel="noopener" href="https://itnext.io/kubernetes-journey-up-and-running-out-of-the-cloud-flannel-c01283308f0e">https://itnext.io/kubernetes-journey-up-and-running-out-of-the-cloud-flannel-c01283308f0e</a></li>
+</ul>
+</blockquote>
+<h3 id="转载请注明出处https-izsk-me"><a href="#转载请注明出处https-izsk-me" class="headerlink" title="转载请注明出处https://izsk.me"></a><strong>转载请注明出处<a target="_blank" rel="noopener" href="https://izsk.me/">https://izsk.me</a></strong></h3>
+      
+    </div>
+
+    <div>
+      
+        
+<div id="wechat_subscriber" style="display: block; padding: 10px 0; margin: 20px auto; width: 100%; text-align: center">
+    <img id="wechat_subscriber_qcode" src="/images/websitecode250.png" alt=" wechat" style="width: 200px; max-width: 100%;"/>
+    <div>Scan Me To Read on Phone</div>
+</div>
+
+
+      
+    </div>
+
+    <div>
+      
+        
+  <div style="padding: 10px 0; margin: 20px auto; width: 90%; text-align: center;">
+    <div>I know you won't do this,but what if you did?</div>
+    <button id="rewardButton" disable="enable" onclick="var qr = document.getElementById('QR'); if (qr.style.display === 'none') {qr.style.display='block';} else {qr.style.display='none'}">
+      <span>赏</span>
+    </button>
+    <div id="QR" style="display: none;">
+      
+        <div id="wechat" style="display: inline-block">
+          <img id="wechat_qr" src="/images/wechatpayme.png" alt=" WeChat Pay"/>
+          <p>微信打赏</p>
+        </div>
+      
+      
+        <div id="alipay" style="display: inline-block">
+          <img id="alipay_qr" src="/images/alipayme.jpg" alt=" Alipay"/>
+          <p>支付宝打赏</p>
+        </div>
+      
     </div>
   </div>
 
-{% endblock %}
 
-{% block sidebar %}
-  {{ sidebar_template.render(true) }}
-{% endblock %}
+      
+    </div>
 
 
-{% block script_extra %}
-  {% include '_scripts/pages/post-details.swig' %}
-{% endblock %}
+    <footer class="post-footer">
+      
+        <div class="post-tags">
+          
+            <a href="/tags/Kubernetes/" rel="tag"># Kubernetes</a>
+          
+        </div>
+      
+
+      
+        <div class="post-nav">
+          <div class="post-nav-next post-nav-item">
+            
+              <a href="/2020/01/05/prometheus-functions/" rel="next" title="Prometheus学习(PromSQL常用函数)">
+                <i class="fa fa-chevron-left"></i> Prometheus学习(PromSQL常用函数)
+              </a>
+            
+          </div>
+
+          <span class="post-nav-divider"></span>
+
+          <div class="post-nav-prev post-nav-item">
+            
+              <a href="/2020/01/05/Kubernetes-Bootstrap-Node/" rel="prev" title="Kubernetes学习(Bootstrap Token机制)">
+                Kubernetes学习(Bootstrap Token机制) <i class="fa fa-chevron-right"></i>
+              </a>
+            
+          </div>
+        </div>
+      
+
+      
+      
+    </footer>
+  </article>
+
+
+
+    <div class="post-spread">
+      
+    </div>
+  </div>
+
+
+          </div>
+          
+
+
+          
+  <div class="comments" id="comments">
+    
+  </div>
+
+
+        </div>
+        
+          
+  
+  <div class="sidebar-toggle">
+    <div class="sidebar-toggle-line-wrap">
+      <span class="sidebar-toggle-line sidebar-toggle-line-first"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-middle"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-last"></span>
+    </div>
+  </div>
+
+  <aside id="sidebar" class="sidebar">
+    <div class="sidebar-inner">
+
+      
+
+      
+        <ul class="sidebar-nav motion-element">
+          <li class="sidebar-nav-toc sidebar-nav-active" data-target="post-toc-wrap" >
+            文章目录
+          </li>
+          <li class="sidebar-nav-overview" data-target="site-overview">
+            站点概览
+          </li>
+        </ul>
+      
+
+      <section class="site-overview sidebar-panel">
+        <div class="site-author motion-element" itemprop="author" itemscope itemtype="http://schema.org/Person">
+          <img class="site-author-image" itemprop="image"
+               src="/images/avatar.gif"
+               alt="" />
+          <p class="site-author-name" itemprop="name"></p>
+          <p class="site-description motion-element" itemprop="description"></p>
+        </div>
+        <nav class="site-state motion-element">
+        
+          
+            <div class="site-state-item site-state-posts">
+              <a href="/archives">
+                <span class="site-state-item-count">192</span>
+                <span class="site-state-item-name">日志</span>
+              </a>
+            </div>
+          
+
+          
+            <div class="site-state-item site-state-categories">
+              <a href="/categories">
+                <span class="site-state-item-count">14</span>
+                <span class="site-state-item-name">分类</span>
+              </a>
+            </div>
+          
+
+          
+            <div class="site-state-item site-state-tags">
+              <a href="/tags">
+                <span class="site-state-item-count">14</span>
+                <span class="site-state-item-name">标签</span>
+              </a>
+            </div>
+          
+
+        </nav>
+
+        
+
+        <div class="links-of-author motion-element">
+          
+        </div>
+
+        
+        
+
+        
+        
+
+        
+
+
+      </section>
+
+      
+      <!--noindex-->
+        <section class="post-toc-wrap motion-element sidebar-panel sidebar-panel-active">
+          <div class="post-toc">
+
+            
+              
+            
+
+            
+              <div class="post-toc-content"><ol class="nav"><li class="nav-item nav-level-3"><a class="nav-link" href="#%E5%A6%82%E4%BD%95%E7%9F%A5%E9%81%93%E4%BD%BF%E7%94%A8%E4%BA%86%E5%93%AA%E7%A7%8DCNI-%E5%A4%84%E7%90%86%E9%80%BB%E8%BE%91%E6%98%AF%E4%BB%80%E4%B9%88%EF%BC%9F"><span class="nav-number">1.</span> <span class="nav-text">如何知道使用了哪种CNI,处理逻辑是什么？</span></a><ol class="nav-child"><li class="nav-item nav-level-4"><a class="nav-link" href="#x2F-etc-x2F-cni-x2F-net-d"><span class="nav-number">1.1.</span> <span class="nav-text">&#x2F;etc&#x2F;cni&#x2F;net.d</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#x2F-opt-x2F-cni-x2F-bin"><span class="nav-number">1.2.</span> <span class="nav-text">&#x2F;opt&#x2F;cni&#x2F;bin</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#flannel"><span class="nav-number">1.3.</span> <span class="nav-text">flannel</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#flanneld"><span class="nav-number">1.4.</span> <span class="nav-text">flanneld</span></a><ol class="nav-child"><li class="nav-item nav-level-5"><a class="nav-link" href="#cni-conf-json"><span class="nav-number">1.4.1.</span> <span class="nav-text">cni-conf.json</span></a></li><li class="nav-item nav-level-5"><a class="nav-link" href="#net-conf-json"><span class="nav-number">1.4.2.</span> <span class="nav-text">net-conf.json</span></a></li><li class="nav-item nav-level-5"><a class="nav-link" href="#subset-env"><span class="nav-number">1.4.3.</span> <span class="nav-text">subset.env</span></a></li><li class="nav-item nav-level-5"><a class="nav-link" href="#flannel-cni%E5%AE%B9%E5%99%A8"><span class="nav-number">1.4.4.</span> <span class="nav-text">flannel-cni容器</span></a></li><li class="nav-item nav-level-5"><a class="nav-link" href="#etcd"><span class="nav-number">1.4.5.</span> <span class="nav-text">etcd</span></a></li></ol></li><li class="nav-item nav-level-4"><a class="nav-link" href="#%E5%A4%84%E7%90%86%E9%80%BB%E8%BE%91"><span class="nav-number">1.5.</span> <span class="nav-text">处理逻辑</span></a></li></ol></li><li class="nav-item nav-level-3"><a class="nav-link" href="#docker0%E3%80%81cni0%E3%80%81flannel-1"><span class="nav-number">2.</span> <span class="nav-text">docker0、cni0、flannel.1</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#flannel%E9%80%9A%E4%BF%A1%E6%96%B9%E5%BC%8F"><span class="nav-number">3.</span> <span class="nav-text">flannel通信方式</span></a><ol class="nav-child"><li class="nav-item nav-level-4"><a class="nav-link" href="#Kube-dns"><span class="nav-number">3.1.</span> <span class="nav-text">Kube-dns</span></a></li></ol></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E8%B7%AF%E7%94%B1%E8%A7%84%E5%88%99"><span class="nav-number">4.</span> <span class="nav-text">路由规则</span></a><ol class="nav-child"><li class="nav-item nav-level-4"><a class="nav-link" href="#VXLAN"><span class="nav-number">4.1.</span> <span class="nav-text">VXLAN</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#%E4%B8%BA%E4%BD%95%E9%9C%80%E8%A6%81%E5%B0%81%E8%A3%85"><span class="nav-number">4.2.</span> <span class="nav-text">为何需要封装</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#%E5%B0%81%E5%8C%85%E6%A0%BC%E5%BC%8F"><span class="nav-number">4.3.</span> <span class="nav-text">封包格式</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#%E5%AE%8C%E6%95%B4%E6%B5%81%E7%A8%8B"><span class="nav-number">4.4.</span> <span class="nav-text">完整流程</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#host-gw"><span class="nav-number">4.5.</span> <span class="nav-text">host-gw</span></a></li></ol></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E5%8F%82%E8%80%83%E6%96%87%E7%AB%A0"><span class="nav-number">5.</span> <span class="nav-text">参考文章:</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E8%BD%AC%E8%BD%BD%E8%AF%B7%E6%B3%A8%E6%98%8E%E5%87%BA%E5%A4%84https-izsk-me"><span class="nav-number">6.</span> <span class="nav-text">转载请注明出处https:&#x2F;&#x2F;izsk.me</span></a></li></ol></div>
+            
+
+          </div>
+        </section>
+      <!--/noindex-->
+      
+
+    </div>
+  </aside>
+
+
+        
+      </div>
+    </main>
+
+    <footer id="footer" class="footer">
+      <div class="footer-inner">
+        <div class="copyright" >
+  
+  &copy; 
+  <span itemprop="copyrightYear">2022</span>
+  <span class="with-love">
+    <i class="fa fa-heart"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">Z.S.K.</span>
+</div>
+
+
+<div class="powered-by">
+  Supported by <a class="theme-link" target="_blank" rel="noopener" href="https://hexo.io">Hexo</a>
+</div>
+
+<div class="theme-info">
+  Theme -
+  <a class="theme-link" target="_blank" rel="noopener" href="https://github.com/iissnan/hexo-theme-next">
+    NexT.Mist
+  </a>
+</div>
+
+
+        
+
+        
+      </div>
+    </footer>
+
+    <div class="back-to-top">
+      <i class="fa fa-arrow-up"></i>
+    </div>
+  </div>
+
+  
+
+<script type="text/javascript">
+  if (Object.prototype.toString.call(window.Promise) !== '[object Function]') {
+    window.Promise = null;
+  }
+</script>
+
+
+
+
+
+
+
+
+
+  
+
+
+
+  
+  <script type="text/javascript" src="/lib/jquery/index.js?v=2.1.3"></script>
+
+  
+  <script type="text/javascript" src="/lib/fastclick/lib/fastclick.min.js?v=1.0.6"></script>
+
+  
+  <script type="text/javascript" src="/lib/jquery_lazyload/jquery.lazyload.js?v=1.9.7"></script>
+
+  
+  <script type="text/javascript" src="/lib/velocity/velocity.min.js?v=1.2.1"></script>
+
+  
+  <script type="text/javascript" src="/lib/velocity/velocity.ui.min.js?v=1.2.1"></script>
+
+  
+  <script type="text/javascript" src="/lib/fancybox/source/jquery.fancybox.pack.js?v=2.1.5"></script>
+
+
+  
+
+
+  <script type="text/javascript" src="/js/src/utils.js?v=5.1.0"></script>
+
+  <script type="text/javascript" src="/js/src/motion.js?v=5.1.0"></script>
+
+
+
+  
+  
+
+  
+  <script type="text/javascript" src="/js/src/scrollspy.js?v=5.1.0"></script>
+<script type="text/javascript" src="/js/src/post-details.js?v=5.1.0"></script>
+
+
+
+  
+
+
+  <script type="text/javascript" src="/js/src/bootstrap.js?v=5.1.0"></script>
+
+
+
+  
+
+
+
+  
+
+
+
+
+	
+
+
+
+
+
+  
+
+
+
+
+  
+  
+  <script type="text/javascript">
+    // Popup Window;
+    var isfetched = false;
+    // Search DB path;
+    var search_path = "search.xml";
+    if (search_path.length == 0) {
+      search_path = "search.xml";
+    }
+    var path = "/" + search_path;
+    // monitor main search box;
+
+    function proceedsearch() {
+      $("body").append('<div class="popoverlay">').css('overflow', 'hidden');
+      $('.popup').toggle();
+    }
+    // search function;
+    var searchFunc = function(path, search_id, content_id) {
+      'use strict';
+      $.ajax({
+        url: path,
+        dataType: "xml",
+        async: true,
+        success: function( xmlResponse ) {
+          // get the contents from search data
+          isfetched = true;
+          $('.popup').detach().appendTo('.header-inner');
+          var datas = $( "entry", xmlResponse ).map(function() {
+            return {
+              title: $( "title", this ).text(),
+              content: $("content",this).text(),
+              url: $( "url" , this).text()
+            };
+          }).get();
+          var $input = document.getElementById(search_id);
+          var $resultContent = document.getElementById(content_id);
+          $input.addEventListener('input', function(){
+            var matchcounts = 0;
+            var str='<ul class=\"search-result-list\">';
+            var keywords = this.value.trim().toLowerCase().split(/[\s\-]+/);
+            $resultContent.innerHTML = "";
+            if (this.value.trim().length > 1) {
+              // perform local searching
+              datas.forEach(function(data) {
+                var isMatch = false;
+                var content_index = [];
+                var data_title = data.title.trim().toLowerCase();
+                var data_content = data.content.trim().replace(/<[^>]+>/g,"").toLowerCase();
+                var data_url = decodeURIComponent(data.url);
+                var index_title = -1;
+                var index_content = -1;
+                var first_occur = -1;
+                // only match artiles with not empty titles and contents
+                if(data_title != '') {
+                  keywords.forEach(function(keyword, i) {
+                    index_title = data_title.indexOf(keyword);
+                    index_content = data_content.indexOf(keyword);
+                    if( index_title >= 0 || index_content >= 0 ){
+                      isMatch = true;
+                      if (i == 0) {
+                        first_occur = index_content;
+                      }
+                    }
+
+                  });
+                }
+                // show search results
+                if (isMatch) {
+                  matchcounts += 1;
+                  str += "<li><a href='"+ data_url +"' class='search-result-title'>"+ data_title +"</a>";
+                  var content = data.content.trim().replace(/<[^>]+>/g,"");
+                  if (first_occur >= 0) {
+                    // cut out 100 characters
+                    var start = first_occur - 20;
+                    var end = first_occur + 80;
+                    if(start < 0){
+                      start = 0;
+                    }
+                    if(start == 0){
+                      end = 50;
+                    }
+                    if(end > content.length){
+                      end = content.length;
+                    }
+                    var match_content = content.substring(start, end);
+                    // highlight all keywords
+                    keywords.forEach(function(keyword){
+                      var regS = new RegExp(keyword, "gi");
+                      match_content = match_content.replace(regS, "<b class=\"search-keyword\">"+keyword+"</b>");
+                    });
+
+                    str += "<p class=\"search-result\">" + match_content +"...</p>"
+                  }
+                  str += "</li>";
+                }
+              })};
+            str += "</ul>";
+            if (matchcounts == 0) { str = '<div id="no-result"><i class="fa fa-frown-o fa-5x" /></div>' }
+            if (keywords == "") { str = '<div id="no-result"><i class="fa fa-search fa-5x" /></div>' }
+            $resultContent.innerHTML = str;
+          });
+          proceedsearch();
+        }
+      });}
+
+    // handle and trigger popup window;
+    $('.popup-trigger').click(function(e) {
+      e.stopPropagation();
+      if (isfetched == false) {
+        searchFunc(path, 'local-search-input', 'local-search-result');
+      } else {
+        proceedsearch();
+      };
+    });
+
+    $('.popup-btn-close').click(function(e){
+      $('.popup').hide();
+      $(".popoverlay").remove();
+      $('body').css('overflow', '');
+    });
+    $('.popup').click(function(e){
+      e.stopPropagation();
+    });
+  </script>
+
+
+  
+
+  
+
+  
+
+  
+
+
+</body>
+</html>

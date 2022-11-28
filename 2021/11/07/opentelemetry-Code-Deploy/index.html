@@ -1,38 +1,916 @@
-{% extends '_layout.swig' %}
-{% import '_macro/post.swig' as post_template %}
-{% import '_macro/sidebar.swig' as sidebar_template %}
+<!doctype html>
 
 
-{% block title %} {{ page.title }} | {{ config.title }} {% endblock %}
 
-{% block page_class %}page-post-detail{% endblock %}
+  
 
 
-{% block content %}
+<html class="theme-next mist use-motion" lang="zh-Hans">
+<head>
+  <meta charset="UTF-8"/>
+<meta http-equiv="X-UA-Compatible" content="IE=edge" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1"/>
+
+
+
+<meta http-equiv="Cache-Control" content="no-transform" />
+<meta http-equiv="Cache-Control" content="no-siteapp" />
+
+
+
+
+
+
+
+
+
+
+
+
+  
+  
+  <link href="/lib/fancybox/source/jquery.fancybox.css?v=2.1.5" rel="stylesheet" type="text/css" />
+
+
+
+
+  
+  
+  
+  
+
+  
+    
+    
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+    
+    
+    <link href="//fonts.googleapis.com/css?family=Lato:300,300italic,400,400italic,700,700italic&subset=latin,latin-ext" rel="stylesheet" type="text/css">
+  
+
+
+
+
+
+
+<link href="/lib/font-awesome/css/font-awesome.min.css?v=4.6.2" rel="stylesheet" type="text/css" />
+
+<link href="/css/main.css?v=5.1.0" rel="stylesheet" type="text/css" />
+
+
+  <meta name="keywords" content="CloudNavi," />
+
+
+
+
+
+
+
+
+  <link rel="shortcut icon" type="image/x-icon" href="/favicon.ico?v=5.1.0" />
+
+
+
+
+
+
+<meta name="description" content="历史文章:可观测性到底在说什么 opentelemetry架构及名词介绍 全链路追踪的TraceID与SpanID 整个opentelemetry体系还是相当复杂的，这里没办法将所有opentelemetry的东西讲清楚，直接通过case顺带opentelemetry里的概念来拆解会比较直观 这里通过一个简单的golang demo来介绍怎么接入opentelemetry以实现Metrics跟Tr">
+<meta property="og:type" content="article">
+<meta property="og:title" content="Opentelemetry调研实践四(k8s中golang应用接入opentelemetry实现可观测性)">
+<meta property="og:url" content="https://zhoushuke.github.io/2021/11/07/opentelemetry-Code-Deploy/index.html">
+<meta property="og:site_name" content="Z.S.K.&#39;s Records">
+<meta property="og:description" content="历史文章:可观测性到底在说什么 opentelemetry架构及名词介绍 全链路追踪的TraceID与SpanID 整个opentelemetry体系还是相当复杂的，这里没办法将所有opentelemetry的东西讲清楚，直接通过case顺带opentelemetry里的概念来拆解会比较直观 这里通过一个简单的golang demo来介绍怎么接入opentelemetry以实现Metrics跟Tr">
+<meta property="og:locale">
+<meta property="og:image" content="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20211101231146.png">
+<meta property="article:published_time" content="2021-11-07T13:10:53.000Z">
+<meta property="article:modified_time" content="2022-07-19T03:16:00.957Z">
+<meta property="article:author" content="Z.S.K.">
+<meta property="article:tag" content="CloudNavi">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:image" content="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20211101231146.png">
+
+
+
+<script type="text/javascript" id="hexo.configurations">
+  var NexT = window.NexT || {};
+  var CONFIG = {
+    root: '',
+    scheme: 'Mist',
+    sidebar: {"position":"left","display":"post"},
+    fancybox: true,
+    motion: true,
+    duoshuo: {
+      userId: 'undefined',
+      author: '博主'
+    },
+    algolia: {
+      applicationID: '',
+      apiKey: '',
+      indexName: '',
+      hits: {"per_page":10},
+      labels: {"input_placeholder":"Search for Posts","hits_empty":"We didn't find any results for the search: ${query}","hits_stats":"${hits} results found in ${time} ms"}
+    }
+  };
+</script>
+
+
+
+  <link rel="canonical" href="https://zhoushuke.github.io/2021/11/07/opentelemetry-Code-Deploy/"/>
+
+
+
+
+
+  <title> Opentelemetry调研实践四(k8s中golang应用接入opentelemetry实现可观测性) | Z.S.K.'s Records </title>
+<meta name="generator" content="Hexo 6.2.0"></head>
+
+<body itemscope itemtype="http://schema.org/WebPage" lang="zh-Hans">
+
+  
+
+
+
+
+
+
+
+
+
+
+  
+  
+    
+  
+
+  <div class="container one-collumn sidebar-position-left page-post-detail ">
+    <div class="headband"></div>
+
+    <header id="header" class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-meta ">
+  
+
+  <div class="custom-logo-site-title">
+    <a href="/"  class="brand" rel="start">
+      <span class="logo-line-before"><i></i></span>
+      <span class="site-title">Z.S.K.'s Records</span>
+      <span class="logo-line-after"><i></i></span>
+    </a>
+  </div>
+    
+      <p class="site-subtitle"></p>
+    
+</div>
+
+<div class="site-nav-toggle">
+  <button>
+    <span class="btn-bar"></span>
+    <span class="btn-bar"></span>
+    <span class="btn-bar"></span>
+  </button>
+</div>
+
+<nav class="site-nav">
+  
+
+  
+    <ul id="menu" class="menu">
+      
+        
+        <li class="menu-item menu-item-home">
+          <a href="/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-home"></i> <br />
+            
+            首页
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-categories">
+          <a href="/categories" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-th"></i> <br />
+            
+            分类
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-about">
+          <a href="/about/ZSK-Profile.pdf" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-user"></i> <br />
+            
+            简历
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-archives">
+          <a href="/archives" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-archive"></i> <br />
+            
+            归档
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-tags">
+          <a href="/tags" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-tags"></i> <br />
+            
+            标签
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-commonweal">
+          <a href="/404.html" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-heartbeat"></i> <br />
+            
+            公益404
+          </a>
+        </li>
+      
+
+      
+        <li class="menu-item menu-item-search">
+          
+            <a href="javascript:;" class="popup-trigger">
+          
+            
+              <i class="menu-item-icon fa fa-search fa-fw"></i> <br />
+            
+            搜索
+          </a>
+        </li>
+      
+    </ul>
+  
+
+  
+    <div class="site-search">
+      
+  <div class="popup">
+ <span class="search-icon fa fa-search"></span>
+ <input type="text" id="local-search-input">
+ <div id="local-search-result"></div>
+ <span class="popup-btn-close">close</span>
+</div>
+
+
+    </div>
+  
+</nav>
+
+
+
+ </div>
+    </header>
+
+    <main id="main" class="main">
+      <div class="main-inner">
+        <div class="content-wrap">
+          <div id="content" class="content">
+            
 
   <div id="posts" class="posts-expand">
-    {{ post_template.render(page) }}
+    
 
-    <div class="post-spread">
-      {% if theme.jiathis %}
-        {% include '_partials/share/jiathis.swig' %}
-      {% elseif theme.baidushare %}
-        {% include '_partials/share/baidushare.swig' %}
-      {% elseif theme.add_this_id %}
-        {% include '_partials/share/add-this.swig' %}
-      {% elseif theme.duoshuo_shortname and theme.duoshuo_share %}
-        {% include '_partials/share/duoshuo_share.swig' %}
-      {% endif %}
+  
+
+  
+  
+  
+
+  <article class="post post-type-normal " itemscope itemtype="http://schema.org/Article">
+  <link itemprop="mainEntityOfPage" href="https://zhoushuke.github.io/2021/11/07/opentelemetry-Code-Deploy/">
+
+  <span style="display:none" itemprop="author" itemscope itemtype="http://schema.org/Person">
+    <meta itemprop="name" content="">
+    <meta itemprop="description" content="">
+    <meta itemprop="image" content="/images/avatar.gif">
+  </span>
+
+  <span style="display:none" itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+    <meta itemprop="name" content="Z.S.K.'s Records">
+    <span style="display:none" itemprop="logo" itemscope itemtype="http://schema.org/ImageObject">
+      <img style="display:none;" itemprop="url image" alt="Z.S.K.'s Records" src="">
+    </span>
+  </span>
+
+    
+      <header class="post-header">
+
+        
+        
+          <h1 class="post-title" itemprop="name headline">
+            
+            
+              
+                Opentelemetry调研实践四(k8s中golang应用接入opentelemetry实现可观测性)
+              
+            
+          </h1>
+        
+
+        <div class="post-meta">
+          <span class="post-time">
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">发表于</span>
+              
+              <time title="Post created" itemprop="dateCreated datePublished" datetime="2021-11-07T21:10:53+08:00">
+                2021-11-07
+              </time>
+            
+
+            
+
+            
+          </span>
+
+          
+            <span class="post-category" >
+            
+              <span class="post-meta-divider">|</span>
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-folder-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">分类于</span>
+              
+              
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/CloudNavi/" itemprop="url" rel="index">
+                    <span itemprop="name">CloudNavi</span>
+                  </a>
+                </span>
+
+                
+                
+              
+            </span>
+          
+
+          
+            
+          
+
+          
+
+          
+          
+
+          
+
+          
+
+        </div>
+      </header>
+    
+
+
+    <div class="post-body" itemprop="articleBody">
+
+      
+      
+
+      
+        <h3 id="历史文章"><a href="#历史文章" class="headerlink" title="历史文章:"></a>历史文章:</h3><p><a target="_blank" rel="noopener" href="https://izsk.me/2021/10/19/OpenTelemetry-what-is-observability/">可观测性到底在说什么</a></p>
+<p><a target="_blank" rel="noopener" href="https://izsk.me/2021/10/27/OpenTelemetry-Introduct/">opentelemetry架构及名词介绍</a></p>
+<p><a target="_blank" rel="noopener" href="https://izsk.me/2021/10/31/OpenTelemetry-Trace/">全链路追踪的TraceID与SpanID</a></p>
+<p>整个opentelemetry体系还是相当复杂的，这里没办法将所有opentelemetry的东西讲清楚，直接通过case顺带opentelemetry里的概念来拆解会比较直观</p>
+<p>这里通过一个简单的golang demo来介绍怎么接入opentelemetry以实现Metrics跟Trace的传递</p>
+<span id="more"></span>
+
+
+
+<p>由于篇幅有限，整个demo会成两部分进行，第一部分为部署篇，第二部分会来拆分主要代码实现。</p>
+<h3 id="链路"><a href="#链路" class="headerlink" title="链路"></a>链路</h3><p>要说明的是，由于prometheus同时支持pull&#x2F;push模式,这里主要会以pull的方式进行说明，这也是普遍采用的方式</p>
+<p>整个请求非常简单，如下:</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">web -- &gt; kong API -- &gt; Golang-client -- &gt; Golang-Server </span><br></pre></td></tr></table></figure>
+
+<p>要实现的效果为:</p>
+<p>当在浏览器中访问URL时，经过kong API网关转发到 Client端， Client端通过http调用server端， server端正确响应后按路径返回给web</p>
+<p>在这期间，借助opentelemetry暴露方法级的metrics，如请求时间、请求次数等度量数据以及整个链路的Trace.</p>
+<p><img src="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20211101231146.png"></p>
+<h3 id="说明"><a href="#说明" class="headerlink" title="说明"></a>说明</h3><p>由于Collector的Receivers支持多种数据模型，在这里，Metrics采用的是Prometheus的pull模式进行采集，而Trace则采用的是OTLP格式进行采集，当采集数据到达Receivers后，会再经过Collector的Processors进行处理，这里使用了Batch及k8s_tagger(在较新版本中重命名为k8sprocessor)，batch是基于性能考虑可对采集数据进行批量操作，k8s_tagger则是在采集原始的数据基础之上新增一些跟k8s相关的<code>label</code>，这部分留在后面进行详解，等processor处理完后，最终会到存储后端，显然，Metrics会落在Prometheus中，Trace的数据则存储在jeager中</p>
+<p>这里要重点说明的是: Receivers中的prometheus(也就是左边的)，不是一个真的prometheus实例，而是一个Prometheus的client,Collector从Instrumenttation获取到的数据按prometheus支持的数据模型进行转换，而右边的Prometheus才是具时存储序数据的实例，也就是最终真正存储时序metrics数据的实例.</p>
+<h3 id="部署"><a href="#部署" class="headerlink" title="部署"></a>部署</h3><p>上述kong、client、server都部署在k8s中，prometheus、jaeger这里为了方便，直接使用的<code>docker-compose</code> all-in-one的方式在k8s集群外部署.</p>
+<h4 id="prometheus-x2F-jaeger"><a href="#prometheus-x2F-jaeger" class="headerlink" title="prometheus&#x2F;jaeger"></a>prometheus&#x2F;jaeger</h4><figure class="highlight yaml"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br></pre></td><td class="code"><pre><span class="line"><span class="attr">version:</span> <span class="string">&quot;2&quot;</span></span><br><span class="line"><span class="attr">services:</span></span><br><span class="line"></span><br><span class="line">  <span class="attr">jaeger-all-in-one:</span></span><br><span class="line">    <span class="attr">image:</span> <span class="string">jaegertracing/all-in-one:latest</span></span><br><span class="line">    <span class="attr">ports:</span></span><br><span class="line">      <span class="bullet">-</span> <span class="string">&quot;16686:16686&quot;</span></span><br><span class="line">      <span class="bullet">-</span> <span class="string">&quot;14268&quot;</span></span><br><span class="line">      <span class="bullet">-</span> <span class="string">&quot;14250&quot;</span></span><br><span class="line"></span><br><span class="line">  <span class="attr">prometheus:</span></span><br><span class="line">    <span class="attr">container_name:</span> <span class="string">prometheus</span></span><br><span class="line">    <span class="attr">image:</span> <span class="string">prom/prometheus:latest</span></span><br><span class="line">    <span class="attr">volumes:</span></span><br><span class="line">      <span class="bullet">-</span> <span class="string">./prometheus.yaml:/etc/prometheus/prometheus.yml</span></span><br><span class="line">    <span class="attr">ports:</span></span><br><span class="line">      <span class="bullet">-</span> <span class="string">&quot;9090:9090&quot;</span></span><br><span class="line">      </span><br><span class="line"><span class="comment"># 其中prometheus.yml的内容是定义抓取的collector中的数据</span></span><br><span class="line"><span class="attr">scrape_configs:</span></span><br><span class="line">  <span class="bullet">-</span> <span class="attr">job_name:</span> <span class="string">&#x27;otel-collector&#x27;</span></span><br><span class="line">    <span class="attr">scrape_interval:</span> <span class="string">10s</span></span><br><span class="line">    <span class="attr">static_configs:</span></span><br><span class="line">      <span class="bullet">-</span> <span class="attr">targets:</span> [<span class="string">&#x27;10.198.x.x:55715&#x27;</span>] <span class="comment"># 55715是collector本身暴露的metrics指标</span></span><br><span class="line">      <span class="bullet">-</span> <span class="attr">targets:</span> [<span class="string">&#x27;10.198.x.x:62034&#x27;</span>] <span class="comment"># 72034是collector采集到的client pull到的指标</span></span><br></pre></td></tr></table></figure>
+
+
+
+<h4 id="Collector"><a href="#Collector" class="headerlink" title="Collector"></a>Collector</h4><p>collector这里是以daemonset部署在集群中的</p>
+<p>这里主要说明下collector的配置文件</p>
+<figure class="highlight yaml"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br><span class="line">58</span><br><span class="line">59</span><br><span class="line">60</span><br><span class="line">61</span><br><span class="line">62</span><br><span class="line">63</span><br><span class="line">64</span><br><span class="line">65</span><br><span class="line">66</span><br><span class="line">67</span><br><span class="line">68</span><br><span class="line">69</span><br><span class="line">70</span><br><span class="line">71</span><br><span class="line">72</span><br><span class="line">73</span><br><span class="line">74</span><br><span class="line">75</span><br><span class="line">76</span><br><span class="line">77</span><br><span class="line">78</span><br><span class="line">79</span><br><span class="line">80</span><br><span class="line">81</span><br><span class="line">82</span><br><span class="line">83</span><br><span class="line">84</span><br><span class="line">85</span><br><span class="line">86</span><br><span class="line">87</span><br><span class="line">88</span><br><span class="line">89</span><br><span class="line">90</span><br><span class="line">91</span><br><span class="line">92</span><br><span class="line">93</span><br><span class="line">94</span><br><span class="line">95</span><br><span class="line">96</span><br><span class="line">97</span><br><span class="line">98</span><br><span class="line">99</span><br><span class="line">100</span><br><span class="line">101</span><br><span class="line">102</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># otel-ds-agent-conf.yaml</span></span><br><span class="line"></span><br><span class="line"><span class="attr">apiVersion:</span> <span class="string">v1</span></span><br><span class="line"><span class="attr">data:</span></span><br><span class="line">  <span class="attr">otel-agent-config:</span></span><br><span class="line">    <span class="attr">receivers:</span></span><br><span class="line">      <span class="attr">otlp:</span></span><br><span class="line">        <span class="attr">protocols:</span></span><br><span class="line">          <span class="attr">grpc:</span></span><br><span class="line">          <span class="attr">http:</span></span><br><span class="line">      <span class="attr">prometheus:</span> <span class="comment"># 采用的是pull方式，因此需要配置ds.</span></span><br><span class="line">        <span class="attr">config:</span></span><br><span class="line">          <span class="attr">scrape_configs:</span></span><br><span class="line">          <span class="bullet">-</span> <span class="attr">job_name:</span> <span class="string">k8s-apps</span></span><br><span class="line">            <span class="attr">scrape_interval:</span> <span class="string">30s</span></span><br><span class="line">            <span class="attr">scrape_timeout:</span> <span class="string">30s</span></span><br><span class="line">            <span class="attr">honor_timestamps:</span> <span class="literal">true</span></span><br><span class="line">            <span class="attr">metrics_path:</span> <span class="string">/metrics</span></span><br><span class="line">            <span class="attr">scheme:</span> <span class="string">http</span></span><br><span class="line">            <span class="attr">kubernetes_sd_configs:</span></span><br><span class="line">            <span class="bullet">-</span> <span class="attr">role:</span> <span class="string">pod</span></span><br><span class="line">              <span class="attr">selectors:</span></span><br><span class="line">              <span class="bullet">-</span> <span class="attr">role:</span> <span class="string">pod</span></span><br><span class="line">                <span class="comment"># only scrape data from pods running on the same node as collector</span></span><br><span class="line">                <span class="attr">field:</span> <span class="string">&quot;spec.nodeName=$KUBE_NODE_NAME&quot;</span></span><br><span class="line">            <span class="attr">relabel_configs:</span></span><br><span class="line">            <span class="comment"># scrape pods annotated with &quot;prometheus.io/scrape: true&quot;</span></span><br><span class="line">            <span class="bullet">-</span> <span class="attr">source_labels:</span> [<span class="string">__meta_kubernetes_pod_annotation_prometheus_io_scrape</span>]</span><br><span class="line">              <span class="attr">regex:</span> <span class="string">&quot;true&quot;</span></span><br><span class="line">              <span class="attr">action:</span> <span class="string">keep</span></span><br><span class="line">            <span class="bullet">-</span> <span class="attr">source_labels:</span> [<span class="string">__address__</span>, <span class="string">__meta_kubernetes_pod_annotation_prometheus_io_port</span>]</span><br><span class="line">              <span class="attr">action:</span> <span class="string">replace</span></span><br><span class="line">              <span class="attr">target_label:</span> <span class="string">__address__</span></span><br><span class="line">              <span class="attr">regex:</span> <span class="string">([^:]+)(?::\d+)?;(\d+)</span></span><br><span class="line">              <span class="comment"># escaped $1:$2</span></span><br><span class="line">              <span class="attr">replacement:</span> <span class="string">$$1:$$2</span></span><br><span class="line">    </span><br><span class="line">    <span class="attr">exporters:</span></span><br><span class="line">      <span class="attr">prometheus:</span></span><br><span class="line">        <span class="attr">endpoint:</span> <span class="string">&quot;0.0.0.0:8889&quot;</span>  <span class="comment"># 8889端口用于collector以prometheus的格式保存metrics数据</span></span><br><span class="line">        <span class="attr">namespace:</span> <span class="string">otel</span></span><br><span class="line">        <span class="attr">const_labels:</span></span><br><span class="line">          <span class="attr">app_env:</span> <span class="string">test</span>   <span class="comment"># 给所有的metrics数据添加静态labels.</span></span><br><span class="line">        <span class="attr">resource_to_telemetry_conversion:</span> <span class="comment"># 开启将collector中所有的resource labels转换成metrics中的labels</span></span><br><span class="line">          <span class="attr">enabled:</span> <span class="literal">true</span></span><br><span class="line">    </span><br><span class="line">      <span class="attr">jaeger:</span></span><br><span class="line">        <span class="attr">endpoint:</span> <span class="number">10.4</span><span class="string">.xx.xx:14250</span> <span class="comment"># 指定jaeger的IP+Port</span></span><br><span class="line">        <span class="attr">tls:</span></span><br><span class="line">          <span class="attr">insecure:</span> <span class="literal">true</span></span><br><span class="line">      <span class="attr">logging:</span></span><br><span class="line">        <span class="attr">loglevel:</span> <span class="string">debug</span>  <span class="comment"># 开启 collector 的debug日志</span></span><br><span class="line">    </span><br><span class="line">    <span class="attr">processors:</span></span><br><span class="line">      <span class="attr">k8s_tagger:</span></span><br><span class="line">      <span class="attr">k8s_tagger/2:</span></span><br><span class="line">        <span class="attr">passthrough:</span> <span class="literal">false</span></span><br><span class="line">        <span class="attr">extract:</span></span><br><span class="line">          <span class="attr">metadata:</span></span><br><span class="line">            <span class="bullet">-</span> <span class="string">k8s.pod.name</span></span><br><span class="line">            <span class="bullet">-</span> <span class="string">k8s.deployment.name</span></span><br><span class="line">            <span class="bullet">-</span> <span class="string">k8s.namespace.name</span></span><br><span class="line">            <span class="bullet">-</span> <span class="string">k8s.node.name</span></span><br><span class="line">            <span class="bullet">-</span> <span class="string">k8s.pod.start_time</span></span><br><span class="line">            <span class="bullet">-</span> <span class="string">k8s.pod.uid</span></span><br><span class="line">        <span class="attr">pod_association:</span></span><br><span class="line">          <span class="bullet">-</span> <span class="attr">from:</span> <span class="string">resource_attribute</span></span><br><span class="line">            <span class="attr">name:</span> <span class="string">ip</span></span><br><span class="line">          <span class="bullet">-</span> <span class="attr">from:</span> <span class="string">resource_attribute</span></span><br><span class="line">            <span class="attr">name:</span> <span class="string">k8s.pod.ip</span></span><br><span class="line">          <span class="bullet">-</span> <span class="attr">from:</span> <span class="string">resource_attribute</span></span><br><span class="line">            <span class="attr">name:</span> <span class="string">host.name</span></span><br><span class="line">          <span class="bullet">-</span> <span class="attr">from:</span> <span class="string">connection</span></span><br><span class="line">            <span class="attr">name:</span> <span class="string">ip</span></span><br><span class="line">          <span class="bullet">-</span> <span class="attr">from:</span> <span class="string">resource_attribute</span></span><br><span class="line">            <span class="attr">name:</span> <span class="string">k8s.pod.uid</span></span><br><span class="line">        <span class="attr">filter:</span></span><br><span class="line">          <span class="attr">node_from_env_var:</span> <span class="string">KUBE_NODE_NAME</span> <span class="comment"># 限制collector agent只收集本node的数据,与上述field保持一致</span></span><br><span class="line">    </span><br><span class="line">      <span class="attr">batch:</span></span><br><span class="line">    <span class="attr">extensions:</span></span><br><span class="line">      <span class="attr">zpages:</span> &#123;&#125;</span><br><span class="line">    <span class="attr">service:</span> <span class="comment"># 指定要开启的Pipeline</span></span><br><span class="line">      <span class="attr">extensions:</span> [<span class="string">zpages</span>]</span><br><span class="line">      <span class="attr">pipelines:</span></span><br><span class="line">        <span class="attr">metrics:</span></span><br><span class="line">          <span class="attr">receivers:</span> [<span class="string">otlp</span>, <span class="string">prometheus</span>]</span><br><span class="line">          <span class="attr">processors:</span> [<span class="string">k8s_tagger</span>, <span class="string">batch</span>]</span><br><span class="line">          <span class="attr">exporters:</span> [<span class="string">prometheus</span>, <span class="string">logging</span>]</span><br><span class="line">        <span class="attr">traces:</span></span><br><span class="line">          <span class="attr">receivers:</span> [<span class="string">otlp</span>]</span><br><span class="line">          <span class="attr">processors:</span> [<span class="string">k8s_tagger</span>, <span class="string">batch</span>]</span><br><span class="line">          <span class="attr">exporters:</span> [<span class="string">jaeger</span>, <span class="string">logging</span>]</span><br><span class="line"></span><br><span class="line"><span class="attr">kind:</span> <span class="string">ConfigMap</span></span><br><span class="line"><span class="attr">metadata:</span></span><br><span class="line">  <span class="attr">labels:</span></span><br><span class="line">    <span class="attr">app:</span> <span class="string">opentelemetry</span></span><br><span class="line">    <span class="attr">component:</span> <span class="string">otel-agent-conf</span></span><br><span class="line">  <span class="attr">name:</span> <span class="string">otel-agent-conf</span></span><br><span class="line">  <span class="attr">namespace:</span> <span class="string">opentelemetry</span></span><br><span class="line"></span><br></pre></td></tr></table></figure>
+
+<p>当然， 这个配置文件有点长，同时涉及的配置项也非常多，同时也需要阅读者对prometheus的ds配置有了解，这里不对所有的配置进行展开，感兴趣的可自行参考官方<a target="_blank" rel="noopener" href="https://opentelemetry.io/docs/collector/configuration/">说明</a>及<a target="_blank" rel="noopener" href="https://github.com/open-telemetry/opentelemetry-specification">opentelemetry-specification</a></p>
+<p>有几点个重要的参数说明如下:</p>
+<blockquote>
+<ul>
+<li><code>service</code>: service部分是真正的指定使用哪些pipeline, 如果没有在service里配置的，则不会起作用，相当于只有一个定义.</li>
+<li><code>node_from_env_var</code>: 由于collector是以ds的方式运行，每个实例只需要负责采集所在本机的数据即可，因此通过node_from_env_var来控制只采集本机的数据</li>
+<li><code>k8s_tagger</code>: <a target="_blank" rel="noopener" href="https://github.com/open-telemetry/opentelemetry-collector-contrib/blob/main/processor/k8sattributesprocessor/README.md">k8s_tagger</a>中的配置是给原始的metrics信息添加相关的k8s集群信息</li>
+</ul>
+</blockquote>
+<p>Collector其它文件的部署由于篇幅有限，不再贴出来，可以参考官网的<a target="_blank" rel="noopener" href="https://raw.githubusercontent.com/open-telemetry/opentelemetry-collector/main/examples/k8s/otel-config.yaml">YAML文件</a></p>
+<h3 id="应用"><a href="#应用" class="headerlink" title="应用"></a>应用</h3><p>然后Golang-client及Golang-server的部署，同样，可以用官方的<a target="_blank" rel="noopener" href="https://github.com/open-telemetry/opentelemetry-collector-contrib/blob/main/examples/demo/docker-compose.yaml">example</a>,是用docker-compose启动的，可通过<code>kompose</code>工具转换成k8s的yaml文件，这里篇幅有限就不贴出来</p>
+<p>这里简单要说明的是，官网的example中client端的代码使用的是push的方式推送metrics到prometheus，而我们将把push方式改成pull的方式来实现collector从client中拉取metrics, 然后由prometheus server从collector中拉取。</p>
+<h3 id="验证"><a href="#验证" class="headerlink" title="验证"></a>验证</h3><p>最终，在k8s集群的opentelemetry ns下会存在collector-ds、一个前端，一个后端、及一个kong api服务.</p>
+<p>接下来会从代码的角度来阐述go应用如何通过opentelemetry暴露出来的metrics及链路信息</p>
+<h3 id="参考文章"><a href="#参考文章" class="headerlink" title="参考文章:"></a>参考文章:</h3><blockquote>
+<ul>
+<li><a target="_blank" rel="noopener" href="https://codingnote.cc/p/246692">https://codingnote.cc/p/246692</a></li>
+<li><a target="_blank" rel="noopener" href="https://opentelemetry.io/docs/collector/configuration/">https://opentelemetry.io/docs/collector/configuration/</a></li>
+<li><a target="_blank" rel="noopener" href="https://github.com/open-telemetry/opentelemetry-specification">https://github.com/open-telemetry/opentelemetry-specification</a></li>
+<li><a target="_blank" rel="noopener" href="https://github.com/open-telemetry/opentelemetry-collector-contrib/blob/main/processor/k8sattributesprocessor/README.md">https://github.com/open-telemetry/opentelemetry-collector-contrib/blob/main/processor/k8sattributesprocessor/README.md</a></li>
+<li><a target="_blank" rel="noopener" href="https://raw.githubusercontent.com/open-telemetry/opentelemetry-collector/main/examples/k8s/otel-config.yaml">https://raw.githubusercontent.com/open-telemetry/opentelemetry-collector/main/examples/k8s/otel-config.yaml</a></li>
+<li><a target="_blank" rel="noopener" href="https://github.com/open-telemetry/opentelemetry-collector-contrib/blob/main/examples/demo/docker-compose.yaml">https://github.com/open-telemetry/opentelemetry-collector-contrib/blob/main/examples/demo/docker-compose.yaml</a></li>
+</ul>
+</blockquote>
+<h3 id="转载请注明出处https-izsk-me"><a href="#转载请注明出处https-izsk-me" class="headerlink" title="转载请注明出处https://izsk.me"></a><strong>转载请注明出处<a target="_blank" rel="noopener" href="https://izsk.me/">https://izsk.me</a></strong></h3>
+      
+    </div>
+
+    <div>
+      
+        
+<div id="wechat_subscriber" style="display: block; padding: 10px 0; margin: 20px auto; width: 100%; text-align: center">
+    <img id="wechat_subscriber_qcode" src="/images/websitecode250.png" alt=" wechat" style="width: 200px; max-width: 100%;"/>
+    <div>Scan Me To Read on Phone</div>
+</div>
+
+
+      
+    </div>
+
+    <div>
+      
+        
+  <div style="padding: 10px 0; margin: 20px auto; width: 90%; text-align: center;">
+    <div>I know you won't do this,but what if you did?</div>
+    <button id="rewardButton" disable="enable" onclick="var qr = document.getElementById('QR'); if (qr.style.display === 'none') {qr.style.display='block';} else {qr.style.display='none'}">
+      <span>赏</span>
+    </button>
+    <div id="QR" style="display: none;">
+      
+        <div id="wechat" style="display: inline-block">
+          <img id="wechat_qr" src="/images/wechatpayme.png" alt=" WeChat Pay"/>
+          <p>微信打赏</p>
+        </div>
+      
+      
+        <div id="alipay" style="display: inline-block">
+          <img id="alipay_qr" src="/images/alipayme.jpg" alt=" Alipay"/>
+          <p>支付宝打赏</p>
+        </div>
+      
     </div>
   </div>
 
-{% endblock %}
 
-{% block sidebar %}
-  {{ sidebar_template.render(true) }}
-{% endblock %}
+      
+    </div>
 
 
-{% block script_extra %}
-  {% include '_scripts/pages/post-details.swig' %}
-{% endblock %}
+    <footer class="post-footer">
+      
+        <div class="post-tags">
+          
+            <a href="/tags/CloudNavi/" rel="tag"># CloudNavi</a>
+          
+        </div>
+      
+
+      
+        <div class="post-nav">
+          <div class="post-nav-next post-nav-item">
+            
+              <a href="/2021/10/31/OpenTelemetry-Trace/" rel="next" title="Opentelemetry调研实践三(全链路追踪的TraceID与SpanID)">
+                <i class="fa fa-chevron-left"></i> Opentelemetry调研实践三(全链路追踪的TraceID与SpanID)
+              </a>
+            
+          </div>
+
+          <span class="post-nav-divider"></span>
+
+          <div class="post-nav-prev post-nav-item">
+            
+              <a href="/2022/01/27/Kubernetes-prombles/" rel="prev" title="Kubernetes学习(Kubernetes踩坑记)">
+                Kubernetes学习(Kubernetes踩坑记) <i class="fa fa-chevron-right"></i>
+              </a>
+            
+          </div>
+        </div>
+      
+
+      
+      
+    </footer>
+  </article>
+
+
+
+    <div class="post-spread">
+      
+    </div>
+  </div>
+
+
+          </div>
+          
+
+
+          
+  <div class="comments" id="comments">
+    
+  </div>
+
+
+        </div>
+        
+          
+  
+  <div class="sidebar-toggle">
+    <div class="sidebar-toggle-line-wrap">
+      <span class="sidebar-toggle-line sidebar-toggle-line-first"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-middle"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-last"></span>
+    </div>
+  </div>
+
+  <aside id="sidebar" class="sidebar">
+    <div class="sidebar-inner">
+
+      
+
+      
+        <ul class="sidebar-nav motion-element">
+          <li class="sidebar-nav-toc sidebar-nav-active" data-target="post-toc-wrap" >
+            文章目录
+          </li>
+          <li class="sidebar-nav-overview" data-target="site-overview">
+            站点概览
+          </li>
+        </ul>
+      
+
+      <section class="site-overview sidebar-panel">
+        <div class="site-author motion-element" itemprop="author" itemscope itemtype="http://schema.org/Person">
+          <img class="site-author-image" itemprop="image"
+               src="/images/avatar.gif"
+               alt="" />
+          <p class="site-author-name" itemprop="name"></p>
+          <p class="site-description motion-element" itemprop="description"></p>
+        </div>
+        <nav class="site-state motion-element">
+        
+          
+            <div class="site-state-item site-state-posts">
+              <a href="/archives">
+                <span class="site-state-item-count">192</span>
+                <span class="site-state-item-name">日志</span>
+              </a>
+            </div>
+          
+
+          
+            <div class="site-state-item site-state-categories">
+              <a href="/categories">
+                <span class="site-state-item-count">14</span>
+                <span class="site-state-item-name">分类</span>
+              </a>
+            </div>
+          
+
+          
+            <div class="site-state-item site-state-tags">
+              <a href="/tags">
+                <span class="site-state-item-count">14</span>
+                <span class="site-state-item-name">标签</span>
+              </a>
+            </div>
+          
+
+        </nav>
+
+        
+
+        <div class="links-of-author motion-element">
+          
+        </div>
+
+        
+        
+
+        
+        
+
+        
+
+
+      </section>
+
+      
+      <!--noindex-->
+        <section class="post-toc-wrap motion-element sidebar-panel sidebar-panel-active">
+          <div class="post-toc">
+
+            
+              
+            
+
+            
+              <div class="post-toc-content"><ol class="nav"><li class="nav-item nav-level-3"><a class="nav-link" href="#%E5%8E%86%E5%8F%B2%E6%96%87%E7%AB%A0"><span class="nav-number">1.</span> <span class="nav-text">历史文章:</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E9%93%BE%E8%B7%AF"><span class="nav-number">2.</span> <span class="nav-text">链路</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E8%AF%B4%E6%98%8E"><span class="nav-number">3.</span> <span class="nav-text">说明</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E9%83%A8%E7%BD%B2"><span class="nav-number">4.</span> <span class="nav-text">部署</span></a><ol class="nav-child"><li class="nav-item nav-level-4"><a class="nav-link" href="#prometheus-x2F-jaeger"><span class="nav-number">4.1.</span> <span class="nav-text">prometheus&#x2F;jaeger</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#Collector"><span class="nav-number">4.2.</span> <span class="nav-text">Collector</span></a></li></ol></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E5%BA%94%E7%94%A8"><span class="nav-number">5.</span> <span class="nav-text">应用</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E9%AA%8C%E8%AF%81"><span class="nav-number">6.</span> <span class="nav-text">验证</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E5%8F%82%E8%80%83%E6%96%87%E7%AB%A0"><span class="nav-number">7.</span> <span class="nav-text">参考文章:</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E8%BD%AC%E8%BD%BD%E8%AF%B7%E6%B3%A8%E6%98%8E%E5%87%BA%E5%A4%84https-izsk-me"><span class="nav-number">8.</span> <span class="nav-text">转载请注明出处https:&#x2F;&#x2F;izsk.me</span></a></li></ol></div>
+            
+
+          </div>
+        </section>
+      <!--/noindex-->
+      
+
+    </div>
+  </aside>
+
+
+        
+      </div>
+    </main>
+
+    <footer id="footer" class="footer">
+      <div class="footer-inner">
+        <div class="copyright" >
+  
+  &copy; 
+  <span itemprop="copyrightYear">2022</span>
+  <span class="with-love">
+    <i class="fa fa-heart"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">Z.S.K.</span>
+</div>
+
+
+<div class="powered-by">
+  Supported by <a class="theme-link" target="_blank" rel="noopener" href="https://hexo.io">Hexo</a>
+</div>
+
+<div class="theme-info">
+  Theme -
+  <a class="theme-link" target="_blank" rel="noopener" href="https://github.com/iissnan/hexo-theme-next">
+    NexT.Mist
+  </a>
+</div>
+
+
+        
+
+        
+      </div>
+    </footer>
+
+    <div class="back-to-top">
+      <i class="fa fa-arrow-up"></i>
+    </div>
+  </div>
+
+  
+
+<script type="text/javascript">
+  if (Object.prototype.toString.call(window.Promise) !== '[object Function]') {
+    window.Promise = null;
+  }
+</script>
+
+
+
+
+
+
+
+
+
+  
+
+
+
+  
+  <script type="text/javascript" src="/lib/jquery/index.js?v=2.1.3"></script>
+
+  
+  <script type="text/javascript" src="/lib/fastclick/lib/fastclick.min.js?v=1.0.6"></script>
+
+  
+  <script type="text/javascript" src="/lib/jquery_lazyload/jquery.lazyload.js?v=1.9.7"></script>
+
+  
+  <script type="text/javascript" src="/lib/velocity/velocity.min.js?v=1.2.1"></script>
+
+  
+  <script type="text/javascript" src="/lib/velocity/velocity.ui.min.js?v=1.2.1"></script>
+
+  
+  <script type="text/javascript" src="/lib/fancybox/source/jquery.fancybox.pack.js?v=2.1.5"></script>
+
+
+  
+
+
+  <script type="text/javascript" src="/js/src/utils.js?v=5.1.0"></script>
+
+  <script type="text/javascript" src="/js/src/motion.js?v=5.1.0"></script>
+
+
+
+  
+  
+
+  
+  <script type="text/javascript" src="/js/src/scrollspy.js?v=5.1.0"></script>
+<script type="text/javascript" src="/js/src/post-details.js?v=5.1.0"></script>
+
+
+
+  
+
+
+  <script type="text/javascript" src="/js/src/bootstrap.js?v=5.1.0"></script>
+
+
+
+  
+
+
+
+  
+
+
+
+
+	
+
+
+
+
+
+  
+
+
+
+
+  
+  
+  <script type="text/javascript">
+    // Popup Window;
+    var isfetched = false;
+    // Search DB path;
+    var search_path = "search.xml";
+    if (search_path.length == 0) {
+      search_path = "search.xml";
+    }
+    var path = "/" + search_path;
+    // monitor main search box;
+
+    function proceedsearch() {
+      $("body").append('<div class="popoverlay">').css('overflow', 'hidden');
+      $('.popup').toggle();
+    }
+    // search function;
+    var searchFunc = function(path, search_id, content_id) {
+      'use strict';
+      $.ajax({
+        url: path,
+        dataType: "xml",
+        async: true,
+        success: function( xmlResponse ) {
+          // get the contents from search data
+          isfetched = true;
+          $('.popup').detach().appendTo('.header-inner');
+          var datas = $( "entry", xmlResponse ).map(function() {
+            return {
+              title: $( "title", this ).text(),
+              content: $("content",this).text(),
+              url: $( "url" , this).text()
+            };
+          }).get();
+          var $input = document.getElementById(search_id);
+          var $resultContent = document.getElementById(content_id);
+          $input.addEventListener('input', function(){
+            var matchcounts = 0;
+            var str='<ul class=\"search-result-list\">';
+            var keywords = this.value.trim().toLowerCase().split(/[\s\-]+/);
+            $resultContent.innerHTML = "";
+            if (this.value.trim().length > 1) {
+              // perform local searching
+              datas.forEach(function(data) {
+                var isMatch = false;
+                var content_index = [];
+                var data_title = data.title.trim().toLowerCase();
+                var data_content = data.content.trim().replace(/<[^>]+>/g,"").toLowerCase();
+                var data_url = decodeURIComponent(data.url);
+                var index_title = -1;
+                var index_content = -1;
+                var first_occur = -1;
+                // only match artiles with not empty titles and contents
+                if(data_title != '') {
+                  keywords.forEach(function(keyword, i) {
+                    index_title = data_title.indexOf(keyword);
+                    index_content = data_content.indexOf(keyword);
+                    if( index_title >= 0 || index_content >= 0 ){
+                      isMatch = true;
+                      if (i == 0) {
+                        first_occur = index_content;
+                      }
+                    }
+
+                  });
+                }
+                // show search results
+                if (isMatch) {
+                  matchcounts += 1;
+                  str += "<li><a href='"+ data_url +"' class='search-result-title'>"+ data_title +"</a>";
+                  var content = data.content.trim().replace(/<[^>]+>/g,"");
+                  if (first_occur >= 0) {
+                    // cut out 100 characters
+                    var start = first_occur - 20;
+                    var end = first_occur + 80;
+                    if(start < 0){
+                      start = 0;
+                    }
+                    if(start == 0){
+                      end = 50;
+                    }
+                    if(end > content.length){
+                      end = content.length;
+                    }
+                    var match_content = content.substring(start, end);
+                    // highlight all keywords
+                    keywords.forEach(function(keyword){
+                      var regS = new RegExp(keyword, "gi");
+                      match_content = match_content.replace(regS, "<b class=\"search-keyword\">"+keyword+"</b>");
+                    });
+
+                    str += "<p class=\"search-result\">" + match_content +"...</p>"
+                  }
+                  str += "</li>";
+                }
+              })};
+            str += "</ul>";
+            if (matchcounts == 0) { str = '<div id="no-result"><i class="fa fa-frown-o fa-5x" /></div>' }
+            if (keywords == "") { str = '<div id="no-result"><i class="fa fa-search fa-5x" /></div>' }
+            $resultContent.innerHTML = str;
+          });
+          proceedsearch();
+        }
+      });}
+
+    // handle and trigger popup window;
+    $('.popup-trigger').click(function(e) {
+      e.stopPropagation();
+      if (isfetched == false) {
+        searchFunc(path, 'local-search-input', 'local-search-result');
+      } else {
+        proceedsearch();
+      };
+    });
+
+    $('.popup-btn-close').click(function(e){
+      $('.popup').hide();
+      $(".popoverlay").remove();
+      $('body').css('overflow', '');
+    });
+    $('.popup').click(function(e){
+      e.stopPropagation();
+    });
+  </script>
+
+
+  
+
+  
+
+  
+
+  
+
+
+</body>
+</html>

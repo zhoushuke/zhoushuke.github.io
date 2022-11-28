@@ -1,38 +1,946 @@
-{% extends '_layout.swig' %}
-{% import '_macro/post.swig' as post_template %}
-{% import '_macro/sidebar.swig' as sidebar_template %}
+<!doctype html>
 
 
-{% block title %} {{ page.title }} | {{ config.title }} {% endblock %}
 
-{% block page_class %}page-post-detail{% endblock %}
+  
 
 
-{% block content %}
+<html class="theme-next mist use-motion" lang="zh-Hans">
+<head>
+  <meta charset="UTF-8"/>
+<meta http-equiv="X-UA-Compatible" content="IE=edge" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1"/>
+
+
+
+<meta http-equiv="Cache-Control" content="no-transform" />
+<meta http-equiv="Cache-Control" content="no-siteapp" />
+
+
+
+
+
+
+
+
+
+
+
+
+  
+  
+  <link href="/lib/fancybox/source/jquery.fancybox.css?v=2.1.5" rel="stylesheet" type="text/css" />
+
+
+
+
+  
+  
+  
+  
+
+  
+    
+    
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+    
+    
+    <link href="//fonts.googleapis.com/css?family=Lato:300,300italic,400,400italic,700,700italic&subset=latin,latin-ext" rel="stylesheet" type="text/css">
+  
+
+
+
+
+
+
+<link href="/lib/font-awesome/css/font-awesome.min.css?v=4.6.2" rel="stylesheet" type="text/css" />
+
+<link href="/css/main.css?v=5.1.0" rel="stylesheet" type="text/css" />
+
+
+  <meta name="keywords" content="Kubernetes," />
+
+
+
+
+
+
+
+
+  <link rel="shortcut icon" type="image/x-icon" href="/favicon.ico?v=5.1.0" />
+
+
+
+
+
+
+<meta name="description" content="任何能够被描述的内容都必须存储在Git库中 这个GitOps的理念, 今天来践行一下，不借助其它devops平台, 看看是不是能够实现工具闭环">
+<meta property="og:type" content="article">
+<meta property="og:title" content="Gitlab学习(GitOps的最简实践)">
+<meta property="og:url" content="https://zhoushuke.github.io/2020/07/05/gitlab-GitOps-pratice/index.html">
+<meta property="og:site_name" content="Z.S.K.&#39;s Records">
+<meta property="og:description" content="任何能够被描述的内容都必须存储在Git库中 这个GitOps的理念, 今天来践行一下，不借助其它devops平台, 看看是不是能够实现工具闭环">
+<meta property="og:locale">
+<meta property="og:image" content="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20200701110947.png">
+<meta property="og:image" content="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20200703104637.png">
+<meta property="article:published_time" content="2020-07-05T05:30:53.000Z">
+<meta property="article:modified_time" content="2022-07-19T03:16:00.962Z">
+<meta property="article:author" content="Z.S.K.">
+<meta property="article:tag" content="Kubernetes">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:image" content="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20200701110947.png">
+
+
+
+<script type="text/javascript" id="hexo.configurations">
+  var NexT = window.NexT || {};
+  var CONFIG = {
+    root: '',
+    scheme: 'Mist',
+    sidebar: {"position":"left","display":"post"},
+    fancybox: true,
+    motion: true,
+    duoshuo: {
+      userId: 'undefined',
+      author: '博主'
+    },
+    algolia: {
+      applicationID: '',
+      apiKey: '',
+      indexName: '',
+      hits: {"per_page":10},
+      labels: {"input_placeholder":"Search for Posts","hits_empty":"We didn't find any results for the search: ${query}","hits_stats":"${hits} results found in ${time} ms"}
+    }
+  };
+</script>
+
+
+
+  <link rel="canonical" href="https://zhoushuke.github.io/2020/07/05/gitlab-GitOps-pratice/"/>
+
+
+
+
+
+  <title> Gitlab学习(GitOps的最简实践) | Z.S.K.'s Records </title>
+<meta name="generator" content="Hexo 6.2.0"></head>
+
+<body itemscope itemtype="http://schema.org/WebPage" lang="zh-Hans">
+
+  
+
+
+
+
+
+
+
+
+
+
+  
+  
+    
+  
+
+  <div class="container one-collumn sidebar-position-left page-post-detail ">
+    <div class="headband"></div>
+
+    <header id="header" class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-meta ">
+  
+
+  <div class="custom-logo-site-title">
+    <a href="/"  class="brand" rel="start">
+      <span class="logo-line-before"><i></i></span>
+      <span class="site-title">Z.S.K.'s Records</span>
+      <span class="logo-line-after"><i></i></span>
+    </a>
+  </div>
+    
+      <p class="site-subtitle"></p>
+    
+</div>
+
+<div class="site-nav-toggle">
+  <button>
+    <span class="btn-bar"></span>
+    <span class="btn-bar"></span>
+    <span class="btn-bar"></span>
+  </button>
+</div>
+
+<nav class="site-nav">
+  
+
+  
+    <ul id="menu" class="menu">
+      
+        
+        <li class="menu-item menu-item-home">
+          <a href="/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-home"></i> <br />
+            
+            首页
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-categories">
+          <a href="/categories" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-th"></i> <br />
+            
+            分类
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-about">
+          <a href="/about/ZSK-Profile.pdf" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-user"></i> <br />
+            
+            简历
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-archives">
+          <a href="/archives" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-archive"></i> <br />
+            
+            归档
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-tags">
+          <a href="/tags" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-tags"></i> <br />
+            
+            标签
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-commonweal">
+          <a href="/404.html" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-heartbeat"></i> <br />
+            
+            公益404
+          </a>
+        </li>
+      
+
+      
+        <li class="menu-item menu-item-search">
+          
+            <a href="javascript:;" class="popup-trigger">
+          
+            
+              <i class="menu-item-icon fa fa-search fa-fw"></i> <br />
+            
+            搜索
+          </a>
+        </li>
+      
+    </ul>
+  
+
+  
+    <div class="site-search">
+      
+  <div class="popup">
+ <span class="search-icon fa fa-search"></span>
+ <input type="text" id="local-search-input">
+ <div id="local-search-result"></div>
+ <span class="popup-btn-close">close</span>
+</div>
+
+
+    </div>
+  
+</nav>
+
+
+
+ </div>
+    </header>
+
+    <main id="main" class="main">
+      <div class="main-inner">
+        <div class="content-wrap">
+          <div id="content" class="content">
+            
 
   <div id="posts" class="posts-expand">
-    {{ post_template.render(page) }}
+    
 
-    <div class="post-spread">
-      {% if theme.jiathis %}
-        {% include '_partials/share/jiathis.swig' %}
-      {% elseif theme.baidushare %}
-        {% include '_partials/share/baidushare.swig' %}
-      {% elseif theme.add_this_id %}
-        {% include '_partials/share/add-this.swig' %}
-      {% elseif theme.duoshuo_shortname and theme.duoshuo_share %}
-        {% include '_partials/share/duoshuo_share.swig' %}
-      {% endif %}
+  
+
+  
+  
+  
+
+  <article class="post post-type-normal " itemscope itemtype="http://schema.org/Article">
+  <link itemprop="mainEntityOfPage" href="https://zhoushuke.github.io/2020/07/05/gitlab-GitOps-pratice/">
+
+  <span style="display:none" itemprop="author" itemscope itemtype="http://schema.org/Person">
+    <meta itemprop="name" content="">
+    <meta itemprop="description" content="">
+    <meta itemprop="image" content="/images/avatar.gif">
+  </span>
+
+  <span style="display:none" itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+    <meta itemprop="name" content="Z.S.K.'s Records">
+    <span style="display:none" itemprop="logo" itemscope itemtype="http://schema.org/ImageObject">
+      <img style="display:none;" itemprop="url image" alt="Z.S.K.'s Records" src="">
+    </span>
+  </span>
+
+    
+      <header class="post-header">
+
+        
+        
+          <h1 class="post-title" itemprop="name headline">
+            
+            
+              
+                Gitlab学习(GitOps的最简实践)
+              
+            
+          </h1>
+        
+
+        <div class="post-meta">
+          <span class="post-time">
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">发表于</span>
+              
+              <time title="Post created" itemprop="dateCreated datePublished" datetime="2020-07-05T13:30:53+08:00">
+                2020-07-05
+              </time>
+            
+
+            
+
+            
+          </span>
+
+          
+            <span class="post-category" >
+            
+              <span class="post-meta-divider">|</span>
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-folder-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">分类于</span>
+              
+              
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/Gitlab/" itemprop="url" rel="index">
+                    <span itemprop="name">Gitlab</span>
+                  </a>
+                </span>
+
+                
+                
+              
+            </span>
+          
+
+          
+            
+          
+
+          
+
+          
+          
+
+          
+
+          
+
+        </div>
+      </header>
+    
+
+
+    <div class="post-body" itemprop="articleBody">
+
+      
+      
+
+      
+        <p><code>任何能够被描述的内容都必须存储在Git库中</code> 这个GitOps的理念, 今天来践行一下，不借助其它devops平台, 看看是不是能够实现工具闭环</p>
+<span id="more"></span>
+
+
+
+<p>Git是GitOps形成的最基础的内容，就像第一条原则“任何能够被描述的内容都必须存储在Git库中 ”描述的那样：通过使用Git作为存储声明性基础架构和应用程序代码的存储仓库，可以方便地监控集群，以及检查比较实际环境的状态与代码库上的状态是否一致。所以，<strong>我们的目标是描述系统相关的所有内容：策略，代码，配置，甚至监控事件和版本控制等</strong>，并且将这些内容全部存储在版本库中，在通过版本库中的内容构建系统的基础架构或者应用程序的时候，如果没有成功，则可以迅速的回滚，并且重新来过</p>
+<p>当然如果团队内有自己的devops平台的话,那其实就没必要接着看了，这篇post主要给大家一种思路，如何借助已有的工具来实现端到端的CI&#x2F;CD, 只适合于团队较小，没有多余的资源来开发自己的平台的场景.</p>
+<h3 id="开源工具"><a href="#开源工具" class="headerlink" title="开源工具"></a>开源工具</h3><p>以下3个开源工具, 不在这里介绍, 大家可参考相应的连接</p>
+<h4 id="kustomize"><a href="#kustomize" class="headerlink" title="kustomize"></a>kustomize</h4><p>kustomize是kubernetes官方推荐的声明式配置形式</p>
+<p><a target="_blank" rel="noopener" href="https://izsk.me/2020/07/01/Kubernetes-kustomize/">https://izsk.me/2020/07/01/Kubernetes-kustomize/</a></p>
+<h4 id="sealed-secrets"><a href="#sealed-secrets" class="headerlink" title="sealed-secrets"></a>sealed-secrets</h4><p>sealed-secrets主要提供可以在git上以密文的形式存储敏感数据, 当发布到k8s集群时用私钥进行解密,解密之后就变成了正常的secret文件.</p>
+<p><a target="_blank" rel="noopener" href="https://izsk.me/2020/06/24/Kubernetes-sealed-secrets/">https://izsk.me/2020/06/24/Kubernetes-sealed-secrets/</a></p>
+<h4 id="configmapsecret"><a href="#configmapsecret" class="headerlink" title="configmapsecret"></a>configmapsecret</h4><p>kubernetes官方是不支持在configmap中直接引用secret中的内容, 因此configmapsecret主要用于在配置中引用secret或者是configmap中的内容</p>
+<p><a target="_blank" rel="noopener" href="https://izsk.me/2020/06/28/Kubernetes-configmap-reference-var-from-secret/">https://izsk.me/2020/06/28/Kubernetes-configmap-reference-var-from-secret/</a></p>
+<h3 id="Demo实践"><a href="#Demo实践" class="headerlink" title="Demo实践"></a>Demo实践</h3><p>这个demo用于实践以下功能:</p>
+<ol>
+<li>使用配置端到端的、使用kubernetes推荐的声明式配置管理的方式(kustomize)</li>
+<li>敏感的密码之类的数据在git源文件中进行脱敏处理(sealed-secrets)</li>
+<li>结合gitlab的ci&#x2F;cd方式完成多环境部署</li>
+</ol>
+<p>到这一步默认在集群中已安装了以上的开源库.</p>
+<h4 id="目录结构"><a href="#目录结构" class="headerlink" title="目录结构"></a>目录结构</h4><figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br></pre></td><td class="code"><pre><span class="line">app-kustomize</span><br><span class="line">	<span class="comment"># ... 这里省略其它的代码文件</span></span><br><span class="line">	deploy</span><br><span class="line">		base</span><br><span class="line">			config.yaml</span><br><span class="line">			deployment.yaml</span><br><span class="line">			service.yaml</span><br><span class="line">			kustomization.yaml </span><br><span class="line">		overlay</span><br><span class="line">			1box</span><br><span class="line">			  patch-deployment.yaml</span><br><span class="line">				kustomization.yaml</span><br><span class="line">			prod</span><br><span class="line">			  patch-deployment.yaml</span><br><span class="line">				kustomization.yaml</span><br></pre></td></tr></table></figure>
+
+<p>以上文件的具体内容大家可参考这篇<a href="">post</a></p>
+<h4 id="数据加密"><a href="#数据加密" class="headerlink" title="数据加密"></a>数据加密</h4><p>业务中敏感的数据其实不会很多，大多都是k-v的形式，比如mysql的密码，token等，既然要在git上存储这些数据，那自然是要进行脱敏才放心, 以最小的知情范围存在</p>
+<p>可以把敏感的数据都放在一个配置文件中，类似下面的形式，怎么简单怎么来</p>
+<p><code>cat senserealty-secret-data.yaml</code></p>
+<figure class="highlight yaml"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line"><span class="attr">mongodb_password:</span> <span class="string">mysql1234</span></span><br><span class="line"><span class="attr">redis_password:</span> <span class="string">abcdefg</span></span><br><span class="line"><span class="attr">redis_port:</span> <span class="number">6379</span></span><br><span class="line"><span class="string">...</span></span><br></pre></td></tr></table></figure>
+
+<p>然后通过<code>sealed-secrets</code>进行加密，发布到集群中, 如何操作, 请参考上面的链接.</p>
+<p>发布到集群后会发现已经生成了一个secret文件, senserealty-secret-data用于存储敏感信息</p>
+<p><img src="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20200701110947.png"></p>
+<p>那在配置文件中就可以通过<code>configmapsecret</code>直接引用这些数据了</p>
+<h3 id="Kustomize"><a href="#Kustomize" class="headerlink" title="Kustomize"></a>Kustomize</h3><p>通过使用kustomize来组织所有需要发布到集群中的文件, 是非常方便的, 特别是应对多套环境的时候,通过派生的形式来生成配置，大大减少维护成本. </p>
+<p>如何使用请参考上面的链接</p>
+<h3 id="CI-x2F-CD"><a href="#CI-x2F-CD" class="headerlink" title="CI&#x2F;CD"></a>CI&#x2F;CD</h3><p>使用gitlab自带的CI&#x2F;CD工具同样可以实现很不错的效果, 只需要为其搭建一个k8s集群做为Runner即可, 很大一部分都会围绕gitlab-ci.yaml文件展开, gitlab实现了自己的语法, 拓展性非常强, <a target="_blank" rel="noopener" href="https://izsk.me/2020/05/15/gitlab-kubernetes-multi-environment-deploy/">参考</a></p>
+<p>这里给一个参考</p>
+<figure class="highlight yaml"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br></pre></td><td class="code"><pre><span class="line"><span class="attr">image:</span> <span class="string">ubuntu:latest</span> <span class="comment"># Pipeline中各个步骤阶段的构建镜像没有指定时，默认使用这里指定的镜像</span></span><br><span class="line"></span><br><span class="line"><span class="comment"># 全局配置</span></span><br><span class="line"><span class="attr">workflow:</span></span><br><span class="line">  <span class="attr">rules:</span></span><br><span class="line">    <span class="bullet">-</span> <span class="attr">if:</span> <span class="string">$CI_MERGE_REQUEST_ID</span></span><br><span class="line">      <span class="attr">when:</span> <span class="string">never</span></span><br><span class="line">    <span class="bullet">-</span> <span class="attr">when:</span> <span class="string">always</span></span><br><span class="line">      </span><br><span class="line"><span class="attr">stages:</span></span><br><span class="line">  <span class="bullet">-</span> <span class="string">makebinary</span></span><br><span class="line">  <span class="bullet">-</span> <span class="string">buildpush</span></span><br><span class="line">  <span class="bullet">-</span> <span class="string">updateconfig1box</span></span><br><span class="line">  <span class="bullet">-</span> <span class="string">deploy1box</span></span><br><span class="line"></span><br><span class="line"><span class="attr">variables:</span></span><br><span class="line"><span class="comment"># 省略 ...</span></span><br><span class="line"></span><br><span class="line"><span class="string">.k8supdateconfig:</span> <span class="meta">&amp;k8supdateconfig</span></span><br><span class="line">  <span class="bullet">-</span> <span class="string">&quot;[ ! -f $&#123;CONFIGPATH&#125; ] &amp;&amp; (echo &#x27;config file NOT FOUND&#x27; &amp;&amp; exit 1)&quot;</span></span><br><span class="line">  <span class="bullet">-</span> <span class="string">kubectl</span> <span class="string">apply</span> <span class="string">-f</span> <span class="string">config.yaml</span> <span class="string">-n</span> <span class="string">$&#123;KUBERNETES_NS&#125;</span></span><br><span class="line">  <span class="bullet">-</span> <span class="string">&quot;kubectl patch deployment $&#123;APP&#125; -n $&#123;KUBERNETES_NS&#125; -p &#x27;&#123;\&quot;spec\&quot;: &#123;\&quot;template\&quot;: &#123;\&quot;metadata\&quot;: &#123;\&quot;annotations\&quot;: &#123;\&quot;com.xxx.configmap/hash\&quot;: \&quot;&#x27;$(date +%s)&#x27;\&quot;&#125;&#125;&#125;&#125;&#125;&#x27;&quot;</span></span><br><span class="line"></span><br><span class="line"><span class="string">.k8srolloutupgrade:</span> <span class="meta">&amp;k8srolloutupgrade</span></span><br><span class="line">  <span class="bullet">-</span> <span class="string">kustomize</span> <span class="string">edit</span> <span class="string">set</span> <span class="string">image</span> <span class="string">a/b:c=$&#123;REGISTRY_ADDR&#125;/$&#123;PUSH_REPO&#125;/$&#123;BINARY_NAME&#125;:$&#123;DEPLOY_VERSION&#125;</span></span><br><span class="line">  <span class="bullet">-</span> <span class="string">kustomize</span> <span class="string">build</span> <span class="string">.</span> <span class="string">|</span> <span class="string">kubectl</span> <span class="string">apply</span> <span class="string">-f</span> <span class="bullet">-</span> <span class="string">--record</span></span><br><span class="line"><span class="comment"># 省略 ...</span></span><br></pre></td></tr></table></figure>
+
+<p><strong>对于只修改配置文件的场景, 由于业务上不想升级一个版本, 因此通过给pod打一个<code>annotation</code>来实现pod的重启.</strong></p>
+<h3 id="验证"><a href="#验证" class="headerlink" title="验证"></a>验证</h3><p>进入到容器的<code>/etc/config/config.yml</code>目录会看到生成了两个配置文件，且敏感信息已经被解密成明文.</p>
+<p><img src="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20200703104637.png"></p>
+<p>其实还有一种情况: 业务中可能很多的应用都会连接mysql, 那么, 当需要修改mysql的账号时, 还需要一个一个地去只需要这些应用的参数然后重启, 一次还好, 如何碰到安全部门定时修改的要求时更苦逼, 这其实是可以优化的</p>
+<p>通过上面的方式, 其它应用都引用的<code>senserealty-secret-data</code>这个secret里的内容, 那只需要修改这一个文件，重新发布一下即可</p>
+<p>应用通过watch的方式来监听该文件的变动，一有变动自动重启即可, 这个其实也有开源工具: <a target="_blank" rel="noopener" href="https://izsk.me/2020/05/10/Kubernetes-deploy-hot-reload-when-configmap-update/">reloader</a>，有兴趣的可以参考一下</p>
+<p>这种方式本人已经在生产环境中得到了验证，非常实用.</p>
+<p>当然上面的例子中只是使用了几种最常用的配置, 其实完全可以将其它的资源对象以声明式的形式保存在git中</p>
+<p>就像GitOps推荐的一样:<strong>任何能够被描述的内容都必须存储在Git库中</strong></p>
+<p>目前有很多的开源库可以直接实现以上功能, 比如Flux，能够同步git的变更直接发布到集群中. 功能上更强大. 感兴趣的可以参考</p>
+<h3 id="问题"><a href="#问题" class="headerlink" title="问题"></a>问题</h3><ol>
+<li><code>kubectl apply -k </code> 出现<code>error: rawResources failed to read Resources</code></li>
+</ol>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">error: rawResources failed to <span class="built_in">read</span> Resources: Load from path ../../base/ failed: <span class="string">&#x27;../../base/&#x27;</span> must be a file (got d=<span class="string">&#x27;/Users/zhoushuke/git_uni/gitlab.bj.sensetime.com/gitlabci-golang-demo/deploy/base&#x27;</span>)</span><br></pre></td></tr></table></figure>
+
+<p>出现这种情况是因为<code>kustomize</code>与<code>kubectl apply -k</code> 版本不匹配， 可以使用<code>kustomiz build . | kubectl apply -f -</code></p>
+<p>另外一个情况下, <code>bases</code>已经在kustomize v2.1.0+ 版本中给去掉了,高版本的会直接将<code>bases</code>转换成<code>resources</code>，这个可以从渲染后的kustomization.yaml中看出</p>
+<ol start="2">
+<li><p>patch时到底是覆盖还是新增</p>
+<p><code>cat base/deployment</code></p>
+<figure class="highlight yaml"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># ... 省略</span></span><br><span class="line">      <span class="attr">containers:</span></span><br><span class="line">        <span class="attr">name:</span> <span class="string">p-expoter</span></span><br><span class="line">        <span class="attr">volumeMounts:</span></span><br><span class="line">        <span class="bullet">-</span> <span class="attr">mountPath:</span> <span class="string">&quot;/etc/config/config.yml&quot;</span></span><br><span class="line">          <span class="attr">name:</span> <span class="string">demo-config</span></span><br><span class="line">          <span class="attr">readOnly:</span> <span class="literal">true</span></span><br><span class="line">          <span class="attr">subPath:</span> <span class="string">config.yml</span></span><br><span class="line">      <span class="attr">volumes:</span></span><br><span class="line">      <span class="bullet">-</span> <span class="attr">secret:</span></span><br><span class="line">          <span class="attr">items:</span></span><br><span class="line">          <span class="bullet">-</span> <span class="attr">key:</span> <span class="string">alertmanager.yaml</span></span><br><span class="line">            <span class="attr">path:</span> <span class="string">config.yml</span></span><br><span class="line">          <span class="attr">secretName:</span> <span class="string">p-expoter-senserealty-cms</span></span><br><span class="line">        <span class="attr">name:</span> <span class="string">demo-config</span></span><br></pre></td></tr></table></figure>
+
+<p><code>cat overlay/1box/patch-deploy.yaml</code></p>
+<figure class="highlight yaml"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># ... 省略</span></span><br><span class="line">      <span class="attr">containers:</span></span><br><span class="line">        <span class="attr">name:</span> <span class="string">p-expoter</span> </span><br><span class="line">        <span class="attr">volumeMounts:</span></span><br><span class="line">        <span class="bullet">-</span> <span class="attr">mountPath:</span> <span class="string">&quot;/etc/config/grafana.yml&quot;</span></span><br><span class="line">          <span class="attr">name:</span> <span class="string">demo-config</span></span><br><span class="line">          <span class="attr">readOnly:</span> <span class="literal">true</span></span><br><span class="line">          <span class="attr">subPath:</span> <span class="string">grafana.yml</span></span><br><span class="line">      <span class="attr">volumes:</span></span><br><span class="line">      <span class="bullet">-</span> <span class="attr">secret:</span></span><br><span class="line">          <span class="attr">items:</span></span><br><span class="line">          <span class="bullet">-</span> <span class="attr">key:</span> <span class="string">grafana.yaml</span></span><br><span class="line">            <span class="attr">path:</span> <span class="string">grafana.yml</span></span><br><span class="line">          <span class="attr">secretName:</span> <span class="string">p-expoter-senserealty-cms</span></span><br><span class="line">        <span class="attr">name:</span> <span class="string">demo-config</span></span><br></pre></td></tr></table></figure>
+
+<p>最终build的结果为</p>
+<figure class="highlight yaml"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># ... 省略</span></span><br><span class="line">      <span class="attr">containers:</span></span><br><span class="line">        <span class="attr">name:</span> <span class="string">p-expoter</span></span><br><span class="line">        <span class="attr">volumeMounts:</span></span><br><span class="line">        <span class="bullet">-</span> <span class="attr">mountPath:</span> <span class="string">/etc/config/grafana.yml</span></span><br><span class="line">          <span class="attr">name:</span> <span class="string">demo-config</span></span><br><span class="line">          <span class="attr">readOnly:</span> <span class="literal">true</span></span><br><span class="line">          <span class="attr">subPath:</span> <span class="string">grafana.yml</span></span><br><span class="line">        <span class="bullet">-</span> <span class="attr">mountPath:</span> <span class="string">/etc/config/config.yml</span></span><br><span class="line">          <span class="attr">name:</span> <span class="string">demo-config</span></span><br><span class="line">          <span class="attr">readOnly:</span> <span class="literal">true</span></span><br><span class="line">          <span class="attr">subPath:</span> <span class="string">config.yml</span></span><br><span class="line">      <span class="attr">volumes:</span></span><br><span class="line">      <span class="bullet">-</span> <span class="attr">name:</span> <span class="string">demo-config</span></span><br><span class="line">        <span class="attr">secret:</span></span><br><span class="line">          <span class="attr">items:</span></span><br><span class="line">          <span class="bullet">-</span> <span class="attr">key:</span> <span class="string">grafana.yaml</span></span><br><span class="line">            <span class="attr">path:</span> <span class="string">grafana.yml</span></span><br><span class="line">          <span class="attr">secretName:</span> <span class="string">p-expoter-senserealty-cms</span></span><br></pre></td></tr></table></figure>
+
+<p>可以看到 mountPath是合并了, 而volumes则是覆盖了. 这里可以使用在<code>kustomization.yaml</code>中使用<code>patch</code>或者<code>patchJson6902</code>, 参考<a target="_blank" rel="noopener" href="https://kubernetes-sigs.github.io/kustomize/api-reference/kustomization/">这里</a>,如果无法确认是合并还是覆盖, 多多使用<code>kustomize build</code>命令</p>
+<p>当然这里只是举个例子, 如果想实现叠加的话, 完全可以把base&#x2F;deployment.yaml下的volumes复制一份过来, 不用把结构搞的太复杂</p>
+</li>
+</ol>
+<h3 id="参考文章"><a href="#参考文章" class="headerlink" title="参考文章:"></a><strong>参考文章:</strong></h3><blockquote>
+<ul>
+<li><a target="_blank" rel="noopener" href="https://kubernetes-sigs.github.io/kustomize/api-reference/glossary/#generator">https://kubernetes-sigs.github.io/kustomize/api-reference/glossary/#generator</a></li>
+<li><a target="_blank" rel="noopener" href="https://blog.fleeto.us/post/crud-with-kustomize/">https://blog.fleeto.us/post/crud-with-kustomize/</a></li>
+<li><a target="_blank" rel="noopener" href="https://zhuanlan.zhihu.com/p/92153378">https://zhuanlan.zhihu.com/p/92153378</a></li>
+<li><a target="_blank" rel="noopener" href="https://izsk.me/2020/06/24/Kubernetes-sealed-secrets/">https://izsk.me/2020/06/24/Kubernetes-sealed-secrets/</a></li>
+<li><a target="_blank" rel="noopener" href="https://izsk.me/2020/06/28/Kubernetes-configmap-reference-var-from-secret/">https://izsk.me/2020/06/28/Kubernetes-configmap-reference-var-from-secret/</a></li>
+<li><a target="_blank" rel="noopener" href="https://kubernetes-sigs.github.io/kustomize/api-reference/kustomization/">https://kubernetes-sigs.github.io/kustomize/api-reference/kustomization/</a></li>
+<li><a target="_blank" rel="noopener" href="https://izsk.me/2020/05/10/Kubernetes-deploy-hot-reload-when-configmap-update/">https://izsk.me/2020/05/10/Kubernetes-deploy-hot-reload-when-configmap-update/</a></li>
+</ul>
+</blockquote>
+<h3 id="转载请注明出处https-izsk-me"><a href="#转载请注明出处https-izsk-me" class="headerlink" title="转载请注明出处https://izsk.me"></a><strong>转载请注明出处<a target="_blank" rel="noopener" href="https://izsk.me/">https://izsk.me</a></strong></h3>
+      
+    </div>
+
+    <div>
+      
+        
+<div id="wechat_subscriber" style="display: block; padding: 10px 0; margin: 20px auto; width: 100%; text-align: center">
+    <img id="wechat_subscriber_qcode" src="/images/websitecode250.png" alt=" wechat" style="width: 200px; max-width: 100%;"/>
+    <div>Scan Me To Read on Phone</div>
+</div>
+
+
+      
+    </div>
+
+    <div>
+      
+        
+  <div style="padding: 10px 0; margin: 20px auto; width: 90%; text-align: center;">
+    <div>I know you won't do this,but what if you did?</div>
+    <button id="rewardButton" disable="enable" onclick="var qr = document.getElementById('QR'); if (qr.style.display === 'none') {qr.style.display='block';} else {qr.style.display='none'}">
+      <span>赏</span>
+    </button>
+    <div id="QR" style="display: none;">
+      
+        <div id="wechat" style="display: inline-block">
+          <img id="wechat_qr" src="/images/wechatpayme.png" alt=" WeChat Pay"/>
+          <p>微信打赏</p>
+        </div>
+      
+      
+        <div id="alipay" style="display: inline-block">
+          <img id="alipay_qr" src="/images/alipayme.jpg" alt=" Alipay"/>
+          <p>支付宝打赏</p>
+        </div>
+      
     </div>
   </div>
 
-{% endblock %}
 
-{% block sidebar %}
-  {{ sidebar_template.render(true) }}
-{% endblock %}
+      
+    </div>
 
 
-{% block script_extra %}
-  {% include '_scripts/pages/post-details.swig' %}
-{% endblock %}
+    <footer class="post-footer">
+      
+        <div class="post-tags">
+          
+            <a href="/tags/Kubernetes/" rel="tag"># Kubernetes</a>
+          
+        </div>
+      
+
+      
+        <div class="post-nav">
+          <div class="post-nav-next post-nav-item">
+            
+              <a href="/2020/07/01/Kubernetes-kustomize/" rel="next" title="Kubernetes学习(使用kustomize实现不同环境的配置派生)">
+                <i class="fa fa-chevron-left"></i> Kubernetes学习(使用kustomize实现不同环境的配置派生)
+              </a>
+            
+          </div>
+
+          <span class="post-nav-divider"></span>
+
+          <div class="post-nav-prev post-nav-item">
+            
+              <a href="/2020/07/06/TCP-DEEP-LEARN/" rel="prev" title="TCP内核参数详解">
+                TCP内核参数详解 <i class="fa fa-chevron-right"></i>
+              </a>
+            
+          </div>
+        </div>
+      
+
+      
+      
+    </footer>
+  </article>
+
+
+
+    <div class="post-spread">
+      
+    </div>
+  </div>
+
+
+          </div>
+          
+
+
+          
+  <div class="comments" id="comments">
+    
+  </div>
+
+
+        </div>
+        
+          
+  
+  <div class="sidebar-toggle">
+    <div class="sidebar-toggle-line-wrap">
+      <span class="sidebar-toggle-line sidebar-toggle-line-first"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-middle"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-last"></span>
+    </div>
+  </div>
+
+  <aside id="sidebar" class="sidebar">
+    <div class="sidebar-inner">
+
+      
+
+      
+        <ul class="sidebar-nav motion-element">
+          <li class="sidebar-nav-toc sidebar-nav-active" data-target="post-toc-wrap" >
+            文章目录
+          </li>
+          <li class="sidebar-nav-overview" data-target="site-overview">
+            站点概览
+          </li>
+        </ul>
+      
+
+      <section class="site-overview sidebar-panel">
+        <div class="site-author motion-element" itemprop="author" itemscope itemtype="http://schema.org/Person">
+          <img class="site-author-image" itemprop="image"
+               src="/images/avatar.gif"
+               alt="" />
+          <p class="site-author-name" itemprop="name"></p>
+          <p class="site-description motion-element" itemprop="description"></p>
+        </div>
+        <nav class="site-state motion-element">
+        
+          
+            <div class="site-state-item site-state-posts">
+              <a href="/archives">
+                <span class="site-state-item-count">192</span>
+                <span class="site-state-item-name">日志</span>
+              </a>
+            </div>
+          
+
+          
+            <div class="site-state-item site-state-categories">
+              <a href="/categories">
+                <span class="site-state-item-count">14</span>
+                <span class="site-state-item-name">分类</span>
+              </a>
+            </div>
+          
+
+          
+            <div class="site-state-item site-state-tags">
+              <a href="/tags">
+                <span class="site-state-item-count">14</span>
+                <span class="site-state-item-name">标签</span>
+              </a>
+            </div>
+          
+
+        </nav>
+
+        
+
+        <div class="links-of-author motion-element">
+          
+        </div>
+
+        
+        
+
+        
+        
+
+        
+
+
+      </section>
+
+      
+      <!--noindex-->
+        <section class="post-toc-wrap motion-element sidebar-panel sidebar-panel-active">
+          <div class="post-toc">
+
+            
+              
+            
+
+            
+              <div class="post-toc-content"><ol class="nav"><li class="nav-item nav-level-3"><a class="nav-link" href="#%E5%BC%80%E6%BA%90%E5%B7%A5%E5%85%B7"><span class="nav-number">1.</span> <span class="nav-text">开源工具</span></a><ol class="nav-child"><li class="nav-item nav-level-4"><a class="nav-link" href="#kustomize"><span class="nav-number">1.1.</span> <span class="nav-text">kustomize</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#sealed-secrets"><span class="nav-number">1.2.</span> <span class="nav-text">sealed-secrets</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#configmapsecret"><span class="nav-number">1.3.</span> <span class="nav-text">configmapsecret</span></a></li></ol></li><li class="nav-item nav-level-3"><a class="nav-link" href="#Demo%E5%AE%9E%E8%B7%B5"><span class="nav-number">2.</span> <span class="nav-text">Demo实践</span></a><ol class="nav-child"><li class="nav-item nav-level-4"><a class="nav-link" href="#%E7%9B%AE%E5%BD%95%E7%BB%93%E6%9E%84"><span class="nav-number">2.1.</span> <span class="nav-text">目录结构</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#%E6%95%B0%E6%8D%AE%E5%8A%A0%E5%AF%86"><span class="nav-number">2.2.</span> <span class="nav-text">数据加密</span></a></li></ol></li><li class="nav-item nav-level-3"><a class="nav-link" href="#Kustomize"><span class="nav-number">3.</span> <span class="nav-text">Kustomize</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#CI-x2F-CD"><span class="nav-number">4.</span> <span class="nav-text">CI&#x2F;CD</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E9%AA%8C%E8%AF%81"><span class="nav-number">5.</span> <span class="nav-text">验证</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E9%97%AE%E9%A2%98"><span class="nav-number">6.</span> <span class="nav-text">问题</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E5%8F%82%E8%80%83%E6%96%87%E7%AB%A0"><span class="nav-number">7.</span> <span class="nav-text">参考文章:</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E8%BD%AC%E8%BD%BD%E8%AF%B7%E6%B3%A8%E6%98%8E%E5%87%BA%E5%A4%84https-izsk-me"><span class="nav-number">8.</span> <span class="nav-text">转载请注明出处https:&#x2F;&#x2F;izsk.me</span></a></li></ol></div>
+            
+
+          </div>
+        </section>
+      <!--/noindex-->
+      
+
+    </div>
+  </aside>
+
+
+        
+      </div>
+    </main>
+
+    <footer id="footer" class="footer">
+      <div class="footer-inner">
+        <div class="copyright" >
+  
+  &copy; 
+  <span itemprop="copyrightYear">2022</span>
+  <span class="with-love">
+    <i class="fa fa-heart"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">Z.S.K.</span>
+</div>
+
+
+<div class="powered-by">
+  Supported by <a class="theme-link" target="_blank" rel="noopener" href="https://hexo.io">Hexo</a>
+</div>
+
+<div class="theme-info">
+  Theme -
+  <a class="theme-link" target="_blank" rel="noopener" href="https://github.com/iissnan/hexo-theme-next">
+    NexT.Mist
+  </a>
+</div>
+
+
+        
+
+        
+      </div>
+    </footer>
+
+    <div class="back-to-top">
+      <i class="fa fa-arrow-up"></i>
+    </div>
+  </div>
+
+  
+
+<script type="text/javascript">
+  if (Object.prototype.toString.call(window.Promise) !== '[object Function]') {
+    window.Promise = null;
+  }
+</script>
+
+
+
+
+
+
+
+
+
+  
+
+
+
+  
+  <script type="text/javascript" src="/lib/jquery/index.js?v=2.1.3"></script>
+
+  
+  <script type="text/javascript" src="/lib/fastclick/lib/fastclick.min.js?v=1.0.6"></script>
+
+  
+  <script type="text/javascript" src="/lib/jquery_lazyload/jquery.lazyload.js?v=1.9.7"></script>
+
+  
+  <script type="text/javascript" src="/lib/velocity/velocity.min.js?v=1.2.1"></script>
+
+  
+  <script type="text/javascript" src="/lib/velocity/velocity.ui.min.js?v=1.2.1"></script>
+
+  
+  <script type="text/javascript" src="/lib/fancybox/source/jquery.fancybox.pack.js?v=2.1.5"></script>
+
+
+  
+
+
+  <script type="text/javascript" src="/js/src/utils.js?v=5.1.0"></script>
+
+  <script type="text/javascript" src="/js/src/motion.js?v=5.1.0"></script>
+
+
+
+  
+  
+
+  
+  <script type="text/javascript" src="/js/src/scrollspy.js?v=5.1.0"></script>
+<script type="text/javascript" src="/js/src/post-details.js?v=5.1.0"></script>
+
+
+
+  
+
+
+  <script type="text/javascript" src="/js/src/bootstrap.js?v=5.1.0"></script>
+
+
+
+  
+
+
+
+  
+
+
+
+
+	
+
+
+
+
+
+  
+
+
+
+
+  
+  
+  <script type="text/javascript">
+    // Popup Window;
+    var isfetched = false;
+    // Search DB path;
+    var search_path = "search.xml";
+    if (search_path.length == 0) {
+      search_path = "search.xml";
+    }
+    var path = "/" + search_path;
+    // monitor main search box;
+
+    function proceedsearch() {
+      $("body").append('<div class="popoverlay">').css('overflow', 'hidden');
+      $('.popup').toggle();
+    }
+    // search function;
+    var searchFunc = function(path, search_id, content_id) {
+      'use strict';
+      $.ajax({
+        url: path,
+        dataType: "xml",
+        async: true,
+        success: function( xmlResponse ) {
+          // get the contents from search data
+          isfetched = true;
+          $('.popup').detach().appendTo('.header-inner');
+          var datas = $( "entry", xmlResponse ).map(function() {
+            return {
+              title: $( "title", this ).text(),
+              content: $("content",this).text(),
+              url: $( "url" , this).text()
+            };
+          }).get();
+          var $input = document.getElementById(search_id);
+          var $resultContent = document.getElementById(content_id);
+          $input.addEventListener('input', function(){
+            var matchcounts = 0;
+            var str='<ul class=\"search-result-list\">';
+            var keywords = this.value.trim().toLowerCase().split(/[\s\-]+/);
+            $resultContent.innerHTML = "";
+            if (this.value.trim().length > 1) {
+              // perform local searching
+              datas.forEach(function(data) {
+                var isMatch = false;
+                var content_index = [];
+                var data_title = data.title.trim().toLowerCase();
+                var data_content = data.content.trim().replace(/<[^>]+>/g,"").toLowerCase();
+                var data_url = decodeURIComponent(data.url);
+                var index_title = -1;
+                var index_content = -1;
+                var first_occur = -1;
+                // only match artiles with not empty titles and contents
+                if(data_title != '') {
+                  keywords.forEach(function(keyword, i) {
+                    index_title = data_title.indexOf(keyword);
+                    index_content = data_content.indexOf(keyword);
+                    if( index_title >= 0 || index_content >= 0 ){
+                      isMatch = true;
+                      if (i == 0) {
+                        first_occur = index_content;
+                      }
+                    }
+
+                  });
+                }
+                // show search results
+                if (isMatch) {
+                  matchcounts += 1;
+                  str += "<li><a href='"+ data_url +"' class='search-result-title'>"+ data_title +"</a>";
+                  var content = data.content.trim().replace(/<[^>]+>/g,"");
+                  if (first_occur >= 0) {
+                    // cut out 100 characters
+                    var start = first_occur - 20;
+                    var end = first_occur + 80;
+                    if(start < 0){
+                      start = 0;
+                    }
+                    if(start == 0){
+                      end = 50;
+                    }
+                    if(end > content.length){
+                      end = content.length;
+                    }
+                    var match_content = content.substring(start, end);
+                    // highlight all keywords
+                    keywords.forEach(function(keyword){
+                      var regS = new RegExp(keyword, "gi");
+                      match_content = match_content.replace(regS, "<b class=\"search-keyword\">"+keyword+"</b>");
+                    });
+
+                    str += "<p class=\"search-result\">" + match_content +"...</p>"
+                  }
+                  str += "</li>";
+                }
+              })};
+            str += "</ul>";
+            if (matchcounts == 0) { str = '<div id="no-result"><i class="fa fa-frown-o fa-5x" /></div>' }
+            if (keywords == "") { str = '<div id="no-result"><i class="fa fa-search fa-5x" /></div>' }
+            $resultContent.innerHTML = str;
+          });
+          proceedsearch();
+        }
+      });}
+
+    // handle and trigger popup window;
+    $('.popup-trigger').click(function(e) {
+      e.stopPropagation();
+      if (isfetched == false) {
+        searchFunc(path, 'local-search-input', 'local-search-result');
+      } else {
+        proceedsearch();
+      };
+    });
+
+    $('.popup-btn-close').click(function(e){
+      $('.popup').hide();
+      $(".popoverlay").remove();
+      $('body').css('overflow', '');
+    });
+    $('.popup').click(function(e){
+      e.stopPropagation();
+    });
+  </script>
+
+
+  
+
+  
+
+  
+
+  
+
+
+</body>
+</html>

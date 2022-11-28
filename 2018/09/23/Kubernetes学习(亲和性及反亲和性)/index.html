@@ -1,38 +1,1014 @@
-{% extends '_layout.swig' %}
-{% import '_macro/post.swig' as post_template %}
-{% import '_macro/sidebar.swig' as sidebar_template %}
+<!doctype html>
 
 
-{% block title %} {{ page.title }} | {{ config.title }} {% endblock %}
 
-{% block page_class %}page-post-detail{% endblock %}
+  
 
 
-{% block content %}
+<html class="theme-next mist use-motion" lang="zh-Hans">
+<head>
+  <meta charset="UTF-8"/>
+<meta http-equiv="X-UA-Compatible" content="IE=edge" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1"/>
+
+
+
+<meta http-equiv="Cache-Control" content="no-transform" />
+<meta http-equiv="Cache-Control" content="no-siteapp" />
+
+
+
+
+
+
+
+
+
+
+
+
+  
+  
+  <link href="/lib/fancybox/source/jquery.fancybox.css?v=2.1.5" rel="stylesheet" type="text/css" />
+
+
+
+
+  
+  
+  
+  
+
+  
+    
+    
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+    
+    
+    <link href="//fonts.googleapis.com/css?family=Lato:300,300italic,400,400italic,700,700italic&subset=latin,latin-ext" rel="stylesheet" type="text/css">
+  
+
+
+
+
+
+
+<link href="/lib/font-awesome/css/font-awesome.min.css?v=4.6.2" rel="stylesheet" type="text/css" />
+
+<link href="/css/main.css?v=5.1.0" rel="stylesheet" type="text/css" />
+
+
+  <meta name="keywords" content="Kubernetes," />
+
+
+
+
+
+
+
+
+  <link rel="shortcut icon" type="image/x-icon" href="/favicon.ico?v=5.1.0" />
+
+
+
+
+
+
+<meta name="description" content="经常听到K8S里亲和性与反亲和性, 这其实是更复杂的调度策略, 用在需要更细力度的控制节点调度的场景.比如不希望对外的一些服务和内部的服务跑在同一个节点上了,害怕内部服务对外部的服务产生影响;但是有的时候我们的服务之间交流比较频繁,又希望能够将这两个服务的 Pod 调度到同一个的节点上. 这就需要用到 Kubernetes 里面的一个概念: 亲和性和反亲和性">
+<meta property="og:type" content="article">
+<meta property="og:title" content="Kubernetes学习(亲和性及反亲和性)">
+<meta property="og:url" content="https://zhoushuke.github.io/2018/09/23/Kubernetes%E5%AD%A6%E4%B9%A0(%E4%BA%B2%E5%92%8C%E6%80%A7%E5%8F%8A%E5%8F%8D%E4%BA%B2%E5%92%8C%E6%80%A7)/index.html">
+<meta property="og:site_name" content="Z.S.K.&#39;s Records">
+<meta property="og:description" content="经常听到K8S里亲和性与反亲和性, 这其实是更复杂的调度策略, 用在需要更细力度的控制节点调度的场景.比如不希望对外的一些服务和内部的服务跑在同一个节点上了,害怕内部服务对外部的服务产生影响;但是有的时候我们的服务之间交流比较频繁,又希望能够将这两个服务的 Pod 调度到同一个的节点上. 这就需要用到 Kubernetes 里面的一个概念: 亲和性和反亲和性">
+<meta property="og:locale">
+<meta property="article:published_time" content="2018-09-23T03:50:53.000Z">
+<meta property="article:modified_time" content="2022-07-19T03:16:00.976Z">
+<meta property="article:author" content="Z.S.K.">
+<meta property="article:tag" content="Kubernetes">
+<meta name="twitter:card" content="summary">
+
+
+
+<script type="text/javascript" id="hexo.configurations">
+  var NexT = window.NexT || {};
+  var CONFIG = {
+    root: '',
+    scheme: 'Mist',
+    sidebar: {"position":"left","display":"post"},
+    fancybox: true,
+    motion: true,
+    duoshuo: {
+      userId: 'undefined',
+      author: '博主'
+    },
+    algolia: {
+      applicationID: '',
+      apiKey: '',
+      indexName: '',
+      hits: {"per_page":10},
+      labels: {"input_placeholder":"Search for Posts","hits_empty":"We didn't find any results for the search: ${query}","hits_stats":"${hits} results found in ${time} ms"}
+    }
+  };
+</script>
+
+
+
+  <link rel="canonical" href="https://zhoushuke.github.io/2018/09/23/Kubernetes学习(亲和性及反亲和性)/"/>
+
+
+
+
+
+  <title> Kubernetes学习(亲和性及反亲和性) | Z.S.K.'s Records </title>
+<meta name="generator" content="Hexo 6.2.0"></head>
+
+<body itemscope itemtype="http://schema.org/WebPage" lang="zh-Hans">
+
+  
+
+
+
+
+
+
+
+
+
+
+  
+  
+    
+  
+
+  <div class="container one-collumn sidebar-position-left page-post-detail ">
+    <div class="headband"></div>
+
+    <header id="header" class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-meta ">
+  
+
+  <div class="custom-logo-site-title">
+    <a href="/"  class="brand" rel="start">
+      <span class="logo-line-before"><i></i></span>
+      <span class="site-title">Z.S.K.'s Records</span>
+      <span class="logo-line-after"><i></i></span>
+    </a>
+  </div>
+    
+      <p class="site-subtitle"></p>
+    
+</div>
+
+<div class="site-nav-toggle">
+  <button>
+    <span class="btn-bar"></span>
+    <span class="btn-bar"></span>
+    <span class="btn-bar"></span>
+  </button>
+</div>
+
+<nav class="site-nav">
+  
+
+  
+    <ul id="menu" class="menu">
+      
+        
+        <li class="menu-item menu-item-home">
+          <a href="/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-home"></i> <br />
+            
+            首页
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-categories">
+          <a href="/categories" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-th"></i> <br />
+            
+            分类
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-about">
+          <a href="/about/ZSK-Profile.pdf" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-user"></i> <br />
+            
+            简历
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-archives">
+          <a href="/archives" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-archive"></i> <br />
+            
+            归档
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-tags">
+          <a href="/tags" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-tags"></i> <br />
+            
+            标签
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-commonweal">
+          <a href="/404.html" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-heartbeat"></i> <br />
+            
+            公益404
+          </a>
+        </li>
+      
+
+      
+        <li class="menu-item menu-item-search">
+          
+            <a href="javascript:;" class="popup-trigger">
+          
+            
+              <i class="menu-item-icon fa fa-search fa-fw"></i> <br />
+            
+            搜索
+          </a>
+        </li>
+      
+    </ul>
+  
+
+  
+    <div class="site-search">
+      
+  <div class="popup">
+ <span class="search-icon fa fa-search"></span>
+ <input type="text" id="local-search-input">
+ <div id="local-search-result"></div>
+ <span class="popup-btn-close">close</span>
+</div>
+
+
+    </div>
+  
+</nav>
+
+
+
+ </div>
+    </header>
+
+    <main id="main" class="main">
+      <div class="main-inner">
+        <div class="content-wrap">
+          <div id="content" class="content">
+            
 
   <div id="posts" class="posts-expand">
-    {{ post_template.render(page) }}
+    
 
-    <div class="post-spread">
-      {% if theme.jiathis %}
-        {% include '_partials/share/jiathis.swig' %}
-      {% elseif theme.baidushare %}
-        {% include '_partials/share/baidushare.swig' %}
-      {% elseif theme.add_this_id %}
-        {% include '_partials/share/add-this.swig' %}
-      {% elseif theme.duoshuo_shortname and theme.duoshuo_share %}
-        {% include '_partials/share/duoshuo_share.swig' %}
-      {% endif %}
+  
+
+  
+  
+  
+
+  <article class="post post-type-normal " itemscope itemtype="http://schema.org/Article">
+  <link itemprop="mainEntityOfPage" href="https://zhoushuke.github.io/2018/09/23/Kubernetes%E5%AD%A6%E4%B9%A0(%E4%BA%B2%E5%92%8C%E6%80%A7%E5%8F%8A%E5%8F%8D%E4%BA%B2%E5%92%8C%E6%80%A7)/">
+
+  <span style="display:none" itemprop="author" itemscope itemtype="http://schema.org/Person">
+    <meta itemprop="name" content="">
+    <meta itemprop="description" content="">
+    <meta itemprop="image" content="/images/avatar.gif">
+  </span>
+
+  <span style="display:none" itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+    <meta itemprop="name" content="Z.S.K.'s Records">
+    <span style="display:none" itemprop="logo" itemscope itemtype="http://schema.org/ImageObject">
+      <img style="display:none;" itemprop="url image" alt="Z.S.K.'s Records" src="">
+    </span>
+  </span>
+
+    
+      <header class="post-header">
+
+        
+        
+          <h1 class="post-title" itemprop="name headline">
+            
+            
+              
+                Kubernetes学习(亲和性及反亲和性)
+              
+            
+          </h1>
+        
+
+        <div class="post-meta">
+          <span class="post-time">
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">发表于</span>
+              
+              <time title="Post created" itemprop="dateCreated datePublished" datetime="2018-09-23T11:50:53+08:00">
+                2018-09-23
+              </time>
+            
+
+            
+
+            
+          </span>
+
+          
+            <span class="post-category" >
+            
+              <span class="post-meta-divider">|</span>
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-folder-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">分类于</span>
+              
+              
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/Kubernetes/" itemprop="url" rel="index">
+                    <span itemprop="name">Kubernetes</span>
+                  </a>
+                </span>
+
+                
+                
+              
+            </span>
+          
+
+          
+            
+          
+
+          
+
+          
+          
+
+          
+
+          
+
+        </div>
+      </header>
+    
+
+
+    <div class="post-body" itemprop="articleBody">
+
+      
+      
+
+      
+        <p>经常听到K8S里亲和性与反亲和性, 这其实是更复杂的调度策略, 用在需要更细力度的控制节点调度的场景.<code>比如不希望对外的一些服务和内部的服务跑在同一个节点上了,害怕内部服务对外部的服务产生影响;但是有的时候我们的服务之间交流比较频繁,又希望能够将这两个服务的 Pod 调度到同一个的节点上.</code></p>
+<p>这就需要用到 Kubernetes 里面的一个概念: <code>亲和性和反亲和性</code></p>
+<span id="more"></span>
+
+<p>还是要提出非常重要的一点,在K8S的调度流程:</p>
+<blockquote>
+<ul>
+<li>(预选)先排除完全不符合pod运行要求的节点</li>
+<li>(优先)根据一系列算法,算出node的得分,最高没有相同的,就直接选择</li>
+<li>如果有相同的话,就随机选一个</li>
+</ul>
+</blockquote>
+<p>亲和性与反亲和性也遵循以上规律.</p>
+<p>在说亲和性特点之前,有必要再说一说nodeselect.</p>
+<h3 id="nodeSelect"><a href="#nodeSelect" class="headerlink" title="nodeSelect"></a><strong>nodeSelect</strong></h3><p>大多数情况下, 如果应用没有特殊要求, 也不会去设定Nodeselect, 因为大体上容器所运行的机器都具有相同的属性, 同时, nodeselect也是一种非常常用的调度方式, 比如某些应用对磁盘IO要高要求, 切好有一批机器是SSD硬盘, 那么这个时候就可以给这些机器打上tag, 在k8s里称之为label, 这样的话,我在调度POD的时候通过这个label来进行机器的选择, 我们可以使用–show-labels也查看node节点所具有的标签.</p>
+<figure class="highlight shell"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta prompt_">$ </span><span class="language-bash">kubectl get nodes --show-labels</span></span><br><span class="line">NAME      STATUS    ROLES     AGE       VERSION   LABELS </span><br><span class="line">master    Ready     master    147d      v1.10.0   beta.kubernetes.io/arch=amd64,beta.kubernetes.io/os=linux,kubernetes.io/hostname=master,node-role.kubernetes.io/master=</span><br><span class="line">node02    Ready     &lt;none&gt;    67d       v1.10.0   beta.kubernetes.io/arch=amd64,beta.kubernetes.io/os=linux,course=k8s,kubernetes.io/hostname=node02</span><br><span class="line">node03    Ready     &lt;none&gt;    127d      v1.10.0   beta.kubernetes.io/arch=amd64,beta.kubernetes.io/os=linux,jnlp=haimaxy,kubernetes.io/hostname=node03</span><br></pre></td></tr></table></figure>
+
+<p>我们再来看看一个标准的deployment的yaml文件</p>
+<figure class="highlight yaml"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br></pre></td><td class="code"><pre><span class="line"><span class="attr">apiVersion:</span> <span class="string">v1</span></span><br><span class="line"><span class="attr">kind:</span> <span class="string">Pod</span></span><br><span class="line"><span class="attr">metadata:</span></span><br><span class="line">  <span class="attr">labels:</span></span><br><span class="line">    <span class="attr">app:</span> <span class="string">busybox-pod</span></span><br><span class="line">  <span class="attr">name:</span> <span class="string">test-busybox</span></span><br><span class="line"><span class="attr">spec:</span></span><br><span class="line">  <span class="attr">containers:</span></span><br><span class="line">  <span class="bullet">-</span> <span class="attr">command:</span></span><br><span class="line">    <span class="bullet">-</span> <span class="string">sleep</span></span><br><span class="line">    <span class="bullet">-</span> <span class="string">&quot;3600&quot;</span></span><br><span class="line">    <span class="attr">image:</span> <span class="string">busybox</span></span><br><span class="line">    <span class="attr">imagePullPolicy:</span> <span class="string">Always</span></span><br><span class="line">    <span class="attr">name:</span> <span class="string">test-busybox</span></span><br><span class="line">  <span class="attr">nodeSelector:</span></span><br><span class="line">    <span class="attr">com:</span> <span class="string">youdianzhishi</span></span><br></pre></td></tr></table></figure>
+
+<p>这里提定了nodeselect, 即这个deployment会调度到带有com的label上, 如果所有node里没有该属性的node, 则我们的 Pod 就会一直处于 Pending 状态, 直到有为此.</p>
+<p><code>所以, nodeSelect是一个硬限制</code></p>
+<h3 id="亲和性-Affinity"><a href="#亲和性-Affinity" class="headerlink" title="亲和性(Affinity)"></a><strong>亲和性(<strong>Affinity</strong>)</strong></h3><p> 那如果我想做到某些密切调用的应用部署到同一台机器上,这样可以减少网络传输等消耗过程, 有好办法吗?</p>
+<p>当时, 使用nodeselect肯定是可以的, 只要在deployment中使用相同的label即可. 但是如果我想更精确的控制POD的调度行为呢？</p>
+<p><code>亲和性/反亲和性特性就是一种更细粒度的控制策略</code></p>
+<p>亲和性又可以分为:</p>
+<blockquote>
+<ul>
+<li>节点亲和性(nodeAffinity): 节点亲和性主要是用来控制 pod 要部署在哪些主机上,以及不能部署在哪些主机上的</li>
+<li>pod亲和性(podAffinity): pod 亲和性主要解决 pod 可以和哪些 pod 部署在同一个拓扑域中的问题</li>
+</ul>
+</blockquote>
+<p>同时, 亲和性在执行程度上,又可分为:</p>
+<blockquote>
+<ul>
+<li><code>软策略(preferredDuringSchedulingIgnoredDuringExecution)</code>:  如果你没有满足调度要求的节点的话,pod 就会忽略这条规则,继续完成调度过程,说白了就是<strong>满足条件最好了,没有的话也无所谓了</strong>的策略</li>
+<li><code>硬策略(requiredDuringSchedulingIgnoredDuringExecution)</code>: 比较强硬了,如果没有满足条件的节点的话,就不断重试直到满足条件为止,简单说就是<strong>你必须满足我的要求,不然我就不干</strong>的策略</li>
+<li><code>RequiredDuringSchedulingRequiredDuringExecution</code>: 在调度期间要求满足亲和性或者反亲和性规则,如果不能满足规则,则POD不能被调度到对应的主机上. 在之后的运行过程中,如果因为某些原因（比如修改label）导致规则不能满足,系统会尝试把POD从主机上删除</li>
+</ul>
+</blockquote>
+<h4 id="节点亲和性"><a href="#节点亲和性" class="headerlink" title="节点亲和性"></a><strong>节点亲和性</strong></h4><p>如上所说, 节点亲和性限定的是pod需要调度到什么资源上, <code>是node与pod的调度关系</code>,同时它支持一些逻辑运算, 比如in,not in之类的.</p>
+<p>比如说,现在我们用一个 Deployment 来管理3个 pod 副本,现在我们来控制下这些 pod 的调度</p>
+<figure class="highlight yaml"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br></pre></td><td class="code"><pre><span class="line"><span class="attr">apiVersion:</span> <span class="string">apps/v1beta1</span></span><br><span class="line"><span class="attr">kind:</span> <span class="string">Deployment</span></span><br><span class="line"><span class="attr">metadata:</span></span><br><span class="line">  <span class="attr">name:</span> <span class="string">affinity</span></span><br><span class="line">  <span class="attr">labels:</span></span><br><span class="line">    <span class="attr">app:</span> <span class="string">affinity</span></span><br><span class="line"><span class="attr">spec:</span></span><br><span class="line">  <span class="attr">replicas:</span> <span class="number">3</span></span><br><span class="line">  <span class="attr">revisionHistoryLimit:</span> <span class="number">15</span></span><br><span class="line">  <span class="attr">template:</span></span><br><span class="line">    <span class="attr">metadata:</span></span><br><span class="line">      <span class="attr">labels:</span></span><br><span class="line">        <span class="attr">app:</span> <span class="string">affinity</span></span><br><span class="line">        <span class="attr">role:</span> <span class="string">test</span></span><br><span class="line">    <span class="attr">spec:</span></span><br><span class="line">      <span class="attr">containers:</span></span><br><span class="line">      <span class="bullet">-</span> <span class="attr">name:</span> <span class="string">nginx</span></span><br><span class="line">        <span class="attr">image:</span> <span class="string">nginx:1.7.9</span></span><br><span class="line">        <span class="attr">ports:</span></span><br><span class="line">        <span class="bullet">-</span> <span class="attr">containerPort:</span> <span class="number">80</span></span><br><span class="line">          <span class="attr">name:</span> <span class="string">nginxweb</span></span><br><span class="line">      <span class="attr">affinity:</span></span><br><span class="line">        <span class="attr">nodeAffinity:</span></span><br><span class="line">          <span class="attr">requiredDuringSchedulingIgnoredDuringExecution:</span>  <span class="comment"># 硬策略</span></span><br><span class="line">            <span class="attr">nodeSelectorTerms:</span></span><br><span class="line">            <span class="bullet">-</span> <span class="attr">matchExpressions:</span></span><br><span class="line">              <span class="bullet">-</span> <span class="attr">key:</span> <span class="string">kubernetes.io/hostname</span></span><br><span class="line">                <span class="attr">operator:</span> <span class="string">NotIn</span></span><br><span class="line">                <span class="attr">values:</span></span><br><span class="line">                <span class="bullet">-</span> <span class="string">node03</span></span><br><span class="line">          <span class="attr">preferredDuringSchedulingIgnoredDuringExecution:</span>  <span class="comment"># 软策略</span></span><br><span class="line">          <span class="bullet">-</span> <span class="attr">weight:</span> <span class="number">1</span></span><br><span class="line">            <span class="attr">preference:</span></span><br><span class="line">              <span class="attr">matchExpressions:</span></span><br><span class="line">              <span class="bullet">-</span> <span class="attr">key:</span> <span class="string">com</span></span><br><span class="line">                <span class="attr">operator:</span> <span class="string">In</span></span><br><span class="line">                <span class="attr">values:</span></span><br><span class="line">                <span class="bullet">-</span> <span class="string">youdianzhishi</span></span><br></pre></td></tr></table></figure>
+
+<p>上面的deployment里同时指定了硬策略与软策略,满足的需求为:该节点的label不能是(硬性条件)kubernetes.io&#x2F;hostname&#x3D;node03, 除此之外, 如果存在com&#x3D;youdianzhishi的节点,则尽可能调度(也不一定能成功).</p>
+<figure class="highlight shell"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta prompt_">$ </span><span class="language-bash">kubectl get nodes --show-labels</span></span><br><span class="line">NAME      STATUS    ROLES     AGE       VERSION   LABELS</span><br><span class="line">master    Ready     master    154d      v1.10.0   beta.kubernetes.io/arch=amd64,beta.kubernetes.io/os=linux,kubernetes.io/hostname=master,node-role.kubernetes.io/master=</span><br><span class="line">node02    Ready     &lt;none&gt;    74d       v1.10.0   beta.kubernetes.io/arch=amd64,beta.kubernetes.io/os=linux,com=youdianzhishi,course=k8s,kubernetes.io/hostname=node02</span><br><span class="line">node03    Ready     &lt;none&gt;    134d      v1.10.0   beta.kubernetes.io/arch=amd64,beta.kubernetes.io/os=linux,jnlp=haimaxy,kubernetes.io/hostname=node03</span><br></pre></td></tr></table></figure>
+
+<p>调度情况如下:</p>
+<figure class="highlight shell"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta prompt_">$ </span><span class="language-bash">kubectl create -f node-affinity-demo.yaml</span></span><br><span class="line">deployment.apps &quot;affinity&quot; created</span><br><span class="line"><span class="meta prompt_">$ </span><span class="language-bash">kubectl get pods -l app=affinity -o wide</span></span><br><span class="line">NAME                        READY     STATUS    RESTARTS   AGE       IP             NODE</span><br><span class="line">affinity-7b4c946854-5gfln   1/1       Running   0          47s       10.244.4.214   node02</span><br><span class="line">affinity-7b4c946854-l8b47   1/1       Running   0          47s       10.244.4.215   node02</span><br><span class="line">affinity-7b4c946854-r86p5   1/1       Running   0          47s       10.244.4.213   node02</span><br></pre></td></tr></table></figure>
+
+<p>从结果可以看出 pod 都被部署到了 node02,其他节点上没有部署 pod,这里的匹配逻辑是 label 的值在某个列表中,现在Kubernetes提供的操作符有下面的几种:</p>
+<blockquote>
+<ul>
+<li>In: label 的值在某个列表中</li>
+<li>NotIn: label 的值不在某个列表中</li>
+<li>Gt: label 的值大于某个值</li>
+<li>Lt: label 的值小于某个值</li>
+<li>Exists: 某个 label 存在</li>
+<li>DoesNotExist: 某个 label 不存在</li>
+</ul>
+</blockquote>
+<p>同时对于nodeSelectorTerms与matchExpressions</p>
+<blockquote>
+<ul>
+<li>如果<code>nodeSelectorTerms</code>下面有多个选项的话,满足任何一个条件就可以了</li>
+<li>如果<code>matchExpressions</code>有多个选项的话,则必须同时满足这些条件才能正常调度 POD</li>
+</ul>
+</blockquote>
+<p>node的反亲和性则只要使用上面列出的逻辑运算就可以很好的先排除一些不符合条件的节点.</p>
+<h4 id="POD亲和性"><a href="#POD亲和性" class="headerlink" title="POD亲和性"></a><strong>POD亲和性</strong></h4><p>pod 亲和性主要解决 pod 可以和哪些 pod 部署在同一个拓扑域中的问题（其中拓扑域用主机标签实现,可以是单个主机,也可以是多个主机组成的 cluster、zone 等等）,而 pod 反亲和性主要是解决 pod 不能和哪些 pod 部署在同一个拓扑域中的问题,它们都是处理的 <code>pod 与 pod 之间的调度</code>,比如一个 pod 在一个节点上了,那么我这个也得在这个节点,或者你这个 pod 在节点上了,那么我就不想和你待在同一个节点上</p>
+<figure class="highlight shell"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta prompt_">$ </span><span class="language-bash">kubectl get nodes --show-labels</span></span><br><span class="line">NAME      STATUS    ROLES     AGE       VERSION   LABELS</span><br><span class="line">master    Ready     master    154d      v1.10.0   beta.kubernetes.io/arch=amd64,beta.kubernetes.io/os=linux,kubernetes.io/hostname=master,node-role.kubernetes.io/master=</span><br><span class="line">node02    Ready     &lt;none&gt;    74d       v1.10.0   beta.kubernetes.io/arch=amd64,beta.kubernetes.io/os=linux,com=youdianzhishi,course=k8s,kubernetes.io/hostname=node02</span><br><span class="line">node03    Ready     &lt;none&gt;    134d      v1.10.0   beta.kubernetes.io/arch=amd64,beta.kubernetes.io/os=linux,jnlp=haimaxy,kubernetes.io/hostname=node03</span><br></pre></td></tr></table></figure>
+
+<figure class="highlight yaml"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br></pre></td><td class="code"><pre><span class="line"><span class="attr">apiVersion:</span> <span class="string">apps/v1beta1</span></span><br><span class="line"><span class="attr">kind:</span> <span class="string">Deployment</span></span><br><span class="line"><span class="attr">metadata:</span></span><br><span class="line">  <span class="attr">name:</span> <span class="string">affinity</span></span><br><span class="line">  <span class="attr">labels:</span></span><br><span class="line">    <span class="attr">app:</span> <span class="string">affinity</span></span><br><span class="line"><span class="attr">spec:</span></span><br><span class="line">  <span class="attr">replicas:</span> <span class="number">3</span></span><br><span class="line">  <span class="attr">revisionHistoryLimit:</span> <span class="number">15</span></span><br><span class="line">  <span class="attr">template:</span></span><br><span class="line">    <span class="attr">metadata:</span></span><br><span class="line">      <span class="attr">labels:</span></span><br><span class="line">        <span class="attr">app:</span> <span class="string">affinity</span></span><br><span class="line">        <span class="attr">role:</span> <span class="string">test</span></span><br><span class="line">    <span class="attr">spec:</span></span><br><span class="line">      <span class="attr">containers:</span></span><br><span class="line">      <span class="bullet">-</span> <span class="attr">name:</span> <span class="string">nginx</span></span><br><span class="line">        <span class="attr">image:</span> <span class="string">nginx:1.7.9</span></span><br><span class="line">        <span class="attr">ports:</span></span><br><span class="line">        <span class="bullet">-</span> <span class="attr">containerPort:</span> <span class="number">80</span></span><br><span class="line">          <span class="attr">name:</span> <span class="string">nginxweb</span></span><br><span class="line">      <span class="attr">affinity:</span></span><br><span class="line">        <span class="attr">podAffinity:</span></span><br><span class="line">          <span class="attr">requiredDuringSchedulingIgnoredDuringExecution:</span>  <span class="comment"># 硬策略</span></span><br><span class="line">          <span class="bullet">-</span> <span class="attr">labelSelector:</span></span><br><span class="line">              <span class="attr">matchExpressions:</span></span><br><span class="line">              <span class="bullet">-</span> <span class="attr">key:</span> <span class="string">app</span></span><br><span class="line">                <span class="attr">operator:</span> <span class="string">In</span></span><br><span class="line">                <span class="attr">values:</span></span><br><span class="line">                <span class="bullet">-</span> <span class="string">busybox-pod</span></span><br><span class="line">            <span class="attr">topologyKey:</span> <span class="string">kubernetes.io/hostname</span></span><br></pre></td></tr></table></figure>
+
+<p>上面的deployment里指定了硬策略,topologykey表示某个拓扑域, 节点满足的需求为必须包含app&#x3D;busybox-pod.</p>
+<p>目前只有node02上面有app&#x3D;busybox-pod的label,所以理想情况是3个pod都 应该在node02上才符合预期</p>
+<figure class="highlight shell"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta prompt_">$ </span><span class="language-bash">kubectl get pods -o wide -l app=busybox-pod</span></span><br><span class="line">NAME           READY     STATUS    RESTARTS   AGE       IP             NODE</span><br><span class="line">test-busybox   1/1       Running   164        7d        10.244.4.205   node02</span><br></pre></td></tr></table></figure>
+
+<p>查看pod调度情况</p>
+<figure class="highlight shell"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta prompt_">$ </span><span class="language-bash">kubectl get pods -o wide -l app=affinity</span></span><br><span class="line">NAME                        READY     STATUS    RESTARTS   AGE       IP             NODE</span><br><span class="line">affinity-564f9d7db9-lzzvq   1/1       Running   0          3m        10.244.4.216   node02</span><br><span class="line">affinity-564f9d7db9-p79cq   1/1       Running   0          3m        10.244.4.217   node02</span><br><span class="line">affinity-564f9d7db9-spfzs   1/1       Running   0          3m        10.244.4.218   node02</span><br></pre></td></tr></table></figure>
+
+<p>我们尝试把node02上的app&#x3D;busybox-pod这个pod删掉,然后再进行调度</p>
+<figure class="highlight shell"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta prompt_">$ </span><span class="language-bash">kubectl delete -f node-selector-demo.yaml</span></span><br><span class="line">pod &quot;test-busybox&quot; deleted</span><br><span class="line"><span class="meta prompt_">$ </span><span class="language-bash">kubectl delete -f pod-affinity-demo.yaml</span></span><br><span class="line">deployment.apps &quot;affinity&quot; deleted</span><br><span class="line"><span class="meta prompt_">$ </span><span class="language-bash">kubectl create -f pod-affinity-demo.yaml</span></span><br><span class="line">deployment.apps &quot;affinity&quot; created</span><br><span class="line"><span class="meta prompt_">$ </span><span class="language-bash">kubectl get pods -o wide -l app=affinity</span></span><br><span class="line">NAME                        READY     STATUS    RESTARTS   AGE       IP        NODE</span><br><span class="line">affinity-564f9d7db9-fbc8w   0/1       Pending   0          2m        &lt;none&gt;    &lt;none&gt;</span><br><span class="line">affinity-564f9d7db9-n8gcf   0/1       Pending   0          2m        &lt;none&gt;    &lt;none&gt;</span><br><span class="line">affinity-564f9d7db9-qc7x6   0/1       Pending   0          2m        &lt;none&gt;    &lt;none&gt;</span><br></pre></td></tr></table></figure>
+
+<p>会发现3个pod都是Pending状态, 原因就是没有任何一个node符合app&#x3D;busybox-pod这个条件, pod则会无限期pending.</p>
+<h3 id="反亲和性-antiAffinity"><a href="#反亲和性-antiAffinity" class="headerlink" title="反亲和性(antiAffinity)"></a><strong>反亲和性(antiAffinity)</strong></h3><p>当时node是没有nodeaAntiAffinity的, 对于node来说, 反亲和就是使用not 取反就行.</p>
+<p>podAntiAffinity则是说如果一个节点上运行了某个 pod,那么我们的 pod 则希望被调度到其他节点上去.</p>
+<p>比如还是上面的例子, 我修改一下</p>
+<figure class="highlight shell"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br></pre></td><td class="code"><pre><span class="line">apiVersion: apps/v1beta1</span><br><span class="line">kind: Deployment</span><br><span class="line">metadata:</span><br><span class="line">  name: affinity</span><br><span class="line">  labels:</span><br><span class="line">    app: affinity</span><br><span class="line">spec:</span><br><span class="line">  replicas: 3</span><br><span class="line">  revisionHistoryLimit: 15</span><br><span class="line">  template:</span><br><span class="line">    metadata:</span><br><span class="line">      labels:</span><br><span class="line">        app: affinity</span><br><span class="line">        role: test</span><br><span class="line">    spec:</span><br><span class="line">      containers:</span><br><span class="line">      - name: nginx</span><br><span class="line">        image: nginx:1.7.9</span><br><span class="line">        ports:</span><br><span class="line">        - containerPort: 80</span><br><span class="line">          name: nginxweb</span><br><span class="line">      affinity:</span><br><span class="line">        podAntiAffinity:</span><br><span class="line">          requiredDuringSchedulingIgnoredDuringExecution:  # 硬策略</span><br><span class="line">          - labelSelector:</span><br><span class="line">              matchExpressions:</span><br><span class="line">              - key: app</span><br><span class="line">                operator: In</span><br><span class="line">                values:</span><br><span class="line">                - busybox-pod</span><br><span class="line">            topologyKey: kubernetes.io/hostname</span><br></pre></td></tr></table></figure>
+
+<p>只是把podAffinity变成 了podAntiAffinity,则达到的效果为如果某个节点上有app&#x3D;busybox-pod,则不会调度到该node上.</p>
+<figure class="highlight shell"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta prompt_">$ </span><span class="language-bash">kubectl create -f pod-antiaffinity-demo.yaml</span></span><br><span class="line">deployment.apps &quot;affinity&quot; created</span><br><span class="line"><span class="meta prompt_">$ </span><span class="language-bash">kubectl get pods -o wide</span></span><br><span class="line">NAME                                      READY     STATUS      RESTARTS   AGE       IP             NODE</span><br><span class="line">affinity-bcbd8854f-br8z8                  1/1       Running     0          5s        10.244.4.222   node02</span><br><span class="line">affinity-bcbd8854f-cdffh                  1/1       Running     0          5s        10.244.4.223   node02</span><br><span class="line">affinity-bcbd8854f-htb52                  1/1       Running     0          5s        10.244.4.224   node02</span><br><span class="line">test-busybox                              1/1       Running     0          23m       10.244.2.10    node03</span><br></pre></td></tr></table></figure>
+
+<p>当然这里也可以In换成NotIn.</p>
+<p>上边的例子中可以通过修改topologyKey来限制拓扑域的范围,实现把相关服务部署在不同的容灾域等其它功能</p>
+<h3 id="总结"><a href="#总结" class="headerlink" title="总结"></a><strong>总结</strong></h3><p>最后总结一下三种亲和性和反亲和性策略的比较如下表所示:</p>
+<p>支持的操作符:</p>
+<table>
+<thead>
+<tr>
+<th>策略名称</th>
+<th>匹配目标</th>
+<th>支持的操作符</th>
+<th align="center">支持拓扑域 设计</th>
+<th>目标</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>nodeAffinity</td>
+<td>主机标签</td>
+<td>In,NotIn,Exists,DoesNotExist,Gt,Lt</td>
+<td align="center">不支持</td>
+<td>决定Pod可以部署在哪些主机上</td>
+</tr>
+<tr>
+<td>podAffinity</td>
+<td>Pod标签</td>
+<td>In,NotIn,Exists,DoesNotExist</td>
+<td align="center">支持</td>
+<td>决定Pod可以和哪些Pod部署在同一拓扑域</td>
+</tr>
+<tr>
+<td>PodAntiAffinity</td>
+<td>Pod标签</td>
+<td>In,NotIn,Exists,DoesNotExist</td>
+<td align="center">支持</td>
+<td>决定Pod不可以和哪些Pod部署在同一拓扑域</td>
+</tr>
+</tbody></table>
+<p>场景:</p>
+<p>**nodeAffinity使用场景 **:</p>
+<blockquote>
+<ul>
+<li>将S1服务的所有Pod部署到指定的符合标签规则的主机上</li>
+<li>将S1服务的所有Pod部署到除部分主机外的其他主机上</li>
+</ul>
+</blockquote>
+<p>**podAffinity使用场景 **:</p>
+<blockquote>
+<ul>
+<li>将某一特定服务的pod部署在同一拓扑域中,不用指定具体的拓扑域</li>
+<li>如果S1服务使用S2服务,为了减少它们之间的网络延迟（或其它原因）,把S1服务的POD和S2服务的pod部署在同一拓扑域中</li>
+</ul>
+</blockquote>
+<p><strong>podAntiAffinity使用场景:</strong></p>
+<blockquote>
+<ul>
+<li>将一个服务的POD分散在不同的主机或者拓扑域中,提高服务本身的稳定性</li>
+<li>给POD对于一个节点的独占访问权限来保证资源隔离,保证不会有其它pod来分享节点资源</li>
+<li>把可能会相互影响的服务的POD分散在不同的主机上</li>
+</ul>
+</blockquote>
+<h3 id="参考文章"><a href="#参考文章" class="headerlink" title="参考文章:"></a><strong>参考文章:</strong></h3><h3 id="转载请注明出处https-izsk-me"><a href="#转载请注明出处https-izsk-me" class="headerlink" title="转载请注明出处https://izsk.me"></a><strong>转载请注明出处<a target="_blank" rel="noopener" href="https://izsk.me/">https://izsk.me</a></strong></h3><hr>
+
+      
+    </div>
+
+    <div>
+      
+        
+<div id="wechat_subscriber" style="display: block; padding: 10px 0; margin: 20px auto; width: 100%; text-align: center">
+    <img id="wechat_subscriber_qcode" src="/images/websitecode250.png" alt=" wechat" style="width: 200px; max-width: 100%;"/>
+    <div>Scan Me To Read on Phone</div>
+</div>
+
+
+      
+    </div>
+
+    <div>
+      
+        
+  <div style="padding: 10px 0; margin: 20px auto; width: 90%; text-align: center;">
+    <div>I know you won't do this,but what if you did?</div>
+    <button id="rewardButton" disable="enable" onclick="var qr = document.getElementById('QR'); if (qr.style.display === 'none') {qr.style.display='block';} else {qr.style.display='none'}">
+      <span>赏</span>
+    </button>
+    <div id="QR" style="display: none;">
+      
+        <div id="wechat" style="display: inline-block">
+          <img id="wechat_qr" src="/images/wechatpayme.png" alt=" WeChat Pay"/>
+          <p>微信打赏</p>
+        </div>
+      
+      
+        <div id="alipay" style="display: inline-block">
+          <img id="alipay_qr" src="/images/alipayme.jpg" alt=" Alipay"/>
+          <p>支付宝打赏</p>
+        </div>
+      
     </div>
   </div>
 
-{% endblock %}
 
-{% block sidebar %}
-  {{ sidebar_template.render(true) }}
-{% endblock %}
+      
+    </div>
 
 
-{% block script_extra %}
-  {% include '_scripts/pages/post-details.swig' %}
-{% endblock %}
+    <footer class="post-footer">
+      
+        <div class="post-tags">
+          
+            <a href="/tags/Kubernetes/" rel="tag"># Kubernetes</a>
+          
+        </div>
+      
+
+      
+        <div class="post-nav">
+          <div class="post-nav-next post-nav-item">
+            
+              <a href="/2018/08/16/Kubernetes%E5%AD%A6%E4%B9%A0(etcd)/" rel="next" title="Kubernetes学习(etcd)">
+                <i class="fa fa-chevron-left"></i> Kubernetes学习(etcd)
+              </a>
+            
+          </div>
+
+          <span class="post-nav-divider"></span>
+
+          <div class="post-nav-prev post-nav-item">
+            
+              <a href="/2018/11/16/Kubernetes%E5%AD%A6%E4%B9%A0(%E6%B1%A1%E7%82%B9%E5%8F%8A%E5%AE%B9%E5%BF%8D)/" rel="prev" title="Kubernetes学习(污点及容忍)">
+                Kubernetes学习(污点及容忍) <i class="fa fa-chevron-right"></i>
+              </a>
+            
+          </div>
+        </div>
+      
+
+      
+      
+    </footer>
+  </article>
+
+
+
+    <div class="post-spread">
+      
+    </div>
+  </div>
+
+
+          </div>
+          
+
+
+          
+  <div class="comments" id="comments">
+    
+  </div>
+
+
+        </div>
+        
+          
+  
+  <div class="sidebar-toggle">
+    <div class="sidebar-toggle-line-wrap">
+      <span class="sidebar-toggle-line sidebar-toggle-line-first"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-middle"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-last"></span>
+    </div>
+  </div>
+
+  <aside id="sidebar" class="sidebar">
+    <div class="sidebar-inner">
+
+      
+
+      
+        <ul class="sidebar-nav motion-element">
+          <li class="sidebar-nav-toc sidebar-nav-active" data-target="post-toc-wrap" >
+            文章目录
+          </li>
+          <li class="sidebar-nav-overview" data-target="site-overview">
+            站点概览
+          </li>
+        </ul>
+      
+
+      <section class="site-overview sidebar-panel">
+        <div class="site-author motion-element" itemprop="author" itemscope itemtype="http://schema.org/Person">
+          <img class="site-author-image" itemprop="image"
+               src="/images/avatar.gif"
+               alt="" />
+          <p class="site-author-name" itemprop="name"></p>
+          <p class="site-description motion-element" itemprop="description"></p>
+        </div>
+        <nav class="site-state motion-element">
+        
+          
+            <div class="site-state-item site-state-posts">
+              <a href="/archives">
+                <span class="site-state-item-count">192</span>
+                <span class="site-state-item-name">日志</span>
+              </a>
+            </div>
+          
+
+          
+            <div class="site-state-item site-state-categories">
+              <a href="/categories">
+                <span class="site-state-item-count">14</span>
+                <span class="site-state-item-name">分类</span>
+              </a>
+            </div>
+          
+
+          
+            <div class="site-state-item site-state-tags">
+              <a href="/tags">
+                <span class="site-state-item-count">14</span>
+                <span class="site-state-item-name">标签</span>
+              </a>
+            </div>
+          
+
+        </nav>
+
+        
+
+        <div class="links-of-author motion-element">
+          
+        </div>
+
+        
+        
+
+        
+        
+
+        
+
+
+      </section>
+
+      
+      <!--noindex-->
+        <section class="post-toc-wrap motion-element sidebar-panel sidebar-panel-active">
+          <div class="post-toc">
+
+            
+              
+            
+
+            
+              <div class="post-toc-content"><ol class="nav"><li class="nav-item nav-level-3"><a class="nav-link" href="#nodeSelect"><span class="nav-number">1.</span> <span class="nav-text">nodeSelect</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E4%BA%B2%E5%92%8C%E6%80%A7-Affinity"><span class="nav-number">2.</span> <span class="nav-text">亲和性(Affinity)</span></a><ol class="nav-child"><li class="nav-item nav-level-4"><a class="nav-link" href="#%E8%8A%82%E7%82%B9%E4%BA%B2%E5%92%8C%E6%80%A7"><span class="nav-number">2.1.</span> <span class="nav-text">节点亲和性</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#POD%E4%BA%B2%E5%92%8C%E6%80%A7"><span class="nav-number">2.2.</span> <span class="nav-text">POD亲和性</span></a></li></ol></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E5%8F%8D%E4%BA%B2%E5%92%8C%E6%80%A7-antiAffinity"><span class="nav-number">3.</span> <span class="nav-text">反亲和性(antiAffinity)</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E6%80%BB%E7%BB%93"><span class="nav-number">4.</span> <span class="nav-text">总结</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E5%8F%82%E8%80%83%E6%96%87%E7%AB%A0"><span class="nav-number">5.</span> <span class="nav-text">参考文章:</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E8%BD%AC%E8%BD%BD%E8%AF%B7%E6%B3%A8%E6%98%8E%E5%87%BA%E5%A4%84https-izsk-me"><span class="nav-number">6.</span> <span class="nav-text">转载请注明出处https:&#x2F;&#x2F;izsk.me</span></a></li></ol></div>
+            
+
+          </div>
+        </section>
+      <!--/noindex-->
+      
+
+    </div>
+  </aside>
+
+
+        
+      </div>
+    </main>
+
+    <footer id="footer" class="footer">
+      <div class="footer-inner">
+        <div class="copyright" >
+  
+  &copy; 
+  <span itemprop="copyrightYear">2022</span>
+  <span class="with-love">
+    <i class="fa fa-heart"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">Z.S.K.</span>
+</div>
+
+
+<div class="powered-by">
+  Supported by <a class="theme-link" target="_blank" rel="noopener" href="https://hexo.io">Hexo</a>
+</div>
+
+<div class="theme-info">
+  Theme -
+  <a class="theme-link" target="_blank" rel="noopener" href="https://github.com/iissnan/hexo-theme-next">
+    NexT.Mist
+  </a>
+</div>
+
+
+        
+
+        
+      </div>
+    </footer>
+
+    <div class="back-to-top">
+      <i class="fa fa-arrow-up"></i>
+    </div>
+  </div>
+
+  
+
+<script type="text/javascript">
+  if (Object.prototype.toString.call(window.Promise) !== '[object Function]') {
+    window.Promise = null;
+  }
+</script>
+
+
+
+
+
+
+
+
+
+  
+
+
+
+  
+  <script type="text/javascript" src="/lib/jquery/index.js?v=2.1.3"></script>
+
+  
+  <script type="text/javascript" src="/lib/fastclick/lib/fastclick.min.js?v=1.0.6"></script>
+
+  
+  <script type="text/javascript" src="/lib/jquery_lazyload/jquery.lazyload.js?v=1.9.7"></script>
+
+  
+  <script type="text/javascript" src="/lib/velocity/velocity.min.js?v=1.2.1"></script>
+
+  
+  <script type="text/javascript" src="/lib/velocity/velocity.ui.min.js?v=1.2.1"></script>
+
+  
+  <script type="text/javascript" src="/lib/fancybox/source/jquery.fancybox.pack.js?v=2.1.5"></script>
+
+
+  
+
+
+  <script type="text/javascript" src="/js/src/utils.js?v=5.1.0"></script>
+
+  <script type="text/javascript" src="/js/src/motion.js?v=5.1.0"></script>
+
+
+
+  
+  
+
+  
+  <script type="text/javascript" src="/js/src/scrollspy.js?v=5.1.0"></script>
+<script type="text/javascript" src="/js/src/post-details.js?v=5.1.0"></script>
+
+
+
+  
+
+
+  <script type="text/javascript" src="/js/src/bootstrap.js?v=5.1.0"></script>
+
+
+
+  
+
+
+
+  
+
+
+
+
+	
+
+
+
+
+
+  
+
+
+
+
+  
+  
+  <script type="text/javascript">
+    // Popup Window;
+    var isfetched = false;
+    // Search DB path;
+    var search_path = "search.xml";
+    if (search_path.length == 0) {
+      search_path = "search.xml";
+    }
+    var path = "/" + search_path;
+    // monitor main search box;
+
+    function proceedsearch() {
+      $("body").append('<div class="popoverlay">').css('overflow', 'hidden');
+      $('.popup').toggle();
+    }
+    // search function;
+    var searchFunc = function(path, search_id, content_id) {
+      'use strict';
+      $.ajax({
+        url: path,
+        dataType: "xml",
+        async: true,
+        success: function( xmlResponse ) {
+          // get the contents from search data
+          isfetched = true;
+          $('.popup').detach().appendTo('.header-inner');
+          var datas = $( "entry", xmlResponse ).map(function() {
+            return {
+              title: $( "title", this ).text(),
+              content: $("content",this).text(),
+              url: $( "url" , this).text()
+            };
+          }).get();
+          var $input = document.getElementById(search_id);
+          var $resultContent = document.getElementById(content_id);
+          $input.addEventListener('input', function(){
+            var matchcounts = 0;
+            var str='<ul class=\"search-result-list\">';
+            var keywords = this.value.trim().toLowerCase().split(/[\s\-]+/);
+            $resultContent.innerHTML = "";
+            if (this.value.trim().length > 1) {
+              // perform local searching
+              datas.forEach(function(data) {
+                var isMatch = false;
+                var content_index = [];
+                var data_title = data.title.trim().toLowerCase();
+                var data_content = data.content.trim().replace(/<[^>]+>/g,"").toLowerCase();
+                var data_url = decodeURIComponent(data.url);
+                var index_title = -1;
+                var index_content = -1;
+                var first_occur = -1;
+                // only match artiles with not empty titles and contents
+                if(data_title != '') {
+                  keywords.forEach(function(keyword, i) {
+                    index_title = data_title.indexOf(keyword);
+                    index_content = data_content.indexOf(keyword);
+                    if( index_title >= 0 || index_content >= 0 ){
+                      isMatch = true;
+                      if (i == 0) {
+                        first_occur = index_content;
+                      }
+                    }
+
+                  });
+                }
+                // show search results
+                if (isMatch) {
+                  matchcounts += 1;
+                  str += "<li><a href='"+ data_url +"' class='search-result-title'>"+ data_title +"</a>";
+                  var content = data.content.trim().replace(/<[^>]+>/g,"");
+                  if (first_occur >= 0) {
+                    // cut out 100 characters
+                    var start = first_occur - 20;
+                    var end = first_occur + 80;
+                    if(start < 0){
+                      start = 0;
+                    }
+                    if(start == 0){
+                      end = 50;
+                    }
+                    if(end > content.length){
+                      end = content.length;
+                    }
+                    var match_content = content.substring(start, end);
+                    // highlight all keywords
+                    keywords.forEach(function(keyword){
+                      var regS = new RegExp(keyword, "gi");
+                      match_content = match_content.replace(regS, "<b class=\"search-keyword\">"+keyword+"</b>");
+                    });
+
+                    str += "<p class=\"search-result\">" + match_content +"...</p>"
+                  }
+                  str += "</li>";
+                }
+              })};
+            str += "</ul>";
+            if (matchcounts == 0) { str = '<div id="no-result"><i class="fa fa-frown-o fa-5x" /></div>' }
+            if (keywords == "") { str = '<div id="no-result"><i class="fa fa-search fa-5x" /></div>' }
+            $resultContent.innerHTML = str;
+          });
+          proceedsearch();
+        }
+      });}
+
+    // handle and trigger popup window;
+    $('.popup-trigger').click(function(e) {
+      e.stopPropagation();
+      if (isfetched == false) {
+        searchFunc(path, 'local-search-input', 'local-search-result');
+      } else {
+        proceedsearch();
+      };
+    });
+
+    $('.popup-btn-close').click(function(e){
+      $('.popup').hide();
+      $(".popoverlay").remove();
+      $('body').css('overflow', '');
+    });
+    $('.popup').click(function(e){
+      e.stopPropagation();
+    });
+  </script>
+
+
+  
+
+  
+
+  
+
+  
+
+
+</body>
+</html>

@@ -1,38 +1,984 @@
-{% extends '_layout.swig' %}
-{% import '_macro/post.swig' as post_template %}
-{% import '_macro/sidebar.swig' as sidebar_template %}
+<!doctype html>
 
 
-{% block title %} {{ page.title }} | {{ config.title }} {% endblock %}
 
-{% block page_class %}page-post-detail{% endblock %}
+  
 
 
-{% block content %}
+<html class="theme-next mist use-motion" lang="zh-Hans">
+<head>
+  <meta charset="UTF-8"/>
+<meta http-equiv="X-UA-Compatible" content="IE=edge" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1"/>
+
+
+
+<meta http-equiv="Cache-Control" content="no-transform" />
+<meta http-equiv="Cache-Control" content="no-siteapp" />
+
+
+
+
+
+
+
+
+
+
+
+
+  
+  
+  <link href="/lib/fancybox/source/jquery.fancybox.css?v=2.1.5" rel="stylesheet" type="text/css" />
+
+
+
+
+  
+  
+  
+  
+
+  
+    
+    
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+    
+    
+    <link href="//fonts.googleapis.com/css?family=Lato:300,300italic,400,400italic,700,700italic&subset=latin,latin-ext" rel="stylesheet" type="text/css">
+  
+
+
+
+
+
+
+<link href="/lib/font-awesome/css/font-awesome.min.css?v=4.6.2" rel="stylesheet" type="text/css" />
+
+<link href="/css/main.css?v=5.1.0" rel="stylesheet" type="text/css" />
+
+
+  <meta name="keywords" content="Http-Tcp-Ip," />
+
+
+
+
+
+
+
+
+  <link rel="shortcut icon" type="image/x-icon" href="/favicon.ico?v=5.1.0" />
+
+
+
+
+
+
+<meta name="description" content="上一篇介绍了iptables是如何工作,现在记录下iptables一些实用的命令">
+<meta property="og:type" content="article">
+<meta property="og:title" content="iptables学习二(iptables常用命令)">
+<meta property="og:url" content="https://zhoushuke.github.io/2017/11/04/iptables%E5%AD%A6%E4%B9%A0%E4%BA%8C(iptables%E5%B8%B8%E7%94%A8%E5%91%BD%E4%BB%A4)/index.html">
+<meta property="og:site_name" content="Z.S.K.&#39;s Records">
+<meta property="og:description" content="上一篇介绍了iptables是如何工作,现在记录下iptables一些实用的命令">
+<meta property="og:locale">
+<meta property="og:image" content="http://zskgithubblog.oss-cn-beijing.aliyuncs.com/blogpic/iptables4.JPG">
+<meta property="article:published_time" content="2017-11-04T15:10:53.000Z">
+<meta property="article:modified_time" content="2022-07-19T03:16:00.937Z">
+<meta property="article:author" content="Z.S.K.">
+<meta property="article:tag" content="Http-Tcp-Ip">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:image" content="http://zskgithubblog.oss-cn-beijing.aliyuncs.com/blogpic/iptables4.JPG">
+
+
+
+<script type="text/javascript" id="hexo.configurations">
+  var NexT = window.NexT || {};
+  var CONFIG = {
+    root: '',
+    scheme: 'Mist',
+    sidebar: {"position":"left","display":"post"},
+    fancybox: true,
+    motion: true,
+    duoshuo: {
+      userId: 'undefined',
+      author: '博主'
+    },
+    algolia: {
+      applicationID: '',
+      apiKey: '',
+      indexName: '',
+      hits: {"per_page":10},
+      labels: {"input_placeholder":"Search for Posts","hits_empty":"We didn't find any results for the search: ${query}","hits_stats":"${hits} results found in ${time} ms"}
+    }
+  };
+</script>
+
+
+
+  <link rel="canonical" href="https://zhoushuke.github.io/2017/11/04/iptables学习二(iptables常用命令)/"/>
+
+
+
+
+
+  <title> iptables学习二(iptables常用命令) | Z.S.K.'s Records </title>
+<meta name="generator" content="Hexo 6.2.0"></head>
+
+<body itemscope itemtype="http://schema.org/WebPage" lang="zh-Hans">
+
+  
+
+
+
+
+
+
+
+
+
+
+  
+  
+    
+  
+
+  <div class="container one-collumn sidebar-position-left page-post-detail ">
+    <div class="headband"></div>
+
+    <header id="header" class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-meta ">
+  
+
+  <div class="custom-logo-site-title">
+    <a href="/"  class="brand" rel="start">
+      <span class="logo-line-before"><i></i></span>
+      <span class="site-title">Z.S.K.'s Records</span>
+      <span class="logo-line-after"><i></i></span>
+    </a>
+  </div>
+    
+      <p class="site-subtitle"></p>
+    
+</div>
+
+<div class="site-nav-toggle">
+  <button>
+    <span class="btn-bar"></span>
+    <span class="btn-bar"></span>
+    <span class="btn-bar"></span>
+  </button>
+</div>
+
+<nav class="site-nav">
+  
+
+  
+    <ul id="menu" class="menu">
+      
+        
+        <li class="menu-item menu-item-home">
+          <a href="/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-home"></i> <br />
+            
+            首页
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-categories">
+          <a href="/categories" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-th"></i> <br />
+            
+            分类
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-about">
+          <a href="/about/ZSK-Profile.pdf" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-user"></i> <br />
+            
+            简历
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-archives">
+          <a href="/archives" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-archive"></i> <br />
+            
+            归档
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-tags">
+          <a href="/tags" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-tags"></i> <br />
+            
+            标签
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-commonweal">
+          <a href="/404.html" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-heartbeat"></i> <br />
+            
+            公益404
+          </a>
+        </li>
+      
+
+      
+        <li class="menu-item menu-item-search">
+          
+            <a href="javascript:;" class="popup-trigger">
+          
+            
+              <i class="menu-item-icon fa fa-search fa-fw"></i> <br />
+            
+            搜索
+          </a>
+        </li>
+      
+    </ul>
+  
+
+  
+    <div class="site-search">
+      
+  <div class="popup">
+ <span class="search-icon fa fa-search"></span>
+ <input type="text" id="local-search-input">
+ <div id="local-search-result"></div>
+ <span class="popup-btn-close">close</span>
+</div>
+
+
+    </div>
+  
+</nav>
+
+
+
+ </div>
+    </header>
+
+    <main id="main" class="main">
+      <div class="main-inner">
+        <div class="content-wrap">
+          <div id="content" class="content">
+            
 
   <div id="posts" class="posts-expand">
-    {{ post_template.render(page) }}
+    
 
-    <div class="post-spread">
-      {% if theme.jiathis %}
-        {% include '_partials/share/jiathis.swig' %}
-      {% elseif theme.baidushare %}
-        {% include '_partials/share/baidushare.swig' %}
-      {% elseif theme.add_this_id %}
-        {% include '_partials/share/add-this.swig' %}
-      {% elseif theme.duoshuo_shortname and theme.duoshuo_share %}
-        {% include '_partials/share/duoshuo_share.swig' %}
-      {% endif %}
+  
+
+  
+  
+  
+
+  <article class="post post-type-normal " itemscope itemtype="http://schema.org/Article">
+  <link itemprop="mainEntityOfPage" href="https://zhoushuke.github.io/2017/11/04/iptables%E5%AD%A6%E4%B9%A0%E4%BA%8C(iptables%E5%B8%B8%E7%94%A8%E5%91%BD%E4%BB%A4)/">
+
+  <span style="display:none" itemprop="author" itemscope itemtype="http://schema.org/Person">
+    <meta itemprop="name" content="">
+    <meta itemprop="description" content="">
+    <meta itemprop="image" content="/images/avatar.gif">
+  </span>
+
+  <span style="display:none" itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+    <meta itemprop="name" content="Z.S.K.'s Records">
+    <span style="display:none" itemprop="logo" itemscope itemtype="http://schema.org/ImageObject">
+      <img style="display:none;" itemprop="url image" alt="Z.S.K.'s Records" src="">
+    </span>
+  </span>
+
+    
+      <header class="post-header">
+
+        
+        
+          <h1 class="post-title" itemprop="name headline">
+            
+            
+              
+                iptables学习二(iptables常用命令)
+              
+            
+          </h1>
+        
+
+        <div class="post-meta">
+          <span class="post-time">
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">发表于</span>
+              
+              <time title="Post created" itemprop="dateCreated datePublished" datetime="2017-11-04T23:10:53+08:00">
+                2017-11-04
+              </time>
+            
+
+            
+
+            
+          </span>
+
+          
+            <span class="post-category" >
+            
+              <span class="post-meta-divider">|</span>
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-folder-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">分类于</span>
+              
+              
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/Http-Tcp-Ip/" itemprop="url" rel="index">
+                    <span itemprop="name">Http-Tcp-Ip</span>
+                  </a>
+                </span>
+
+                
+                
+              
+            </span>
+          
+
+          
+            
+          
+
+          
+
+          
+          
+
+          
+
+          
+
+        </div>
+      </header>
+    
+
+
+    <div class="post-body" itemprop="articleBody">
+
+      
+      
+
+      
+        <p>上一篇介绍了iptables是如何工作,现在记录下iptables一些实用的命令</p>
+<span id="more"></span>
+
+<h3 id="语法"><a href="#语法" class="headerlink" title="语法"></a><strong>语法</strong></h3><p><code>iptables [-t 表名] -命令 匹配规则 动作</code></p>
+<p>语法说明:</p>
+<blockquote>
+<ul>
+<li>表名: 即那四表: raw、mangle、nat、filter,该参数可以忽略,忽略时默认为filter表</li>
+<li>命令: 用来增删规则,常用的命令如下:<ol>
+<li>-P  –policy        &lt;链名&gt;  定义默认策略</li>
+<li>-L  –list          &lt;链名&gt;  查看iptables规则列表</li>
+<li>-A  –append        &lt;链名&gt;  在规则列表的最后增加1条规则</li>
+<li>-I  –insert        &lt;链名&gt;  在指定的位置插入1条规则</li>
+<li>-D  –delete        &lt;链名&gt;  从规则列表中删除1条规则</li>
+<li>-R  –replace       &lt;链名&gt;  替换规则列表中的某条规则</li>
+<li>-F  –flush         &lt;链名&gt;  删除表中所有规则</li>
+<li>-Z  –zero          &lt;链名&gt;  将表中数据包计数器和流量计数器归零</li>
+<li>-X  –delete-chain  &lt;链名&gt;  删除自定义链</li>
+<li>-v  –verbose       &lt;链名&gt;  与-L他命令一起使用显示更多更详细的信息</li>
+</ol>
+</li>
+<li>匹配规则: 用来对数据包进行匹配,常用如下:<ol>
+<li>-i –in-interface    网络接口名&gt;     指定数据包从哪个网络接口进入</li>
+<li>-o –out-interface   网络接口名&gt;     指定数据包从哪个网络接口输出</li>
+<li>-p —proto          协议类型        指定数据包匹配的协议，如TCP、UDP和ICMP等</li>
+<li>-s –source          源地址或子网&gt;   指定数据包匹配的源地址</li>
+<li>–sport           源端口号&gt;       指定数据包匹配的源端口号</li>
+<li>–dport           目的端口号&gt;     指定数据包匹配的目的端口号</li>
+<li>-m –match           匹配的模块      指定数据包规则所使用的过滤模块</li>
+</ol>
+</li>
+<li>动作,在上一篇中已经列出来了,常用的如下:<ol>
+<li>DROP: 直接丢弃该数据包,且对端不会有任何提示,对端可能在超时时才会知道</li>
+<li>ACCEPT: 接受数据包</li>
+<li>REJECT:  拒绝该数据包,会在对端进行提示</li>
+<li>LOG: 记录该数据包然后把该数据包传递到下一规则链中</li>
+</ol>
+</li>
+</ul>
+</blockquote>
+<h3 id="常用命令"><a href="#常用命令" class="headerlink" title="常用命令"></a><strong>常用命令</strong></h3><ol>
+<li><p>查看当前iptables设置</p>
+<figure class="highlight shell"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line">iptables -L -n -v --line-numbers</span><br><span class="line"><span class="meta prompt_">#</span><span class="language-bash">-L: 查看iptables规则列表</span></span><br><span class="line"><span class="meta prompt_">#</span><span class="language-bash">-n: 直接以ip的形式显示ip地址,不进行名称转换</span></span><br><span class="line"><span class="meta prompt_">#</span><span class="language-bash">-v: 显示更多更详细的信息</span></span><br><span class="line"><span class="meta prompt_">#</span><span class="language-bash">--line-numbers: 显示每条规则所在行号</span></span><br><span class="line"><span class="meta prompt_"></span></span><br><span class="line"><span class="meta prompt_">#</span><span class="language-bash">当然也可以指定查看具体的表</span></span><br><span class="line">iptables -t filter -L -nv --line-numbers</span><br></pre></td></tr></table></figure>
+
+<p><img src="http://zskgithubblog.oss-cn-beijing.aliyuncs.com/blogpic/iptables4.JPG" alt="iptables4"></p>
+<p>说明:</p>
+<p>chain INPUT: 指明正在查看的链为INPUT</p>
+<p>policy ACCEPT: 指明INPUT默认的策略为ACCEPT</p>
+<p>0 packets: 指明当前链使用默认策略匹配到的所有包的数量</p>
+<p>0 bytes: 明当前链使用默认策略匹配到的所有包的字节大小</p>
+<p><strong>参数-Z就是用来清空这两个值</strong></p>
+</li>
+<li><p>插入一条规则:</p>
+<figure class="highlight shell"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br></pre></td><td class="code"><pre><span class="line">iptables -t filter -I INPUT -s 192.168.1.10 -j DROP</span><br><span class="line"><span class="meta prompt_">#</span><span class="language-bash">-t: 指定规则应用于表filter</span></span><br><span class="line"><span class="meta prompt_">#</span><span class="language-bash">-I: 表明这条规则需要插入到INPUT链中,默认在开头位置插入</span></span><br><span class="line"><span class="meta prompt_">#</span><span class="language-bash">-s: 匹配数据包中源ip地址为192.168.1.10</span></span><br><span class="line"><span class="meta prompt_">#</span><span class="language-bash">-j: 指定动作为丢弃</span></span><br><span class="line"><span class="meta prompt_">#</span><span class="language-bash">上面这条命令用来丢弃从192.168.1.10发送过来的数据包</span></span><br><span class="line"><span class="meta prompt_"></span></span><br><span class="line"><span class="meta prompt_">#</span><span class="language-bash">也可指定插入的位置</span></span><br><span class="line">iptables -t filter -I INPUT 3 -s 192.168.1.10 -j DROP</span><br><span class="line"><span class="meta prompt_">#</span><span class="language-bash">在表filter中的INPUT链中的第3条规则之前插入该规则</span></span><br></pre></td></tr></table></figure>
+</li>
+<li><p>增加一条规则(在规则列表的最后增加):</p>
+<figure class="highlight shell"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line">iptables -t filter -A INPUT -s 192.168.1.10 -j DROP</span><br><span class="line"><span class="meta prompt_">#</span><span class="language-bash">-t: 指定规则应用于表filter</span></span><br><span class="line"><span class="meta prompt_">#</span><span class="language-bash">-A: 表明这条规则需要增加到INPUT链中,在最后位置增加</span></span><br><span class="line"><span class="meta prompt_">#</span><span class="language-bash">-s: 匹配数据包中源ip地址为192.168.1.10</span></span><br><span class="line"><span class="meta prompt_">#</span><span class="language-bash">-j: 指定动作为丢弃</span></span><br><span class="line"><span class="meta prompt_">#</span><span class="language-bash">上面这条命令用来丢弃从192.168.1.10发送过来的数据包</span></span><br></pre></td></tr></table></figure>
+</li>
+<li><p>删除一条规则:</p>
+<figure class="highlight shell"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br></pre></td><td class="code"><pre><span class="line">iptables -t filter -D INPUT -s 192.168.1.10 -j DROP</span><br><span class="line"><span class="meta prompt_">#</span><span class="language-bash">删除使用-D命令,其它命令参数跟3相同</span></span><br><span class="line"><span class="meta prompt_">#</span><span class="language-bash">这条命令用来删除在表filter的INPUT链中,源地址为192.168.1.10且动作为DROP的规则</span></span><br><span class="line"><span class="meta prompt_"></span></span><br><span class="line"><span class="meta prompt_">#</span><span class="language-bash">我们也可以直接使用行号来删除规则</span></span><br><span class="line">iptables -t filter -D INPUT 3</span><br><span class="line"><span class="meta prompt_">#</span><span class="language-bash">删除在表filter的INPUT链中的第3行规则</span></span><br><span class="line"><span class="meta prompt_"></span></span><br><span class="line"><span class="meta prompt_">#</span><span class="language-bash">那如果我们要删除指定表中的所有规则呢</span></span><br><span class="line">iptables -t filter -F</span><br><span class="line"><span class="meta prompt_">#</span><span class="language-bash">-F: (flush)清空指定表上的所有规则</span></span><br><span class="line"><span class="meta prompt_"></span></span><br><span class="line"><span class="meta prompt_">#</span><span class="language-bash">清空所有表的规则</span></span><br><span class="line">iptables -F</span><br></pre></td></tr></table></figure>
+</li>
+<li><p>修改规则(用来修改动作)</p>
+<figure class="highlight shell"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line">iptables -t filter -R INPUT -s 192.168.1.10 -j ACCEPT</span><br><span class="line"><span class="meta prompt_">#</span><span class="language-bash">-R:(replace):如果使用-R来修改规则,则需要指定原本规则的匹配条件</span></span><br><span class="line"><span class="meta prompt_">#</span><span class="language-bash">-R一般用来修改规则的动作</span></span><br><span class="line"><span class="meta prompt_"></span></span><br><span class="line"><span class="meta prompt_">#</span><span class="language-bash">如果要修改规则,则更靠谱的办法是删除原来的规则,新增一条新规则</span></span><br></pre></td></tr></table></figure>
+</li>
+<li><p>保存规则</p>
+<figure class="highlight shell"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta prompt_">#</span><span class="language-bash">把规则保存为文件中</span></span><br><span class="line">iptables-save &gt; /etc/sysconfig/iptables</span><br><span class="line"><span class="meta prompt_">#</span><span class="language-bash">直接保存</span></span><br><span class="line">service iptables save</span><br><span class="line"><span class="meta prompt_">#</span><span class="language-bash">加载规则</span></span><br><span class="line">iptables-restore &lt; /etc/sysconfig/iptables</span><br></pre></td></tr></table></figure>
+</li>
+<li><p>常用的清空所有规则</p>
+<figure class="highlight shell"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line">iptables -F</span><br><span class="line">iptables -X</span><br><span class="line">iptables -Z</span><br><span class="line"><span class="meta prompt_">#</span><span class="language-bash">下面增加其它规则</span></span><br><span class="line">...</span><br></pre></td></tr></table></figure></li>
+</ol>
+<h3 id="常用模块"><a href="#常用模块" class="headerlink" title="常用模块"></a><strong>常用模块</strong></h3><p>我们使用-m 参数来指定使用到的iptables模块,常用的模块如下:</p>
+<p>最开头匹配条件中,有些我们可以直接使用,能直接使用的属于基本条件匹配,还有些是不能直接使用的,不能直接使用的就需要借助模块来使用了,比如–sport&#x2F;–dport,比较常用的模块如下:</p>
+<ol>
+<li><p>tcp模块</p>
+<figure class="highlight shell"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line">iptables -t filter -I INPUT -s 192.168.1.10 -p tcp -m tcp --dport 80 -j ACCEPT</span><br><span class="line"><span class="meta prompt_">#</span><span class="language-bash">-p: 指明协议为tcp</span></span><br><span class="line"><span class="meta prompt_">#</span><span class="language-bash">-m: 指明智使用tcp模块</span></span><br><span class="line"><span class="meta prompt_">#</span><span class="language-bash">--dport: 这个参数是属于tcp模块的,所以必须使用-m tcp指定,且--dport 必须指定-p参数</span></span><br><span class="line"><span class="meta prompt_">#</span><span class="language-bash">如果使用的协议跟模块是一个名字的话,则可以省略-m,如上面的命令等价于</span></span><br><span class="line">iptables -t filter -I INPUT -s 192.168.1.10 -p tcp --dport 80 -j ACCEPT</span><br><span class="line"><span class="meta prompt_">#</span><span class="language-bash">但是建议大家还是尽量不要省略,因为那么多模块,有时你不能确定协议名跟模块名是否一致</span></span><br></pre></td></tr></table></figure>
+</li>
+<li><p>multiport模块</p>
+</li>
+</ol>
+   <figure class="highlight shell"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">iptables -t filter -I INPUT -s 192.168.1.10 -p tcp -m multiport --dport 22,80 -j ACCEPT</span><br><span class="line"><span class="meta prompt_">#</span><span class="language-bash">multiport: 用来指定多端口</span></span><br></pre></td></tr></table></figure>
+
+<ol start="3">
+<li><p>string模块</p>
+<figure class="highlight shell"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">iptables -t filter -I INPUT -p tcp --sport 80 -m string --algo bm --string &quot;helloworld&quot; -j REJECT</span><br><span class="line"><span class="meta prompt_">#</span><span class="language-bash">algo: 指定对应的匹配算法,有bm,kpm,为必需项</span></span><br><span class="line"><span class="meta prompt_">#</span><span class="language-bash">string: 用来匹配数据包中包含有hellowworld</span></span><br></pre></td></tr></table></figure>
+</li>
+<li><p>state模块</p>
+<figure class="highlight shell"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta prompt_">#</span><span class="language-bash">state模块用来追踪连接的状态</span></span><br><span class="line"><span class="meta prompt_">#</span><span class="language-bash">常用的状态有如下几种:</span></span><br><span class="line"><span class="meta prompt_">  #</span><span class="language-bash">1. NEW： 建立连接中的第一个包</span></span><br><span class="line"><span class="meta prompt_">  #</span><span class="language-bash">2. ESTABLISHED: TCP三次连接成功后为ESTABLISHED</span></span><br><span class="line"><span class="meta prompt_">  #</span><span class="language-bash">3. RELATED: 相关边的数据连接为RELATED,如FTP的22跟23端口之间的控制连接</span></span><br><span class="line"><span class="meta prompt_">  #</span><span class="language-bash">4. INVALID: 无法识别状态的数据包为INVALID</span></span><br><span class="line"><span class="meta prompt_">  #</span><span class="language-bash">5. UNTRACKED: 未被追踪的包为UNTRACKED</span></span><br><span class="line">  </span><br><span class="line">iptables -t filter -I INPUT -m state --state RELATED,ESTABLISHED -j ACCEPT</span><br><span class="line"><span class="meta prompt_">#</span><span class="language-bash">只有状态是RELATED,ESTABLISHED的才通过</span></span><br></pre></td></tr></table></figure>
+</li>
+<li><p>iprange模块</p>
+<figure class="highlight shell"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">iptables -t filter -I INPUT -m iprange --src-range 192.168.1.1-192.168.1.10 -j DROP</span><br><span class="line"><span class="meta prompt_">#</span><span class="language-bash">iprange: 指定一个ip范围</span></span><br></pre></td></tr></table></figure></li>
+</ol>
+<h3 id="白名单-x2F-黑名单机制"><a href="#白名单-x2F-黑名单机制" class="headerlink" title="白名单&#x2F;黑名单机制"></a><strong>白名单&#x2F;黑名单机制</strong></h3><p>这两种说法其实是一个意思,关键在于默认的策略是什么?</p>
+<p>如果默认的策略为ACCEPT,如果在匹配完所有的规则之后还是无法匹配,该数据包会被ACCEPT</p>
+<p>如果默认的策略为DROP,如果在匹配完所有的规则之后还是无法匹配,该数据包会被DROP</p>
+<p>所以,正常情况下,</p>
+<p><strong>如果默认的策略为ACCEPT,则链中的规则匹配上的数据包动作应该指定为DROP&#x2F;REJECT,这是黑名单机制</strong></p>
+<p><strong>如果默认的策略为DROP,则链中的规则匹配上的数据包动作应该指定为ACCEPT,这是白名单机制</strong></p>
+<p>考虑如下这种情况:</p>
+<p>假如使用了默认规则为DROP</p>
+<p>突然有一天,管理员使用了<code>iptables -F</code>清空了所有规则,这个时候你会发现管理员自己也登录不上去了,因为默认使用的是DROP,其它能够匹配的规则都被删除了,这个时候所有的数据包都会被DROP掉,这就是黑名单的缺点</p>
+<p> 那如果我们使用了默认规则为ACCEPT</p>
+<p>就算我们清空了其它规则,那管理员还能能够登录上去,因为默认接受所有数据包.</p>
+<p><strong>所以我们一般会这样设置:</strong></p>
+<ol>
+<li><p>把默认规则设置为ACCEPT,然后在规则链的最后加一条规则:</p>
+<figure class="highlight shell"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta prompt_">#</span><span class="language-bash">我们希望数据包能够匹配的规则</span></span><br><span class="line">...</span><br><span class="line">iptables -t filter -j REJECT</span><br></pre></td></tr></table></figure>
+
+<p>这样的话,如果我们想要的数据包能够匹配前面已有的规则,不匹配的数据包执行到最后这条的时候会被拒绝.</p>
+<p>就算是我们使用了<code>iptables -F</code>清空了规则,也能够使用默认的ACCEPT</p>
+</li>
+<li><p>我们可以复用crontab的定时执行机制写一条规则(允许通过指定ip登录的规则),让它每隔几份钟执行一次,这样不管我现在是什么规则导致我登录不了,过了几份钟后新规则生效,管理员就可以登录了, 不至于永远登录不了.</p>
+</li>
+</ol>
+<h3 id="参考文章"><a href="#参考文章" class="headerlink" title="参考文章:"></a><strong>参考文章:</strong></h3><blockquote>
+<ul>
+<li><a target="_blank" rel="noopener" href="https://wiki.archlinux.org/index.php/Iptables">iptables-wiki</a></li>
+<li><a target="_blank" rel="noopener" href="https://www.liuliqiang.info/post/dive-in-iptables/">iptables 深度详解</a></li>
+<li><a target="_blank" rel="noopener" href="http://www.zsythink.net/archives/1199">iptables概念</a></li>
+</ul>
+</blockquote>
+<h3 id="转载请注明出处https-izsk-me"><a href="#转载请注明出处https-izsk-me" class="headerlink" title="转载请注明出处https://izsk.me"></a><strong>转载请注明出处<a target="_blank" rel="noopener" href="https://izsk.me/">https://izsk.me</a></strong></h3><hr>
+
+      
+    </div>
+
+    <div>
+      
+        
+<div id="wechat_subscriber" style="display: block; padding: 10px 0; margin: 20px auto; width: 100%; text-align: center">
+    <img id="wechat_subscriber_qcode" src="/images/websitecode250.png" alt=" wechat" style="width: 200px; max-width: 100%;"/>
+    <div>Scan Me To Read on Phone</div>
+</div>
+
+
+      
+    </div>
+
+    <div>
+      
+        
+  <div style="padding: 10px 0; margin: 20px auto; width: 90%; text-align: center;">
+    <div>I know you won't do this,but what if you did?</div>
+    <button id="rewardButton" disable="enable" onclick="var qr = document.getElementById('QR'); if (qr.style.display === 'none') {qr.style.display='block';} else {qr.style.display='none'}">
+      <span>赏</span>
+    </button>
+    <div id="QR" style="display: none;">
+      
+        <div id="wechat" style="display: inline-block">
+          <img id="wechat_qr" src="/images/wechatpayme.png" alt=" WeChat Pay"/>
+          <p>微信打赏</p>
+        </div>
+      
+      
+        <div id="alipay" style="display: inline-block">
+          <img id="alipay_qr" src="/images/alipayme.jpg" alt=" Alipay"/>
+          <p>支付宝打赏</p>
+        </div>
+      
     </div>
   </div>
 
-{% endblock %}
 
-{% block sidebar %}
-  {{ sidebar_template.render(true) }}
-{% endblock %}
+      
+    </div>
 
 
-{% block script_extra %}
-  {% include '_scripts/pages/post-details.swig' %}
-{% endblock %}
+    <footer class="post-footer">
+      
+        <div class="post-tags">
+          
+            <a href="/tags/Http-Tcp-Ip/" rel="tag"># Http-Tcp-Ip</a>
+          
+        </div>
+      
+
+      
+        <div class="post-nav">
+          <div class="post-nav-next post-nav-item">
+            
+              <a href="/2017/10/12/iptables%E5%AD%A6%E4%B9%A0%E4%B8%80(iptables%E4%BB%8B%E7%BB%8D)/" rel="next" title="iptables学习一(iptables介绍)">
+                <i class="fa fa-chevron-left"></i> iptables学习一(iptables介绍)
+              </a>
+            
+          </div>
+
+          <span class="post-nav-divider"></span>
+
+          <div class="post-nav-prev post-nav-item">
+            
+              <a href="/2017/11/12/TCP%E5%8D%8F%E8%AE%AE%E4%B8%AD%E5%9B%9B%E6%AC%A1%E5%88%86%E6%89%8B%E7%9A%84time_wait%E7%8A%B6%E6%80%81/" rel="prev" title="TCP协议中四次分手的time_wait状态">
+                TCP协议中四次分手的time_wait状态 <i class="fa fa-chevron-right"></i>
+              </a>
+            
+          </div>
+        </div>
+      
+
+      
+      
+    </footer>
+  </article>
+
+
+
+    <div class="post-spread">
+      
+    </div>
+  </div>
+
+
+          </div>
+          
+
+
+          
+  <div class="comments" id="comments">
+    
+  </div>
+
+
+        </div>
+        
+          
+  
+  <div class="sidebar-toggle">
+    <div class="sidebar-toggle-line-wrap">
+      <span class="sidebar-toggle-line sidebar-toggle-line-first"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-middle"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-last"></span>
+    </div>
+  </div>
+
+  <aside id="sidebar" class="sidebar">
+    <div class="sidebar-inner">
+
+      
+
+      
+        <ul class="sidebar-nav motion-element">
+          <li class="sidebar-nav-toc sidebar-nav-active" data-target="post-toc-wrap" >
+            文章目录
+          </li>
+          <li class="sidebar-nav-overview" data-target="site-overview">
+            站点概览
+          </li>
+        </ul>
+      
+
+      <section class="site-overview sidebar-panel">
+        <div class="site-author motion-element" itemprop="author" itemscope itemtype="http://schema.org/Person">
+          <img class="site-author-image" itemprop="image"
+               src="/images/avatar.gif"
+               alt="" />
+          <p class="site-author-name" itemprop="name"></p>
+          <p class="site-description motion-element" itemprop="description"></p>
+        </div>
+        <nav class="site-state motion-element">
+        
+          
+            <div class="site-state-item site-state-posts">
+              <a href="/archives">
+                <span class="site-state-item-count">192</span>
+                <span class="site-state-item-name">日志</span>
+              </a>
+            </div>
+          
+
+          
+            <div class="site-state-item site-state-categories">
+              <a href="/categories">
+                <span class="site-state-item-count">14</span>
+                <span class="site-state-item-name">分类</span>
+              </a>
+            </div>
+          
+
+          
+            <div class="site-state-item site-state-tags">
+              <a href="/tags">
+                <span class="site-state-item-count">14</span>
+                <span class="site-state-item-name">标签</span>
+              </a>
+            </div>
+          
+
+        </nav>
+
+        
+
+        <div class="links-of-author motion-element">
+          
+        </div>
+
+        
+        
+
+        
+        
+
+        
+
+
+      </section>
+
+      
+      <!--noindex-->
+        <section class="post-toc-wrap motion-element sidebar-panel sidebar-panel-active">
+          <div class="post-toc">
+
+            
+              
+            
+
+            
+              <div class="post-toc-content"><ol class="nav"><li class="nav-item nav-level-3"><a class="nav-link" href="#%E8%AF%AD%E6%B3%95"><span class="nav-number">1.</span> <span class="nav-text">语法</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E5%B8%B8%E7%94%A8%E5%91%BD%E4%BB%A4"><span class="nav-number">2.</span> <span class="nav-text">常用命令</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E5%B8%B8%E7%94%A8%E6%A8%A1%E5%9D%97"><span class="nav-number">3.</span> <span class="nav-text">常用模块</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E7%99%BD%E5%90%8D%E5%8D%95-x2F-%E9%BB%91%E5%90%8D%E5%8D%95%E6%9C%BA%E5%88%B6"><span class="nav-number">4.</span> <span class="nav-text">白名单&#x2F;黑名单机制</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E5%8F%82%E8%80%83%E6%96%87%E7%AB%A0"><span class="nav-number">5.</span> <span class="nav-text">参考文章:</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E8%BD%AC%E8%BD%BD%E8%AF%B7%E6%B3%A8%E6%98%8E%E5%87%BA%E5%A4%84https-izsk-me"><span class="nav-number">6.</span> <span class="nav-text">转载请注明出处https:&#x2F;&#x2F;izsk.me</span></a></li></ol></div>
+            
+
+          </div>
+        </section>
+      <!--/noindex-->
+      
+
+    </div>
+  </aside>
+
+
+        
+      </div>
+    </main>
+
+    <footer id="footer" class="footer">
+      <div class="footer-inner">
+        <div class="copyright" >
+  
+  &copy; 
+  <span itemprop="copyrightYear">2022</span>
+  <span class="with-love">
+    <i class="fa fa-heart"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">Z.S.K.</span>
+</div>
+
+
+<div class="powered-by">
+  Supported by <a class="theme-link" target="_blank" rel="noopener" href="https://hexo.io">Hexo</a>
+</div>
+
+<div class="theme-info">
+  Theme -
+  <a class="theme-link" target="_blank" rel="noopener" href="https://github.com/iissnan/hexo-theme-next">
+    NexT.Mist
+  </a>
+</div>
+
+
+        
+
+        
+      </div>
+    </footer>
+
+    <div class="back-to-top">
+      <i class="fa fa-arrow-up"></i>
+    </div>
+  </div>
+
+  
+
+<script type="text/javascript">
+  if (Object.prototype.toString.call(window.Promise) !== '[object Function]') {
+    window.Promise = null;
+  }
+</script>
+
+
+
+
+
+
+
+
+
+  
+
+
+
+  
+  <script type="text/javascript" src="/lib/jquery/index.js?v=2.1.3"></script>
+
+  
+  <script type="text/javascript" src="/lib/fastclick/lib/fastclick.min.js?v=1.0.6"></script>
+
+  
+  <script type="text/javascript" src="/lib/jquery_lazyload/jquery.lazyload.js?v=1.9.7"></script>
+
+  
+  <script type="text/javascript" src="/lib/velocity/velocity.min.js?v=1.2.1"></script>
+
+  
+  <script type="text/javascript" src="/lib/velocity/velocity.ui.min.js?v=1.2.1"></script>
+
+  
+  <script type="text/javascript" src="/lib/fancybox/source/jquery.fancybox.pack.js?v=2.1.5"></script>
+
+
+  
+
+
+  <script type="text/javascript" src="/js/src/utils.js?v=5.1.0"></script>
+
+  <script type="text/javascript" src="/js/src/motion.js?v=5.1.0"></script>
+
+
+
+  
+  
+
+  
+  <script type="text/javascript" src="/js/src/scrollspy.js?v=5.1.0"></script>
+<script type="text/javascript" src="/js/src/post-details.js?v=5.1.0"></script>
+
+
+
+  
+
+
+  <script type="text/javascript" src="/js/src/bootstrap.js?v=5.1.0"></script>
+
+
+
+  
+
+
+
+  
+
+
+
+
+	
+
+
+
+
+
+  
+
+
+
+
+  
+  
+  <script type="text/javascript">
+    // Popup Window;
+    var isfetched = false;
+    // Search DB path;
+    var search_path = "search.xml";
+    if (search_path.length == 0) {
+      search_path = "search.xml";
+    }
+    var path = "/" + search_path;
+    // monitor main search box;
+
+    function proceedsearch() {
+      $("body").append('<div class="popoverlay">').css('overflow', 'hidden');
+      $('.popup').toggle();
+    }
+    // search function;
+    var searchFunc = function(path, search_id, content_id) {
+      'use strict';
+      $.ajax({
+        url: path,
+        dataType: "xml",
+        async: true,
+        success: function( xmlResponse ) {
+          // get the contents from search data
+          isfetched = true;
+          $('.popup').detach().appendTo('.header-inner');
+          var datas = $( "entry", xmlResponse ).map(function() {
+            return {
+              title: $( "title", this ).text(),
+              content: $("content",this).text(),
+              url: $( "url" , this).text()
+            };
+          }).get();
+          var $input = document.getElementById(search_id);
+          var $resultContent = document.getElementById(content_id);
+          $input.addEventListener('input', function(){
+            var matchcounts = 0;
+            var str='<ul class=\"search-result-list\">';
+            var keywords = this.value.trim().toLowerCase().split(/[\s\-]+/);
+            $resultContent.innerHTML = "";
+            if (this.value.trim().length > 1) {
+              // perform local searching
+              datas.forEach(function(data) {
+                var isMatch = false;
+                var content_index = [];
+                var data_title = data.title.trim().toLowerCase();
+                var data_content = data.content.trim().replace(/<[^>]+>/g,"").toLowerCase();
+                var data_url = decodeURIComponent(data.url);
+                var index_title = -1;
+                var index_content = -1;
+                var first_occur = -1;
+                // only match artiles with not empty titles and contents
+                if(data_title != '') {
+                  keywords.forEach(function(keyword, i) {
+                    index_title = data_title.indexOf(keyword);
+                    index_content = data_content.indexOf(keyword);
+                    if( index_title >= 0 || index_content >= 0 ){
+                      isMatch = true;
+                      if (i == 0) {
+                        first_occur = index_content;
+                      }
+                    }
+
+                  });
+                }
+                // show search results
+                if (isMatch) {
+                  matchcounts += 1;
+                  str += "<li><a href='"+ data_url +"' class='search-result-title'>"+ data_title +"</a>";
+                  var content = data.content.trim().replace(/<[^>]+>/g,"");
+                  if (first_occur >= 0) {
+                    // cut out 100 characters
+                    var start = first_occur - 20;
+                    var end = first_occur + 80;
+                    if(start < 0){
+                      start = 0;
+                    }
+                    if(start == 0){
+                      end = 50;
+                    }
+                    if(end > content.length){
+                      end = content.length;
+                    }
+                    var match_content = content.substring(start, end);
+                    // highlight all keywords
+                    keywords.forEach(function(keyword){
+                      var regS = new RegExp(keyword, "gi");
+                      match_content = match_content.replace(regS, "<b class=\"search-keyword\">"+keyword+"</b>");
+                    });
+
+                    str += "<p class=\"search-result\">" + match_content +"...</p>"
+                  }
+                  str += "</li>";
+                }
+              })};
+            str += "</ul>";
+            if (matchcounts == 0) { str = '<div id="no-result"><i class="fa fa-frown-o fa-5x" /></div>' }
+            if (keywords == "") { str = '<div id="no-result"><i class="fa fa-search fa-5x" /></div>' }
+            $resultContent.innerHTML = str;
+          });
+          proceedsearch();
+        }
+      });}
+
+    // handle and trigger popup window;
+    $('.popup-trigger').click(function(e) {
+      e.stopPropagation();
+      if (isfetched == false) {
+        searchFunc(path, 'local-search-input', 'local-search-result');
+      } else {
+        proceedsearch();
+      };
+    });
+
+    $('.popup-btn-close').click(function(e){
+      $('.popup').hide();
+      $(".popoverlay").remove();
+      $('body').css('overflow', '');
+    });
+    $('.popup').click(function(e){
+      e.stopPropagation();
+    });
+  </script>
+
+
+  
+
+  
+
+  
+
+  
+
+
+</body>
+</html>

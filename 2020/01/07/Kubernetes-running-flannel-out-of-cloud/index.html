@@ -1,38 +1,967 @@
-{% extends '_layout.swig' %}
-{% import '_macro/post.swig' as post_template %}
-{% import '_macro/sidebar.swig' as sidebar_template %}
+<!doctype html>
 
 
-{% block title %} {{ page.title }} | {{ config.title }} {% endblock %}
 
-{% block page_class %}page-post-detail{% endblock %}
+  
 
 
-{% block content %}
+<html class="theme-next mist use-motion" lang="zh-Hans">
+<head>
+  <meta charset="UTF-8"/>
+<meta http-equiv="X-UA-Compatible" content="IE=edge" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1"/>
+
+
+
+<meta http-equiv="Cache-Control" content="no-transform" />
+<meta http-equiv="Cache-Control" content="no-siteapp" />
+
+
+
+
+
+
+
+
+
+
+
+
+  
+  
+  <link href="/lib/fancybox/source/jquery.fancybox.css?v=2.1.5" rel="stylesheet" type="text/css" />
+
+
+
+
+  
+  
+  
+  
+
+  
+    
+    
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+    
+    
+    <link href="//fonts.googleapis.com/css?family=Lato:300,300italic,400,400italic,700,700italic&subset=latin,latin-ext" rel="stylesheet" type="text/css">
+  
+
+
+
+
+
+
+<link href="/lib/font-awesome/css/font-awesome.min.css?v=4.6.2" rel="stylesheet" type="text/css" />
+
+<link href="/css/main.css?v=5.1.0" rel="stylesheet" type="text/css" />
+
+
+  <meta name="keywords" content="Kubernetes," />
+
+
+
+
+
+
+
+
+  <link rel="shortcut icon" type="image/x-icon" href="/favicon.ico?v=5.1.0" />
+
+
+
+
+
+
+<meta name="description" content="该文章为翻译文档, 这里是原文地址, 比较清晰地说明了flannel在VxLAN下的实现原理">
+<meta property="og:type" content="article">
+<meta property="og:title" content="Kubernetes学习(在云架构外运行flannel)">
+<meta property="og:url" content="https://zhoushuke.github.io/2020/01/07/Kubernetes-running-flannel-out-of-cloud/index.html">
+<meta property="og:site_name" content="Z.S.K.&#39;s Records">
+<meta property="og:description" content="该文章为翻译文档, 这里是原文地址, 比较清晰地说明了flannel在VxLAN下的实现原理">
+<meta property="og:locale">
+<meta property="og:image" content="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20200422150307.png">
+<meta property="og:image" content="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20200422150719.png">
+<meta property="og:image" content="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20200422151055.png">
+<meta property="og:image" content="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20200422151535.png">
+<meta property="og:image" content="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20200422151813.png">
+<meta property="article:published_time" content="2020-01-07T02:30:53.000Z">
+<meta property="article:modified_time" content="2022-07-19T03:16:00.945Z">
+<meta property="article:author" content="Z.S.K.">
+<meta property="article:tag" content="Kubernetes">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:image" content="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20200422150307.png">
+
+
+
+<script type="text/javascript" id="hexo.configurations">
+  var NexT = window.NexT || {};
+  var CONFIG = {
+    root: '',
+    scheme: 'Mist',
+    sidebar: {"position":"left","display":"post"},
+    fancybox: true,
+    motion: true,
+    duoshuo: {
+      userId: 'undefined',
+      author: '博主'
+    },
+    algolia: {
+      applicationID: '',
+      apiKey: '',
+      indexName: '',
+      hits: {"per_page":10},
+      labels: {"input_placeholder":"Search for Posts","hits_empty":"We didn't find any results for the search: ${query}","hits_stats":"${hits} results found in ${time} ms"}
+    }
+  };
+</script>
+
+
+
+  <link rel="canonical" href="https://zhoushuke.github.io/2020/01/07/Kubernetes-running-flannel-out-of-cloud/"/>
+
+
+
+
+
+  <title> Kubernetes学习(在云架构外运行flannel) | Z.S.K.'s Records </title>
+<meta name="generator" content="Hexo 6.2.0"></head>
+
+<body itemscope itemtype="http://schema.org/WebPage" lang="zh-Hans">
+
+  
+
+
+
+
+
+
+
+
+
+
+  
+  
+    
+  
+
+  <div class="container one-collumn sidebar-position-left page-post-detail ">
+    <div class="headband"></div>
+
+    <header id="header" class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-meta ">
+  
+
+  <div class="custom-logo-site-title">
+    <a href="/"  class="brand" rel="start">
+      <span class="logo-line-before"><i></i></span>
+      <span class="site-title">Z.S.K.'s Records</span>
+      <span class="logo-line-after"><i></i></span>
+    </a>
+  </div>
+    
+      <p class="site-subtitle"></p>
+    
+</div>
+
+<div class="site-nav-toggle">
+  <button>
+    <span class="btn-bar"></span>
+    <span class="btn-bar"></span>
+    <span class="btn-bar"></span>
+  </button>
+</div>
+
+<nav class="site-nav">
+  
+
+  
+    <ul id="menu" class="menu">
+      
+        
+        <li class="menu-item menu-item-home">
+          <a href="/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-home"></i> <br />
+            
+            首页
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-categories">
+          <a href="/categories" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-th"></i> <br />
+            
+            分类
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-about">
+          <a href="/about/ZSK-Profile.pdf" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-user"></i> <br />
+            
+            简历
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-archives">
+          <a href="/archives" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-archive"></i> <br />
+            
+            归档
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-tags">
+          <a href="/tags" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-tags"></i> <br />
+            
+            标签
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-commonweal">
+          <a href="/404.html" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-heartbeat"></i> <br />
+            
+            公益404
+          </a>
+        </li>
+      
+
+      
+        <li class="menu-item menu-item-search">
+          
+            <a href="javascript:;" class="popup-trigger">
+          
+            
+              <i class="menu-item-icon fa fa-search fa-fw"></i> <br />
+            
+            搜索
+          </a>
+        </li>
+      
+    </ul>
+  
+
+  
+    <div class="site-search">
+      
+  <div class="popup">
+ <span class="search-icon fa fa-search"></span>
+ <input type="text" id="local-search-input">
+ <div id="local-search-result"></div>
+ <span class="popup-btn-close">close</span>
+</div>
+
+
+    </div>
+  
+</nav>
+
+
+
+ </div>
+    </header>
+
+    <main id="main" class="main">
+      <div class="main-inner">
+        <div class="content-wrap">
+          <div id="content" class="content">
+            
 
   <div id="posts" class="posts-expand">
-    {{ post_template.render(page) }}
+    
 
-    <div class="post-spread">
-      {% if theme.jiathis %}
-        {% include '_partials/share/jiathis.swig' %}
-      {% elseif theme.baidushare %}
-        {% include '_partials/share/baidushare.swig' %}
-      {% elseif theme.add_this_id %}
-        {% include '_partials/share/add-this.swig' %}
-      {% elseif theme.duoshuo_shortname and theme.duoshuo_share %}
-        {% include '_partials/share/duoshuo_share.swig' %}
-      {% endif %}
+  
+
+  
+  
+  
+
+  <article class="post post-type-normal " itemscope itemtype="http://schema.org/Article">
+  <link itemprop="mainEntityOfPage" href="https://zhoushuke.github.io/2020/01/07/Kubernetes-running-flannel-out-of-cloud/">
+
+  <span style="display:none" itemprop="author" itemscope itemtype="http://schema.org/Person">
+    <meta itemprop="name" content="">
+    <meta itemprop="description" content="">
+    <meta itemprop="image" content="/images/avatar.gif">
+  </span>
+
+  <span style="display:none" itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+    <meta itemprop="name" content="Z.S.K.'s Records">
+    <span style="display:none" itemprop="logo" itemscope itemtype="http://schema.org/ImageObject">
+      <img style="display:none;" itemprop="url image" alt="Z.S.K.'s Records" src="">
+    </span>
+  </span>
+
+    
+      <header class="post-header">
+
+        
+        
+          <h1 class="post-title" itemprop="name headline">
+            
+            
+              
+                Kubernetes学习(在云架构外运行flannel)
+              
+            
+          </h1>
+        
+
+        <div class="post-meta">
+          <span class="post-time">
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">发表于</span>
+              
+              <time title="Post created" itemprop="dateCreated datePublished" datetime="2020-01-07T10:30:53+08:00">
+                2020-01-07
+              </time>
+            
+
+            
+
+            
+          </span>
+
+          
+            <span class="post-category" >
+            
+              <span class="post-meta-divider">|</span>
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-folder-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">分类于</span>
+              
+              
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/Kubernetes/" itemprop="url" rel="index">
+                    <span itemprop="name">Kubernetes</span>
+                  </a>
+                </span>
+
+                
+                
+              
+            </span>
+          
+
+          
+            
+          
+
+          
+
+          
+          
+
+          
+
+          
+
+        </div>
+      </header>
+    
+
+
+    <div class="post-body" itemprop="articleBody">
+
+      
+      
+
+      
+        <p>该文章为翻译文档, 这里是<a target="_blank" rel="noopener" href="https://itnext.io/kubernetes-journey-up-and-running-out-of-the-cloud-flannel-c01283308f0e">原文地址</a>, 比较清晰地说明了flannel在VxLAN下的实现原理</p>
+<span id="more"></span>
+
+
+
+<p>在本文中，我们将详细介绍flannel及其在Kubernetes网络中的作用。我强烈建议您点击参考链接，以更好地了解flannel工作原理。</p>
+<p>在<a target="_blank" rel="noopener" href="https://itnext.io/kubernetes-journey-up-and-running-out-of-the-cloud-etcd-b332d1be474c">上一篇文章中</a>，我们介绍了<strong>etcd</strong>并对其进行了简要概述。</p>
+<p>这些文章是我们的<a target="_blank" rel="noopener" href="https://medium.com/@mtvallim/kubernetes-journey-up-and-running-out-of-the-cloud-introduction-f04a811c92a5">Kubernetes旅程的</a>一部分。我希望您很高兴深入了解如何从云中安装和配置Kubernetes！</p>
+<h3 id="集群网络"><a href="#集群网络" class="headerlink" title="集群网络"></a>集群网络</h3><blockquote>
+<p><em>“网络是Kubernetes的核心部分，但要确切地了解其预期工作方式可能会有些困难。”</em></p>
+</blockquote>
+<blockquote>
+<p>参考：<a target="_blank" rel="noopener" href="https://kubernetes.io/docs/concepts/cluster-administration/networking/">https://kubernetes.io/docs/concepts/cluster-administration/networking/</a></p>
+</blockquote>
+<p>在讨论<strong>flannel</strong>之前，了解群集的网络特性很重要。</p>
+<p>在本节中，我们将主要集中于了解<strong>Pod到Pod的</strong>通信方式。</p>
+<p><strong>Kubernetes网络模型</strong>遵循一些基本假设。在<a target="_blank" rel="noopener" href="https://kubernetes.io/docs/concepts/cluster-administration/networking/#the-kubernetes-network-model">官方文件</a>说，<strong>Kubernetes网络模型的</strong>要求：</p>
+<ul>
+<li><em>Pod都可以彼此通信，而无需使用网络地址转换（NAT）。</em></li>
+<li><em>节点-运行Kubernetes集群的机器。这些可以是虚拟机或物理机，或者实际上可以运行Kubernetes的任何其他机器-也可以与所有Pod通信，而无需NAT。</em></li>
+<li><em>每个Pod会看到与其他Pod一样的IP</em></li>
+</ul>
+<h3 id="Kubernetes网络模型"><a href="#Kubernetes网络模型" class="headerlink" title="Kubernetes网络模型"></a>Kubernetes网络模型</h3><p><img src="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20200422150307.png"></p>
+<p>每个Kubernetes节点（主节点或工作节点）都是Linux机器（VM或Bare Metal），其具有网络命名空间**-netns-<strong>以网络接口作为其主要接口。上图中的</strong>eth0**对此进行了说明。</p>
+<p>仔细观察，我们可以看到每个Pod都有自己的<strong>eth</strong>接口，这意味着每个Pod都有自己的网络配置（IP，路由等）。这也意味着每个Pod都有自己的<strong>网络</strong>，因此我们有一个按网络接口分隔的网络命名空间。</p>
+<p>为了说明这一点，假设您与同事一起参加在拉斯维加斯举行的会议。贵公司将赞助您参加此次会议，因此您将全部留在同一家酒店（Kubernetes节点）。这家酒店的每个房间（一个Pod）都配备了客房电话（网络接口）。</p>
+<p>您可以使用客房电话与不在酒店的家人进行通讯。没有免费的午餐，因此酒店显然会向您收取使用客房电话拨打的任何外部电话的费用。为此，所有外部呼叫都要经过一个中心（<strong>eth0</strong>），该中心将对其进行注册，然后将这些呼叫重定向到外部世界。客房电话和此中央设备之间的链接类似于虚拟接口（<strong>veth</strong>）在网络中扮演的角色</p>
+<p><em>“第五个设备是虚拟以太网设备。它们可以充当网络名称空间之间的隧道，以创建到另一个名称空间中的物理网络设备的桥，但也可以用作独立的网络设备。</em></p>
+<p><em>veth设备总是以互连对的形式创建。”</em></p>
+<blockquote>
+<p>参考：<a target="_blank" rel="noopener" href="http://man7.org/linux/man-pages/man4/veth.4.html">https://man7.org/linux/man-pages/man4/veth.4.html</a></p>
+</blockquote>
+<p>现在，您和您的同事希望例如在您离开会议或吃晚饭时让对方知道。您想节省一些钱，因此决定使用客房电话互相通话，而不是使用手机。当您在酒店办理入住手续时，礼宾部解释说，您可以通过输入<strong>＃&lt;房间号&gt;在</strong>各个房间之间互相呼叫。有一个内部中心，可以进行这种通信。这类似于<strong>cni0</strong>（如上图所示）扮演的角色，充当允许Pod到Pod通信的桥梁。</p>
+<p>这家酒店可能有多栋建筑，而您的一些同事则位于第二栋建筑中。不过，礼宾部解释说根本没有问题。要与他们进行通信，您只需要在房间号之前添加建筑物号：<strong>＃ &lt;房间号&gt;<strong>。内部中央（</strong>cni</strong>）将注意到此地址不是其自己建筑物的内部地址，会将呼叫重定向到中央（<strong>eth0</strong>），这将使它们再次将呼叫重定向到另一个建筑物（另一个Kubernetes节点）中央（类似于<strong>eth0</strong>），依次将呼叫传递到它自己的内部中心，使呼叫最终在目标房间完成。有关此方案的更多技术说明，请检查<strong>在</strong>下面的“<strong>跨不同主机路由流量”</strong>部分。</p>
+<p>在Kubernetes上，所有这些配置和管理都是通过<strong>CNI</strong>（容器网络接口）插件进行的</p>
+<h3 id="什么是CNI"><a href="#什么是CNI" class="headerlink" title="什么是CNI"></a>什么是CNI</h3><p><strong>CNI</strong>是<strong>Container Networking Interface</strong>（<strong>容器网络接口</strong>）的缩写，它基本上是一个外部软件（模块），它实现了<a target="_blank" rel="noopener" href="https://github.com/containernetworking/cni/blob/master/SPEC.md#container-network-interface-specification">规范明确定义</a>的<a target="_blank" rel="noopener" href="https://github.com/containernetworking/cni/blob/master/SPEC.md#container-network-interface-specification">接口</a>，该<a target="_blank" rel="noopener" href="https://github.com/containernetworking/cni/blob/master/SPEC.md#container-network-interface-specification">接口</a>允许<strong>Kubernetes</strong>执行操作以提供网络功能。</p>
+<p>“<strong>每个CNI插件必须实现为由容器管理系统（例如rkt或Kubernetes）调用的可执行文件。</strong></p>
+<p>CNI插件是负责将网络接口到所述容器网络命名空间（例如一个的一端VETH在主机上对），使任何必要的变更（例如，另一端附接VETH成桥）。然后，它应该通过调用适当的IPAM插件，将IP分配给该接口并设置与IP地址管理部分一致的路由。”</p>
+<blockquote>
+<p>参考：<a target="_blank" rel="noopener" href="https://github.com/containernetworking/cni/blob/master/SPEC.md#cni-plugin">https://github.com/containernetworking/cni/blob/master/SPEC.md#cni-plugin</a></p>
+</blockquote>
+<h3 id="Kubernetes请求路由"><a href="#Kubernetes请求路由" class="headerlink" title="Kubernetes请求路由"></a>Kubernetes请求路由</h3><p>我们将在两种情况下更详细地说明如何在Pod之间路由流量</p>
+<h4 id="在同一主机上路由流量"><a href="#在同一主机上路由流量" class="headerlink" title="在同一主机上路由流量"></a>在同一主机上路由流量</h4><p><img src="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20200422150719.png"></p>
+<p>从<strong>Pod 4</strong>到<strong>Pod 6</strong>的逐步通信：</p>
+<ol>
+<li>程序包通过eth4接口离开Pod 4网络，并通过虚拟接口veth4到达根网络</li>
+<li>请求到达cni0，寻找Pod 6的地址</li>
+<li>请求离开cni0并重定向到veth6</li>
+<li>请求通过veth6离开根网络，并通过eth6接口到达pod6网络</li>
+</ol>
+<h4 id="跨不同主机路由流量"><a href="#跨不同主机路由流量" class="headerlink" title="跨不同主机路由流量"></a>跨不同主机路由流量</h4><p><img src="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20200422151055.png"></p>
+<p>从<strong>Pod 1</strong>到<strong>Pod 6</strong>的逐步通信：</p>
+<ol>
+<li>程序包通过eth1接口离开Pod 1网络并通过虚拟接口veth1到达根网络</li>
+<li>请求离开veth1并到达cni0，寻找Pod6地址</li>
+<li>请求离开cni0并重定向到eth0</li>
+<li>请求从主机1离开eth0到达网关</li>
+<li>请求离开网关，并通过Worker1上的eth0接口到达根网</li>
+<li>请求离开eth0并到达cni0，以查找Pod6的地址；</li>
+<li>请求离开cni0并重定向到veth6虚拟接口</li>
+<li>请求从根netns通过veth6并到达Pod6 netns的eth6接口;</li>
+</ol>
+<h3 id="flannel"><a href="#flannel" class="headerlink" title="flannel"></a>flannel</h3><p><img src="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20200422151535.png"></p>
+<p>“ Flannel是配置专为Kubernetes设计的第3层网络结构的简单方法</p>
+<p><em>Flannel</em> 在每个主机上运行一个小的单一二进制代理程序，称为flanneld，并负责从更大的预配置地址空间中为每个主机分配子网租约。Flannel *直接<strong>使用Kubernetes API或etcd</strong>来存储网络配置，分配的子网以及任何辅助数据（例如主机的公共IP）。数据包使用包括VXLAN和各种云集成在内的几种后端机制之一转发。”</p>
+<blockquote>
+<p>参考：<a target="_blank" rel="noopener" href="https://github.com/coreos/flannel">https://github.com/coreos/flannel</a></p>
+</blockquote>
+<h4 id="backend"><a href="#backend" class="headerlink" title="backend"></a>backend</h4><blockquote>
+<p><em>“</em> flannel可以与几个不同的后端进行配对。设置后，不应在运行时更改后端。</p>
+<p>推荐使用<a target="_blank" rel="noopener" href="https://github.com/coreos/flannel/blob/master/Documentation/backends.md#vxlan">VXLAN</a><em>。建议有经验的用户使用</em><a target="_blank" rel="noopener" href="https://github.com/coreos/flannel/blob/master/Documentation/backends.md#host-gw"> host-gw</a>*来提高性能并获得基础架构的支持（通常不能在云环境中使用）。建议将<a target="_blank" rel="noopener" href="https://github.com/coreos/flannel/blob/master/Documentation/backends.md#udp">UDP</a>*仅用于调试或不支持VXLAN的非常老的内核。”</p>
+</blockquote>
+<blockquote>
+<p>参考 <a href="%5Bgithub.com/coreos/flannel/blob/master/Documentation/backends.md">https://github.com/coreos/flannel/blob/master/Documentation/backends</a></p>
+</blockquote>
+<p>在本文中，我们将讨论在解决方案中将使用的<strong>VXLAN</strong>模式的内部</p>
+<p><img src="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20200422151813.png"></p>
+<h3 id="flannel-namespace"><a href="#flannel-namespace" class="headerlink" title="flannel namespace"></a>flannel namespace</h3><p>默认情况下，flannel使用CIDR <strong>10.244.0.0&#x2F;16</strong>为每个节点分配具有<strong>10.244.X.0 &#x2F; 24</strong>掩码的较小子网，而<strong>Pod</strong>将使用这些子网之一分配给给定节点的IP地址。</p>
+<p>简而言之，这意味着每个节点最多可以有254个活动Pod，其中每个Pod将具有与此分配的子网不同的IP。</p>
+<p>你可以看到在本说明书<strong>KUBE-flannel.yml</strong>清单，在定义<strong>网conf.json</strong>。（官方flannel repository位于下面的链接中）</p>
+<figure class="highlight yaml"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br></pre></td><td class="code"><pre><span class="line"><span class="attr">kind:</span> <span class="string">ConfigMap</span> </span><br><span class="line"><span class="attr">apiVersion:</span> <span class="string">v1</span></span><br><span class="line"><span class="attr">metadata:</span></span><br><span class="line">  <span class="attr">name:</span> <span class="string">kube-flannel-cfg</span></span><br><span class="line">  <span class="attr">namespace:</span> <span class="string">kube-system</span></span><br><span class="line">  <span class="attr">labels:</span></span><br><span class="line">    <span class="attr">tier:</span> <span class="string">node</span></span><br><span class="line">    <span class="attr">app:</span> <span class="string">flannel</span></span><br><span class="line"><span class="attr">data:</span></span><br><span class="line">  <span class="attr">cni-conf.json:</span> <span class="string">|</span></span><br><span class="line"><span class="string">    &#123;</span></span><br><span class="line"><span class="string">      &quot;name&quot;: &quot;cbr0&quot;,</span></span><br><span class="line"><span class="string">      &quot;plugins&quot;: [</span></span><br><span class="line"><span class="string">        &#123;</span></span><br><span class="line"><span class="string">          &quot;type&quot;: &quot;flannel&quot;,</span></span><br><span class="line"><span class="string">          &quot;delegate&quot;: &#123;</span></span><br><span class="line"><span class="string">            &quot;hairpinMode&quot;: true,</span></span><br><span class="line"><span class="string">            &quot;isDefaultGateway&quot;: true</span></span><br><span class="line"><span class="string">          &#125;</span></span><br><span class="line"><span class="string">        &#125;,</span></span><br><span class="line"><span class="string">        &#123;</span></span><br><span class="line"><span class="string">          &quot;type&quot;: &quot;portmap&quot;,</span></span><br><span class="line"><span class="string">          &quot;capabilities&quot;: &#123;</span></span><br><span class="line"><span class="string">            &quot;portMappings&quot;: true</span></span><br><span class="line"><span class="string">          &#125;</span></span><br><span class="line"><span class="string">        &#125;</span></span><br><span class="line"><span class="string">      ]</span></span><br><span class="line"><span class="string">    &#125;</span></span><br><span class="line"><span class="string"></span>  <span class="attr">net-conf.json:</span> <span class="string">|</span></span><br><span class="line"><span class="string">    &#123;</span></span><br><span class="line"><span class="string">      &quot;Network&quot;: &quot;10.244.0.0/16&quot;,</span></span><br><span class="line"><span class="string">      &quot;Backend&quot;: &#123;</span></span><br><span class="line"><span class="string">        &quot;Type&quot;: &quot;vxlan&quot;</span></span><br><span class="line"><span class="string">      &#125;</span></span><br><span class="line"><span class="string">    &#125;</span></span><br></pre></td></tr></table></figure>
+
+
+
+<h4 id="Virtual-Ethernet-Devices-—-veth"><a href="#Virtual-Ethernet-Devices-—-veth" class="headerlink" title="Virtual Ethernet Devices — veth"></a>Virtual Ethernet Devices — veth</h4><blockquote>
+<p>“veth设备是虚拟以太网设备。它们可以充当网络名称空间之间的隧道，以创建到另一个名称空间中的物理网络设备的桥梁，但也可以用作独立的网络设备。”</p>
+</blockquote>
+<blockquote>
+<p>参考 <a target="_blank" rel="noopener" href="http://man7.org/linux/man-pages/man4/veth.4.html">https://man7.org/linux/man-pages/man4/veth.4.html</a></p>
+</blockquote>
+<h4 id="Bridge-—-cni0"><a href="#Bridge-—-cni0" class="headerlink" title="Bridge — cni0"></a>Bridge — cni0</h4><p><strong>cni0</strong>是Linux网络桥接设备，所有<strong>veth</strong>设备都将连接到该桥接器，因此同一节点上的所有<strong>Pod</strong>都可以相互通信，如<strong>Kubernetes网络模型</strong>和上述酒店类比中所述	</p>
+<h4 id="vxlan-flannel"><a href="#vxlan-flannel" class="headerlink" title="vxlan-flannel"></a>vxlan-flannel</h4><p><em>“</em> 虚拟可扩展局域网（VXLAN）是一种<a target="_blank" rel="noopener" href="https://en.wikipedia.org/wiki/Network_virtualization">网络虚拟化</a>技术，旨在解决与大型<a target="_blank" rel="noopener" href="https://en.wikipedia.org/wiki/Cloud_computing">云计算</a>部署相关的<a target="_blank" rel="noopener" href="https://en.wikipedia.org/wiki/Scalability">可扩展性</a>问题。它使用类似<a target="_blank" rel="noopener" href="https://en.wikipedia.org/wiki/VLAN">VLAN</a>的封装技术将<a target="_blank" rel="noopener" href="https://en.wikipedia.org/wiki/OSI_model">OSI</a><a target="_blank" rel="noopener" href="https://en.wikipedia.org/wiki/Layer_2">第2层</a><a target="_blank" rel="noopener" href="https://en.wikipedia.org/wiki/Ethernet_frame">以太网帧</a>封装在<a target="_blank" rel="noopener" href="https://en.wikipedia.org/wiki/Layer_4">第4层</a><a target="_blank" rel="noopener" href="https://en.wikipedia.org/wiki/User_Datagram_Protocol">UDP</a>数据报中，并使用4789作为默认<a target="_blank" rel="noopener" href="https://en.wikipedia.org/wiki/Internet_Assigned_Numbers_Authority">IANA</a>分配的目标UDP端口号。终止VXLAN隧道的VXLAN终结点，可以是虚拟或物理<a target="_blank" rel="noopener" href="https://en.wikipedia.org/wiki/Switch_port">交换机端口</a>，称为VXLAN隧道终结点（VTEP ).”</p>
+<blockquote>
+<p>参考：<a target="_blank" rel="noopener" href="https://en.wikipedia.org/wiki/Virtual_Extensible_LAN">https://en.wikipedia.org/wiki/Virtual_Extensible_LAN</a></p>
+</blockquote>
+<p>该接口（在我们的图中，flannel.1）的主要功能是通过覆盖来确保Pod及其网络之间的通信前提之一（记住每个节点都有一个子网，每个Pod都有该子网的IP)。</p>
+<p>使用VXLAN，可以通过使两个或多个网络像在同一个网络中一样进行操作来连接两个或多个网络，也就是说，每个网络都是其自身网络的一部分，但在同一域内。</p>
+<p>在以前使用的类比中，VXLAN是将一栋建筑物连接到另一栋建筑物的（物理）电话线，从而允许您所在建筑物（Node1）中一个（Pod1)与位于您的同事所在的另一座建筑物（Node2）中的Pod4通信。 </p>
+<p><strong>flanneld</strong>是一个守护程序，负责使节点（及其所包含的Pod）之间的路由保持最新。</p>
+<h3 id="原文地址"><a href="#原文地址" class="headerlink" title="原文地址"></a>原文地址</h3><p><a target="_blank" rel="noopener" href="https://itnext.io/kubernetes-journey-up-and-running-out-of-the-cloud-flannel-c01283308f0e">https://itnext.io/kubernetes-journey-up-and-running-out-of-the-cloud-flannel-c01283308f0e</a></p>
+
+      
+    </div>
+
+    <div>
+      
+        
+<div id="wechat_subscriber" style="display: block; padding: 10px 0; margin: 20px auto; width: 100%; text-align: center">
+    <img id="wechat_subscriber_qcode" src="/images/websitecode250.png" alt=" wechat" style="width: 200px; max-width: 100%;"/>
+    <div>Scan Me To Read on Phone</div>
+</div>
+
+
+      
+    </div>
+
+    <div>
+      
+        
+  <div style="padding: 10px 0; margin: 20px auto; width: 90%; text-align: center;">
+    <div>I know you won't do this,but what if you did?</div>
+    <button id="rewardButton" disable="enable" onclick="var qr = document.getElementById('QR'); if (qr.style.display === 'none') {qr.style.display='block';} else {qr.style.display='none'}">
+      <span>赏</span>
+    </button>
+    <div id="QR" style="display: none;">
+      
+        <div id="wechat" style="display: inline-block">
+          <img id="wechat_qr" src="/images/wechatpayme.png" alt=" WeChat Pay"/>
+          <p>微信打赏</p>
+        </div>
+      
+      
+        <div id="alipay" style="display: inline-block">
+          <img id="alipay_qr" src="/images/alipayme.jpg" alt=" Alipay"/>
+          <p>支付宝打赏</p>
+        </div>
+      
     </div>
   </div>
 
-{% endblock %}
 
-{% block sidebar %}
-  {{ sidebar_template.render(true) }}
-{% endblock %}
+      
+    </div>
 
 
-{% block script_extra %}
-  {% include '_scripts/pages/post-details.swig' %}
-{% endblock %}
+    <footer class="post-footer">
+      
+        <div class="post-tags">
+          
+            <a href="/tags/Kubernetes/" rel="tag"># Kubernetes</a>
+          
+        </div>
+      
+
+      
+        <div class="post-nav">
+          <div class="post-nav-next post-nav-item">
+            
+              <a href="/2020/01/05/Kubernetes-Bootstrap-Node/" rel="next" title="Kubernetes学习(Bootstrap Token机制)">
+                <i class="fa fa-chevron-left"></i> Kubernetes学习(Bootstrap Token机制)
+              </a>
+            
+          </div>
+
+          <span class="post-nav-divider"></span>
+
+          <div class="post-nav-prev post-nav-item">
+            
+              <a href="/2020/01/10/github+PicGo%E5%AE%9E%E7%8E%B0%E5%BC%80%E6%BA%90%E5%9B%BE%E5%BA%8A%E5%B7%A5%E5%85%B7/" rel="prev" title="typora+github+PicGo在MarkDown里实现图床功能">
+                typora+github+PicGo在MarkDown里实现图床功能 <i class="fa fa-chevron-right"></i>
+              </a>
+            
+          </div>
+        </div>
+      
+
+      
+      
+    </footer>
+  </article>
+
+
+
+    <div class="post-spread">
+      
+    </div>
+  </div>
+
+
+          </div>
+          
+
+
+          
+  <div class="comments" id="comments">
+    
+  </div>
+
+
+        </div>
+        
+          
+  
+  <div class="sidebar-toggle">
+    <div class="sidebar-toggle-line-wrap">
+      <span class="sidebar-toggle-line sidebar-toggle-line-first"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-middle"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-last"></span>
+    </div>
+  </div>
+
+  <aside id="sidebar" class="sidebar">
+    <div class="sidebar-inner">
+
+      
+
+      
+        <ul class="sidebar-nav motion-element">
+          <li class="sidebar-nav-toc sidebar-nav-active" data-target="post-toc-wrap" >
+            文章目录
+          </li>
+          <li class="sidebar-nav-overview" data-target="site-overview">
+            站点概览
+          </li>
+        </ul>
+      
+
+      <section class="site-overview sidebar-panel">
+        <div class="site-author motion-element" itemprop="author" itemscope itemtype="http://schema.org/Person">
+          <img class="site-author-image" itemprop="image"
+               src="/images/avatar.gif"
+               alt="" />
+          <p class="site-author-name" itemprop="name"></p>
+          <p class="site-description motion-element" itemprop="description"></p>
+        </div>
+        <nav class="site-state motion-element">
+        
+          
+            <div class="site-state-item site-state-posts">
+              <a href="/archives">
+                <span class="site-state-item-count">192</span>
+                <span class="site-state-item-name">日志</span>
+              </a>
+            </div>
+          
+
+          
+            <div class="site-state-item site-state-categories">
+              <a href="/categories">
+                <span class="site-state-item-count">14</span>
+                <span class="site-state-item-name">分类</span>
+              </a>
+            </div>
+          
+
+          
+            <div class="site-state-item site-state-tags">
+              <a href="/tags">
+                <span class="site-state-item-count">14</span>
+                <span class="site-state-item-name">标签</span>
+              </a>
+            </div>
+          
+
+        </nav>
+
+        
+
+        <div class="links-of-author motion-element">
+          
+        </div>
+
+        
+        
+
+        
+        
+
+        
+
+
+      </section>
+
+      
+      <!--noindex-->
+        <section class="post-toc-wrap motion-element sidebar-panel sidebar-panel-active">
+          <div class="post-toc">
+
+            
+              
+            
+
+            
+              <div class="post-toc-content"><ol class="nav"><li class="nav-item nav-level-3"><a class="nav-link" href="#%E9%9B%86%E7%BE%A4%E7%BD%91%E7%BB%9C"><span class="nav-number">1.</span> <span class="nav-text">集群网络</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#Kubernetes%E7%BD%91%E7%BB%9C%E6%A8%A1%E5%9E%8B"><span class="nav-number">2.</span> <span class="nav-text">Kubernetes网络模型</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E4%BB%80%E4%B9%88%E6%98%AFCNI"><span class="nav-number">3.</span> <span class="nav-text">什么是CNI</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#Kubernetes%E8%AF%B7%E6%B1%82%E8%B7%AF%E7%94%B1"><span class="nav-number">4.</span> <span class="nav-text">Kubernetes请求路由</span></a><ol class="nav-child"><li class="nav-item nav-level-4"><a class="nav-link" href="#%E5%9C%A8%E5%90%8C%E4%B8%80%E4%B8%BB%E6%9C%BA%E4%B8%8A%E8%B7%AF%E7%94%B1%E6%B5%81%E9%87%8F"><span class="nav-number">4.1.</span> <span class="nav-text">在同一主机上路由流量</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#%E8%B7%A8%E4%B8%8D%E5%90%8C%E4%B8%BB%E6%9C%BA%E8%B7%AF%E7%94%B1%E6%B5%81%E9%87%8F"><span class="nav-number">4.2.</span> <span class="nav-text">跨不同主机路由流量</span></a></li></ol></li><li class="nav-item nav-level-3"><a class="nav-link" href="#flannel"><span class="nav-number">5.</span> <span class="nav-text">flannel</span></a><ol class="nav-child"><li class="nav-item nav-level-4"><a class="nav-link" href="#backend"><span class="nav-number">5.1.</span> <span class="nav-text">backend</span></a></li></ol></li><li class="nav-item nav-level-3"><a class="nav-link" href="#flannel-namespace"><span class="nav-number">6.</span> <span class="nav-text">flannel namespace</span></a><ol class="nav-child"><li class="nav-item nav-level-4"><a class="nav-link" href="#Virtual-Ethernet-Devices-%E2%80%94-veth"><span class="nav-number">6.1.</span> <span class="nav-text">Virtual Ethernet Devices — veth</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#Bridge-%E2%80%94-cni0"><span class="nav-number">6.2.</span> <span class="nav-text">Bridge — cni0</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#vxlan-flannel"><span class="nav-number">6.3.</span> <span class="nav-text">vxlan-flannel</span></a></li></ol></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E5%8E%9F%E6%96%87%E5%9C%B0%E5%9D%80"><span class="nav-number">7.</span> <span class="nav-text">原文地址</span></a></li></ol></div>
+            
+
+          </div>
+        </section>
+      <!--/noindex-->
+      
+
+    </div>
+  </aside>
+
+
+        
+      </div>
+    </main>
+
+    <footer id="footer" class="footer">
+      <div class="footer-inner">
+        <div class="copyright" >
+  
+  &copy; 
+  <span itemprop="copyrightYear">2022</span>
+  <span class="with-love">
+    <i class="fa fa-heart"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">Z.S.K.</span>
+</div>
+
+
+<div class="powered-by">
+  Supported by <a class="theme-link" target="_blank" rel="noopener" href="https://hexo.io">Hexo</a>
+</div>
+
+<div class="theme-info">
+  Theme -
+  <a class="theme-link" target="_blank" rel="noopener" href="https://github.com/iissnan/hexo-theme-next">
+    NexT.Mist
+  </a>
+</div>
+
+
+        
+
+        
+      </div>
+    </footer>
+
+    <div class="back-to-top">
+      <i class="fa fa-arrow-up"></i>
+    </div>
+  </div>
+
+  
+
+<script type="text/javascript">
+  if (Object.prototype.toString.call(window.Promise) !== '[object Function]') {
+    window.Promise = null;
+  }
+</script>
+
+
+
+
+
+
+
+
+
+  
+
+
+
+  
+  <script type="text/javascript" src="/lib/jquery/index.js?v=2.1.3"></script>
+
+  
+  <script type="text/javascript" src="/lib/fastclick/lib/fastclick.min.js?v=1.0.6"></script>
+
+  
+  <script type="text/javascript" src="/lib/jquery_lazyload/jquery.lazyload.js?v=1.9.7"></script>
+
+  
+  <script type="text/javascript" src="/lib/velocity/velocity.min.js?v=1.2.1"></script>
+
+  
+  <script type="text/javascript" src="/lib/velocity/velocity.ui.min.js?v=1.2.1"></script>
+
+  
+  <script type="text/javascript" src="/lib/fancybox/source/jquery.fancybox.pack.js?v=2.1.5"></script>
+
+
+  
+
+
+  <script type="text/javascript" src="/js/src/utils.js?v=5.1.0"></script>
+
+  <script type="text/javascript" src="/js/src/motion.js?v=5.1.0"></script>
+
+
+
+  
+  
+
+  
+  <script type="text/javascript" src="/js/src/scrollspy.js?v=5.1.0"></script>
+<script type="text/javascript" src="/js/src/post-details.js?v=5.1.0"></script>
+
+
+
+  
+
+
+  <script type="text/javascript" src="/js/src/bootstrap.js?v=5.1.0"></script>
+
+
+
+  
+
+
+
+  
+
+
+
+
+	
+
+
+
+
+
+  
+
+
+
+
+  
+  
+  <script type="text/javascript">
+    // Popup Window;
+    var isfetched = false;
+    // Search DB path;
+    var search_path = "search.xml";
+    if (search_path.length == 0) {
+      search_path = "search.xml";
+    }
+    var path = "/" + search_path;
+    // monitor main search box;
+
+    function proceedsearch() {
+      $("body").append('<div class="popoverlay">').css('overflow', 'hidden');
+      $('.popup').toggle();
+    }
+    // search function;
+    var searchFunc = function(path, search_id, content_id) {
+      'use strict';
+      $.ajax({
+        url: path,
+        dataType: "xml",
+        async: true,
+        success: function( xmlResponse ) {
+          // get the contents from search data
+          isfetched = true;
+          $('.popup').detach().appendTo('.header-inner');
+          var datas = $( "entry", xmlResponse ).map(function() {
+            return {
+              title: $( "title", this ).text(),
+              content: $("content",this).text(),
+              url: $( "url" , this).text()
+            };
+          }).get();
+          var $input = document.getElementById(search_id);
+          var $resultContent = document.getElementById(content_id);
+          $input.addEventListener('input', function(){
+            var matchcounts = 0;
+            var str='<ul class=\"search-result-list\">';
+            var keywords = this.value.trim().toLowerCase().split(/[\s\-]+/);
+            $resultContent.innerHTML = "";
+            if (this.value.trim().length > 1) {
+              // perform local searching
+              datas.forEach(function(data) {
+                var isMatch = false;
+                var content_index = [];
+                var data_title = data.title.trim().toLowerCase();
+                var data_content = data.content.trim().replace(/<[^>]+>/g,"").toLowerCase();
+                var data_url = decodeURIComponent(data.url);
+                var index_title = -1;
+                var index_content = -1;
+                var first_occur = -1;
+                // only match artiles with not empty titles and contents
+                if(data_title != '') {
+                  keywords.forEach(function(keyword, i) {
+                    index_title = data_title.indexOf(keyword);
+                    index_content = data_content.indexOf(keyword);
+                    if( index_title >= 0 || index_content >= 0 ){
+                      isMatch = true;
+                      if (i == 0) {
+                        first_occur = index_content;
+                      }
+                    }
+
+                  });
+                }
+                // show search results
+                if (isMatch) {
+                  matchcounts += 1;
+                  str += "<li><a href='"+ data_url +"' class='search-result-title'>"+ data_title +"</a>";
+                  var content = data.content.trim().replace(/<[^>]+>/g,"");
+                  if (first_occur >= 0) {
+                    // cut out 100 characters
+                    var start = first_occur - 20;
+                    var end = first_occur + 80;
+                    if(start < 0){
+                      start = 0;
+                    }
+                    if(start == 0){
+                      end = 50;
+                    }
+                    if(end > content.length){
+                      end = content.length;
+                    }
+                    var match_content = content.substring(start, end);
+                    // highlight all keywords
+                    keywords.forEach(function(keyword){
+                      var regS = new RegExp(keyword, "gi");
+                      match_content = match_content.replace(regS, "<b class=\"search-keyword\">"+keyword+"</b>");
+                    });
+
+                    str += "<p class=\"search-result\">" + match_content +"...</p>"
+                  }
+                  str += "</li>";
+                }
+              })};
+            str += "</ul>";
+            if (matchcounts == 0) { str = '<div id="no-result"><i class="fa fa-frown-o fa-5x" /></div>' }
+            if (keywords == "") { str = '<div id="no-result"><i class="fa fa-search fa-5x" /></div>' }
+            $resultContent.innerHTML = str;
+          });
+          proceedsearch();
+        }
+      });}
+
+    // handle and trigger popup window;
+    $('.popup-trigger').click(function(e) {
+      e.stopPropagation();
+      if (isfetched == false) {
+        searchFunc(path, 'local-search-input', 'local-search-result');
+      } else {
+        proceedsearch();
+      };
+    });
+
+    $('.popup-btn-close').click(function(e){
+      $('.popup').hide();
+      $(".popoverlay").remove();
+      $('body').css('overflow', '');
+    });
+    $('.popup').click(function(e){
+      e.stopPropagation();
+    });
+  </script>
+
+
+  
+
+  
+
+  
+
+  
+
+
+</body>
+</html>

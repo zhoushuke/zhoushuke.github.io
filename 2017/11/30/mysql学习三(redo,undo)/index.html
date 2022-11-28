@@ -1,38 +1,980 @@
-{% extends '_layout.swig' %}
-{% import '_macro/post.swig' as post_template %}
-{% import '_macro/sidebar.swig' as sidebar_template %}
+<!doctype html>
 
 
-{% block title %} {{ page.title }} | {{ config.title }} {% endblock %}
 
-{% block page_class %}page-post-detail{% endblock %}
+  
 
 
-{% block content %}
+<html class="theme-next mist use-motion" lang="zh-Hans">
+<head>
+  <meta charset="UTF-8"/>
+<meta http-equiv="X-UA-Compatible" content="IE=edge" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1"/>
+
+
+
+<meta http-equiv="Cache-Control" content="no-transform" />
+<meta http-equiv="Cache-Control" content="no-siteapp" />
+
+
+
+
+
+
+
+
+
+
+
+
+  
+  
+  <link href="/lib/fancybox/source/jquery.fancybox.css?v=2.1.5" rel="stylesheet" type="text/css" />
+
+
+
+
+  
+  
+  
+  
+
+  
+    
+    
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+    
+    
+    <link href="//fonts.googleapis.com/css?family=Lato:300,300italic,400,400italic,700,700italic&subset=latin,latin-ext" rel="stylesheet" type="text/css">
+  
+
+
+
+
+
+
+<link href="/lib/font-awesome/css/font-awesome.min.css?v=4.6.2" rel="stylesheet" type="text/css" />
+
+<link href="/css/main.css?v=5.1.0" rel="stylesheet" type="text/css" />
+
+
+  <meta name="keywords" content="分布式架构," />
+
+
+
+
+
+
+
+
+  <link rel="shortcut icon" type="image/x-icon" href="/favicon.ico?v=5.1.0" />
+
+
+
+
+
+
+<meta name="description" content="redo跟undo是很多数据库都支持的特性,不同的数据库redo跟undo可能有点细节上的不同,整个方向几乎都起着同样的效果. undo: 撤销,也就是取消之前的操作. redo: 重做,重新执行一遍之前的操作.">
+<meta property="og:type" content="article">
+<meta property="og:title" content="mysql学习(redo,undo)">
+<meta property="og:url" content="https://zhoushuke.github.io/2017/11/30/mysql%E5%AD%A6%E4%B9%A0%E4%B8%89(redo,undo)/index.html">
+<meta property="og:site_name" content="Z.S.K.&#39;s Records">
+<meta property="og:description" content="redo跟undo是很多数据库都支持的特性,不同的数据库redo跟undo可能有点细节上的不同,整个方向几乎都起着同样的效果. undo: 撤销,也就是取消之前的操作. redo: 重做,重新执行一遍之前的操作.">
+<meta property="og:locale">
+<meta property="og:image" content="http://zskgithubblog.oss-cn-beijing.aliyuncs.com/blogpic/mysqlredoundo.png">
+<meta property="article:published_time" content="2017-11-30T12:50:53.000Z">
+<meta property="article:modified_time" content="2022-07-19T03:16:00.953Z">
+<meta property="article:author" content="Z.S.K.">
+<meta property="article:tag" content="分布式架构">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:image" content="http://zskgithubblog.oss-cn-beijing.aliyuncs.com/blogpic/mysqlredoundo.png">
+
+
+
+<script type="text/javascript" id="hexo.configurations">
+  var NexT = window.NexT || {};
+  var CONFIG = {
+    root: '',
+    scheme: 'Mist',
+    sidebar: {"position":"left","display":"post"},
+    fancybox: true,
+    motion: true,
+    duoshuo: {
+      userId: 'undefined',
+      author: '博主'
+    },
+    algolia: {
+      applicationID: '',
+      apiKey: '',
+      indexName: '',
+      hits: {"per_page":10},
+      labels: {"input_placeholder":"Search for Posts","hits_empty":"We didn't find any results for the search: ${query}","hits_stats":"${hits} results found in ${time} ms"}
+    }
+  };
+</script>
+
+
+
+  <link rel="canonical" href="https://zhoushuke.github.io/2017/11/30/mysql学习三(redo,undo)/"/>
+
+
+
+
+
+  <title> mysql学习(redo,undo) | Z.S.K.'s Records </title>
+<meta name="generator" content="Hexo 6.2.0"></head>
+
+<body itemscope itemtype="http://schema.org/WebPage" lang="zh-Hans">
+
+  
+
+
+
+
+
+
+
+
+
+
+  
+  
+    
+  
+
+  <div class="container one-collumn sidebar-position-left page-post-detail ">
+    <div class="headband"></div>
+
+    <header id="header" class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-meta ">
+  
+
+  <div class="custom-logo-site-title">
+    <a href="/"  class="brand" rel="start">
+      <span class="logo-line-before"><i></i></span>
+      <span class="site-title">Z.S.K.'s Records</span>
+      <span class="logo-line-after"><i></i></span>
+    </a>
+  </div>
+    
+      <p class="site-subtitle"></p>
+    
+</div>
+
+<div class="site-nav-toggle">
+  <button>
+    <span class="btn-bar"></span>
+    <span class="btn-bar"></span>
+    <span class="btn-bar"></span>
+  </button>
+</div>
+
+<nav class="site-nav">
+  
+
+  
+    <ul id="menu" class="menu">
+      
+        
+        <li class="menu-item menu-item-home">
+          <a href="/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-home"></i> <br />
+            
+            首页
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-categories">
+          <a href="/categories" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-th"></i> <br />
+            
+            分类
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-about">
+          <a href="/about/ZSK-Profile.pdf" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-user"></i> <br />
+            
+            简历
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-archives">
+          <a href="/archives" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-archive"></i> <br />
+            
+            归档
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-tags">
+          <a href="/tags" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-tags"></i> <br />
+            
+            标签
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-commonweal">
+          <a href="/404.html" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-heartbeat"></i> <br />
+            
+            公益404
+          </a>
+        </li>
+      
+
+      
+        <li class="menu-item menu-item-search">
+          
+            <a href="javascript:;" class="popup-trigger">
+          
+            
+              <i class="menu-item-icon fa fa-search fa-fw"></i> <br />
+            
+            搜索
+          </a>
+        </li>
+      
+    </ul>
+  
+
+  
+    <div class="site-search">
+      
+  <div class="popup">
+ <span class="search-icon fa fa-search"></span>
+ <input type="text" id="local-search-input">
+ <div id="local-search-result"></div>
+ <span class="popup-btn-close">close</span>
+</div>
+
+
+    </div>
+  
+</nav>
+
+
+
+ </div>
+    </header>
+
+    <main id="main" class="main">
+      <div class="main-inner">
+        <div class="content-wrap">
+          <div id="content" class="content">
+            
 
   <div id="posts" class="posts-expand">
-    {{ post_template.render(page) }}
+    
 
-    <div class="post-spread">
-      {% if theme.jiathis %}
-        {% include '_partials/share/jiathis.swig' %}
-      {% elseif theme.baidushare %}
-        {% include '_partials/share/baidushare.swig' %}
-      {% elseif theme.add_this_id %}
-        {% include '_partials/share/add-this.swig' %}
-      {% elseif theme.duoshuo_shortname and theme.duoshuo_share %}
-        {% include '_partials/share/duoshuo_share.swig' %}
-      {% endif %}
+  
+
+  
+  
+  
+
+  <article class="post post-type-normal " itemscope itemtype="http://schema.org/Article">
+  <link itemprop="mainEntityOfPage" href="https://zhoushuke.github.io/2017/11/30/mysql%E5%AD%A6%E4%B9%A0%E4%B8%89(redo,undo)/">
+
+  <span style="display:none" itemprop="author" itemscope itemtype="http://schema.org/Person">
+    <meta itemprop="name" content="">
+    <meta itemprop="description" content="">
+    <meta itemprop="image" content="/images/avatar.gif">
+  </span>
+
+  <span style="display:none" itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+    <meta itemprop="name" content="Z.S.K.'s Records">
+    <span style="display:none" itemprop="logo" itemscope itemtype="http://schema.org/ImageObject">
+      <img style="display:none;" itemprop="url image" alt="Z.S.K.'s Records" src="">
+    </span>
+  </span>
+
+    
+      <header class="post-header">
+
+        
+        
+          <h1 class="post-title" itemprop="name headline">
+            
+            
+              
+                mysql学习(redo,undo)
+              
+            
+          </h1>
+        
+
+        <div class="post-meta">
+          <span class="post-time">
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">发表于</span>
+              
+              <time title="Post created" itemprop="dateCreated datePublished" datetime="2017-11-30T20:50:53+08:00">
+                2017-11-30
+              </time>
+            
+
+            
+
+            
+          </span>
+
+          
+            <span class="post-category" >
+            
+              <span class="post-meta-divider">|</span>
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-folder-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">分类于</span>
+              
+              
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/%E5%88%86%E5%B8%83%E5%BC%8F%E6%9E%B6%E6%9E%84/" itemprop="url" rel="index">
+                    <span itemprop="name">分布式架构</span>
+                  </a>
+                </span>
+
+                
+                
+              
+            </span>
+          
+
+          
+            
+          
+
+          
+
+          
+          
+
+          
+
+          
+
+        </div>
+      </header>
+    
+
+
+    <div class="post-body" itemprop="articleBody">
+
+      
+      
+
+      
+        <p>redo跟undo是很多数据库都支持的特性,不同的数据库redo跟undo可能有点细节上的不同,整个方向几乎都起着同样的效果.</p>
+<p>undo: 撤销,也就是取消之前的操作.</p>
+<p>redo: 重做,重新执行一遍之前的操作.</p>
+<span id="more"></span>
+
+<p>这里主要以mysql常用的且支持事务特性的innodb存储引擎为例,myisam不在这之列.</p>
+<h3 id="redo"><a href="#redo" class="headerlink" title="redo"></a><strong>redo</strong></h3><p>redo,从字面上来理解,就是<strong>重新执行一次之前做的操作,我们一般叫做前滚(rollforward)</strong>,是一种事务日志(transaction logs),可分为online和archived,以<strong>恢复</strong>为目的,保证事务的<strong>持久性</strong>.</p>
+<p>Redo Log记录的是<strong>新数据</strong>的备份.在事务提交前,只要将Redo Log持久化即可,不需要将数据持久化(当然这需要根据配置而定具体什么时候数据文件持久化).当系统崩溃时,虽然数据没有持久化,但是Redo Log已经持久化.系统可以根据Redo Log的内容,将所有数据恢复到最新的状态.</p>
+<p>一般的,redo log 都是会以日志组的形式出现,以顺序的方式写入文件文件,这就是 online redo log(在线重做日志),写满时则回溯到第一个文件,在进行覆盖写之前,有些数据库如Oracle则会把之前的redo log文件打包到特定目录下存档,这种文件就叫做archived redo log(归档重做日志).</p>
+<p>redo log 其实由两部分组成,:<strong>redo log buffer 跟redo log file</strong>.redo log buffer 跟redo log file.buffer pool中把数据修改情况记录到redo log buffer,出现以下情况,再把redo log刷下到redo log file:</p>
+<blockquote>
+<ul>
+<li>Redo log buffer空间不足</li>
+<li>事务提交（依赖innodb_flush_log_at_trx_commit参数设置）</li>
+<li>后台线程</li>
+<li>做checkpoint</li>
+<li>实例shutdown</li>
+<li>binlog切换</li>
+</ul>
+</blockquote>
+<p>这里有个重要的参数需要解释一下</p>
+<h4 id="innodb-flush-log-at-trx-commit"><a href="#innodb-flush-log-at-trx-commit" class="headerlink" title="innodb_flush_log_at_trx_commit"></a><strong>innodb_flush_log_at_trx_commit</strong></h4><p>官方的解释请看<a target="_blank" rel="noopener" href="https://dev.mysql.com/doc/refman/5.7/en/innodb-parameters.html#sysvar_innodb_flush_log_at_trx_commit">这里</a>:</p>
+<blockquote>
+<ul>
+<li>innodb_flush_log_at_trx_commit&#x3D;1,每次事务提交时,log buffer 会被写入到日志文件并刷写到磁盘.这也是默认值.这是最安全的配置,但由于每次事务都需要进行磁盘I&#x2F;O,所以也最慢.</li>
+<li>innodb_flush_log_at_trx_commit&#x3D;2,每次事务提交会写入日志文件,但并不会立即刷写到磁盘,日志文件会每秒刷写一次到磁盘.这时如果 mysqld 进程崩溃,由于日志已经写入到系统缓存,所以并不会丢失数据；在操作系统崩溃的情况下,通常会导致最后 1s 的日志丢失</li>
+<li>innodb_flush_log_at_trx_commit&#x3D;0,log buffer 会 每秒写入到日志文件并刷写（flush）到磁盘.但每次事务提交不会有任何影响,也就是 log buffer 的刷写操作和事务提交操作没有关系.在这种情况下,MySQL性能最好,但如果 mysqld 进程崩溃,通常会导致最后 1s 的日志丢失.</li>
+<li><strong>注意:由于进程调度策略问题,这个“每秒执行一次 flush(刷到磁盘)操作”并不是保证100%的“每秒”.</strong></li>
+</ul>
+</blockquote>
+<p>在<a target="_blank" rel="noopener" href="https://dev.mysql.com/doc/refman/5.7/en/innodb-parameters.html#sysvar_innodb_flush_log_at_trx_commit">官网</a>上还有这么一句话:</p>
+<p><code>InnoDB log flushing frequency is controlled by innodb_flush_log_at_timeout, which allows you to set log flushing frequency to N seconds (where N is 1 ... 2700, with a default value of 1). However, any mysqld process crash can erase up to N seconds of transactions</code>.</p>
+<p>innodb log 的从buffer刷新到log的频率还受<code>innodb_flush_log_at_timeout</code>这个参数的控制,这个参数允许你设置1-2700秒中的任何一个秒数,但是当mysql宕机的时候,会损失这N秒内的数据</p>
+<p><code>DDL changes and other internal InnoDB activities flush the InnoDB log independent of the innodb_flush_log_at_trx_commit setting.</code></p>
+<p>对于DDL的改变和一些innodb内部的一些刷新机制不依赖于<code>innodb_flush_log_at_trx_commit </code>参数</p>
+<p><code>InnoDB crash recovery works regardless of the innodb_flush_log_at_trx_commit setting. Transactions are either applied entirely or erased entirely.</code></p>
+<p>innodb的宕机恢复不受<code>innodb_flush_log_at_trx_commit</code>参数影响,事务要么全部应用要么全部擦除.</p>
+<p>借用网上<a target="_blank" rel="noopener" href="http://www.cnblogs.com/xinysu/p/6555082.html">一张图</a>来解释这个日志流向过程:</p>
+<p><img src="http://zskgithubblog.oss-cn-beijing.aliyuncs.com/blogpic/mysqlredoundo.png" alt="mysqlredoundo"></p>
+<h4 id="redo恢复"><a href="#redo恢复" class="headerlink" title="redo恢复"></a><strong>redo恢复</strong></h4><p>从上面我们知道的redo 日志的数据流向, 那么redo是如何恢复数据的呢?</p>
+<ol>
+<li>在设置innodb_flush_log_at_trx_commit&#x3D;1的情况下,如果只在redo log buffer中写入了日志,还没来的及写到redo log file中,此时mysql数据库宕机,再启动mysql时 redo log buffer内的记录肯定都不复存在,没有关系,也无需恢复,就相当于该事务还没发生一样,因为数据库的datafile并没有改变.</li>
+<li>在设置innodb_flush_log_at_trx_commit&#x3D;1的情况下,如果日志已经写进了redo log file中(或者说从redo log file中刷数据到datafile刷到一半),此时mysql数据库宕机,再启动mysql时,mysql会自动的把redo log file中的记录执行一次到宕机的失败点,这样就能保证事务完整执行,这就是所谓的<strong>前滚</strong>.</li>
+</ol>
+<h3 id="undo"><a href="#undo" class="headerlink" title="undo"></a><strong>undo</strong></h3><p>undo,从字面上来理解就是<strong>撤销这次操作,我们一般叫做回滚(rollback)</strong>,它也是一种事务日志(transaction logs).它主要是保证事务的<strong>原子性</strong>及提供<strong>读一致性</strong>.</p>
+<p>Undo Log的原理很简单,为了满足事务的原子性,在操作任何数据之前,首先将数据备份到一个地方(这个存储数据备份的地方称为Undo Log).然后进行数据的修改.如果出现了错误或者用户执行了<strong>ROLLBACK</strong>语句,系统可以利用Undo Log中的备份将数据恢复到事务开始之前的状态.</p>
+<h4 id="回滚"><a href="#回滚" class="headerlink" title="回滚"></a><strong>回滚</strong></h4><p>这个就不用说了,就是撤销到事务开始之前的状态.</p>
+<h4 id="MVCC"><a href="#MVCC" class="headerlink" title="MVCC"></a><strong>MVCC</strong></h4><p>mvcc(Multiversion Concurrency Control,多版本并发控制),mvcc+undo一同为mysql提供<strong>一致性非锁定读</strong>的机制,提供更高的并发.</p>
+<p>我们知道MySQL中的InnoDB存储引擎的默认隔离级别REPEATABLE READ(RR), 行级锁(在不能确定范围的情况下使用表级锁),当有一个事务正在更新某些数据时(写操作),同时另一个事务还能读取这些数据(读操作),确切的说是历史数据据,这就是mvcc与undo的作用,这里涉及到mysql的隔离级别,先不在这篇讨论,会另起一篇.</p>
+<h3 id="redo-undo"><a href="#redo-undo" class="headerlink" title="redo+undo"></a><strong>redo+undo</strong></h3><p>假设有A、B两个数据,值分别为1,2,开始一个事务,事务的操作内容为:把1修改为3,2修改为4,那么实际的记录如下(简化):</p>
+<figure class="highlight shell"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br></pre></td><td class="code"><pre><span class="line">A.事务开始.</span><br><span class="line">B.记录A=1到undo log.</span><br><span class="line">C.修改A=3.</span><br><span class="line">D.记录A=3到redo log.</span><br><span class="line">E.记录B=2到undo log.</span><br><span class="line">F.修改B=4.</span><br><span class="line">G.记录B=4到redo log.</span><br><span class="line">H.将redo log写入磁盘.</span><br><span class="line">I.事务提交</span><br></pre></td></tr></table></figure>
+
+<p>Undo + Redo的设计主要考虑的是提升IO性能,增大数据库吞吐量.可以看出,B D E G H,均是新增操作,但是B D E G 是缓冲到buffer区,<strong>只有H是真正的增加了IO操作</strong>,为了保证Redo Log能够有比较好的IO性能,InnoDB 的 Redo Log的设计有以下几个特点:</p>
+<blockquote>
+<ul>
+<li>A.尽量保持Redo Log存储在一段连续的空间上.因此在系统第一次启动时就会将日志文件的空间完全分配. 以顺序追加的方式记录Redo Log,通过顺序IO来改善性能.</li>
+<li>B. 批量写入日志.日志并不是直接写入文件,而是先写入redo log buffer.当需要将日志刷新到磁盘时 (如事务提交),将许多日志一起写入磁盘.</li>
+<li>C. 并发的事务共享Redo Log的存储空间,它们的Redo Log按语句的执行顺序,依次交替的记录在一起,</li>
+<li>D. 因为C的原因,当一个事务将Redo Log写入磁盘时,也会将其他未提交的事务的日志写入磁盘.</li>
+<li>E. Redo Log上只进行顺序追加的操作,当一个事务需要回滚时,它的Redo Log记录也不会从Redo Log中删除掉,对于 回滚事务先执行redo,再从undo中回滚.</li>
+</ul>
+</blockquote>
+<figure class="highlight shell"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line">以减少日志占用的空间.例如,Redo Log中的记录内容可能是这样的：</span><br><span class="line">记录1: &lt;trx1, insert …&gt;</span><br><span class="line">记录2: &lt;trx2, update …&gt;</span><br><span class="line">记录3: &lt;trx1, delete …&gt;</span><br><span class="line">记录4: &lt;trx3, update …&gt;</span><br><span class="line">记录5: &lt;trx2, insert …&gt;</span><br></pre></td></tr></table></figure>
+<p>  一次提交IO,会将其它日志一同提交,这样便提高了IO性能.</p>
+<h3 id="恢复"><a href="#恢复" class="headerlink" title="恢复"></a><strong>恢复</strong></h3><p>有2种不同的恢复策略:</p>
+<blockquote>
+<ul>
+<li>A.进行恢复时,只重做已经提交了的事务.</li>
+<li>B.进行恢复时,重做所有事务包括未提交的事务和回滚了的事务.然后通过Undo Log回滚那些</li>
+</ul>
+</blockquote>
+<p>MySQL数据库InnoDB存储引擎使用了B策略, InnoDB存储引擎中的恢复机制有几个特点:</p>
+<blockquote>
+<ul>
+<li>在重做Redo Log时,并不关心事务性. 恢复时,没有BEGIN,也没有COMMIT,ROLLBACK的行为.也不关心每个日志是哪个事务的.尽管事务ID等事务相关的内容会记入Redo Log,这些内容只是被当作要操作的数据的一部分</li>
+<li>使用B策略就必须要将Undo Log持久化,而且必须要在写Redo Log之前将对应的Undo Log写入磁盘.Undo和Redo Log的这种关联,使得持久化变得复杂起来.为了降低复杂度,InnoDB将Undo Log看作数据,因此记录Undo Log的操作也会记录到redo log中.这样undo log就可以象数据一样缓存起来,而不用在redo log之前写入磁盘了</li>
+<li>Innodb也会将事务回滚时的操作记录到redo log中.回滚操作本质上也是对数据进行修改,因此回滚时对数据的操作也会记录到Redo Log中</li>
+<li>一个被回滚了的事务在恢复时的操作就是先redo再undo,因此不会破坏数据的一致性</li>
+</ul>
+</blockquote>
+<p><strong>简言之就是:mysql恢复时会执行所有的redo(包含了回滚的事务), 对于那些被回滚的事务再应用undo操作.</strong></p>
+<h3 id="总结"><a href="#总结" class="headerlink" title="总结"></a><strong>总结</strong></h3><table>
+<thead>
+<tr>
+<th></th>
+<th>UNDO</th>
+<th>REDO</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><strong>Record of</strong></td>
+<td><strong>How to undo a change</strong></td>
+<td><strong>How to reproduce a change</strong></td>
+</tr>
+<tr>
+<td><strong>Used for</strong></td>
+<td><strong>Rollback, Read-Consistency</strong></td>
+<td><strong>Rolling forward DB Changes</strong></td>
+</tr>
+<tr>
+<td><strong>Stored in</strong></td>
+<td><strong>Undo segments</strong></td>
+<td><strong>Redo log files</strong></td>
+</tr>
+<tr>
+<td><strong>Protect Against</strong></td>
+<td><strong>Inconsistent reads in multiuser systems</strong></td>
+<td><strong>Data loss</strong></td>
+</tr>
+</tbody></table>
+<h3 id="参考文章"><a href="#参考文章" class="headerlink" title="参考文章:"></a><strong>参考文章:</strong></h3><blockquote>
+<ul>
+<li><a target="_blank" rel="noopener" href="http://www.cnblogs.com/xinysu/p/6555082.html">说说MySQL中的Redo log Undo log都在干啥</a></li>
+<li><a target="_blank" rel="noopener" href="https://oraclenz.wordpress.com/2008/06/22/differences-between-undo-and-redo/">Differences between UNDO and REDO</a></li>
+</ul>
+</blockquote>
+<h3 id="转载请注明出处https-izsk-me"><a href="#转载请注明出处https-izsk-me" class="headerlink" title="转载请注明出处https://izsk.me"></a><strong>转载请注明出处<a target="_blank" rel="noopener" href="https://izsk.me/">https://izsk.me</a></strong></h3><hr>
+
+      
+    </div>
+
+    <div>
+      
+        
+<div id="wechat_subscriber" style="display: block; padding: 10px 0; margin: 20px auto; width: 100%; text-align: center">
+    <img id="wechat_subscriber_qcode" src="/images/websitecode250.png" alt=" wechat" style="width: 200px; max-width: 100%;"/>
+    <div>Scan Me To Read on Phone</div>
+</div>
+
+
+      
+    </div>
+
+    <div>
+      
+        
+  <div style="padding: 10px 0; margin: 20px auto; width: 90%; text-align: center;">
+    <div>I know you won't do this,but what if you did?</div>
+    <button id="rewardButton" disable="enable" onclick="var qr = document.getElementById('QR'); if (qr.style.display === 'none') {qr.style.display='block';} else {qr.style.display='none'}">
+      <span>赏</span>
+    </button>
+    <div id="QR" style="display: none;">
+      
+        <div id="wechat" style="display: inline-block">
+          <img id="wechat_qr" src="/images/wechatpayme.png" alt=" WeChat Pay"/>
+          <p>微信打赏</p>
+        </div>
+      
+      
+        <div id="alipay" style="display: inline-block">
+          <img id="alipay_qr" src="/images/alipayme.jpg" alt=" Alipay"/>
+          <p>支付宝打赏</p>
+        </div>
+      
     </div>
   </div>
 
-{% endblock %}
 
-{% block sidebar %}
-  {{ sidebar_template.render(true) }}
-{% endblock %}
+      
+    </div>
 
 
-{% block script_extra %}
-  {% include '_scripts/pages/post-details.swig' %}
-{% endblock %}
+    <footer class="post-footer">
+      
+        <div class="post-tags">
+          
+            <a href="/tags/%E5%88%86%E5%B8%83%E5%BC%8F%E6%9E%B6%E6%9E%84/" rel="tag"># 分布式架构</a>
+          
+        </div>
+      
+
+      
+        <div class="post-nav">
+          <div class="post-nav-next post-nav-item">
+            
+              <a href="/2017/11/20/python%E4%B8%AD%E7%9A%84copy%E5%8F%8Adeepcopy/" rel="next" title="python中的copy及deepcopy">
+                <i class="fa fa-chevron-left"></i> python中的copy及deepcopy
+              </a>
+            
+          </div>
+
+          <span class="post-nav-divider"></span>
+
+          <div class="post-nav-prev post-nav-item">
+            
+              <a href="/2017/12/02/mysql%E5%AD%A6%E4%B9%A0%E5%9B%9B(MVCC%E5%AE%9E%E7%8E%B0)/" rel="prev" title="mysql学习(MVCC实现)">
+                mysql学习(MVCC实现) <i class="fa fa-chevron-right"></i>
+              </a>
+            
+          </div>
+        </div>
+      
+
+      
+      
+    </footer>
+  </article>
+
+
+
+    <div class="post-spread">
+      
+    </div>
+  </div>
+
+
+          </div>
+          
+
+
+          
+  <div class="comments" id="comments">
+    
+  </div>
+
+
+        </div>
+        
+          
+  
+  <div class="sidebar-toggle">
+    <div class="sidebar-toggle-line-wrap">
+      <span class="sidebar-toggle-line sidebar-toggle-line-first"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-middle"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-last"></span>
+    </div>
+  </div>
+
+  <aside id="sidebar" class="sidebar">
+    <div class="sidebar-inner">
+
+      
+
+      
+        <ul class="sidebar-nav motion-element">
+          <li class="sidebar-nav-toc sidebar-nav-active" data-target="post-toc-wrap" >
+            文章目录
+          </li>
+          <li class="sidebar-nav-overview" data-target="site-overview">
+            站点概览
+          </li>
+        </ul>
+      
+
+      <section class="site-overview sidebar-panel">
+        <div class="site-author motion-element" itemprop="author" itemscope itemtype="http://schema.org/Person">
+          <img class="site-author-image" itemprop="image"
+               src="/images/avatar.gif"
+               alt="" />
+          <p class="site-author-name" itemprop="name"></p>
+          <p class="site-description motion-element" itemprop="description"></p>
+        </div>
+        <nav class="site-state motion-element">
+        
+          
+            <div class="site-state-item site-state-posts">
+              <a href="/archives">
+                <span class="site-state-item-count">192</span>
+                <span class="site-state-item-name">日志</span>
+              </a>
+            </div>
+          
+
+          
+            <div class="site-state-item site-state-categories">
+              <a href="/categories">
+                <span class="site-state-item-count">14</span>
+                <span class="site-state-item-name">分类</span>
+              </a>
+            </div>
+          
+
+          
+            <div class="site-state-item site-state-tags">
+              <a href="/tags">
+                <span class="site-state-item-count">14</span>
+                <span class="site-state-item-name">标签</span>
+              </a>
+            </div>
+          
+
+        </nav>
+
+        
+
+        <div class="links-of-author motion-element">
+          
+        </div>
+
+        
+        
+
+        
+        
+
+        
+
+
+      </section>
+
+      
+      <!--noindex-->
+        <section class="post-toc-wrap motion-element sidebar-panel sidebar-panel-active">
+          <div class="post-toc">
+
+            
+              
+            
+
+            
+              <div class="post-toc-content"><ol class="nav"><li class="nav-item nav-level-3"><a class="nav-link" href="#redo"><span class="nav-number">1.</span> <span class="nav-text">redo</span></a><ol class="nav-child"><li class="nav-item nav-level-4"><a class="nav-link" href="#innodb-flush-log-at-trx-commit"><span class="nav-number">1.1.</span> <span class="nav-text">innodb_flush_log_at_trx_commit</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#redo%E6%81%A2%E5%A4%8D"><span class="nav-number">1.2.</span> <span class="nav-text">redo恢复</span></a></li></ol></li><li class="nav-item nav-level-3"><a class="nav-link" href="#undo"><span class="nav-number">2.</span> <span class="nav-text">undo</span></a><ol class="nav-child"><li class="nav-item nav-level-4"><a class="nav-link" href="#%E5%9B%9E%E6%BB%9A"><span class="nav-number">2.1.</span> <span class="nav-text">回滚</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#MVCC"><span class="nav-number">2.2.</span> <span class="nav-text">MVCC</span></a></li></ol></li><li class="nav-item nav-level-3"><a class="nav-link" href="#redo-undo"><span class="nav-number">3.</span> <span class="nav-text">redo+undo</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E6%81%A2%E5%A4%8D"><span class="nav-number">4.</span> <span class="nav-text">恢复</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E6%80%BB%E7%BB%93"><span class="nav-number">5.</span> <span class="nav-text">总结</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E5%8F%82%E8%80%83%E6%96%87%E7%AB%A0"><span class="nav-number">6.</span> <span class="nav-text">参考文章:</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E8%BD%AC%E8%BD%BD%E8%AF%B7%E6%B3%A8%E6%98%8E%E5%87%BA%E5%A4%84https-izsk-me"><span class="nav-number">7.</span> <span class="nav-text">转载请注明出处https:&#x2F;&#x2F;izsk.me</span></a></li></ol></div>
+            
+
+          </div>
+        </section>
+      <!--/noindex-->
+      
+
+    </div>
+  </aside>
+
+
+        
+      </div>
+    </main>
+
+    <footer id="footer" class="footer">
+      <div class="footer-inner">
+        <div class="copyright" >
+  
+  &copy; 
+  <span itemprop="copyrightYear">2022</span>
+  <span class="with-love">
+    <i class="fa fa-heart"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">Z.S.K.</span>
+</div>
+
+
+<div class="powered-by">
+  Supported by <a class="theme-link" target="_blank" rel="noopener" href="https://hexo.io">Hexo</a>
+</div>
+
+<div class="theme-info">
+  Theme -
+  <a class="theme-link" target="_blank" rel="noopener" href="https://github.com/iissnan/hexo-theme-next">
+    NexT.Mist
+  </a>
+</div>
+
+
+        
+
+        
+      </div>
+    </footer>
+
+    <div class="back-to-top">
+      <i class="fa fa-arrow-up"></i>
+    </div>
+  </div>
+
+  
+
+<script type="text/javascript">
+  if (Object.prototype.toString.call(window.Promise) !== '[object Function]') {
+    window.Promise = null;
+  }
+</script>
+
+
+
+
+
+
+
+
+
+  
+
+
+
+  
+  <script type="text/javascript" src="/lib/jquery/index.js?v=2.1.3"></script>
+
+  
+  <script type="text/javascript" src="/lib/fastclick/lib/fastclick.min.js?v=1.0.6"></script>
+
+  
+  <script type="text/javascript" src="/lib/jquery_lazyload/jquery.lazyload.js?v=1.9.7"></script>
+
+  
+  <script type="text/javascript" src="/lib/velocity/velocity.min.js?v=1.2.1"></script>
+
+  
+  <script type="text/javascript" src="/lib/velocity/velocity.ui.min.js?v=1.2.1"></script>
+
+  
+  <script type="text/javascript" src="/lib/fancybox/source/jquery.fancybox.pack.js?v=2.1.5"></script>
+
+
+  
+
+
+  <script type="text/javascript" src="/js/src/utils.js?v=5.1.0"></script>
+
+  <script type="text/javascript" src="/js/src/motion.js?v=5.1.0"></script>
+
+
+
+  
+  
+
+  
+  <script type="text/javascript" src="/js/src/scrollspy.js?v=5.1.0"></script>
+<script type="text/javascript" src="/js/src/post-details.js?v=5.1.0"></script>
+
+
+
+  
+
+
+  <script type="text/javascript" src="/js/src/bootstrap.js?v=5.1.0"></script>
+
+
+
+  
+
+
+
+  
+
+
+
+
+	
+
+
+
+
+
+  
+
+
+
+
+  
+  
+  <script type="text/javascript">
+    // Popup Window;
+    var isfetched = false;
+    // Search DB path;
+    var search_path = "search.xml";
+    if (search_path.length == 0) {
+      search_path = "search.xml";
+    }
+    var path = "/" + search_path;
+    // monitor main search box;
+
+    function proceedsearch() {
+      $("body").append('<div class="popoverlay">').css('overflow', 'hidden');
+      $('.popup').toggle();
+    }
+    // search function;
+    var searchFunc = function(path, search_id, content_id) {
+      'use strict';
+      $.ajax({
+        url: path,
+        dataType: "xml",
+        async: true,
+        success: function( xmlResponse ) {
+          // get the contents from search data
+          isfetched = true;
+          $('.popup').detach().appendTo('.header-inner');
+          var datas = $( "entry", xmlResponse ).map(function() {
+            return {
+              title: $( "title", this ).text(),
+              content: $("content",this).text(),
+              url: $( "url" , this).text()
+            };
+          }).get();
+          var $input = document.getElementById(search_id);
+          var $resultContent = document.getElementById(content_id);
+          $input.addEventListener('input', function(){
+            var matchcounts = 0;
+            var str='<ul class=\"search-result-list\">';
+            var keywords = this.value.trim().toLowerCase().split(/[\s\-]+/);
+            $resultContent.innerHTML = "";
+            if (this.value.trim().length > 1) {
+              // perform local searching
+              datas.forEach(function(data) {
+                var isMatch = false;
+                var content_index = [];
+                var data_title = data.title.trim().toLowerCase();
+                var data_content = data.content.trim().replace(/<[^>]+>/g,"").toLowerCase();
+                var data_url = decodeURIComponent(data.url);
+                var index_title = -1;
+                var index_content = -1;
+                var first_occur = -1;
+                // only match artiles with not empty titles and contents
+                if(data_title != '') {
+                  keywords.forEach(function(keyword, i) {
+                    index_title = data_title.indexOf(keyword);
+                    index_content = data_content.indexOf(keyword);
+                    if( index_title >= 0 || index_content >= 0 ){
+                      isMatch = true;
+                      if (i == 0) {
+                        first_occur = index_content;
+                      }
+                    }
+
+                  });
+                }
+                // show search results
+                if (isMatch) {
+                  matchcounts += 1;
+                  str += "<li><a href='"+ data_url +"' class='search-result-title'>"+ data_title +"</a>";
+                  var content = data.content.trim().replace(/<[^>]+>/g,"");
+                  if (first_occur >= 0) {
+                    // cut out 100 characters
+                    var start = first_occur - 20;
+                    var end = first_occur + 80;
+                    if(start < 0){
+                      start = 0;
+                    }
+                    if(start == 0){
+                      end = 50;
+                    }
+                    if(end > content.length){
+                      end = content.length;
+                    }
+                    var match_content = content.substring(start, end);
+                    // highlight all keywords
+                    keywords.forEach(function(keyword){
+                      var regS = new RegExp(keyword, "gi");
+                      match_content = match_content.replace(regS, "<b class=\"search-keyword\">"+keyword+"</b>");
+                    });
+
+                    str += "<p class=\"search-result\">" + match_content +"...</p>"
+                  }
+                  str += "</li>";
+                }
+              })};
+            str += "</ul>";
+            if (matchcounts == 0) { str = '<div id="no-result"><i class="fa fa-frown-o fa-5x" /></div>' }
+            if (keywords == "") { str = '<div id="no-result"><i class="fa fa-search fa-5x" /></div>' }
+            $resultContent.innerHTML = str;
+          });
+          proceedsearch();
+        }
+      });}
+
+    // handle and trigger popup window;
+    $('.popup-trigger').click(function(e) {
+      e.stopPropagation();
+      if (isfetched == false) {
+        searchFunc(path, 'local-search-input', 'local-search-result');
+      } else {
+        proceedsearch();
+      };
+    });
+
+    $('.popup-btn-close').click(function(e){
+      $('.popup').hide();
+      $(".popoverlay").remove();
+      $('body').css('overflow', '');
+    });
+    $('.popup').click(function(e){
+      e.stopPropagation();
+    });
+  </script>
+
+
+  
+
+  
+
+  
+
+  
+
+
+</body>
+</html>

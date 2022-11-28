@@ -1,38 +1,943 @@
-{% extends '_layout.swig' %}
-{% import '_macro/post.swig' as post_template %}
-{% import '_macro/sidebar.swig' as sidebar_template %}
+<!doctype html>
 
 
-{% block title %} {{ page.title }} | {{ config.title }} {% endblock %}
 
-{% block page_class %}page-post-detail{% endblock %}
+  
 
 
-{% block content %}
+<html class="theme-next mist use-motion" lang="zh-Hans">
+<head>
+  <meta charset="UTF-8"/>
+<meta http-equiv="X-UA-Compatible" content="IE=edge" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1"/>
+
+
+
+<meta http-equiv="Cache-Control" content="no-transform" />
+<meta http-equiv="Cache-Control" content="no-siteapp" />
+
+
+
+
+
+
+
+
+
+
+
+
+  
+  
+  <link href="/lib/fancybox/source/jquery.fancybox.css?v=2.1.5" rel="stylesheet" type="text/css" />
+
+
+
+
+  
+  
+  
+  
+
+  
+    
+    
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+    
+    
+    <link href="//fonts.googleapis.com/css?family=Lato:300,300italic,400,400italic,700,700italic&subset=latin,latin-ext" rel="stylesheet" type="text/css">
+  
+
+
+
+
+
+
+<link href="/lib/font-awesome/css/font-awesome.min.css?v=4.6.2" rel="stylesheet" type="text/css" />
+
+<link href="/css/main.css?v=5.1.0" rel="stylesheet" type="text/css" />
+
+
+  <meta name="keywords" content="Python," />
+
+
+
+
+
+
+
+
+  <link rel="shortcut icon" type="image/x-icon" href="/favicon.ico?v=5.1.0" />
+
+
+
+
+
+
+<meta name="description" content="近期在做一个数据库后台管理系统,功能非常简单,就是定时获取oracle数据库的awr性能报告数据,结合highcharts生成图表.因为之前已经用python写了个模块,这次有个功能刚好可以直接用,就也直接想用python写了,这种小系统当然是用python的flask框架了,简单轻便,项目中有用到用户登陆功能,使用了flask-login,对这种内部小型的不需要太复杂权限应用系统实乃必备">
+<meta property="og:type" content="article">
+<meta property="og:title" content="Flask学习(flask-login使用)">
+<meta property="og:url" content="https://zhoushuke.github.io/2017/07/01/flask-login%E4%BD%BF%E7%94%A8/index.html">
+<meta property="og:site_name" content="Z.S.K.&#39;s Records">
+<meta property="og:description" content="近期在做一个数据库后台管理系统,功能非常简单,就是定时获取oracle数据库的awr性能报告数据,结合highcharts生成图表.因为之前已经用python写了个模块,这次有个功能刚好可以直接用,就也直接想用python写了,这种小系统当然是用python的flask框架了,简单轻便,项目中有用到用户登陆功能,使用了flask-login,对这种内部小型的不需要太复杂权限应用系统实乃必备">
+<meta property="og:locale">
+<meta property="article:published_time" content="2017-07-01T15:29:36.000Z">
+<meta property="article:modified_time" content="2022-07-19T03:16:00.985Z">
+<meta property="article:author" content="Z.S.K.">
+<meta property="article:tag" content="Python">
+<meta name="twitter:card" content="summary">
+
+
+
+<script type="text/javascript" id="hexo.configurations">
+  var NexT = window.NexT || {};
+  var CONFIG = {
+    root: '',
+    scheme: 'Mist',
+    sidebar: {"position":"left","display":"post"},
+    fancybox: true,
+    motion: true,
+    duoshuo: {
+      userId: 'undefined',
+      author: '博主'
+    },
+    algolia: {
+      applicationID: '',
+      apiKey: '',
+      indexName: '',
+      hits: {"per_page":10},
+      labels: {"input_placeholder":"Search for Posts","hits_empty":"We didn't find any results for the search: ${query}","hits_stats":"${hits} results found in ${time} ms"}
+    }
+  };
+</script>
+
+
+
+  <link rel="canonical" href="https://zhoushuke.github.io/2017/07/01/flask-login使用/"/>
+
+
+
+
+
+  <title> Flask学习(flask-login使用) | Z.S.K.'s Records </title>
+<meta name="generator" content="Hexo 6.2.0"></head>
+
+<body itemscope itemtype="http://schema.org/WebPage" lang="zh-Hans">
+
+  
+
+
+
+
+
+
+
+
+
+
+  
+  
+    
+  
+
+  <div class="container one-collumn sidebar-position-left page-post-detail ">
+    <div class="headband"></div>
+
+    <header id="header" class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-meta ">
+  
+
+  <div class="custom-logo-site-title">
+    <a href="/"  class="brand" rel="start">
+      <span class="logo-line-before"><i></i></span>
+      <span class="site-title">Z.S.K.'s Records</span>
+      <span class="logo-line-after"><i></i></span>
+    </a>
+  </div>
+    
+      <p class="site-subtitle"></p>
+    
+</div>
+
+<div class="site-nav-toggle">
+  <button>
+    <span class="btn-bar"></span>
+    <span class="btn-bar"></span>
+    <span class="btn-bar"></span>
+  </button>
+</div>
+
+<nav class="site-nav">
+  
+
+  
+    <ul id="menu" class="menu">
+      
+        
+        <li class="menu-item menu-item-home">
+          <a href="/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-home"></i> <br />
+            
+            首页
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-categories">
+          <a href="/categories" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-th"></i> <br />
+            
+            分类
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-about">
+          <a href="/about/ZSK-Profile.pdf" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-user"></i> <br />
+            
+            简历
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-archives">
+          <a href="/archives" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-archive"></i> <br />
+            
+            归档
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-tags">
+          <a href="/tags" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-tags"></i> <br />
+            
+            标签
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-commonweal">
+          <a href="/404.html" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-heartbeat"></i> <br />
+            
+            公益404
+          </a>
+        </li>
+      
+
+      
+        <li class="menu-item menu-item-search">
+          
+            <a href="javascript:;" class="popup-trigger">
+          
+            
+              <i class="menu-item-icon fa fa-search fa-fw"></i> <br />
+            
+            搜索
+          </a>
+        </li>
+      
+    </ul>
+  
+
+  
+    <div class="site-search">
+      
+  <div class="popup">
+ <span class="search-icon fa fa-search"></span>
+ <input type="text" id="local-search-input">
+ <div id="local-search-result"></div>
+ <span class="popup-btn-close">close</span>
+</div>
+
+
+    </div>
+  
+</nav>
+
+
+
+ </div>
+    </header>
+
+    <main id="main" class="main">
+      <div class="main-inner">
+        <div class="content-wrap">
+          <div id="content" class="content">
+            
 
   <div id="posts" class="posts-expand">
-    {{ post_template.render(page) }}
+    
 
-    <div class="post-spread">
-      {% if theme.jiathis %}
-        {% include '_partials/share/jiathis.swig' %}
-      {% elseif theme.baidushare %}
-        {% include '_partials/share/baidushare.swig' %}
-      {% elseif theme.add_this_id %}
-        {% include '_partials/share/add-this.swig' %}
-      {% elseif theme.duoshuo_shortname and theme.duoshuo_share %}
-        {% include '_partials/share/duoshuo_share.swig' %}
-      {% endif %}
+  
+
+  
+  
+  
+
+  <article class="post post-type-normal " itemscope itemtype="http://schema.org/Article">
+  <link itemprop="mainEntityOfPage" href="https://zhoushuke.github.io/2017/07/01/flask-login%E4%BD%BF%E7%94%A8/">
+
+  <span style="display:none" itemprop="author" itemscope itemtype="http://schema.org/Person">
+    <meta itemprop="name" content="">
+    <meta itemprop="description" content="">
+    <meta itemprop="image" content="/images/avatar.gif">
+  </span>
+
+  <span style="display:none" itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+    <meta itemprop="name" content="Z.S.K.'s Records">
+    <span style="display:none" itemprop="logo" itemscope itemtype="http://schema.org/ImageObject">
+      <img style="display:none;" itemprop="url image" alt="Z.S.K.'s Records" src="">
+    </span>
+  </span>
+
+    
+      <header class="post-header">
+
+        
+        
+          <h1 class="post-title" itemprop="name headline">
+            
+            
+              
+                Flask学习(flask-login使用)
+              
+            
+          </h1>
+        
+
+        <div class="post-meta">
+          <span class="post-time">
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">发表于</span>
+              
+              <time title="Post created" itemprop="dateCreated datePublished" datetime="2017-07-01T23:29:36+08:00">
+                2017-07-01
+              </time>
+            
+
+            
+
+            
+          </span>
+
+          
+            <span class="post-category" >
+            
+              <span class="post-meta-divider">|</span>
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-folder-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">分类于</span>
+              
+              
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/Python/" itemprop="url" rel="index">
+                    <span itemprop="name">Python</span>
+                  </a>
+                </span>
+
+                
+                
+              
+            </span>
+          
+
+          
+            
+          
+
+          
+
+          
+          
+
+          
+
+          
+
+        </div>
+      </header>
+    
+
+
+    <div class="post-body" itemprop="articleBody">
+
+      
+      
+
+      
+        <p>近期在做一个数据库后台管理系统,功能非常简单,就是定时获取oracle数据库的awr性能报告数据,结合highcharts生成图表.因为之前已经用python写了个模块,这次有个功能刚好可以直接用,就也直接想用python写了,这种小系统当然是用python的flask框架了,简单轻便,项目中有用到用户登陆功能,使用了flask-login,对这种内部小型的不需要太复杂权限应用系统实乃必备</p>
+<span id="more"></span>
+
+<h3 id="flask-login"><a href="#flask-login" class="headerlink" title="flask-login"></a><strong>flask-login</strong></h3><p>Flask-Login 为 Flask 提供了用户会话管理,它处理了日常的登入、登出并且长时间记住用户的会话,主要使用的是session机制</p>
+<p>它可以轻松实现以下功能:</p>
+<blockquote>
+<ul>
+<li>在会话中存储当前活跃的用户 ID，让你能够自由地登入和登出</li>
+<li>让你限制登入(或者登出)用户可以访问的视图</li>
+<li>处理让人棘手的 “记住我” 功能</li>
+<li>帮助你保护用户会话免遭 cookie 被盗的牵连</li>
+<li>可以与以后可能使用的 Flask-Principal 或其它认证扩展集成</li>
+</ul>
+</blockquote>
+<p>但是,它不会:</p>
+<blockquote>
+<ul>
+<li>限制你使用特定的数据库或其它存储方法。如何加载用户完全由你决定</li>
+<li>限制你使用用户名和密码,OpenIDs,或者其它的认证方法</li>
+<li>处理超越 “登入或者登出” 之外的权限</li>
+<li>处理用户注册或者账号恢复</li>
+</ul>
+</blockquote>
+<p>使用它也是非常简单</p>
+<blockquote>
+<ol>
+<li>引用flask-login</li>
+<li>在应用中配置login_manager</li>
+<li>实现User(db.Model,UserMixin)</li>
+<li>完成load_user(user_id)回调函数</li>
+<li>login_user保存用户信息</li>
+<li>使用@login_required</li>
+</ol>
+</blockquote>
+<p>当然,以上几点并不是它的顺序,而是各自对应一种操作,下面一一介绍:</p>
+<h4 id="初始化flask-login"><a href="#初始化flask-login" class="headerlink" title="初始化flask-login"></a><strong>初始化flask-login</strong></h4><figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">from</span> flask_login <span class="keyword">import</span> UserMixin,LoginManager,login_user,logout_user,login_required</span><br><span class="line"></span><br><span class="line">login_manager = LoginManager()                        <span class="comment">####LoginManager对象</span></span><br><span class="line">login_manager.login_view = <span class="string">&quot;login&quot;</span>                    <span class="comment">####表示如果用户没有登陆时跳转指向的路由</span></span><br><span class="line">login_manager.session_protection = <span class="string">&quot;strong&quot;</span>           <span class="comment">####session的保护等级,如果发现异常会登出用户</span></span><br><span class="line">login_manager.login_message = <span class="string">&quot;请先登陆&quot;</span>               <span class="comment">####用户没有登陆时访问需要登陆才能访问的页面时的提示</span></span><br><span class="line">login_manager.login_message_category = <span class="string">&quot;warning&quot;</span>      <span class="comment">####上述提示的提示等级,跟flask的flash消息分类等同</span></span><br><span class="line">login_manager.init_app(app)                           <span class="comment">####初始化</span></span><br></pre></td></tr></table></figure>
+
+<p>登录管理(login manager)包含了让你的应用和 Flask-Login 协同工作的代码，比如怎样从一个 ID 加载用户，当用户需要登录的时候跳转到哪里等等。一旦实际的应用对象创建后，就可以使用最后一句话在应用中初始化了</p>
+<h4 id="实现User类"><a href="#实现User类" class="headerlink" title="实现User类"></a><strong>实现User类</strong></h4><p>使用flask-login验证用户登录时需要如下属性:</p>
+<blockquote>
+<ol>
+<li>is_authenticated</li>
+</ol>
+<p>   当用户通过验证时,也即提供有效证明时返回 True .（只有通过验证的用户会满足 login_required 的条件)</p>
+<ol start="2">
+<li><p>is_active</p>
+<p>如果这是一个活动用户且通过验证,账户也已激活,未被停用,也不符合任何你 的应用拒绝一个账号的条件,返回 True .不活动的账号可能不会登入（当然, 是在没被强制的情况下）</p>
+</li>
+<li><p>is_anonymous</p>
+<p>如果是一个匿名用户,返回 True (真实用户应返回 False)</p>
+</li>
+<li><p>get_id()</p>
+<p>返回一个能唯一识别用户的,并能用于从 user_loader 回调中加载用户的 unicode .注意着 必须 是一个 unicode,如           果 ID 原本是 一个 int 或其它类型,你需要把它转换为 unicode.</p>
+</li>
+</ol>
+</blockquote>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">class</span> <span class="title class_">User</span>(db.Model,UserMixin):</span><br><span class="line">    __tablename__ = <span class="string">&#x27;XT_REGIST_USER&#x27;</span></span><br><span class="line">    rowid = db.Column(db.Integer, primary_key=<span class="literal">True</span>)</span><br><span class="line">    username = db.Column(db.String(<span class="number">64</span>), unique=<span class="literal">True</span>)</span><br><span class="line">    password = db.Column(db.String(<span class="number">255</span>))</span><br><span class="line">    </span><br><span class="line">    <span class="keyword">def</span> <span class="title function_">__init__</span>(<span class="params">self, rowid=<span class="literal">None</span>, username=<span class="literal">None</span>, password=<span class="literal">None</span></span>):</span><br><span class="line">        self.rowid = rowid</span><br><span class="line">        self.username = username</span><br><span class="line">        self.password = self.set_password(password)</span><br><span class="line"></span><br><span class="line">    <span class="keyword">def</span> <span class="title function_">set_password</span>(<span class="params">self, password</span>):</span><br><span class="line">        <span class="keyword">return</span> generate_password_hash(password,method=<span class="string">&quot;pbkdf2:sha1:100&quot;</span>,salt_length=<span class="number">2</span>)</span><br><span class="line"></span><br><span class="line">    <span class="keyword">def</span> <span class="title function_">check_password</span>(<span class="params">self, password</span>):</span><br><span class="line">        <span class="keyword">return</span> check_password_hash(self.password, password)</span><br><span class="line">    </span><br><span class="line">    <span class="keyword">def</span> <span class="title function_">is_active</span>():</span><br><span class="line">        <span class="keyword">return</span> <span class="literal">True</span></span><br><span class="line"></span><br><span class="line">    <span class="keyword">def</span> <span class="title function_">is_anonymous</span>(<span class="params">self</span>):</span><br><span class="line">        <span class="keyword">return</span> <span class="literal">False</span></span><br><span class="line"></span><br><span class="line">    <span class="keyword">def</span> <span class="title function_">get_id</span>(<span class="params">self</span>):</span><br><span class="line">        <span class="keyword">return</span> self.rowid</span><br><span class="line">    </span><br><span class="line"><span class="comment">####登陆视图</span></span><br><span class="line"><span class="meta">@app.route(<span class="params"><span class="string">&quot;/login/&quot;</span>,methods=[<span class="string">&quot;GET&quot;</span>,<span class="string">&quot;POST&quot;</span>]</span>)</span></span><br><span class="line"><span class="keyword">def</span> <span class="title function_">login</span>():</span><br><span class="line">    <span class="keyword">if</span> request.method == <span class="string">&quot;POST&quot;</span>:</span><br><span class="line">        me = User.query.filter_by(username=request.form.get(<span class="string">&#x27;username&#x27;</span>)).first()</span><br><span class="line">        <span class="keyword">if</span> me <span class="keyword">and</span> me.check_password(request.form.get(<span class="string">&#x27;password&#x27;</span>)):</span><br><span class="line">            session[<span class="string">&quot;spasswd&quot;</span>] = request.form.get(<span class="string">&#x27;password&#x27;</span>)</span><br><span class="line">            login_user(me,remember=request.form.get(<span class="string">&#x27;rememberme&#x27;</span>))</span><br><span class="line">            <span class="keyword">return</span> redirect(url_for(<span class="string">&quot;online&quot;</span>,_external=<span class="literal">True</span>) <span class="keyword">or</span> request.args.get(<span class="string">&quot;next&quot;</span>))</span><br><span class="line">        <span class="keyword">else</span>:</span><br><span class="line">            flash(<span class="string">&quot;用户不存在或密码错误&quot;</span>,<span class="string">&#x27;warning&#x27;</span>)</span><br><span class="line">    <span class="keyword">return</span> render_template(<span class="string">&quot;login.html&quot;</span>)</span><br></pre></td></tr></table></figure>
+
+<p>这里我们是直接继承UserMixin,它提供了对所有这些方法的默认 实现,当然可以自己实现用户类的.通过werkzeug.security包中的generate_password_hash与check_password_hash来实现密码的加密解密.</p>
+<p>我们看到在login视图中,先通过用户名在库中查找到该用户信息(注意这里使用了User类),如果存在该用户而且输入的密码也正确,那么就使用login_user()函数来登录用户,这时用户在会话中的状态就是登录状态了</p>
+<h4 id="remember-me"><a href="#remember-me" class="headerlink" title="remember_me"></a><strong>remember_me</strong></h4><p>“记住我”的功能很难实现,但是，Flask-Login 几乎透明地实现它 - 只要把 remember&#x3D;True 传递给 login_user。一个 cookie 将会存储在用户计算机中，如果用户会话中没有用户 ID 的话，Flask-Login 会自动地从 cookie 中恢复用户 ID。cookie 是防纂改的，因此如果用户纂改过它(比如，使用其它的一些东西来代替用户的 ID)，它就会被拒绝，就像不存在。该层功能是被自动实现的。但你能（且应该，如果你的应用处理任何敏感的数据）提供 额外基础工作来增强你记住的 cookie 的安全性</p>
+<h4 id="load-user"><a href="#load-user" class="headerlink" title="load_user()"></a><strong>load_user()</strong></h4><figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">@login_manager.user_loader</span></span><br><span class="line"><span class="keyword">def</span> <span class="title function_">load_user</span>(<span class="params">rowid</span>):</span><br><span class="line">    <span class="keyword">return</span> User.query.get(<span class="built_in">int</span>(rowid))</span><br></pre></td></tr></table></figure>
+
+<p>这是一个回调函数,根据session中存储的rowid来reload User object,返回User对象,第一行,其实是一个装饰器,这个装饰器表示,每次有请求时都会调用它所装饰的函数,说的更直白一点就是,<strong>每次请求到来时,都会调用这个方法,检查id是否在当前session中,如果存在返回id对应的User给login_user(),不存在则返回None</strong>.这里有更详细的说明<a target="_blank" rel="noopener" href="https://stackoverflow.com/questions/12075535/flask-login-cant-understand-how-it-works">flask-login: can’t understand how it works</a></p>
+<h4 id="login-required"><a href="#login-required" class="headerlink" title="@login_required"></a><strong>@login_required</strong></h4><p>如果需要让页面只可让已登陆的用户访问,可使用login_required装饰路由函数,未登陆的请求将会跳转到上面loginManager.login_view设置的登陆页面路由</p>
+<h4 id="logout-user"><a href="#logout-user" class="headerlink" title="logout_user()"></a><strong>logout_user()</strong></h4><figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">@app.route(<span class="params"><span class="string">&#x27;/logout/&#x27;</span>,methods=[<span class="string">&#x27;GET&#x27;</span>, <span class="string">&#x27;POST&#x27;</span>]</span>)</span></span><br><span class="line"><span class="keyword">def</span> <span class="title function_">logout</span>():</span><br><span class="line">    logout_user()</span><br><span class="line">    <span class="keyword">return</span> redirect(url_for(<span class="string">&#x27;index&#x27;</span>))</span><br></pre></td></tr></table></figure>
+
+<p>logout_user()函数功能就是将缓存的用户信息清楚，将Remember me标记位设置为清空状态</p>
+<h4 id="current-user-is-authenticated"><a href="#current-user-is-authenticated" class="headerlink" title="current_user.is_authenticated()"></a><strong>current_user.is_authenticated()</strong></h4><p>current_user.is_authenticated()是用来获取当前登陆用户的,可直接在模板中判断用户级别</p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">&#123;% <span class="keyword">if</span> current_user.is_authenticated() <span class="keyword">and</span> current_user.username == <span class="string">&#x27;Admin&#x27;</span> %&#125;</span><br><span class="line">  Hi &#123;&#123; current_user.name &#125;&#125;</span><br><span class="line">&#123;% endif %&#125;</span><br></pre></td></tr></table></figure>
+
+
+
+<h3 id="参考文章"><a href="#参考文章" class="headerlink" title="参考文章:"></a><strong>参考文章:</strong></h3><blockquote>
+<ul>
+<li><a target="_blank" rel="noopener" href="http://www.jianshu.com/p/06bd93e21945">使用Flask实现用户登陆认证的详细过程</a></li>
+<li><a target="_blank" rel="noopener" href="http://www.cnblogs.com/alima/p/5818852.html">关于flask-login中各种API使用实例</a></li>
+<li><a target="_blank" rel="noopener" href="http://www.voidcn.com/blog/agmcs/article/p-3750636.html">Flask学习记录之Flask-Login</a></li>
+<li><a target="_blank" rel="noopener" href="http://www.pythondoc.com/flask-login/">Flask-Login</a></li>
+</ul>
+</blockquote>
+<h3 id="转载请注明出处https-izsk-me"><a href="#转载请注明出处https-izsk-me" class="headerlink" title="转载请注明出处https://izsk.me"></a><strong>转载请注明出处<a target="_blank" rel="noopener" href="https://izsk.me/">https://izsk.me</a></strong></h3><hr>
+
+      
+    </div>
+
+    <div>
+      
+        
+<div id="wechat_subscriber" style="display: block; padding: 10px 0; margin: 20px auto; width: 100%; text-align: center">
+    <img id="wechat_subscriber_qcode" src="/images/websitecode250.png" alt=" wechat" style="width: 200px; max-width: 100%;"/>
+    <div>Scan Me To Read on Phone</div>
+</div>
+
+
+      
+    </div>
+
+    <div>
+      
+        
+  <div style="padding: 10px 0; margin: 20px auto; width: 90%; text-align: center;">
+    <div>I know you won't do this,but what if you did?</div>
+    <button id="rewardButton" disable="enable" onclick="var qr = document.getElementById('QR'); if (qr.style.display === 'none') {qr.style.display='block';} else {qr.style.display='none'}">
+      <span>赏</span>
+    </button>
+    <div id="QR" style="display: none;">
+      
+        <div id="wechat" style="display: inline-block">
+          <img id="wechat_qr" src="/images/wechatpayme.png" alt=" WeChat Pay"/>
+          <p>微信打赏</p>
+        </div>
+      
+      
+        <div id="alipay" style="display: inline-block">
+          <img id="alipay_qr" src="/images/alipayme.jpg" alt=" Alipay"/>
+          <p>支付宝打赏</p>
+        </div>
+      
     </div>
   </div>
 
-{% endblock %}
 
-{% block sidebar %}
-  {{ sidebar_template.render(true) }}
-{% endblock %}
+      
+    </div>
 
 
-{% block script_extra %}
-  {% include '_scripts/pages/post-details.swig' %}
-{% endblock %}
+    <footer class="post-footer">
+      
+        <div class="post-tags">
+          
+            <a href="/tags/Python/" rel="tag"># Python</a>
+          
+        </div>
+      
+
+      
+        <div class="post-nav">
+          <div class="post-nav-next post-nav-item">
+            
+              <a href="/2017/05/16/FELK-ELK-Struct/" rel="next" title="FELK学习(ELK介绍)">
+                <i class="fa fa-chevron-left"></i> FELK学习(ELK介绍)
+              </a>
+            
+          </div>
+
+          <span class="post-nav-divider"></span>
+
+          <div class="post-nav-prev post-nav-item">
+            
+              <a href="/2017/07/29/bootstrap3%E9%80%82%E9%85%8DIE8/" rel="prev" title="bootstrap3适配IE8">
+                bootstrap3适配IE8 <i class="fa fa-chevron-right"></i>
+              </a>
+            
+          </div>
+        </div>
+      
+
+      
+      
+    </footer>
+  </article>
+
+
+
+    <div class="post-spread">
+      
+    </div>
+  </div>
+
+
+          </div>
+          
+
+
+          
+  <div class="comments" id="comments">
+    
+  </div>
+
+
+        </div>
+        
+          
+  
+  <div class="sidebar-toggle">
+    <div class="sidebar-toggle-line-wrap">
+      <span class="sidebar-toggle-line sidebar-toggle-line-first"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-middle"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-last"></span>
+    </div>
+  </div>
+
+  <aside id="sidebar" class="sidebar">
+    <div class="sidebar-inner">
+
+      
+
+      
+        <ul class="sidebar-nav motion-element">
+          <li class="sidebar-nav-toc sidebar-nav-active" data-target="post-toc-wrap" >
+            文章目录
+          </li>
+          <li class="sidebar-nav-overview" data-target="site-overview">
+            站点概览
+          </li>
+        </ul>
+      
+
+      <section class="site-overview sidebar-panel">
+        <div class="site-author motion-element" itemprop="author" itemscope itemtype="http://schema.org/Person">
+          <img class="site-author-image" itemprop="image"
+               src="/images/avatar.gif"
+               alt="" />
+          <p class="site-author-name" itemprop="name"></p>
+          <p class="site-description motion-element" itemprop="description"></p>
+        </div>
+        <nav class="site-state motion-element">
+        
+          
+            <div class="site-state-item site-state-posts">
+              <a href="/archives">
+                <span class="site-state-item-count">192</span>
+                <span class="site-state-item-name">日志</span>
+              </a>
+            </div>
+          
+
+          
+            <div class="site-state-item site-state-categories">
+              <a href="/categories">
+                <span class="site-state-item-count">14</span>
+                <span class="site-state-item-name">分类</span>
+              </a>
+            </div>
+          
+
+          
+            <div class="site-state-item site-state-tags">
+              <a href="/tags">
+                <span class="site-state-item-count">14</span>
+                <span class="site-state-item-name">标签</span>
+              </a>
+            </div>
+          
+
+        </nav>
+
+        
+
+        <div class="links-of-author motion-element">
+          
+        </div>
+
+        
+        
+
+        
+        
+
+        
+
+
+      </section>
+
+      
+      <!--noindex-->
+        <section class="post-toc-wrap motion-element sidebar-panel sidebar-panel-active">
+          <div class="post-toc">
+
+            
+              
+            
+
+            
+              <div class="post-toc-content"><ol class="nav"><li class="nav-item nav-level-3"><a class="nav-link" href="#flask-login"><span class="nav-number">1.</span> <span class="nav-text">flask-login</span></a><ol class="nav-child"><li class="nav-item nav-level-4"><a class="nav-link" href="#%E5%88%9D%E5%A7%8B%E5%8C%96flask-login"><span class="nav-number">1.1.</span> <span class="nav-text">初始化flask-login</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#%E5%AE%9E%E7%8E%B0User%E7%B1%BB"><span class="nav-number">1.2.</span> <span class="nav-text">实现User类</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#remember-me"><span class="nav-number">1.3.</span> <span class="nav-text">remember_me</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#load-user"><span class="nav-number">1.4.</span> <span class="nav-text">load_user()</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#login-required"><span class="nav-number">1.5.</span> <span class="nav-text">@login_required</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#logout-user"><span class="nav-number">1.6.</span> <span class="nav-text">logout_user()</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#current-user-is-authenticated"><span class="nav-number">1.7.</span> <span class="nav-text">current_user.is_authenticated()</span></a></li></ol></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E5%8F%82%E8%80%83%E6%96%87%E7%AB%A0"><span class="nav-number">2.</span> <span class="nav-text">参考文章:</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E8%BD%AC%E8%BD%BD%E8%AF%B7%E6%B3%A8%E6%98%8E%E5%87%BA%E5%A4%84https-izsk-me"><span class="nav-number">3.</span> <span class="nav-text">转载请注明出处https:&#x2F;&#x2F;izsk.me</span></a></li></ol></div>
+            
+
+          </div>
+        </section>
+      <!--/noindex-->
+      
+
+    </div>
+  </aside>
+
+
+        
+      </div>
+    </main>
+
+    <footer id="footer" class="footer">
+      <div class="footer-inner">
+        <div class="copyright" >
+  
+  &copy; 
+  <span itemprop="copyrightYear">2022</span>
+  <span class="with-love">
+    <i class="fa fa-heart"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">Z.S.K.</span>
+</div>
+
+
+<div class="powered-by">
+  Supported by <a class="theme-link" target="_blank" rel="noopener" href="https://hexo.io">Hexo</a>
+</div>
+
+<div class="theme-info">
+  Theme -
+  <a class="theme-link" target="_blank" rel="noopener" href="https://github.com/iissnan/hexo-theme-next">
+    NexT.Mist
+  </a>
+</div>
+
+
+        
+
+        
+      </div>
+    </footer>
+
+    <div class="back-to-top">
+      <i class="fa fa-arrow-up"></i>
+    </div>
+  </div>
+
+  
+
+<script type="text/javascript">
+  if (Object.prototype.toString.call(window.Promise) !== '[object Function]') {
+    window.Promise = null;
+  }
+</script>
+
+
+
+
+
+
+
+
+
+  
+
+
+
+  
+  <script type="text/javascript" src="/lib/jquery/index.js?v=2.1.3"></script>
+
+  
+  <script type="text/javascript" src="/lib/fastclick/lib/fastclick.min.js?v=1.0.6"></script>
+
+  
+  <script type="text/javascript" src="/lib/jquery_lazyload/jquery.lazyload.js?v=1.9.7"></script>
+
+  
+  <script type="text/javascript" src="/lib/velocity/velocity.min.js?v=1.2.1"></script>
+
+  
+  <script type="text/javascript" src="/lib/velocity/velocity.ui.min.js?v=1.2.1"></script>
+
+  
+  <script type="text/javascript" src="/lib/fancybox/source/jquery.fancybox.pack.js?v=2.1.5"></script>
+
+
+  
+
+
+  <script type="text/javascript" src="/js/src/utils.js?v=5.1.0"></script>
+
+  <script type="text/javascript" src="/js/src/motion.js?v=5.1.0"></script>
+
+
+
+  
+  
+
+  
+  <script type="text/javascript" src="/js/src/scrollspy.js?v=5.1.0"></script>
+<script type="text/javascript" src="/js/src/post-details.js?v=5.1.0"></script>
+
+
+
+  
+
+
+  <script type="text/javascript" src="/js/src/bootstrap.js?v=5.1.0"></script>
+
+
+
+  
+
+
+
+  
+
+
+
+
+	
+
+
+
+
+
+  
+
+
+
+
+  
+  
+  <script type="text/javascript">
+    // Popup Window;
+    var isfetched = false;
+    // Search DB path;
+    var search_path = "search.xml";
+    if (search_path.length == 0) {
+      search_path = "search.xml";
+    }
+    var path = "/" + search_path;
+    // monitor main search box;
+
+    function proceedsearch() {
+      $("body").append('<div class="popoverlay">').css('overflow', 'hidden');
+      $('.popup').toggle();
+    }
+    // search function;
+    var searchFunc = function(path, search_id, content_id) {
+      'use strict';
+      $.ajax({
+        url: path,
+        dataType: "xml",
+        async: true,
+        success: function( xmlResponse ) {
+          // get the contents from search data
+          isfetched = true;
+          $('.popup').detach().appendTo('.header-inner');
+          var datas = $( "entry", xmlResponse ).map(function() {
+            return {
+              title: $( "title", this ).text(),
+              content: $("content",this).text(),
+              url: $( "url" , this).text()
+            };
+          }).get();
+          var $input = document.getElementById(search_id);
+          var $resultContent = document.getElementById(content_id);
+          $input.addEventListener('input', function(){
+            var matchcounts = 0;
+            var str='<ul class=\"search-result-list\">';
+            var keywords = this.value.trim().toLowerCase().split(/[\s\-]+/);
+            $resultContent.innerHTML = "";
+            if (this.value.trim().length > 1) {
+              // perform local searching
+              datas.forEach(function(data) {
+                var isMatch = false;
+                var content_index = [];
+                var data_title = data.title.trim().toLowerCase();
+                var data_content = data.content.trim().replace(/<[^>]+>/g,"").toLowerCase();
+                var data_url = decodeURIComponent(data.url);
+                var index_title = -1;
+                var index_content = -1;
+                var first_occur = -1;
+                // only match artiles with not empty titles and contents
+                if(data_title != '') {
+                  keywords.forEach(function(keyword, i) {
+                    index_title = data_title.indexOf(keyword);
+                    index_content = data_content.indexOf(keyword);
+                    if( index_title >= 0 || index_content >= 0 ){
+                      isMatch = true;
+                      if (i == 0) {
+                        first_occur = index_content;
+                      }
+                    }
+
+                  });
+                }
+                // show search results
+                if (isMatch) {
+                  matchcounts += 1;
+                  str += "<li><a href='"+ data_url +"' class='search-result-title'>"+ data_title +"</a>";
+                  var content = data.content.trim().replace(/<[^>]+>/g,"");
+                  if (first_occur >= 0) {
+                    // cut out 100 characters
+                    var start = first_occur - 20;
+                    var end = first_occur + 80;
+                    if(start < 0){
+                      start = 0;
+                    }
+                    if(start == 0){
+                      end = 50;
+                    }
+                    if(end > content.length){
+                      end = content.length;
+                    }
+                    var match_content = content.substring(start, end);
+                    // highlight all keywords
+                    keywords.forEach(function(keyword){
+                      var regS = new RegExp(keyword, "gi");
+                      match_content = match_content.replace(regS, "<b class=\"search-keyword\">"+keyword+"</b>");
+                    });
+
+                    str += "<p class=\"search-result\">" + match_content +"...</p>"
+                  }
+                  str += "</li>";
+                }
+              })};
+            str += "</ul>";
+            if (matchcounts == 0) { str = '<div id="no-result"><i class="fa fa-frown-o fa-5x" /></div>' }
+            if (keywords == "") { str = '<div id="no-result"><i class="fa fa-search fa-5x" /></div>' }
+            $resultContent.innerHTML = str;
+          });
+          proceedsearch();
+        }
+      });}
+
+    // handle and trigger popup window;
+    $('.popup-trigger').click(function(e) {
+      e.stopPropagation();
+      if (isfetched == false) {
+        searchFunc(path, 'local-search-input', 'local-search-result');
+      } else {
+        proceedsearch();
+      };
+    });
+
+    $('.popup-btn-close').click(function(e){
+      $('.popup').hide();
+      $(".popoverlay").remove();
+      $('body').css('overflow', '');
+    });
+    $('.popup').click(function(e){
+      e.stopPropagation();
+    });
+  </script>
+
+
+  
+
+  
+
+  
+
+  
+
+
+</body>
+</html>

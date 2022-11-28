@@ -1,38 +1,969 @@
-{% extends '_layout.swig' %}
-{% import '_macro/post.swig' as post_template %}
-{% import '_macro/sidebar.swig' as sidebar_template %}
+<!doctype html>
 
 
-{% block title %} {{ page.title }} | {{ config.title }} {% endblock %}
 
-{% block page_class %}page-post-detail{% endblock %}
+  
 
 
-{% block content %}
+<html class="theme-next mist use-motion" lang="zh-Hans">
+<head>
+  <meta charset="UTF-8"/>
+<meta http-equiv="X-UA-Compatible" content="IE=edge" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1"/>
+
+
+
+<meta http-equiv="Cache-Control" content="no-transform" />
+<meta http-equiv="Cache-Control" content="no-siteapp" />
+
+
+
+
+
+
+
+
+
+
+
+
+  
+  
+  <link href="/lib/fancybox/source/jquery.fancybox.css?v=2.1.5" rel="stylesheet" type="text/css" />
+
+
+
+
+  
+  
+  
+  
+
+  
+    
+    
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+    
+    
+    <link href="//fonts.googleapis.com/css?family=Lato:300,300italic,400,400italic,700,700italic&subset=latin,latin-ext" rel="stylesheet" type="text/css">
+  
+
+
+
+
+
+
+<link href="/lib/font-awesome/css/font-awesome.min.css?v=4.6.2" rel="stylesheet" type="text/css" />
+
+<link href="/css/main.css?v=5.1.0" rel="stylesheet" type="text/css" />
+
+
+  <meta name="keywords" content="Kubernetes," />
+
+
+
+
+
+
+
+
+  <link rel="shortcut icon" type="image/x-icon" href="/favicon.ico?v=5.1.0" />
+
+
+
+
+
+
+<meta name="description" content="在Devops中经常面对的一个问题就是，如何将敏感信息保存在git中, 虽然kubernetes提供了secret，但它也只是Base64转换了一下, 任何人拿到这个串都可以反转出来，不安全. 在GitOps的流程上, 如何解决save everything on git but secrets的问题一直是个非常有趣的话题，而今天要说的Sealed Secrets就是一个很好的工具, 可以与Kub">
+<meta property="og:type" content="article">
+<meta property="og:title" content="Kubernetes学习(Sealed Secrets如何安全地将密码存储在git中)">
+<meta property="og:url" content="https://zhoushuke.github.io/2020/06/24/Kubernetes-sealed-secrets/index.html">
+<meta property="og:site_name" content="Z.S.K.&#39;s Records">
+<meta property="og:description" content="在Devops中经常面对的一个问题就是，如何将敏感信息保存在git中, 虽然kubernetes提供了secret，但它也只是Base64转换了一下, 任何人拿到这个串都可以反转出来，不安全. 在GitOps的流程上, 如何解决save everything on git but secrets的问题一直是个非常有趣的话题，而今天要说的Sealed Secrets就是一个很好的工具, 可以与Kub">
+<meta property="og:locale">
+<meta property="og:image" content="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20200624125407.png">
+<meta property="og:image" content="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20200624123543.png">
+<meta property="og:image" content="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20200624140240.png">
+<meta property="og:image" content="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20200624140831.png">
+<meta property="og:image" content="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20200624142108.png">
+<meta property="og:image" content="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20200624190637.png">
+<meta property="article:published_time" content="2020-06-24T08:10:53.000Z">
+<meta property="article:modified_time" content="2022-07-19T03:16:00.943Z">
+<meta property="article:author" content="Z.S.K.">
+<meta property="article:tag" content="Kubernetes">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:image" content="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20200624125407.png">
+
+
+
+<script type="text/javascript" id="hexo.configurations">
+  var NexT = window.NexT || {};
+  var CONFIG = {
+    root: '',
+    scheme: 'Mist',
+    sidebar: {"position":"left","display":"post"},
+    fancybox: true,
+    motion: true,
+    duoshuo: {
+      userId: 'undefined',
+      author: '博主'
+    },
+    algolia: {
+      applicationID: '',
+      apiKey: '',
+      indexName: '',
+      hits: {"per_page":10},
+      labels: {"input_placeholder":"Search for Posts","hits_empty":"We didn't find any results for the search: ${query}","hits_stats":"${hits} results found in ${time} ms"}
+    }
+  };
+</script>
+
+
+
+  <link rel="canonical" href="https://zhoushuke.github.io/2020/06/24/Kubernetes-sealed-secrets/"/>
+
+
+
+
+
+  <title> Kubernetes学习(Sealed Secrets如何安全地将密码存储在git中) | Z.S.K.'s Records </title>
+<meta name="generator" content="Hexo 6.2.0"></head>
+
+<body itemscope itemtype="http://schema.org/WebPage" lang="zh-Hans">
+
+  
+
+
+
+
+
+
+
+
+
+
+  
+  
+    
+  
+
+  <div class="container one-collumn sidebar-position-left page-post-detail ">
+    <div class="headband"></div>
+
+    <header id="header" class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-meta ">
+  
+
+  <div class="custom-logo-site-title">
+    <a href="/"  class="brand" rel="start">
+      <span class="logo-line-before"><i></i></span>
+      <span class="site-title">Z.S.K.'s Records</span>
+      <span class="logo-line-after"><i></i></span>
+    </a>
+  </div>
+    
+      <p class="site-subtitle"></p>
+    
+</div>
+
+<div class="site-nav-toggle">
+  <button>
+    <span class="btn-bar"></span>
+    <span class="btn-bar"></span>
+    <span class="btn-bar"></span>
+  </button>
+</div>
+
+<nav class="site-nav">
+  
+
+  
+    <ul id="menu" class="menu">
+      
+        
+        <li class="menu-item menu-item-home">
+          <a href="/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-home"></i> <br />
+            
+            首页
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-categories">
+          <a href="/categories" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-th"></i> <br />
+            
+            分类
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-about">
+          <a href="/about/ZSK-Profile.pdf" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-user"></i> <br />
+            
+            简历
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-archives">
+          <a href="/archives" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-archive"></i> <br />
+            
+            归档
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-tags">
+          <a href="/tags" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-tags"></i> <br />
+            
+            标签
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-commonweal">
+          <a href="/404.html" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-heartbeat"></i> <br />
+            
+            公益404
+          </a>
+        </li>
+      
+
+      
+        <li class="menu-item menu-item-search">
+          
+            <a href="javascript:;" class="popup-trigger">
+          
+            
+              <i class="menu-item-icon fa fa-search fa-fw"></i> <br />
+            
+            搜索
+          </a>
+        </li>
+      
+    </ul>
+  
+
+  
+    <div class="site-search">
+      
+  <div class="popup">
+ <span class="search-icon fa fa-search"></span>
+ <input type="text" id="local-search-input">
+ <div id="local-search-result"></div>
+ <span class="popup-btn-close">close</span>
+</div>
+
+
+    </div>
+  
+</nav>
+
+
+
+ </div>
+    </header>
+
+    <main id="main" class="main">
+      <div class="main-inner">
+        <div class="content-wrap">
+          <div id="content" class="content">
+            
 
   <div id="posts" class="posts-expand">
-    {{ post_template.render(page) }}
+    
 
-    <div class="post-spread">
-      {% if theme.jiathis %}
-        {% include '_partials/share/jiathis.swig' %}
-      {% elseif theme.baidushare %}
-        {% include '_partials/share/baidushare.swig' %}
-      {% elseif theme.add_this_id %}
-        {% include '_partials/share/add-this.swig' %}
-      {% elseif theme.duoshuo_shortname and theme.duoshuo_share %}
-        {% include '_partials/share/duoshuo_share.swig' %}
-      {% endif %}
+  
+
+  
+  
+  
+
+  <article class="post post-type-normal " itemscope itemtype="http://schema.org/Article">
+  <link itemprop="mainEntityOfPage" href="https://zhoushuke.github.io/2020/06/24/Kubernetes-sealed-secrets/">
+
+  <span style="display:none" itemprop="author" itemscope itemtype="http://schema.org/Person">
+    <meta itemprop="name" content="">
+    <meta itemprop="description" content="">
+    <meta itemprop="image" content="/images/avatar.gif">
+  </span>
+
+  <span style="display:none" itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+    <meta itemprop="name" content="Z.S.K.'s Records">
+    <span style="display:none" itemprop="logo" itemscope itemtype="http://schema.org/ImageObject">
+      <img style="display:none;" itemprop="url image" alt="Z.S.K.'s Records" src="">
+    </span>
+  </span>
+
+    
+      <header class="post-header">
+
+        
+        
+          <h1 class="post-title" itemprop="name headline">
+            
+            
+              
+                Kubernetes学习(Sealed Secrets如何安全地将密码存储在git中)
+              
+            
+          </h1>
+        
+
+        <div class="post-meta">
+          <span class="post-time">
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">发表于</span>
+              
+              <time title="Post created" itemprop="dateCreated datePublished" datetime="2020-06-24T16:10:53+08:00">
+                2020-06-24
+              </time>
+            
+
+            
+
+            
+          </span>
+
+          
+            <span class="post-category" >
+            
+              <span class="post-meta-divider">|</span>
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-folder-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">分类于</span>
+              
+              
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/Kubernetes/" itemprop="url" rel="index">
+                    <span itemprop="name">Kubernetes</span>
+                  </a>
+                </span>
+
+                
+                
+              
+            </span>
+          
+
+          
+            
+          
+
+          
+
+          
+          
+
+          
+
+          
+
+        </div>
+      </header>
+    
+
+
+    <div class="post-body" itemprop="articleBody">
+
+      
+      
+
+      
+        <p>在Devops中经常面对的一个问题就是，如何将敏感信息保存在git中, 虽然kubernetes提供了secret，但它也只是Base64转换了一下, 任何人拿到这个串都可以反转出来，不安全.</p>
+<p>在GitOps的流程上, 如何解决save everything on git but secrets的问题一直是个非常有趣的话题，而今天要说的Sealed Secrets就是一个很好的工具, 可以与Kubernetes无缝接入.</p>
+<span id="more"></span>
+
+
+
+<h3 id="原理"><a href="#原理" class="headerlink" title="原理"></a>原理</h3><p><img src="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20200624125407.png"></p>
+<p>Sealed Secrets 包括以下组成部分：</p>
+<ol>
+<li>一个部署到集群的控制器</li>
+<li>一个名为 <em>kubeseal</em> 的 CLI 工具</li>
+<li>一个名为 SealedSecret 的定制化资源定义 (CRD)</li>
+</ol>
+<p>启动后，控制器会查找集群范围的私钥&#x2F;公钥对，如果未找到，则会生成一个新的 4096 位 RSA 密钥对。私钥保存在一个 Secret 对象中，该对象位于控制器所在的命名空间中。任何想要在此集群中使用 Sealed Secrets 的人都可以公开获得此密钥的公钥部分。</p>
+<p>加密时，原始 Secret 中的每个值都使用带有随机生成的会话密钥的 AES-256 方式进行对称加密。然后，将 SHA256 和原始 Secret 的命名空间&#x2F;名称作为输入参数，使用控制器的公钥对会话密钥进行非对称加密。加密过程的输出结果是一个字符串，其构造为：<strong>加密会话密钥的长度（2 个字节）</strong>+ <strong>加密会话密钥</strong> + <strong>已加密的 Secret</strong>。</p>
+<p>将 SealedSecret 自定义资源部署到 Kubernetes 集群时，控制器会watch该类资源，然后使用私钥将其解封并创建一个 Secret 资源。解密时，会再次使用 SealedSecret 的命名空间&#x2F;名称作为输入参数。这样可以确保 SealedSecret 和 Secret 严格绑定到相同的命名空间和名称。</p>
+<p>配套的 CLI 工具 <strong>kubeseal</strong> 用于使用公钥从 Secret 资源定义中创建 SealedSecret 定制化资源定义 (CRD)。<strong>kubeseal</strong> 可以通过 Kubernetes API 服务器与控制器进行通信，并在运行时检索加密 Secret 所需的公钥。您也可以从控制器下载公钥并保存在本地以便离线使用</p>
+<h3 id="安装controller"><a href="#安装controller" class="headerlink" title="安装controller"></a>安装controller</h3><figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">kubectl apply -f controller.yaml</span><br></pre></td></tr></table></figure>
+
+<p><img src="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20200624123543.png"></p>
+<h3 id="密钥对"><a href="#密钥对" class="headerlink" title="密钥对"></a>密钥对</h3><p>通过上面生成的CRD之后, 查看<code>sealed-secrets-controller</code>的日志文件可以发现:</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br></pre></td><td class="code"><pre><span class="line">2020/06/24 16:34:47 Starting sealed-secrets controller version: v0.12.4+dirty</span><br><span class="line">controller version: v0.12.4+dirty</span><br><span class="line">2020/06/24 16:34:47 Searching <span class="keyword">for</span> existing private keys</span><br><span class="line">2020/06/24 16:34:47 New key written to senserealty/sealed-secrets-keyzslr5 <span class="comment"># 这个secret包含证书及私钥</span></span><br><span class="line">2020/06/24 16:34:47 Certificate is</span><br><span class="line">-----BEGIN CERTIFICATE-----</span><br><span class="line"><span class="comment"># ... 这里是公钥内容</span></span><br><span class="line">-----END CERTIFICATE-----</span><br><span class="line"></span><br><span class="line">2020/06/24 16:34:47 HTTP server serving on :8080</span><br></pre></td></tr></table></figure>
+
+<p>启动时，控制器会在其命名空间中搜索带有 <strong>sealedsecrets.bitnami.com&#x2F;sealed-secrets-key</strong> 标签的 Secret。如果找不到，控制器会在其命名空间中创建新的 Secret, 查看<code>sealed-secrets-keyzslr5</code>.</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">kubectl get secret -n senserealty -l sealedsecrets.bitnami.com/sealed-secrets-key -o yaml</span><br></pre></td></tr></table></figure>
+
+<figure class="highlight yaml"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line"><span class="attr">apiVersion:</span> <span class="string">v1</span></span><br><span class="line"><span class="attr">data:</span></span><br><span class="line">  <span class="attr">tls.crt:</span> <span class="comment"># ... 证书</span></span><br><span class="line">  <span class="attr">tls.key:</span> <span class="comment"># ... 私钥</span></span><br><span class="line"><span class="comment"># ...  </span></span><br></pre></td></tr></table></figure>
+
+<p>该secret包含证书及私钥，私钥用于解密集群中的SealedSecret资源.</p>
+<h3 id="安装kubeseal"><a href="#安装kubeseal" class="headerlink" title="安装kubeseal"></a>安装kubeseal</h3><figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">wget https://github.com/bitnami-labs/sealed-secrets/releases/download/v0.12.4/kubeseal-linux-amd64 -O kubeseal</span><br><span class="line">sudo install -m 755 kubeseal /usr/local/bin/kubeseal</span><br></pre></td></tr></table></figure>
+
+<p><strong>kubeseal</strong> 使用公钥加密 Secret，该公钥是它在运行时从在 Kubernetes 集群中运行的控制器获取的，也就是说，kubeaeal会读取~&#x2F;.kube&#x2F;config文件来获取集群权限，然后查找集群中的<code>sealed-secrets-controller</code>控制器来获取公钥.</p>
+<p>如果无法获取集群权限, 可以通过以下命令直接把公钥下载到本地</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">kubeseal --fetch-cert &gt;mycert.pem --controller-namespace senserealty</span><br></pre></td></tr></table></figure>
+
+<p>在加密时，使用–cert来指定本地的pem公钥文件, 这样的话，就可能够保证集群权限最小化.</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">kubeseal --format=yaml --cert=public-key-cert.pem &lt; secret.yaml &gt; sealed-secret.yaml</span><br></pre></td></tr></table></figure>
+
+
+
+<h3 id="Example"><a href="#Example" class="headerlink" title="Example"></a>Example</h3><p>这里直接使用的是github上的example, 参考<a target="_blank" rel="noopener" href="https://github.com/bitnami-labs/sealed-secrets/blob/master/docs/examples/config-template/deployment.yaml">这里</a></p>
+<h4 id="secret"><a href="#secret" class="headerlink" title="secret"></a>secret</h4><figure class="highlight yaml"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">---</span></span><br><span class="line"><span class="attr">apiVersion:</span> <span class="string">v1</span></span><br><span class="line"><span class="attr">kind:</span> <span class="string">Secret</span></span><br><span class="line"><span class="attr">metadata:</span></span><br><span class="line">  <span class="attr">name:</span> <span class="string">example</span></span><br><span class="line">  <span class="attr">namespace:</span> <span class="string">senserealty</span></span><br><span class="line"><span class="attr">stringData:</span></span><br><span class="line">  <span class="attr">server1:</span> <span class="string">foo</span></span><br><span class="line">  <span class="attr">server2:</span> <span class="string">bar</span></span><br><span class="line">  <span class="attr">database1:</span> <span class="string">baz</span></span><br></pre></td></tr></table></figure>
+
+<p>通过kubeseal生成sealed-secret</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">kubeseal --format=yaml &lt; secret.yaml &gt; sealed-secret.yaml  --controller-namespace senserealty</span><br><span class="line"><span class="comment"># 默认情况下 controller是安装在kube-system下的, 如果指定在其它ns,则需要使用--controller-namespace</span></span><br></pre></td></tr></table></figure>
+
+<p>会在当前目录下生成sealed-secret.yaml，该文件内容已被加密，将该文件发布到集群中</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">kubectl apply -f sealed-secret.yaml</span><br></pre></td></tr></table></figure>
+
+<p>查看集群中的secret, 会发现secret被解密成正常的secret(通过base64加密过后的)</p>
+<p><img src="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20200624140240.png"></p>
+<p>同样, 可以在controller中查看到日志，显示该secret被成功解密.</p>
+<p><img src="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20200624140831.png"></p>
+<h4 id="configmap"><a href="#configmap" class="headerlink" title="configmap"></a>configmap</h4><p>官方的example里还包含了一个configmap, 该configmap里引用了上面的secret, 最终我们验证的时候可以看configmap中引用的内容是否正确. </p>
+<p><strong>这也是生产上常用的方式, app中的配置使用configmap，但是敏感的信息也不能放在configmap中, 因此configmap中使用了模板的形式引用被kubeseal加密后的secret</strong></p>
+<figure class="highlight yaml"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">---</span></span><br><span class="line"><span class="attr">apiVersion:</span> <span class="string">v1</span></span><br><span class="line"><span class="attr">kind:</span> <span class="string">ConfigMap</span></span><br><span class="line"><span class="attr">metadata:</span></span><br><span class="line">  <span class="attr">name:</span> <span class="string">example</span></span><br><span class="line">  <span class="attr">namespace:</span> <span class="string">senserealty</span></span><br><span class="line"><span class="attr">data:</span></span><br><span class="line">  <span class="attr">myconfig.json.tmpl:</span> <span class="string">|</span></span><br><span class="line"><span class="string">    &#123;</span></span><br><span class="line"><span class="string">           &quot;Server&quot;: [&#123;</span></span><br><span class="line"><span class="string">                           &quot;host&quot;: &quot;foobar&quot;,</span></span><br><span class="line"><span class="string">                           &quot;ip&quot;: &quot;10.10.10.12&quot;,</span></span><br><span class="line"><span class="string">                           &quot;port&quot;: &quot;22&quot;,</span></span><br><span class="line"><span class="string">                           &quot;env&quot;: &quot;SOME_ENV&quot;,</span></span><br><span class="line"><span class="string">                           &quot;user&quot;: &quot;myuser&quot;,</span></span><br><span class="line"><span class="string">                           &quot;password&quot;: &quot;&#123;&#123; (ds &quot;secrets&quot; &quot;server1&quot;) &#125;&#125;&quot;, # 引用变量</span></span><br><span class="line"><span class="string">                           &quot;role&quot;: &quot;foo&quot;</span></span><br><span class="line"><span class="string">                   &#125;,&#123;</span></span><br><span class="line"><span class="string">                           &quot;host&quot;: &quot;barfoo&quot;,</span></span><br><span class="line"><span class="string">                           &quot;ip&quot;: &quot;10.10.10.11&quot;,</span></span><br><span class="line"><span class="string">                           &quot;port&quot;: &quot;22&quot;,</span></span><br><span class="line"><span class="string">                           &quot;env&quot;: &quot;SOME_OTHER_STUFF&quot;,</span></span><br><span class="line"><span class="string">                           &quot;user&quot;: &quot;otheruser&quot;,</span></span><br><span class="line"><span class="string">                           &quot;password&quot;: &quot;&#123;&#123; (ds &quot;secrets&quot; &quot;server2&quot;) &#125;&#125;&quot;, # 引用变量</span></span><br><span class="line"><span class="string">                           &quot;role&quot;: &quot;foo&quot;</span></span><br><span class="line"><span class="string">                   &#125;</span></span><br><span class="line"><span class="string">           ],</span></span><br><span class="line"><span class="string">           &quot;Database&quot;: [&#123;</span></span><br><span class="line"><span class="string">                           &quot;host&quot;: &quot;somedb&quot;,</span></span><br><span class="line"><span class="string">                           &quot;ip&quot;: &quot;10.10.10.10&quot;,</span></span><br><span class="line"><span class="string">                           &quot;port&quot;: &quot;1521&quot;,</span></span><br><span class="line"><span class="string">                           &quot;sid&quot;: &quot;FOO&quot;,</span></span><br><span class="line"><span class="string">                           &quot;env&quot;: &quot;BAZ&quot;,</span></span><br><span class="line"><span class="string">                           &quot;user&quot;: &quot;abcdefg123&quot;,</span></span><br><span class="line"><span class="string">                           &quot;password&quot;: &quot;&#123;&#123; (ds &quot;secrets&quot; &quot;database1&quot;) &#125;&#125;&quot;, # 引用变量</span></span><br><span class="line"><span class="string">                           &quot;role&quot;: &quot;foo&quot;</span></span><br><span class="line"><span class="string">                   &#125;</span></span><br><span class="line"><span class="string">           ]</span></span><br><span class="line"><span class="string">    &#125;</span></span><br></pre></td></tr></table></figure>
+
+<p>发布到集群中</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">kubectl apply -f configmap.yaml</span><br></pre></td></tr></table></figure>
+
+
+
+<h3 id="deployment"><a href="#deployment" class="headerlink" title="deployment"></a>deployment</h3><figure class="highlight yaml"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">---</span></span><br><span class="line"><span class="attr">apiVersion:</span> <span class="string">apps/v1</span></span><br><span class="line"><span class="attr">kind:</span> <span class="string">Deployment</span></span><br><span class="line"><span class="attr">metadata:</span></span><br><span class="line">  <span class="attr">name:</span> <span class="string">example</span></span><br><span class="line"><span class="attr">spec:</span></span><br><span class="line">  <span class="attr">selector:</span></span><br><span class="line">    <span class="attr">matchLabels:</span></span><br><span class="line">      <span class="attr">app:</span> <span class="string">example</span></span><br><span class="line">  <span class="attr">template:</span></span><br><span class="line">    <span class="attr">metadata:</span></span><br><span class="line">      <span class="attr">labels:</span></span><br><span class="line">        <span class="attr">app:</span> <span class="string">example</span></span><br><span class="line">    <span class="attr">spec:</span></span><br><span class="line">      <span class="attr">initContainers:</span></span><br><span class="line">      <span class="bullet">-</span> <span class="attr">name:</span> <span class="string">inject-secrets</span></span><br><span class="line">        <span class="attr">image:</span> <span class="string">hairyhenderson/gomplate:alpine</span></span><br><span class="line">        <span class="attr">volumeMounts:</span></span><br><span class="line">        <span class="comment"># The /secrets directory will contain one file per secret item.</span></span><br><span class="line">        <span class="comment"># The secret item&#x27;s key will become the file name, while its value goes in the file contents.</span></span><br><span class="line">        <span class="bullet">-</span> <span class="attr">name:</span> <span class="string">config-secrets-volume</span></span><br><span class="line">          <span class="attr">mountPath:</span> <span class="string">/secrets</span></span><br><span class="line">        <span class="comment"># The config map containing the config file template will be available here.</span></span><br><span class="line">        <span class="bullet">-</span> <span class="attr">name:</span> <span class="string">config-template-volume</span></span><br><span class="line">          <span class="attr">mountPath:</span> <span class="string">/input</span></span><br><span class="line">        <span class="comment"># While the expanded template will be put in a volume shared with the application which will run</span></span><br><span class="line">        <span class="comment"># in the main container when this init container is done.</span></span><br><span class="line">        <span class="bullet">-</span> <span class="attr">name:</span> <span class="string">config-volume</span></span><br><span class="line">          <span class="attr">mountPath:</span> <span class="string">/output</span></span><br><span class="line">        <span class="comment"># Now we can actually run the template expander and inject secrets into the template.</span></span><br><span class="line">        <span class="attr">command:</span> [<span class="string">&quot;sh&quot;</span>, <span class="string">&quot;-c&quot;</span>]</span><br><span class="line">        <span class="attr">args:</span></span><br><span class="line">        <span class="bullet">-</span> <span class="string">gomplate</span> <span class="string">-d</span> <span class="string">secrets=/secrets/</span> <span class="string">&lt;/input/myconfig.json.tmpl</span> <span class="string">&gt;/output/myconfig.json</span></span><br><span class="line">      <span class="attr">containers:</span></span><br><span class="line">      <span class="comment"># This is an example application that assumes a complex configuration file in /config/myconfig.json.</span></span><br><span class="line">      <span class="comment"># The JSON format here is just an example; any textual file format would work.</span></span><br><span class="line">      <span class="bullet">-</span> <span class="attr">name:</span> <span class="string">app</span></span><br><span class="line">        <span class="attr">image:</span> <span class="string">bitnami/minideb:buster</span></span><br><span class="line">        <span class="attr">volumeMounts:</span></span><br><span class="line">        <span class="bullet">-</span> <span class="attr">name:</span> <span class="string">config-volume</span></span><br><span class="line">          <span class="attr">mountPath:</span> <span class="string">/config</span></span><br><span class="line">        <span class="attr">command:</span> [<span class="string">&quot;sh&quot;</span>, <span class="string">&quot;-c&quot;</span>]</span><br><span class="line">        <span class="attr">args:</span></span><br><span class="line">        <span class="bullet">-</span> <span class="string">|</span></span><br><span class="line"><span class="string">         echo Your app will get this config file:</span></span><br><span class="line"><span class="string">         cat /config/myconfig.json</span></span><br><span class="line"><span class="string">         # dummy application</span></span><br><span class="line"><span class="string">         sleep 100000h</span></span><br><span class="line"><span class="string"></span>      <span class="attr">volumes:</span></span><br><span class="line">      <span class="bullet">-</span> <span class="attr">name:</span> <span class="string">config-volume</span></span><br><span class="line">        <span class="attr">emptyDir:</span> &#123;&#125;</span><br><span class="line">      <span class="bullet">-</span> <span class="attr">name:</span> <span class="string">config-template-volume</span></span><br><span class="line">        <span class="attr">configMap:</span></span><br><span class="line">          <span class="attr">name:</span> <span class="string">example</span></span><br><span class="line">      <span class="bullet">-</span> <span class="attr">name:</span> <span class="string">config-secrets-volume</span></span><br><span class="line">        <span class="attr">secret:</span></span><br><span class="line">          <span class="attr">secretName:</span> <span class="string">example</span></span><br></pre></td></tr></table></figure>
+
+<p> 该deployment有一个initcontainer, 用<a target="_blank" rel="noopener" href="https://github.com/hairyhenderson/gomplate">goemplate</a>将secret填充configmap中的变量, 然后containers中的容器直接打印最终的config配置</p>
+<p><img src="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20200624142108.png"></p>
+<p>从上面可以看出, configmap中的变量跟原始的secret中的值完全一样. 达到了对secret加解密的作用.</p>
+<h3 id="更新secret"><a href="#更新secret" class="headerlink" title="更新secret"></a>更新secret</h3><p>SealedSecret支持对存在的secret进行更新.</p>
+<p>可使用 <code>--merge-into</code></p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># 生成一个secret, 文件名为foo,内容为bar</span></span><br><span class="line"><span class="built_in">echo</span> -n bar | kubectl create secret generic mysecret --dry-run --from-file=foo=/dev/stdin -o json \</span><br><span class="line">  | kubeseal &gt; mysealedsecret.json</span><br><span class="line"><span class="comment"># 更新secret, 新增一个文件为bar, 内容为baz</span></span><br><span class="line"><span class="built_in">echo</span> -n baz | kubectl create secret generic mysecret --dry-run --from-file=bar=/dev/stdin -o json \</span><br><span class="line">  | kubeseal --merge-into mysealedsecret.json</span><br></pre></td></tr></table></figure>
+
+<p>当然也可以按照正常的更新secret的方式，先更新secret ，然后使用SealedSecret加密，然后发布到集群中，然后更新app.</p>
+<p>最后可以看到，app中的config也更新了.</p>
+<p><img src="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20200624190637.png"></p>
+<h3 id="使用范围"><a href="#使用范围" class="headerlink" title="使用范围"></a>使用范围</h3><p>SealedSecret提供了3种对ns的安全限制， 我大概看了下说明, 觉得虽然会更安全, 但是会带来使用上的复杂性, 大部分情况下，secret还是会跟app在同一ns中,因此这块内容本人没有实验， 可参考<a target="_blank" rel="noopener" href="https://github.com/bitnami-labs/sealed-secrets/blob/master/README.md#scopes">scope</a></p>
+<ul>
+<li><code>strict</code> (default): the secret must be sealed with exactly the same <em>name</em> and <em>namespace</em>. These attributes become <em>part of the encrypted data</em> and thus changing name and&#x2F;or namespace would lead to “decryption error”.</li>
+<li><code>namespace-wide</code>: you can freely <em>rename</em> the sealed secret within a given namespace.</li>
+<li><code>cluster-wide</code>: the secret can be unsealed in <em>any</em> namespace and can be given <em>any</em> name.</li>
+</ul>
+<h3 id="安全"><a href="#安全" class="headerlink" title="安全"></a>安全</h3><p>如果没有由控制器管理的私钥，就无法在 SealedSecret 中对已加密的数据进行解密。如果SealedSecret被集群广泛使用, 那么就需要小心集群发生灾难性异常，在恢复之后或者迁移到一个新集群之后，新集群中部署的控制器必须使用相同的私钥才能解封 SealedSecrets。如果没有此私钥，则必须使用新的私钥&#x2F;公钥对重新生成所有 SealedSecrets，这对于包含大量 Secret 资源的部署可能会是一项繁重的任务。因此备份私钥非常有必要， 可以使用以下命令从控制器中获取证书及私钥写到文件中</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">kubectl get secret -n senserealty -l sealedsecrets.bitnami.com/sealed-secrets-key -o yaml &gt; master.yaml</span><br></pre></td></tr></table></figure>
+
+<p>这样，即使整个集群崩溃或者迁移到新集群之后，使用相同的私钥创建的SealedSecret CRD同样可以解密由这个私钥加密的secret.</p>
+<figure class="highlight yaml"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line"><span class="string">kubectl</span> <span class="string">apply</span> <span class="string">-f</span> <span class="string">master.yaml</span></span><br><span class="line"><span class="comment"># 当集群中已经存在sealedsecrets.bitnami.com/sealed-secrets-key时，则不会新建</span></span><br><span class="line"><span class="attr">2020/06/24 23:26:07 Starting sealed-secrets controller version:</span> <span class="string">v0.12.1+dirty</span></span><br><span class="line"><span class="attr">controller version:</span> <span class="string">v0.12.1</span></span><br><span class="line"><span class="number">2020</span><span class="string">/06/24</span> <span class="number">23</span><span class="string">:26:07</span> <span class="string">Searching</span> <span class="string">for</span> <span class="string">existing</span> <span class="string">private</span> <span class="string">keys</span></span><br><span class="line"><span class="number">2020</span><span class="string">/06/24</span> <span class="number">23</span><span class="string">:26:07</span> <span class="string">-----</span> <span class="string">sealed-secrets-keyhvdtf</span></span><br><span class="line"><span class="number">2020</span><span class="string">/06/24</span> <span class="number">23</span><span class="string">:26:07</span> <span class="string">HTTP</span> <span class="string">server</span> <span class="string">serving</span> <span class="string">on</span> <span class="string">:8080</span></span><br></pre></td></tr></table></figure>
+
+
+
+<p>通过这种方式, 敏感信息可以只被少数人掌握, 开发同学则直接引用加密后的信息即可</p>
+<p>当然，上面的例子只是一个demo, SealedSecret提供了一种思路，生产中SealedSecret如何更好地对接kubernetes app, 还需要进一步地研究.</p>
+<p>就跟SealedSecret官方说的那样:</p>
+<p><strong>Problem:</strong> “I can manage all my K8s config in git, except Secrets.”</p>
+<p><strong>Solution:</strong> Encrypt your Secret into a SealedSecret, which <em>is</em> safe to store - even to a public repository. The SealedSecret can be decrypted only by the controller running in the target cluster and nobody else (not even the original author) is able to obtain the original Secret from the SealedSecret</p>
+<p><strong>SealedSecret在GitOps的流程上又推进了一步.</strong></p>
+<h3 id="参考文章"><a href="#参考文章" class="headerlink" title="参考文章:"></a><strong>参考文章:</strong></h3><blockquote>
+<ul>
+<li><a target="_blank" rel="noopener" href="https://aws.amazon.com/cn/blogs/china/managing-secrets-deployment-in-kubernetes-using-sealed-secrets/">https://aws.amazon.com/cn/blogs/china/managing-secrets-deployment-in-kubernetes-using-sealed-secrets/</a></li>
+<li><a target="_blank" rel="noopener" href="https://github.com/bitnami-labs/sealed-secrets">https://github.com/bitnami-labs/sealed-secrets</a></li>
+<li><a target="_blank" rel="noopener" href="https://github.com/bitnami-labs/sealed-secrets/blob/master/README.md#scopes">https://github.com/bitnami-labs/sealed-secrets/blob/master/README.md#scopes</a></li>
+</ul>
+</blockquote>
+<h3 id="转载请注明出处https-izsk-me"><a href="#转载请注明出处https-izsk-me" class="headerlink" title="转载请注明出处https://izsk.me"></a><strong>转载请注明出处<a target="_blank" rel="noopener" href="https://izsk.me/">https://izsk.me</a></strong></h3>
+      
+    </div>
+
+    <div>
+      
+        
+<div id="wechat_subscriber" style="display: block; padding: 10px 0; margin: 20px auto; width: 100%; text-align: center">
+    <img id="wechat_subscriber_qcode" src="/images/websitecode250.png" alt=" wechat" style="width: 200px; max-width: 100%;"/>
+    <div>Scan Me To Read on Phone</div>
+</div>
+
+
+      
+    </div>
+
+    <div>
+      
+        
+  <div style="padding: 10px 0; margin: 20px auto; width: 90%; text-align: center;">
+    <div>I know you won't do this,but what if you did?</div>
+    <button id="rewardButton" disable="enable" onclick="var qr = document.getElementById('QR'); if (qr.style.display === 'none') {qr.style.display='block';} else {qr.style.display='none'}">
+      <span>赏</span>
+    </button>
+    <div id="QR" style="display: none;">
+      
+        <div id="wechat" style="display: inline-block">
+          <img id="wechat_qr" src="/images/wechatpayme.png" alt=" WeChat Pay"/>
+          <p>微信打赏</p>
+        </div>
+      
+      
+        <div id="alipay" style="display: inline-block">
+          <img id="alipay_qr" src="/images/alipayme.jpg" alt=" Alipay"/>
+          <p>支付宝打赏</p>
+        </div>
+      
     </div>
   </div>
 
-{% endblock %}
 
-{% block sidebar %}
-  {{ sidebar_template.render(true) }}
-{% endblock %}
+      
+    </div>
 
 
-{% block script_extra %}
-  {% include '_scripts/pages/post-details.swig' %}
-{% endblock %}
+    <footer class="post-footer">
+      
+        <div class="post-tags">
+          
+            <a href="/tags/Kubernetes/" rel="tag"># Kubernetes</a>
+          
+        </div>
+      
+
+      
+        <div class="post-nav">
+          <div class="post-nav-next post-nav-item">
+            
+              <a href="/2020/06/18/why-x509-error-when-curl-https/" rel="next" title="访问https时为何会出现x509 certificate signed by unknown authority">
+                <i class="fa fa-chevron-left"></i> 访问https时为何会出现x509 certificate signed by unknown authority
+              </a>
+            
+          </div>
+
+          <span class="post-nav-divider"></span>
+
+          <div class="post-nav-prev post-nav-item">
+            
+              <a href="/2020/06/28/Kubernetes-configmap-reference-var-from-secret/" rel="prev" title="Kubernetes学习(在configmap中引用secret)">
+                Kubernetes学习(在configmap中引用secret) <i class="fa fa-chevron-right"></i>
+              </a>
+            
+          </div>
+        </div>
+      
+
+      
+      
+    </footer>
+  </article>
+
+
+
+    <div class="post-spread">
+      
+    </div>
+  </div>
+
+
+          </div>
+          
+
+
+          
+  <div class="comments" id="comments">
+    
+  </div>
+
+
+        </div>
+        
+          
+  
+  <div class="sidebar-toggle">
+    <div class="sidebar-toggle-line-wrap">
+      <span class="sidebar-toggle-line sidebar-toggle-line-first"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-middle"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-last"></span>
+    </div>
+  </div>
+
+  <aside id="sidebar" class="sidebar">
+    <div class="sidebar-inner">
+
+      
+
+      
+        <ul class="sidebar-nav motion-element">
+          <li class="sidebar-nav-toc sidebar-nav-active" data-target="post-toc-wrap" >
+            文章目录
+          </li>
+          <li class="sidebar-nav-overview" data-target="site-overview">
+            站点概览
+          </li>
+        </ul>
+      
+
+      <section class="site-overview sidebar-panel">
+        <div class="site-author motion-element" itemprop="author" itemscope itemtype="http://schema.org/Person">
+          <img class="site-author-image" itemprop="image"
+               src="/images/avatar.gif"
+               alt="" />
+          <p class="site-author-name" itemprop="name"></p>
+          <p class="site-description motion-element" itemprop="description"></p>
+        </div>
+        <nav class="site-state motion-element">
+        
+          
+            <div class="site-state-item site-state-posts">
+              <a href="/archives">
+                <span class="site-state-item-count">192</span>
+                <span class="site-state-item-name">日志</span>
+              </a>
+            </div>
+          
+
+          
+            <div class="site-state-item site-state-categories">
+              <a href="/categories">
+                <span class="site-state-item-count">14</span>
+                <span class="site-state-item-name">分类</span>
+              </a>
+            </div>
+          
+
+          
+            <div class="site-state-item site-state-tags">
+              <a href="/tags">
+                <span class="site-state-item-count">14</span>
+                <span class="site-state-item-name">标签</span>
+              </a>
+            </div>
+          
+
+        </nav>
+
+        
+
+        <div class="links-of-author motion-element">
+          
+        </div>
+
+        
+        
+
+        
+        
+
+        
+
+
+      </section>
+
+      
+      <!--noindex-->
+        <section class="post-toc-wrap motion-element sidebar-panel sidebar-panel-active">
+          <div class="post-toc">
+
+            
+              
+            
+
+            
+              <div class="post-toc-content"><ol class="nav"><li class="nav-item nav-level-3"><a class="nav-link" href="#%E5%8E%9F%E7%90%86"><span class="nav-number">1.</span> <span class="nav-text">原理</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E5%AE%89%E8%A3%85controller"><span class="nav-number">2.</span> <span class="nav-text">安装controller</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E5%AF%86%E9%92%A5%E5%AF%B9"><span class="nav-number">3.</span> <span class="nav-text">密钥对</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E5%AE%89%E8%A3%85kubeseal"><span class="nav-number">4.</span> <span class="nav-text">安装kubeseal</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#Example"><span class="nav-number">5.</span> <span class="nav-text">Example</span></a><ol class="nav-child"><li class="nav-item nav-level-4"><a class="nav-link" href="#secret"><span class="nav-number">5.1.</span> <span class="nav-text">secret</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#configmap"><span class="nav-number">5.2.</span> <span class="nav-text">configmap</span></a></li></ol></li><li class="nav-item nav-level-3"><a class="nav-link" href="#deployment"><span class="nav-number">6.</span> <span class="nav-text">deployment</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E6%9B%B4%E6%96%B0secret"><span class="nav-number">7.</span> <span class="nav-text">更新secret</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E4%BD%BF%E7%94%A8%E8%8C%83%E5%9B%B4"><span class="nav-number">8.</span> <span class="nav-text">使用范围</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E5%AE%89%E5%85%A8"><span class="nav-number">9.</span> <span class="nav-text">安全</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E5%8F%82%E8%80%83%E6%96%87%E7%AB%A0"><span class="nav-number">10.</span> <span class="nav-text">参考文章:</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E8%BD%AC%E8%BD%BD%E8%AF%B7%E6%B3%A8%E6%98%8E%E5%87%BA%E5%A4%84https-izsk-me"><span class="nav-number">11.</span> <span class="nav-text">转载请注明出处https:&#x2F;&#x2F;izsk.me</span></a></li></ol></div>
+            
+
+          </div>
+        </section>
+      <!--/noindex-->
+      
+
+    </div>
+  </aside>
+
+
+        
+      </div>
+    </main>
+
+    <footer id="footer" class="footer">
+      <div class="footer-inner">
+        <div class="copyright" >
+  
+  &copy; 
+  <span itemprop="copyrightYear">2022</span>
+  <span class="with-love">
+    <i class="fa fa-heart"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">Z.S.K.</span>
+</div>
+
+
+<div class="powered-by">
+  Supported by <a class="theme-link" target="_blank" rel="noopener" href="https://hexo.io">Hexo</a>
+</div>
+
+<div class="theme-info">
+  Theme -
+  <a class="theme-link" target="_blank" rel="noopener" href="https://github.com/iissnan/hexo-theme-next">
+    NexT.Mist
+  </a>
+</div>
+
+
+        
+
+        
+      </div>
+    </footer>
+
+    <div class="back-to-top">
+      <i class="fa fa-arrow-up"></i>
+    </div>
+  </div>
+
+  
+
+<script type="text/javascript">
+  if (Object.prototype.toString.call(window.Promise) !== '[object Function]') {
+    window.Promise = null;
+  }
+</script>
+
+
+
+
+
+
+
+
+
+  
+
+
+
+  
+  <script type="text/javascript" src="/lib/jquery/index.js?v=2.1.3"></script>
+
+  
+  <script type="text/javascript" src="/lib/fastclick/lib/fastclick.min.js?v=1.0.6"></script>
+
+  
+  <script type="text/javascript" src="/lib/jquery_lazyload/jquery.lazyload.js?v=1.9.7"></script>
+
+  
+  <script type="text/javascript" src="/lib/velocity/velocity.min.js?v=1.2.1"></script>
+
+  
+  <script type="text/javascript" src="/lib/velocity/velocity.ui.min.js?v=1.2.1"></script>
+
+  
+  <script type="text/javascript" src="/lib/fancybox/source/jquery.fancybox.pack.js?v=2.1.5"></script>
+
+
+  
+
+
+  <script type="text/javascript" src="/js/src/utils.js?v=5.1.0"></script>
+
+  <script type="text/javascript" src="/js/src/motion.js?v=5.1.0"></script>
+
+
+
+  
+  
+
+  
+  <script type="text/javascript" src="/js/src/scrollspy.js?v=5.1.0"></script>
+<script type="text/javascript" src="/js/src/post-details.js?v=5.1.0"></script>
+
+
+
+  
+
+
+  <script type="text/javascript" src="/js/src/bootstrap.js?v=5.1.0"></script>
+
+
+
+  
+
+
+
+  
+
+
+
+
+	
+
+
+
+
+
+  
+
+
+
+
+  
+  
+  <script type="text/javascript">
+    // Popup Window;
+    var isfetched = false;
+    // Search DB path;
+    var search_path = "search.xml";
+    if (search_path.length == 0) {
+      search_path = "search.xml";
+    }
+    var path = "/" + search_path;
+    // monitor main search box;
+
+    function proceedsearch() {
+      $("body").append('<div class="popoverlay">').css('overflow', 'hidden');
+      $('.popup').toggle();
+    }
+    // search function;
+    var searchFunc = function(path, search_id, content_id) {
+      'use strict';
+      $.ajax({
+        url: path,
+        dataType: "xml",
+        async: true,
+        success: function( xmlResponse ) {
+          // get the contents from search data
+          isfetched = true;
+          $('.popup').detach().appendTo('.header-inner');
+          var datas = $( "entry", xmlResponse ).map(function() {
+            return {
+              title: $( "title", this ).text(),
+              content: $("content",this).text(),
+              url: $( "url" , this).text()
+            };
+          }).get();
+          var $input = document.getElementById(search_id);
+          var $resultContent = document.getElementById(content_id);
+          $input.addEventListener('input', function(){
+            var matchcounts = 0;
+            var str='<ul class=\"search-result-list\">';
+            var keywords = this.value.trim().toLowerCase().split(/[\s\-]+/);
+            $resultContent.innerHTML = "";
+            if (this.value.trim().length > 1) {
+              // perform local searching
+              datas.forEach(function(data) {
+                var isMatch = false;
+                var content_index = [];
+                var data_title = data.title.trim().toLowerCase();
+                var data_content = data.content.trim().replace(/<[^>]+>/g,"").toLowerCase();
+                var data_url = decodeURIComponent(data.url);
+                var index_title = -1;
+                var index_content = -1;
+                var first_occur = -1;
+                // only match artiles with not empty titles and contents
+                if(data_title != '') {
+                  keywords.forEach(function(keyword, i) {
+                    index_title = data_title.indexOf(keyword);
+                    index_content = data_content.indexOf(keyword);
+                    if( index_title >= 0 || index_content >= 0 ){
+                      isMatch = true;
+                      if (i == 0) {
+                        first_occur = index_content;
+                      }
+                    }
+
+                  });
+                }
+                // show search results
+                if (isMatch) {
+                  matchcounts += 1;
+                  str += "<li><a href='"+ data_url +"' class='search-result-title'>"+ data_title +"</a>";
+                  var content = data.content.trim().replace(/<[^>]+>/g,"");
+                  if (first_occur >= 0) {
+                    // cut out 100 characters
+                    var start = first_occur - 20;
+                    var end = first_occur + 80;
+                    if(start < 0){
+                      start = 0;
+                    }
+                    if(start == 0){
+                      end = 50;
+                    }
+                    if(end > content.length){
+                      end = content.length;
+                    }
+                    var match_content = content.substring(start, end);
+                    // highlight all keywords
+                    keywords.forEach(function(keyword){
+                      var regS = new RegExp(keyword, "gi");
+                      match_content = match_content.replace(regS, "<b class=\"search-keyword\">"+keyword+"</b>");
+                    });
+
+                    str += "<p class=\"search-result\">" + match_content +"...</p>"
+                  }
+                  str += "</li>";
+                }
+              })};
+            str += "</ul>";
+            if (matchcounts == 0) { str = '<div id="no-result"><i class="fa fa-frown-o fa-5x" /></div>' }
+            if (keywords == "") { str = '<div id="no-result"><i class="fa fa-search fa-5x" /></div>' }
+            $resultContent.innerHTML = str;
+          });
+          proceedsearch();
+        }
+      });}
+
+    // handle and trigger popup window;
+    $('.popup-trigger').click(function(e) {
+      e.stopPropagation();
+      if (isfetched == false) {
+        searchFunc(path, 'local-search-input', 'local-search-result');
+      } else {
+        proceedsearch();
+      };
+    });
+
+    $('.popup-btn-close').click(function(e){
+      $('.popup').hide();
+      $(".popoverlay").remove();
+      $('body').css('overflow', '');
+    });
+    $('.popup').click(function(e){
+      e.stopPropagation();
+    });
+  </script>
+
+
+  
+
+  
+
+  
+
+  
+
+
+</body>
+</html>

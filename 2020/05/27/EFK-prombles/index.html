@@ -1,38 +1,1018 @@
-{% extends '_layout.swig' %}
-{% import '_macro/post.swig' as post_template %}
-{% import '_macro/sidebar.swig' as sidebar_template %}
+<!doctype html>
 
 
-{% block title %} {{ page.title }} | {{ config.title }} {% endblock %}
 
-{% block page_class %}page-post-detail{% endblock %}
+  
 
 
-{% block content %}
+<html class="theme-next mist use-motion" lang="zh-Hans">
+<head>
+  <meta charset="UTF-8"/>
+<meta http-equiv="X-UA-Compatible" content="IE=edge" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1"/>
+
+
+
+<meta http-equiv="Cache-Control" content="no-transform" />
+<meta http-equiv="Cache-Control" content="no-siteapp" />
+
+
+
+
+
+
+
+
+
+
+
+
+  
+  
+  <link href="/lib/fancybox/source/jquery.fancybox.css?v=2.1.5" rel="stylesheet" type="text/css" />
+
+
+
+
+  
+  
+  
+  
+
+  
+    
+    
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+    
+    
+    <link href="//fonts.googleapis.com/css?family=Lato:300,300italic,400,400italic,700,700italic&subset=latin,latin-ext" rel="stylesheet" type="text/css">
+  
+
+
+
+
+
+
+<link href="/lib/font-awesome/css/font-awesome.min.css?v=4.6.2" rel="stylesheet" type="text/css" />
+
+<link href="/css/main.css?v=5.1.0" rel="stylesheet" type="text/css" />
+
+
+  <meta name="keywords" content="FELK," />
+
+
+
+
+
+
+
+
+  <link rel="shortcut icon" type="image/x-icon" href="/favicon.ico?v=5.1.0" />
+
+
+
+
+
+
+<meta name="description" content="各种各样的问题大部分都可以为是业务日志不规范的, 当然这个是不可避免的, 规范不是一天建立起来的. 在没有建立起来之前, 只能像打补丁一样修复 在这里记录下运维EFK踩过的坑, 不定期更新">
+<meta property="og:type" content="article">
+<meta property="og:title" content="FELK学习(踩坑记)">
+<meta property="og:url" content="https://zhoushuke.github.io/2020/05/27/EFK-prombles/index.html">
+<meta property="og:site_name" content="Z.S.K.&#39;s Records">
+<meta property="og:description" content="各种各样的问题大部分都可以为是业务日志不规范的, 当然这个是不可避免的, 规范不是一天建立起来的. 在没有建立起来之前, 只能像打补丁一样修复 在这里记录下运维EFK踩过的坑, 不定期更新">
+<meta property="og:locale">
+<meta property="og:image" content="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20200416163906.png">
+<meta property="og:image" content="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20200416164017.png">
+<meta property="og:image" content="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20200416164935.png">
+<meta property="og:image" content="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20200416173539.png">
+<meta property="og:image" content="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20200519150847.png">
+<meta property="og:image" content="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20200416174010.png">
+<meta property="article:published_time" content="2020-05-27T09:30:53.000Z">
+<meta property="article:modified_time" content="2022-07-19T03:16:00.958Z">
+<meta property="article:author" content="Z.S.K.">
+<meta property="article:tag" content="FELK">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:image" content="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20200416163906.png">
+
+
+
+<script type="text/javascript" id="hexo.configurations">
+  var NexT = window.NexT || {};
+  var CONFIG = {
+    root: '',
+    scheme: 'Mist',
+    sidebar: {"position":"left","display":"post"},
+    fancybox: true,
+    motion: true,
+    duoshuo: {
+      userId: 'undefined',
+      author: '博主'
+    },
+    algolia: {
+      applicationID: '',
+      apiKey: '',
+      indexName: '',
+      hits: {"per_page":10},
+      labels: {"input_placeholder":"Search for Posts","hits_empty":"We didn't find any results for the search: ${query}","hits_stats":"${hits} results found in ${time} ms"}
+    }
+  };
+</script>
+
+
+
+  <link rel="canonical" href="https://zhoushuke.github.io/2020/05/27/EFK-prombles/"/>
+
+
+
+
+
+  <title> FELK学习(踩坑记) | Z.S.K.'s Records </title>
+<meta name="generator" content="Hexo 6.2.0"></head>
+
+<body itemscope itemtype="http://schema.org/WebPage" lang="zh-Hans">
+
+  
+
+
+
+
+
+
+
+
+
+
+  
+  
+    
+  
+
+  <div class="container one-collumn sidebar-position-left page-post-detail ">
+    <div class="headband"></div>
+
+    <header id="header" class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-meta ">
+  
+
+  <div class="custom-logo-site-title">
+    <a href="/"  class="brand" rel="start">
+      <span class="logo-line-before"><i></i></span>
+      <span class="site-title">Z.S.K.'s Records</span>
+      <span class="logo-line-after"><i></i></span>
+    </a>
+  </div>
+    
+      <p class="site-subtitle"></p>
+    
+</div>
+
+<div class="site-nav-toggle">
+  <button>
+    <span class="btn-bar"></span>
+    <span class="btn-bar"></span>
+    <span class="btn-bar"></span>
+  </button>
+</div>
+
+<nav class="site-nav">
+  
+
+  
+    <ul id="menu" class="menu">
+      
+        
+        <li class="menu-item menu-item-home">
+          <a href="/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-home"></i> <br />
+            
+            首页
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-categories">
+          <a href="/categories" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-th"></i> <br />
+            
+            分类
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-about">
+          <a href="/about/ZSK-Profile.pdf" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-user"></i> <br />
+            
+            简历
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-archives">
+          <a href="/archives" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-archive"></i> <br />
+            
+            归档
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-tags">
+          <a href="/tags" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-tags"></i> <br />
+            
+            标签
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-commonweal">
+          <a href="/404.html" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-heartbeat"></i> <br />
+            
+            公益404
+          </a>
+        </li>
+      
+
+      
+        <li class="menu-item menu-item-search">
+          
+            <a href="javascript:;" class="popup-trigger">
+          
+            
+              <i class="menu-item-icon fa fa-search fa-fw"></i> <br />
+            
+            搜索
+          </a>
+        </li>
+      
+    </ul>
+  
+
+  
+    <div class="site-search">
+      
+  <div class="popup">
+ <span class="search-icon fa fa-search"></span>
+ <input type="text" id="local-search-input">
+ <div id="local-search-result"></div>
+ <span class="popup-btn-close">close</span>
+</div>
+
+
+    </div>
+  
+</nav>
+
+
+
+ </div>
+    </header>
+
+    <main id="main" class="main">
+      <div class="main-inner">
+        <div class="content-wrap">
+          <div id="content" class="content">
+            
 
   <div id="posts" class="posts-expand">
-    {{ post_template.render(page) }}
+    
 
-    <div class="post-spread">
-      {% if theme.jiathis %}
-        {% include '_partials/share/jiathis.swig' %}
-      {% elseif theme.baidushare %}
-        {% include '_partials/share/baidushare.swig' %}
-      {% elseif theme.add_this_id %}
-        {% include '_partials/share/add-this.swig' %}
-      {% elseif theme.duoshuo_shortname and theme.duoshuo_share %}
-        {% include '_partials/share/duoshuo_share.swig' %}
-      {% endif %}
+  
+
+  
+  
+  
+
+  <article class="post post-type-normal " itemscope itemtype="http://schema.org/Article">
+  <link itemprop="mainEntityOfPage" href="https://zhoushuke.github.io/2020/05/27/EFK-prombles/">
+
+  <span style="display:none" itemprop="author" itemscope itemtype="http://schema.org/Person">
+    <meta itemprop="name" content="">
+    <meta itemprop="description" content="">
+    <meta itemprop="image" content="/images/avatar.gif">
+  </span>
+
+  <span style="display:none" itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+    <meta itemprop="name" content="Z.S.K.'s Records">
+    <span style="display:none" itemprop="logo" itemscope itemtype="http://schema.org/ImageObject">
+      <img style="display:none;" itemprop="url image" alt="Z.S.K.'s Records" src="">
+    </span>
+  </span>
+
+    
+      <header class="post-header">
+
+        
+        
+          <h1 class="post-title" itemprop="name headline">
+            
+            
+              
+                FELK学习(踩坑记)
+              
+            
+          </h1>
+        
+
+        <div class="post-meta">
+          <span class="post-time">
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">发表于</span>
+              
+              <time title="Post created" itemprop="dateCreated datePublished" datetime="2020-05-27T17:30:53+08:00">
+                2020-05-27
+              </time>
+            
+
+            
+
+            
+          </span>
+
+          
+            <span class="post-category" >
+            
+              <span class="post-meta-divider">|</span>
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-folder-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">分类于</span>
+              
+              
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/FELK/" itemprop="url" rel="index">
+                    <span itemprop="name">FELK</span>
+                  </a>
+                </span>
+
+                
+                
+              
+            </span>
+          
+
+          
+            
+          
+
+          
+
+          
+          
+
+          
+
+          
+
+        </div>
+      </header>
+    
+
+
+    <div class="post-body" itemprop="articleBody">
+
+      
+      
+
+      
+        <p>各种各样的问题大部分都可以为是业务日志不规范的, 当然这个是不可避免的, 规范不是一天建立起来的.</p>
+<p>在没有建立起来之前, 只能像打补丁一样修复</p>
+<p><strong>在这里记录下运维EFK踩过的坑, 不定期更新</strong></p>
+<span id="more"></span>
+
+
+
+<h3 id="日志流"><a href="#日志流" class="headerlink" title="日志流"></a>日志流</h3><p><code>[Kubernetes/LB/...] --&gt; fluentd --&gt; kafka --&gt; logstash --&gt; es</code></p>
+<h3 id="type不覆盖"><a href="#type不覆盖" class="headerlink" title="type不覆盖"></a>type不覆盖</h3><p>最近就发现存在小部分的日志丢失了, 经过层层debug, 终于发现原来是因为源日志中就存在type这个字段, </p>
+<p>因为logstash环节一般都会根据业务添加一个type来进行区别, 然后根据不同的type输出到不同的存储，</p>
+<p>平时很少会关注日志本身的字段, 导致这个问题花了差不多一天的时间定位.</p>
+<p>如果源日志中就存在有type字段, 而在logstash中又指定了type, 那么这个type不会覆盖源日志中的type(后来想想其实也可以理解, 业务数据为王嘛)</p>
+<p><a target="_blank" rel="noopener" href="https://www.elastic.co/guide/en/logstash/current/plugins-inputs-kafka.html#plugins-inputs-kafka-type">官方</a>有说明, 这个有点巧, 刚好在页面的最下面, 都不怎么会看到</p>
+<p><img src="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20200416163906.png"></p>
+<p>因此在output中出现使用type来做为判断条件的那就会被丢弃掉, 因此此时的type是你源日志中的type.</p>
+<figure class="highlight json"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line">output <span class="punctuation">&#123;</span></span><br><span class="line">  if <span class="punctuation">[</span>type<span class="punctuation">]</span> == <span class="string">&quot;xxx&quot;</span><span class="punctuation">&#123;</span></span><br><span class="line">    elasticsearch <span class="punctuation">&#123;</span></span><br><span class="line">  <span class="punctuation">&#125;</span></span><br></pre></td></tr></table></figure>
+
+<p>找到问题解决办法也就容易多了, 直接在fluentd上把这个字段进行重命名, 就是add一个字段然后再把type字段remove</p>
+<figure class="highlight yml"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br></pre></td><td class="code"><pre><span class="line"><span class="string">&lt;filter</span> <span class="string">kubernetes.**&gt;</span></span><br><span class="line">  <span class="string">@type</span> <span class="string">record_transformer</span></span><br><span class="line">  <span class="string">enable_ruby</span> <span class="literal">true</span></span><br><span class="line">  <span class="string">&lt;record&gt;</span></span><br><span class="line">    <span class="string">f_type</span> <span class="string">$&#123;record.dig(&quot;type&quot;)&#125;</span></span><br><span class="line">  <span class="string">&lt;/record&gt;</span></span><br><span class="line"><span class="string">&lt;/filter&gt;</span></span><br><span class="line"></span><br><span class="line"><span class="string">&lt;filter</span> <span class="string">kubernetes.**&gt;</span></span><br><span class="line">  <span class="string">@type</span> <span class="string">record_transformer</span></span><br><span class="line">  <span class="string">remove_keys</span> <span class="string">type</span></span><br><span class="line"><span class="string">&lt;/filter&gt;</span></span><br></pre></td></tr></table></figure>
+
+
+
+<p>这个问题也反映出本人对logstash用的不是很熟.</p>
+<h3 id="字段类型转换"><a href="#字段类型转换" class="headerlink" title="字段类型转换"></a>字段类型转换</h3><p>由于后端的存储使用的es, es中有个 <a target="_blank" rel="noopener" href="https://www.elastic.co/guide/cn/elasticsearch/guide/current/dynamic-mapping.html">Dynamic Mapping</a>, 默认情况下是开启状态, 这个特性能够根据文档的字段动态地进行填充, 也就是说新增字段会自动地添加mapping， 但是无法对已经存在的字段进行修改</p>
+<p>一般情况下, 索引都是按天进行分隔, 也就是在零点的时候会自动生成新的索引，然后这个索引的mapping以第一条进来的文档为准, 假如有个字段, 比如下面的<code>call_db_dynamic_response.score</code>这个field, 这个表示对比的一个得分(代码中的float64),假如第一个文档中的这个<code>score</code>为1, 那么这个在es中的类型为<code>long</code>类型, 那么就不能改变,</p>
+<p>但是<code>score</code>可能会再传过来<code>0.99</code>,那么这个时候就会出现以下报错, 这条数据是无法进入es的,<strong>es中long与float是不一样的类型</strong></p>
+<p><img src="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20200416164017.png"></p>
+<p>那么解决办法, 有以下几种方式:</p>
+<ol>
+<li>直接从源代码中修改, 代码中本身就是float类型, 而且这个值是底层SDK传过来的, 在业务层做判断不是很友好, 毕竟每次都将多一层判断, 影响性能</li>
+<li>可以在logstash中对改字段进行类型转换</li>
+<li>在创建索引时使用自定义的template</li>
+</ol>
+<p>这里我采取的是第2种办法， 没有采用第1种办法是因为代码中本身就是float类型, 而且这个值是底层SDK传过来的, 在业务层做判断不是很友好, 毕竟每次都将多一层该值判断, 影响性能，把这个操作移步到日志系统中，毕竟日志系统只是做为一个排查工具, 不需要那么实时</p>
+<p>在logstash中进行类型转换用到了<code>filter的mutate</code>,当然这里最好也对索引做个判断</p>
+<figure class="highlight json"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line">if <span class="punctuation">[</span>tag<span class="punctuation">]</span> == <span class="string">&quot;yourindex&quot;</span> <span class="punctuation">&#123;</span></span><br><span class="line">  mutate <span class="punctuation">&#123;</span></span><br><span class="line">    convert =&gt; <span class="punctuation">[</span><span class="string">&quot;[call_db_dynamic_response][score]&quot;</span><span class="punctuation">,</span> <span class="string">&quot;float&quot;</span><span class="punctuation">]</span></span><br><span class="line">   <span class="punctuation">&#125;</span></span><br><span class="line"> <span class="punctuation">&#125;</span></span><br></pre></td></tr></table></figure>
+
+<p>这样的话, <code>score</code>就永远都是<code>float</code>类型了.</p>
+<p>这里没有使用自定义的template，理论上这种方法是性能最高的, 因为不需要每条日志都判断一下是否存在这个<code>score</code>字段, 不过本人还是觉得第2种方法更容易, 效果还行.</p>
+<h3 id="字段多种类型"><a href="#字段多种类型" class="headerlink" title="字段多种类型"></a>字段多种类型</h3><p>这个报错的原因跟上面的类似, 都是因为es对field的类型不支持多个, 如果是个object，那你就无法把一个值写进去,不然会提示以下错误</p>
+<p><img src="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20200416164935.png"></p>
+<p>这个问题曾经引起过一次线上es的启机, 有兴趣的可以看这里的<a target="_blank" rel="noopener" href="https://izsk.me/2019/10/06/ES-FGC-Fix/">分析</a></p>
+<h3 id="kafka版本不匹配"><a href="#kafka版本不匹配" class="headerlink" title="kafka版本不匹配"></a>kafka版本不匹配</h3><p><img src="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20200416173539.png"></p>
+<p>这是本人遇到过的最坑爹的问题</p>
+<p>由于有个环境需要下线, 在迁移的过程中使用了一个新版本的fluentd, 但是却无法对接这个kafka</p>
+<p>fluentd使用了一个<a target="_blank" rel="noopener" href="https://github.com/fluent/fluent-plugin-kafka">fluent-plugin-kafka</a>, 比较坑的是里面有个ruby_kafka的client, 如果kafka的版本太旧而fluentd的版本又太新的话, 就会造成ruby_kafka_client无法适配旧版的kafka, 折腾半天无果后果断放弃, 由于这个kafka无法直接升级，最后只能重新搭建了一个新版本的kafka, 问题解决</p>
+<h3 id="fluentd的tag"><a href="#fluentd的tag" class="headerlink" title="fluentd的tag"></a>fluentd的tag</h3><p>在使用fluentd中大家看fluentd的配置文件,开始的时候一定会对tag的使用有点懵</p>
+<figure class="highlight yaml"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br></pre></td><td class="code"><pre><span class="line"><span class="string">&lt;source&gt;</span></span><br><span class="line">  <span class="string">@id</span> <span class="string">fluentd-k8s-containers.log</span></span><br><span class="line">  <span class="string">@type</span> <span class="string">tail</span></span><br><span class="line">  <span class="string">path</span> <span class="string">/var/log/containers/*.log</span></span><br><span class="line">  <span class="string">pos_file</span> <span class="string">/var/log/fluentd-k8s-containers.log.pos</span></span><br><span class="line">  <span class="string">tag</span> <span class="string">kubernetes.*</span></span><br><span class="line">  <span class="string">&lt;parse&gt;</span></span><br><span class="line">    <span class="string">@type</span> <span class="string">multi_format</span></span><br><span class="line">    <span class="string">&lt;pattern&gt;</span></span><br><span class="line">      <span class="string">format</span> <span class="string">json</span></span><br><span class="line">      <span class="string">time_key</span> <span class="string">time</span></span><br><span class="line">      <span class="string">time_format</span> <span class="string">%Y-%m-%dT%H:%M:%S.%NZ</span></span><br><span class="line">    <span class="string">&lt;/pattern&gt;</span></span><br><span class="line">  <span class="string">&lt;/parse&gt;</span></span><br><span class="line"><span class="string">&lt;/source&gt;</span></span><br><span class="line"></span><br><span class="line"><span class="string">&lt;filter</span> <span class="string">kubernetes.**&gt;</span> <span class="comment"># --</span></span><br><span class="line">  <span class="string">@id</span> <span class="string">filter_kubernetes_metadata</span></span><br><span class="line">  <span class="string">@type</span> <span class="string">kubernetes_metadata</span></span><br><span class="line">  <span class="string">skip_labels</span> <span class="literal">true</span></span><br><span class="line">  <span class="comment">#skip_container_metadata true</span></span><br><span class="line">  <span class="string">skip_master_url</span> <span class="literal">true</span></span><br><span class="line">  <span class="string">skip_namespace_metadata</span> <span class="literal">true</span></span><br><span class="line"><span class="string">&lt;/filter&gt;</span></span><br></pre></td></tr></table></figure>
+
+<p>这是一段收集kubernetes容器日志的经典配置</p>
+<p>在<code>source</code>中使用了<code>tail</code>指定了<code>path,tag</code>, 那么这个时候的tag到底是什么?</p>
+<p>先看下官方的<a target="_blank" rel="noopener" href="https://docs.fluentd.org/input/tail#tag">说明</a></p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">#* can be used as a placeholder that expands to the actual file path, replacing &#x27;/&#x27; with &#x27;.&#x27;. For example, if you have the following configuration</span></span><br><span class="line">path /path/to/file</span><br><span class="line">tag foo.*</span><br><span class="line"><span class="comment"># in_tail emits the parsed events with the &#x27;foo.path.to.file&#x27; tag.</span></span><br></pre></td></tr></table></figure>
+
+<p>意思就是说, tag是由<code>tag+path</code>一起组成，如上面, </p>
+<p><code>path=/var/log/containers/*.log</code></p>
+<p><code>tag=kubernetes.*</code></p>
+<p>那么在<code>filter</code>时使用了<code>kubernetes.**</code>来表示匹配所有以<code>kubernetes开头的tag</code></p>
+<p>每一个容器的tag为<code>kubernetes.var.log.containers.xxxxx.log</code></p>
+<p><code>xxxxx</code>指&#x2F;var&#x2F;log&#x2F;containers&#x2F;目录下容器的信息</p>
+<p>注意:</p>
+<p><code>.*</code>跟<code>.**</code>是有区别的, 引入官方<a target="_blank" rel="noopener" href="https://docs.fluentd.org/configuration/config-file">文档</a></p>
+<p>The following match patterns can be used in <code>and</code> tags.</p>
+<ul>
+<li><p><code>*</code> matches a single tag part.</p>
+<ul>
+<li><p>For example, the pattern <code>a.*</code> matches <code>a.b</code>, but does not match</p>
+<p><code>a</code> or <code>a.b.c</code></p>
+</li>
+</ul>
+</li>
+<li><p><code>**</code> matches zero or more tag parts.</p>
+<ul>
+<li>For example, the pattern <code>a.**</code> matches <code>a</code>, <code>a.b</code> and <code>a.b.c</code></li>
+</ul>
+</li>
+<li><p><code>&#123;X,Y,Z&#125;</code> matches X, Y, or Z, where X, Y, and Z are match patterns.</p>
+<ul>
+<li>For example, the pattern <code>&#123;a,b&#125;</code> matches <code>a</code> and <code>b</code>, but does not match <code>c</code></li>
+<li>This can be used in combination with the <code>*</code> or <code>**</code> patterns. Examples include <code>a.&#123;b,c&#125;.*</code> and <code>a.&#123;b,c.**&#125;</code></li>
+</ul>
+</li>
+<li><p><code>#&#123;...&#125;</code> evaluates the string inside brackets as a Ruby expression (See the section “Embedding Ruby Expressions” below)</p>
+</li>
+<li><p>When multiple patterns are listed inside a single tag (delimited by one or more whitespaces), it matches any of the listed patterns. For example:</p>
+<ul>
+<li>The patterns &#96;&#96; match <code>a</code> and <code>b</code>.</li>
+<li>The patterns &#96;&#96; match <code>a</code>, <code>a.b</code>, <code>a.b.c</code> (from the first pattern) and <code>b.d</code> (from the second pattern).</li>
+</ul>
+</li>
+</ul>
+<p>所以,这个tag还是非常长的, 因此最后都会将tag改成故名知义, 比如改成服务名.</p>
+<figure class="highlight yaml"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br></pre></td><td class="code"><pre><span class="line"><span class="string">&lt;match</span> <span class="string">kubernetes.**&gt;</span></span><br><span class="line">  <span class="string">@type</span> <span class="string">rewrite_tag_filter</span></span><br><span class="line">  <span class="string">&lt;rule&gt;</span></span><br><span class="line">    <span class="string">key</span> <span class="string">request_method</span></span><br><span class="line">    <span class="string">pattern</span> <span class="string">/^HEAD$/</span></span><br><span class="line">    <span class="string">tag</span> <span class="string">clear</span></span><br><span class="line">  <span class="string">&lt;/rule&gt;</span></span><br><span class="line">  <span class="string">&lt;rule&gt;</span></span><br><span class="line">    <span class="string">key</span> <span class="string">service_name</span></span><br><span class="line">    <span class="string">pattern</span> <span class="string">^(.+)$</span></span><br><span class="line">    <span class="string">tag</span> <span class="string">$1</span></span><br><span class="line">  <span class="string">&lt;/rule&gt;</span></span><br><span class="line"><span class="string">&lt;/match&gt;</span></span><br></pre></td></tr></table></figure>
+
+
+
+<h3 id="The-connection-might-have-been-closed-Sleeping-for-64-seconds"><a href="#The-connection-might-have-been-closed-Sleeping-for-64-seconds" class="headerlink" title="The connection might have been closed. Sleeping for 64 seconds"></a>The connection might have been closed. Sleeping for 64 seconds</h3><p>![image-20200519140723710](&#x2F;Users&#x2F;zhoushuke&#x2F;Library&#x2F;Application Support&#x2F;typora-user-images&#x2F;image-20200519140723710.png)</p>
+<p>原因: 从grafana上来看，fluentd的cpu会出现周期性的突升，同时，在apiserver会出现大量的watch pod调用</p>
+<p><img src="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20200519150847.png"></p>
+<p>解决: 增大fluentd的cpu使用，同时在配置文件中修改插件filter_kubernetes_metadata，</p>
+<p>增加watch false,减少频繁地去请求apiserver</p>
+<figure class="highlight yaml"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># Enriches records with Kubernetes metadata</span></span><br><span class="line"><span class="string">&lt;filter</span> <span class="string">kubernetes.**&gt;</span></span><br><span class="line"><span class="string">@id</span> <span class="string">filter_kubernetes_metadata</span></span><br><span class="line"><span class="string">@type</span> <span class="string">kubernetes_metadata</span></span><br><span class="line"><span class="string">watch</span> <span class="literal">false</span> <span class="comment"># 这行</span></span><br><span class="line"><span class="string">skip_labels</span> <span class="literal">true</span></span><br><span class="line"><span class="comment">#skip_container_metadata true</span></span><br><span class="line"><span class="string">skip_master_url</span> <span class="literal">true</span></span><br><span class="line"><span class="string">skip_namespace_metadata</span> <span class="literal">true</span></span><br><span class="line"><span class="string">&lt;/filter&gt;</span></span><br></pre></td></tr></table></figure>
+
+
+
+<h3 id="使用wildcard查询时无记录"><a href="#使用wildcard查询时无记录" class="headerlink" title="使用wildcard查询时无记录"></a>使用wildcard查询时无记录</h3><p>经常，会使用wildcard来查询某个时间段内的某个字段包含某个值的记录, 假如现在要筛选出15钟之内的msg中包含<code>unaryInterceptor</code>的记录</p>
+<p>假如doc字段如下:</p>
+<figure class="highlight json"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br></pre></td><td class="code"><pre><span class="line"><span class="punctuation">&#123;</span></span><br><span class="line">  <span class="attr">&quot;_index&quot;</span><span class="punctuation">:</span> <span class="string">&quot;realtysense.viking-jarl-2020.05.27&quot;</span><span class="punctuation">,</span></span><br><span class="line">  <span class="attr">&quot;_type&quot;</span><span class="punctuation">:</span> <span class="string">&quot;RealtySense&quot;</span><span class="punctuation">,</span></span><br><span class="line">  <span class="attr">&quot;_id&quot;</span><span class="punctuation">:</span> <span class="string">&quot;AXJVQxYRxgPqZboc0ExD&quot;</span><span class="punctuation">,</span></span><br><span class="line">  <span class="attr">&quot;_score&quot;</span><span class="punctuation">:</span> <span class="literal"><span class="keyword">null</span></span><span class="punctuation">,</span></span><br><span class="line">  <span class="attr">&quot;_source&quot;</span><span class="punctuation">:</span> <span class="punctuation">&#123;</span></span><br><span class="line">    <span class="attr">&quot;stream&quot;</span><span class="punctuation">:</span> <span class="string">&quot;stdout&quot;</span><span class="punctuation">,</span></span><br><span class="line">    <span class="attr">&quot;service_name&quot;</span><span class="punctuation">:</span> <span class="string">&quot;demo&quot;</span><span class="punctuation">,</span></span><br><span class="line">    <span class="attr">&quot;msg&quot;</span><span class="punctuation">:</span> <span class="string">&quot;unaryInterceptor done&quot;</span><span class="punctuation">,</span></span><br><span class="line">    <span class="attr">&quot;@version&quot;</span><span class="punctuation">:</span> <span class="string">&quot;1&quot;</span><span class="punctuation">,</span></span><br><span class="line">    <span class="attr">&quot;@timestamp&quot;</span><span class="punctuation">:</span> <span class="string">&quot;2020-05-27T08:32:36.928Z&quot;</span><span class="punctuation">,</span></span><br><span class="line">    <span class="attr">&quot;type&quot;</span><span class="punctuation">:</span> <span class="string">&quot;RealtySense&quot;</span></span><br><span class="line">  <span class="punctuation">&#125;</span><span class="punctuation">,</span></span><br><span class="line">  <span class="attr">&quot;fields&quot;</span><span class="punctuation">:</span> <span class="punctuation">&#123;</span></span><br><span class="line">    <span class="attr">&quot;@timestamp&quot;</span><span class="punctuation">:</span> <span class="punctuation">[</span></span><br><span class="line">      <span class="number">1590568356928</span></span><br><span class="line">    <span class="punctuation">]</span></span><br><span class="line">  <span class="punctuation">&#125;</span><span class="punctuation">,</span></span><br><span class="line">  <span class="attr">&quot;sort&quot;</span><span class="punctuation">:</span> <span class="punctuation">[</span></span><br><span class="line">    <span class="number">1590568356928</span></span><br><span class="line">  <span class="punctuation">]</span></span><br><span class="line"><span class="punctuation">&#125;</span></span><br></pre></td></tr></table></figure>
+
+<p>那么相应的会使用以下的查询语句:</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br></pre></td><td class="code"><pre><span class="line">curl -H <span class="string">&#x27;Content-Type: application/json&#x27;</span> -XGET <span class="string">&#x27;http://localhost:9200/demo-*/_search?pretty&amp;_source_include=%2A%2C%40timestamp&amp;ignore_unavailable=true&amp;scroll=30s&amp;size=10&#x27;</span> -d <span class="string">&#x27;&#123;</span></span><br><span class="line"><span class="string">  &quot;query&quot;: &#123;</span></span><br><span class="line"><span class="string">    &quot;bool&quot;: &#123;</span></span><br><span class="line"><span class="string">      &quot;filter&quot;: &#123;</span></span><br><span class="line"><span class="string">        &quot;bool&quot;: &#123;</span></span><br><span class="line"><span class="string">          &quot;must&quot;: [</span></span><br><span class="line"><span class="string">            &#123;</span></span><br><span class="line"><span class="string">              &quot;range&quot;: &#123;</span></span><br><span class="line"><span class="string">                &quot;@timestamp&quot;: &#123; # 指定时间段</span></span><br><span class="line"><span class="string">                  &quot;gt&quot;: &quot;2020-05-27T08:31:43.695209Z&quot;, </span></span><br><span class="line"><span class="string">                  &quot;lte&quot;: &quot;2020-05-27T08:33:15.189058Z&quot;</span></span><br><span class="line"><span class="string">                &#125;</span></span><br><span class="line"><span class="string">              &#125;</span></span><br><span class="line"><span class="string">            &#125;,</span></span><br><span class="line"><span class="string">            &#123;</span></span><br><span class="line"><span class="string">              &quot;wildcard&quot;: &#123; #使用通配符</span></span><br><span class="line"><span class="string">                &quot;msg&quot;: &quot;*unaryInterceptor*&quot; # 正确的写法: 1. &quot;msg.keyword&quot;: &quot;*unaryInterceptor*&quot;</span></span><br><span class="line"><span class="string">                														#						2. &quot;msg&quot;: &quot;*unaryinterceptor*&quot; 注意全都是小写.</span></span><br><span class="line"><span class="string">              &#125;</span></span><br><span class="line"><span class="string">            &#125;</span></span><br><span class="line"><span class="string">          ]</span></span><br><span class="line"><span class="string">        &#125;</span></span><br><span class="line"><span class="string">      &#125;</span></span><br><span class="line"><span class="string">    &#125;</span></span><br><span class="line"><span class="string">  &#125;,</span></span><br><span class="line"><span class="string">  &quot;sort&quot;: [</span></span><br><span class="line"><span class="string">    &#123;</span></span><br><span class="line"><span class="string">      &quot;@timestamp&quot;: &#123;</span></span><br><span class="line"><span class="string">        &quot;order&quot;: &quot;asc&quot;</span></span><br><span class="line"><span class="string">      &#125;</span></span><br><span class="line"><span class="string">    &#125;</span></span><br><span class="line"><span class="string">  ]</span></span><br><span class="line"><span class="string">&#125;&#x27;</span></span><br></pre></td></tr></table></figure>
+
+<p>执行之后会发现，得到的结果为空,百思不得其解.</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br></pre></td><td class="code"><pre><span class="line">&#123;</span><br><span class="line">  <span class="string">&quot;took&quot;</span> : 4,</span><br><span class="line">  <span class="string">&quot;timed_out&quot;</span> : <span class="literal">false</span>,</span><br><span class="line">  <span class="string">&quot;_shards&quot;</span> : &#123;</span><br><span class="line">    <span class="string">&quot;total&quot;</span> : 20,</span><br><span class="line">    <span class="string">&quot;successful&quot;</span> : 20,</span><br><span class="line">    <span class="string">&quot;failed&quot;</span> : 0</span><br><span class="line">  &#125;,</span><br><span class="line">  <span class="string">&quot;hits&quot;</span> : &#123;</span><br><span class="line">    <span class="string">&quot;total&quot;</span> : 0,</span><br><span class="line">    <span class="string">&quot;max_score&quot;</span> : null,</span><br><span class="line">    <span class="string">&quot;hits&quot;</span> : [ ]</span><br><span class="line">  &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>但是从kibana上查看，在指定的时间段内是存在记录的, 原因就在于**<code>msg</code>字段本身是<code>analyzed</code>的，elasticsearch对于<code>analyzed</code>的字段会将字段按空格进行分隔, 而且会所有的大写字母转换成小写字母**, 因此，在上面使用的通配符中有大写字母就无法匹配上了,这也是为何结果无记录的原因,那么解决方案有两个</p>
+<ol>
+<li>通配符里直接使用小写</li>
+<li>对于<code>analyzed</code>的字段可直接使用内置的keyword, 比如上面可改成 <code>&quot;msg.keyword&quot;: &quot;*unaryInterceptor*&quot;</code>,那么这样的话原始的字符就可以匹配上了,参考<a target="_blank" rel="noopener" href="https://stackoverflow.com/questions/51849598/elasticsearch-wild-card-query-not-working">github</a></li>
+</ol>
+<h3 id="排查技巧"><a href="#排查技巧" class="headerlink" title="排查技巧"></a>排查技巧</h3><h4 id="fluentd"><a href="#fluentd" class="headerlink" title="fluentd"></a>fluentd</h4><p>fluentd的一个排查技巧就是debug模块, 只需要在fluentd的启动参数中指定级别</p>
+<p><img src="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20200416174010.png"></p>
+<p>当然在各类的output插件中, 也支持开启debug模块, 这个大家可以查看官方<a target="_blank" rel="noopener" href="https://docs.fluentd.org/">文档</a></p>
+<h4 id="kafka"><a href="#kafka" class="headerlink" title="kafka"></a>kafka</h4><p>kafka除了上次遇到过的版本问题也没出现过有问题是因为kafka造成的,但是有几条命令还是比较有用的, 毕竟数据经过它, 看看数据有时还是有必要</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># 查看消费者</span></span><br><span class="line">./kafka-consumer-groups.sh --bootstrap-server localhost:9092 —list</span><br><span class="line"><span class="comment"># 查看数据消费情况</span></span><br><span class="line">./kafka-console-consumer.sh --bootstrap-server localhost:9092 --topic yourtopic</span><br></pre></td></tr></table></figure>
+
+<p>后面那个命令可以看到数据进kafka是否符合预期, 当然这个数据可以直接在fluentd中看到, 是一样的</p>
+<p>这里要注意一个问题就是, <strong>版本不同的kafka, 上面两条命令有所不同, 有时可能会需要使用–zookeeper.</strong></p>
+<h4 id="logstash"><a href="#logstash" class="headerlink" title="logstash"></a>logstash</h4><figure class="highlight yaml"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line"><span class="string">output</span> &#123;</span><br><span class="line">  <span class="string">if</span> [<span class="string">type</span>] <span class="string">==</span> <span class="string">&quot;RealtySense&quot;</span>&#123;</span><br><span class="line">    <span class="string">file</span> &#123;</span><br><span class="line">      <span class="string">path</span> <span class="string">=&gt;</span> <span class="string">&quot;/tmp/logstash/<span class="template-variable">%&#123;+yyyy&#125;</span>/<span class="template-variable">%&#123;+MM&#125;</span>/<span class="template-variable">%&#123;+dd-HH&#125;</span>.log&quot;</span></span><br><span class="line">    &#125;</span><br><span class="line">  &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>logstash定位日志时可以打印到console或者文件中</p>
+<p>在个grok在线debug的[工具][<a target="_blank" rel="noopener" href="https://grokdebug.herokuapp.com/">https://grokdebug.herokuapp.com/</a></p>
+<h4 id="es"><a href="#es" class="headerlink" title="es"></a>es</h4><figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># 查看索引 </span></span><br><span class="line">curl <span class="string">&#x27;http://elasticsearch:9200/_cat/indices?v&#x27;</span></span><br><span class="line"><span class="comment"># 查看集群状态</span></span><br><span class="line">curl <span class="string">&#x27;http://elasticsearch:9200/_cluster/health?pretty&#x27;</span></span><br><span class="line"><span class="comment"># 删除索引 </span></span><br><span class="line">curl -XDELETE http://elasticsearch:9200/yourindex</span><br><span class="line"><span class="comment"># 查看索引数据</span></span><br><span class="line">curl <span class="string">&#x27;http://elasticsearch:9200/logstash.index-2019.09.22/_doc/SjLHVG0BChdCCvDoTgAU?pretty&#x27;</span> </span><br><span class="line"><span class="comment"># 查看es集群占用磁盘资源</span></span><br><span class="line">curl -s <span class="string">&#x27;http://localhost:9200/_cat/indices?h=index,store.size&amp;bytes=m&#x27;</span>|grep yourindex|grep -v <span class="string">&#x27;close&#x27;</span>|<span class="built_in">head</span>|awk <span class="string">&#x27;&#123;sum+=$2&#125; END &#123;print &quot;yourindex_size_sum_total = &quot;, sum, &quot;mb&quot;&#125;&#x27;</span></span><br><span class="line"><span class="comment"># 关闭集群自平衡,这个在集群重启时有用</span></span><br><span class="line">curl -XPUT http://localhost::9200/_cluster/settings -d<span class="string">&#x27; &#123;&quot;transient&quot;: &#123;&quot;cluster.routing.allocation.enable&quot; : &quot;none&quot;&#125;&#125;&#x27;</span></span><br><span class="line"><span class="comment"># 开启/关闭索引: </span></span><br><span class="line">curl -XPOST <span class="string">&#x27;localhost:9200/my_index/_close?pretty&#x27;</span>  curl -XPOST <span class="string">&#x27;localhost:9200/my_index/_open?pretty&#x27;</span></span><br><span class="line"><span class="comment"># 查询索引: </span></span><br><span class="line">GET /_cat/indices/senserealty.sensego-mingyuan-2019.11.20?pretty</span><br><span class="line"><span class="comment"># 查询每个节点的磁盘使用情况: </span></span><br><span class="line">curl -XGET <span class="string">&#x27;localhost:9200/_cat/allocation?v&amp;pretty&#x27;</span></span><br><span class="line"><span class="comment"># 查看unassigned shard: </span></span><br><span class="line">GET /_cat/shards?h=index,shard,prirep,state,unassigned.reason</span><br><span class="line"><span class="comment"># 查看某个文档</span></span><br><span class="line">GET /_cat/indices/realtysense.auth-2020.04.08?v</span><br><span class="line">GET /realtysense.auth-2020.04.08/RealtySense/AXFZK6wkxgPqZbocqveB</span><br><span class="line"><span class="comment"># 插入数据</span></span><br><span class="line">curl -XPOST <span class="string">&#x27;http://localhost:9200/realtysense.sensego-mingyuan-2020.04.15/RealtySense/&#x27;</span> -d <span class="string">&#x27;&#123;&quot;call_bk_url&quot;: &quot;3356&quot;&#125;&#x27;</span></span><br></pre></td></tr></table></figure>
+
+
+
+<h3 id="未完待续"><a href="#未完待续" class="headerlink" title="未完待续"></a>未完待续</h3><h3 id="参考文章"><a href="#参考文章" class="headerlink" title="参考文章:"></a><strong>参考文章:</strong></h3><blockquote>
+<ul>
+<li><a target="_blank" rel="noopener" href="https://izsk.me/2019/10/06/ES-FGC-Fix/">https://izsk.me/2019/10/06/ES-FGC-Fix/</a></li>
+<li><a target="_blank" rel="noopener" href="https://docs.fluentd.org/">https://docs.fluentd.org/</a></li>
+<li><a target="_blank" rel="noopener" href="https://github.com/fluent/fluent-plugin-kafka">https://github.com/fluent/fluent-plugin-kafka</a></li>
+<li><a target="_blank" rel="noopener" href="https://grokdebug.herokuapp.com/">https://grokdebug.herokuapp.com/</a></li>
+<li><a target="_blank" rel="noopener" href="https://docs.fluentd.org/input/tail#tag">https://docs.fluentd.org/input/tail#tag</a></li>
+<li><a target="_blank" rel="noopener" href="https://docs.fluentd.org/configuration/config-file">https://docs.fluentd.org/configuration/config-file</a></li>
+<li><a target="_blank" rel="noopener" href="https://www.matviichuk.com/2016/07/08/nested-json-in-logstash">https://www.matviichuk.com/2016/07/08/nested-json-in-logstash</a></li>
+<li><a target="_blank" rel="noopener" href="https://www.elastic.co/guide/en/logstash/current/plugins-inputs-kafka.html#plugins-inputs-kafka-type">https://www.elastic.co/guide/en/logstash/current/plugins-inputs-kafka.html#plugins-inputs-kafka-type</a></li>
+<li><a target="_blank" rel="noopener" href="https://www.elastic.co/guide/cn/elasticsearch/guide/current/dynamic-mapping.html">https://www.elastic.co/guide/cn/elasticsearch/guide/current/dynamic-mapping.html</a></li>
+<li><a target="_blank" rel="noopener" href="https://stackoverflow.com/questions/51849598/elasticsearch-wild-card-query-not-working">https://stackoverflow.com/questions/51849598/elasticsearch-wild-card-query-not-working</a></li>
+</ul>
+</blockquote>
+<h3 id="转载请注明出处https-izsk-me"><a href="#转载请注明出处https-izsk-me" class="headerlink" title="转载请注明出处https://izsk.me"></a><strong>转载请注明出处<a target="_blank" rel="noopener" href="https://izsk.me/">https://izsk.me</a></strong></h3>
+      
+    </div>
+
+    <div>
+      
+        
+<div id="wechat_subscriber" style="display: block; padding: 10px 0; margin: 20px auto; width: 100%; text-align: center">
+    <img id="wechat_subscriber_qcode" src="/images/websitecode250.png" alt=" wechat" style="width: 200px; max-width: 100%;"/>
+    <div>Scan Me To Read on Phone</div>
+</div>
+
+
+      
+    </div>
+
+    <div>
+      
+        
+  <div style="padding: 10px 0; margin: 20px auto; width: 90%; text-align: center;">
+    <div>I know you won't do this,but what if you did?</div>
+    <button id="rewardButton" disable="enable" onclick="var qr = document.getElementById('QR'); if (qr.style.display === 'none') {qr.style.display='block';} else {qr.style.display='none'}">
+      <span>赏</span>
+    </button>
+    <div id="QR" style="display: none;">
+      
+        <div id="wechat" style="display: inline-block">
+          <img id="wechat_qr" src="/images/wechatpayme.png" alt=" WeChat Pay"/>
+          <p>微信打赏</p>
+        </div>
+      
+      
+        <div id="alipay" style="display: inline-block">
+          <img id="alipay_qr" src="/images/alipayme.jpg" alt=" Alipay"/>
+          <p>支付宝打赏</p>
+        </div>
+      
     </div>
   </div>
 
-{% endblock %}
 
-{% block sidebar %}
-  {{ sidebar_template.render(true) }}
-{% endblock %}
+      
+    </div>
 
 
-{% block script_extra %}
-  {% include '_scripts/pages/post-details.swig' %}
-{% endblock %}
+    <footer class="post-footer">
+      
+        <div class="post-tags">
+          
+            <a href="/tags/FELK/" rel="tag"># FELK</a>
+          
+        </div>
+      
+
+      
+        <div class="post-nav">
+          <div class="post-nav-next post-nav-item">
+            
+              <a href="/2020/05/15/gitlab-kubernetes-multi-environment-deploy/" rel="next" title="Gitlab学习(实现多kubernets环境CI/CD)">
+                <i class="fa fa-chevron-left"></i> Gitlab学习(实现多kubernets环境CI/CD)
+              </a>
+            
+          </div>
+
+          <span class="post-nav-divider"></span>
+
+          <div class="post-nav-prev post-nav-item">
+            
+              <a href="/2020/05/28/EFLK-elastalert-mail/" rel="prev" title="FELK学习(elastalert自定义邮件模板)">
+                FELK学习(elastalert自定义邮件模板) <i class="fa fa-chevron-right"></i>
+              </a>
+            
+          </div>
+        </div>
+      
+
+      
+      
+    </footer>
+  </article>
+
+
+
+    <div class="post-spread">
+      
+    </div>
+  </div>
+
+
+          </div>
+          
+
+
+          
+  <div class="comments" id="comments">
+    
+  </div>
+
+
+        </div>
+        
+          
+  
+  <div class="sidebar-toggle">
+    <div class="sidebar-toggle-line-wrap">
+      <span class="sidebar-toggle-line sidebar-toggle-line-first"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-middle"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-last"></span>
+    </div>
+  </div>
+
+  <aside id="sidebar" class="sidebar">
+    <div class="sidebar-inner">
+
+      
+
+      
+        <ul class="sidebar-nav motion-element">
+          <li class="sidebar-nav-toc sidebar-nav-active" data-target="post-toc-wrap" >
+            文章目录
+          </li>
+          <li class="sidebar-nav-overview" data-target="site-overview">
+            站点概览
+          </li>
+        </ul>
+      
+
+      <section class="site-overview sidebar-panel">
+        <div class="site-author motion-element" itemprop="author" itemscope itemtype="http://schema.org/Person">
+          <img class="site-author-image" itemprop="image"
+               src="/images/avatar.gif"
+               alt="" />
+          <p class="site-author-name" itemprop="name"></p>
+          <p class="site-description motion-element" itemprop="description"></p>
+        </div>
+        <nav class="site-state motion-element">
+        
+          
+            <div class="site-state-item site-state-posts">
+              <a href="/archives">
+                <span class="site-state-item-count">192</span>
+                <span class="site-state-item-name">日志</span>
+              </a>
+            </div>
+          
+
+          
+            <div class="site-state-item site-state-categories">
+              <a href="/categories">
+                <span class="site-state-item-count">14</span>
+                <span class="site-state-item-name">分类</span>
+              </a>
+            </div>
+          
+
+          
+            <div class="site-state-item site-state-tags">
+              <a href="/tags">
+                <span class="site-state-item-count">14</span>
+                <span class="site-state-item-name">标签</span>
+              </a>
+            </div>
+          
+
+        </nav>
+
+        
+
+        <div class="links-of-author motion-element">
+          
+        </div>
+
+        
+        
+
+        
+        
+
+        
+
+
+      </section>
+
+      
+      <!--noindex-->
+        <section class="post-toc-wrap motion-element sidebar-panel sidebar-panel-active">
+          <div class="post-toc">
+
+            
+              
+            
+
+            
+              <div class="post-toc-content"><ol class="nav"><li class="nav-item nav-level-3"><a class="nav-link" href="#%E6%97%A5%E5%BF%97%E6%B5%81"><span class="nav-number">1.</span> <span class="nav-text">日志流</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#type%E4%B8%8D%E8%A6%86%E7%9B%96"><span class="nav-number">2.</span> <span class="nav-text">type不覆盖</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E5%AD%97%E6%AE%B5%E7%B1%BB%E5%9E%8B%E8%BD%AC%E6%8D%A2"><span class="nav-number">3.</span> <span class="nav-text">字段类型转换</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E5%AD%97%E6%AE%B5%E5%A4%9A%E7%A7%8D%E7%B1%BB%E5%9E%8B"><span class="nav-number">4.</span> <span class="nav-text">字段多种类型</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#kafka%E7%89%88%E6%9C%AC%E4%B8%8D%E5%8C%B9%E9%85%8D"><span class="nav-number">5.</span> <span class="nav-text">kafka版本不匹配</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#fluentd%E7%9A%84tag"><span class="nav-number">6.</span> <span class="nav-text">fluentd的tag</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#The-connection-might-have-been-closed-Sleeping-for-64-seconds"><span class="nav-number">7.</span> <span class="nav-text">The connection might have been closed. Sleeping for 64 seconds</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E4%BD%BF%E7%94%A8wildcard%E6%9F%A5%E8%AF%A2%E6%97%B6%E6%97%A0%E8%AE%B0%E5%BD%95"><span class="nav-number">8.</span> <span class="nav-text">使用wildcard查询时无记录</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E6%8E%92%E6%9F%A5%E6%8A%80%E5%B7%A7"><span class="nav-number">9.</span> <span class="nav-text">排查技巧</span></a><ol class="nav-child"><li class="nav-item nav-level-4"><a class="nav-link" href="#fluentd"><span class="nav-number">9.1.</span> <span class="nav-text">fluentd</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#kafka"><span class="nav-number">9.2.</span> <span class="nav-text">kafka</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#logstash"><span class="nav-number">9.3.</span> <span class="nav-text">logstash</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#es"><span class="nav-number">9.4.</span> <span class="nav-text">es</span></a></li></ol></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E6%9C%AA%E5%AE%8C%E5%BE%85%E7%BB%AD"><span class="nav-number">10.</span> <span class="nav-text">未完待续</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E5%8F%82%E8%80%83%E6%96%87%E7%AB%A0"><span class="nav-number">11.</span> <span class="nav-text">参考文章:</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E8%BD%AC%E8%BD%BD%E8%AF%B7%E6%B3%A8%E6%98%8E%E5%87%BA%E5%A4%84https-izsk-me"><span class="nav-number">12.</span> <span class="nav-text">转载请注明出处https:&#x2F;&#x2F;izsk.me</span></a></li></ol></div>
+            
+
+          </div>
+        </section>
+      <!--/noindex-->
+      
+
+    </div>
+  </aside>
+
+
+        
+      </div>
+    </main>
+
+    <footer id="footer" class="footer">
+      <div class="footer-inner">
+        <div class="copyright" >
+  
+  &copy; 
+  <span itemprop="copyrightYear">2022</span>
+  <span class="with-love">
+    <i class="fa fa-heart"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">Z.S.K.</span>
+</div>
+
+
+<div class="powered-by">
+  Supported by <a class="theme-link" target="_blank" rel="noopener" href="https://hexo.io">Hexo</a>
+</div>
+
+<div class="theme-info">
+  Theme -
+  <a class="theme-link" target="_blank" rel="noopener" href="https://github.com/iissnan/hexo-theme-next">
+    NexT.Mist
+  </a>
+</div>
+
+
+        
+
+        
+      </div>
+    </footer>
+
+    <div class="back-to-top">
+      <i class="fa fa-arrow-up"></i>
+    </div>
+  </div>
+
+  
+
+<script type="text/javascript">
+  if (Object.prototype.toString.call(window.Promise) !== '[object Function]') {
+    window.Promise = null;
+  }
+</script>
+
+
+
+
+
+
+
+
+
+  
+
+
+
+  
+  <script type="text/javascript" src="/lib/jquery/index.js?v=2.1.3"></script>
+
+  
+  <script type="text/javascript" src="/lib/fastclick/lib/fastclick.min.js?v=1.0.6"></script>
+
+  
+  <script type="text/javascript" src="/lib/jquery_lazyload/jquery.lazyload.js?v=1.9.7"></script>
+
+  
+  <script type="text/javascript" src="/lib/velocity/velocity.min.js?v=1.2.1"></script>
+
+  
+  <script type="text/javascript" src="/lib/velocity/velocity.ui.min.js?v=1.2.1"></script>
+
+  
+  <script type="text/javascript" src="/lib/fancybox/source/jquery.fancybox.pack.js?v=2.1.5"></script>
+
+
+  
+
+
+  <script type="text/javascript" src="/js/src/utils.js?v=5.1.0"></script>
+
+  <script type="text/javascript" src="/js/src/motion.js?v=5.1.0"></script>
+
+
+
+  
+  
+
+  
+  <script type="text/javascript" src="/js/src/scrollspy.js?v=5.1.0"></script>
+<script type="text/javascript" src="/js/src/post-details.js?v=5.1.0"></script>
+
+
+
+  
+
+
+  <script type="text/javascript" src="/js/src/bootstrap.js?v=5.1.0"></script>
+
+
+
+  
+
+
+
+  
+
+
+
+
+	
+
+
+
+
+
+  
+
+
+
+
+  
+  
+  <script type="text/javascript">
+    // Popup Window;
+    var isfetched = false;
+    // Search DB path;
+    var search_path = "search.xml";
+    if (search_path.length == 0) {
+      search_path = "search.xml";
+    }
+    var path = "/" + search_path;
+    // monitor main search box;
+
+    function proceedsearch() {
+      $("body").append('<div class="popoverlay">').css('overflow', 'hidden');
+      $('.popup').toggle();
+    }
+    // search function;
+    var searchFunc = function(path, search_id, content_id) {
+      'use strict';
+      $.ajax({
+        url: path,
+        dataType: "xml",
+        async: true,
+        success: function( xmlResponse ) {
+          // get the contents from search data
+          isfetched = true;
+          $('.popup').detach().appendTo('.header-inner');
+          var datas = $( "entry", xmlResponse ).map(function() {
+            return {
+              title: $( "title", this ).text(),
+              content: $("content",this).text(),
+              url: $( "url" , this).text()
+            };
+          }).get();
+          var $input = document.getElementById(search_id);
+          var $resultContent = document.getElementById(content_id);
+          $input.addEventListener('input', function(){
+            var matchcounts = 0;
+            var str='<ul class=\"search-result-list\">';
+            var keywords = this.value.trim().toLowerCase().split(/[\s\-]+/);
+            $resultContent.innerHTML = "";
+            if (this.value.trim().length > 1) {
+              // perform local searching
+              datas.forEach(function(data) {
+                var isMatch = false;
+                var content_index = [];
+                var data_title = data.title.trim().toLowerCase();
+                var data_content = data.content.trim().replace(/<[^>]+>/g,"").toLowerCase();
+                var data_url = decodeURIComponent(data.url);
+                var index_title = -1;
+                var index_content = -1;
+                var first_occur = -1;
+                // only match artiles with not empty titles and contents
+                if(data_title != '') {
+                  keywords.forEach(function(keyword, i) {
+                    index_title = data_title.indexOf(keyword);
+                    index_content = data_content.indexOf(keyword);
+                    if( index_title >= 0 || index_content >= 0 ){
+                      isMatch = true;
+                      if (i == 0) {
+                        first_occur = index_content;
+                      }
+                    }
+
+                  });
+                }
+                // show search results
+                if (isMatch) {
+                  matchcounts += 1;
+                  str += "<li><a href='"+ data_url +"' class='search-result-title'>"+ data_title +"</a>";
+                  var content = data.content.trim().replace(/<[^>]+>/g,"");
+                  if (first_occur >= 0) {
+                    // cut out 100 characters
+                    var start = first_occur - 20;
+                    var end = first_occur + 80;
+                    if(start < 0){
+                      start = 0;
+                    }
+                    if(start == 0){
+                      end = 50;
+                    }
+                    if(end > content.length){
+                      end = content.length;
+                    }
+                    var match_content = content.substring(start, end);
+                    // highlight all keywords
+                    keywords.forEach(function(keyword){
+                      var regS = new RegExp(keyword, "gi");
+                      match_content = match_content.replace(regS, "<b class=\"search-keyword\">"+keyword+"</b>");
+                    });
+
+                    str += "<p class=\"search-result\">" + match_content +"...</p>"
+                  }
+                  str += "</li>";
+                }
+              })};
+            str += "</ul>";
+            if (matchcounts == 0) { str = '<div id="no-result"><i class="fa fa-frown-o fa-5x" /></div>' }
+            if (keywords == "") { str = '<div id="no-result"><i class="fa fa-search fa-5x" /></div>' }
+            $resultContent.innerHTML = str;
+          });
+          proceedsearch();
+        }
+      });}
+
+    // handle and trigger popup window;
+    $('.popup-trigger').click(function(e) {
+      e.stopPropagation();
+      if (isfetched == false) {
+        searchFunc(path, 'local-search-input', 'local-search-result');
+      } else {
+        proceedsearch();
+      };
+    });
+
+    $('.popup-btn-close').click(function(e){
+      $('.popup').hide();
+      $(".popoverlay").remove();
+      $('body').css('overflow', '');
+    });
+    $('.popup').click(function(e){
+      e.stopPropagation();
+    });
+  </script>
+
+
+  
+
+  
+
+  
+
+  
+
+
+</body>
+</html>

@@ -1,38 +1,980 @@
-{% extends '_layout.swig' %}
-{% import '_macro/post.swig' as post_template %}
-{% import '_macro/sidebar.swig' as sidebar_template %}
+<!doctype html>
 
 
-{% block title %} {{ page.title }} | {{ config.title }} {% endblock %}
 
-{% block page_class %}page-post-detail{% endblock %}
+  
 
 
-{% block content %}
+<html class="theme-next mist use-motion" lang="zh-Hans">
+<head>
+  <meta charset="UTF-8"/>
+<meta http-equiv="X-UA-Compatible" content="IE=edge" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1"/>
+
+
+
+<meta http-equiv="Cache-Control" content="no-transform" />
+<meta http-equiv="Cache-Control" content="no-siteapp" />
+
+
+
+
+
+
+
+
+
+
+
+
+  
+  
+  <link href="/lib/fancybox/source/jquery.fancybox.css?v=2.1.5" rel="stylesheet" type="text/css" />
+
+
+
+
+  
+  
+  
+  
+
+  
+    
+    
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+    
+    
+    <link href="//fonts.googleapis.com/css?family=Lato:300,300italic,400,400italic,700,700italic&subset=latin,latin-ext" rel="stylesheet" type="text/css">
+  
+
+
+
+
+
+
+<link href="/lib/font-awesome/css/font-awesome.min.css?v=4.6.2" rel="stylesheet" type="text/css" />
+
+<link href="/css/main.css?v=5.1.0" rel="stylesheet" type="text/css" />
+
+
+  <meta name="keywords" content="分布式架构," />
+
+
+
+
+
+
+
+
+  <link rel="shortcut icon" type="image/x-icon" href="/favicon.ico?v=5.1.0" />
+
+
+
+
+
+
+<meta name="description" content="模型训练除了算法侧需要优化之外，工程师也可以做很多落地来加速这个过程，今天就结合作者在落地训练平台的经验来聊一聊其中常用技术.">
+<meta property="og:type" content="article">
+<meta property="og:title" content="工程侧如何加速模型训练">
+<meta property="og:url" content="https://zhoushuke.github.io/2022/05/29/Model-Traning-High-Speed-Tech/index.html">
+<meta property="og:site_name" content="Z.S.K.&#39;s Records">
+<meta property="og:description" content="模型训练除了算法侧需要优化之外，工程师也可以做很多落地来加速这个过程，今天就结合作者在落地训练平台的经验来聊一聊其中常用技术.">
+<meta property="og:locale">
+<meta property="og:image" content="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20220529112651.png">
+<meta property="og:image" content="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20220529112651.png">
+<meta property="og:image" content="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20220529172604.png">
+<meta property="og:image" content="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20220529180635.png">
+<meta property="article:published_time" content="2022-05-29T10:30:53.000Z">
+<meta property="article:modified_time" content="2022-07-19T03:16:00.967Z">
+<meta property="article:author" content="Z.S.K.">
+<meta property="article:tag" content="分布式架构">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:image" content="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20220529112651.png">
+
+
+
+<script type="text/javascript" id="hexo.configurations">
+  var NexT = window.NexT || {};
+  var CONFIG = {
+    root: '',
+    scheme: 'Mist',
+    sidebar: {"position":"left","display":"post"},
+    fancybox: true,
+    motion: true,
+    duoshuo: {
+      userId: 'undefined',
+      author: '博主'
+    },
+    algolia: {
+      applicationID: '',
+      apiKey: '',
+      indexName: '',
+      hits: {"per_page":10},
+      labels: {"input_placeholder":"Search for Posts","hits_empty":"We didn't find any results for the search: ${query}","hits_stats":"${hits} results found in ${time} ms"}
+    }
+  };
+</script>
+
+
+
+  <link rel="canonical" href="https://zhoushuke.github.io/2022/05/29/Model-Traning-High-Speed-Tech/"/>
+
+
+
+
+
+  <title> 工程侧如何加速模型训练 | Z.S.K.'s Records </title>
+<meta name="generator" content="Hexo 6.2.0"></head>
+
+<body itemscope itemtype="http://schema.org/WebPage" lang="zh-Hans">
+
+  
+
+
+
+
+
+
+
+
+
+
+  
+  
+    
+  
+
+  <div class="container one-collumn sidebar-position-left page-post-detail ">
+    <div class="headband"></div>
+
+    <header id="header" class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-meta ">
+  
+
+  <div class="custom-logo-site-title">
+    <a href="/"  class="brand" rel="start">
+      <span class="logo-line-before"><i></i></span>
+      <span class="site-title">Z.S.K.'s Records</span>
+      <span class="logo-line-after"><i></i></span>
+    </a>
+  </div>
+    
+      <p class="site-subtitle"></p>
+    
+</div>
+
+<div class="site-nav-toggle">
+  <button>
+    <span class="btn-bar"></span>
+    <span class="btn-bar"></span>
+    <span class="btn-bar"></span>
+  </button>
+</div>
+
+<nav class="site-nav">
+  
+
+  
+    <ul id="menu" class="menu">
+      
+        
+        <li class="menu-item menu-item-home">
+          <a href="/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-home"></i> <br />
+            
+            首页
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-categories">
+          <a href="/categories" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-th"></i> <br />
+            
+            分类
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-about">
+          <a href="/about/ZSK-Profile.pdf" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-user"></i> <br />
+            
+            简历
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-archives">
+          <a href="/archives" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-archive"></i> <br />
+            
+            归档
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-tags">
+          <a href="/tags" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-tags"></i> <br />
+            
+            标签
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-commonweal">
+          <a href="/404.html" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-heartbeat"></i> <br />
+            
+            公益404
+          </a>
+        </li>
+      
+
+      
+        <li class="menu-item menu-item-search">
+          
+            <a href="javascript:;" class="popup-trigger">
+          
+            
+              <i class="menu-item-icon fa fa-search fa-fw"></i> <br />
+            
+            搜索
+          </a>
+        </li>
+      
+    </ul>
+  
+
+  
+    <div class="site-search">
+      
+  <div class="popup">
+ <span class="search-icon fa fa-search"></span>
+ <input type="text" id="local-search-input">
+ <div id="local-search-result"></div>
+ <span class="popup-btn-close">close</span>
+</div>
+
+
+    </div>
+  
+</nav>
+
+
+
+ </div>
+    </header>
+
+    <main id="main" class="main">
+      <div class="main-inner">
+        <div class="content-wrap">
+          <div id="content" class="content">
+            
 
   <div id="posts" class="posts-expand">
-    {{ post_template.render(page) }}
+    
 
-    <div class="post-spread">
-      {% if theme.jiathis %}
-        {% include '_partials/share/jiathis.swig' %}
-      {% elseif theme.baidushare %}
-        {% include '_partials/share/baidushare.swig' %}
-      {% elseif theme.add_this_id %}
-        {% include '_partials/share/add-this.swig' %}
-      {% elseif theme.duoshuo_shortname and theme.duoshuo_share %}
-        {% include '_partials/share/duoshuo_share.swig' %}
-      {% endif %}
+  
+
+  
+  
+  
+
+  <article class="post post-type-normal " itemscope itemtype="http://schema.org/Article">
+  <link itemprop="mainEntityOfPage" href="https://zhoushuke.github.io/2022/05/29/Model-Traning-High-Speed-Tech/">
+
+  <span style="display:none" itemprop="author" itemscope itemtype="http://schema.org/Person">
+    <meta itemprop="name" content="">
+    <meta itemprop="description" content="">
+    <meta itemprop="image" content="/images/avatar.gif">
+  </span>
+
+  <span style="display:none" itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+    <meta itemprop="name" content="Z.S.K.'s Records">
+    <span style="display:none" itemprop="logo" itemscope itemtype="http://schema.org/ImageObject">
+      <img style="display:none;" itemprop="url image" alt="Z.S.K.'s Records" src="">
+    </span>
+  </span>
+
+    
+      <header class="post-header">
+
+        
+        
+          <h1 class="post-title" itemprop="name headline">
+            
+            
+              
+                工程侧如何加速模型训练
+              
+            
+          </h1>
+        
+
+        <div class="post-meta">
+          <span class="post-time">
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">发表于</span>
+              
+              <time title="Post created" itemprop="dateCreated datePublished" datetime="2022-05-29T18:30:53+08:00">
+                2022-05-29
+              </time>
+            
+
+            
+
+            
+          </span>
+
+          
+            <span class="post-category" >
+            
+              <span class="post-meta-divider">|</span>
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-folder-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">分类于</span>
+              
+              
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/%E5%88%86%E5%B8%83%E5%BC%8F%E6%9E%B6%E6%9E%84/" itemprop="url" rel="index">
+                    <span itemprop="name">分布式架构</span>
+                  </a>
+                </span>
+
+                
+                
+              
+            </span>
+          
+
+          
+            
+          
+
+          
+
+          
+          
+
+          
+
+          
+
+        </div>
+      </header>
+    
+
+
+    <div class="post-body" itemprop="articleBody">
+
+      
+      
+
+      
+        <p>模型训练除了算法侧需要优化之外，工程师也可以做很多落地来加速这个过程，今天就结合作者在落地训练平台的经验来聊一聊其中常用技术.</p>
+<span id="more"></span>
+
+
+
+<p>训练常常提到的单机单卡，单机多卡，多机多卡以及数据并行及模型并行的概念(<strong>作者并不是算法研究工作者,也没有能力深入了解其代码细节，所以接下来只会广义上引出一些概念</strong>)</p>
+<h3 id="GPU使用"><a href="#GPU使用" class="headerlink" title="GPU使用"></a>GPU使用</h3><h4 id="单机单卡"><a href="#单机单卡" class="headerlink" title="单机单卡"></a>单机单卡</h4><p>这是最简单的一种方式, 使用一台机器上的一张卡运行任务, 常常用于本地调试目的，这个没什么好说的</p>
+<h4 id="单机多卡"><a href="#单机多卡" class="headerlink" title="单机多卡"></a>单机多卡</h4><p>有时只使用一张卡效率太慢，如果刚好一台机器上又有好几块GPU,那么自然就会想到是不是可以从单卡扩展到多卡上，同时在多张卡上运行</p>
+<h4 id="多机多卡"><a href="#多机多卡" class="headerlink" title="多机多卡"></a>多机多卡</h4><p>一般情况下，一台服务器可安装8块GPU,如果性能还是无法满足的情况下，就需要使用多机多卡方式了，从单机扩展到多机实现分布式</p>
+<p><strong>单机多卡</strong>和<strong>多机多卡（分布式）</strong>的区别：</p>
+<ul>
+<li><strong>单机多卡</strong>：只需运行一份代码，由该代码分配该台机器上GPU资源的使用</li>
+<li><strong>多机多卡</strong>：每台机器上都需要运行一份代码，机器之间需要互相通信传递梯度，并且模型参数的更新也存在<strong>同步</strong>训练模式和<strong>异步</strong>训练模式的区别</li>
+</ul>
+<h3 id="GPU并行"><a href="#GPU并行" class="headerlink" title="GPU并行"></a>GPU并行</h3><p>那么有以上几种对GPU的使用, 存在多GPU的情况下，又涉及到另一个问题就是: 多GPU之间如何协调数据、模型的关系呢?</p>
+<p>显然要么把数据切分，要么把模型切分，业界大体以数据并行、模型并行的方式实现,而又以数据并行使用较多</p>
+<h4 id="数据并行"><a href="#数据并行" class="headerlink" title="数据并行"></a>数据并行</h4><p><img src="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20220529112651.png"></p>
+<p><strong>数据并行时，每个GPU设备上保持了同样的模型数据</strong>，且一次完整的训练过程包括以下3步：</p>
+<ul>
+<li>1.CPU负责将不同的训练数据（mini-batch）分别喂给GPU0和GPU1设备；</li>
+<li>2.不同的显卡设备上存储了完全一致的模型，通过mini-batch数据进行了前向和反向传播；</li>
+<li>3.位于不同GPU设备上的模型进行权重同步和更新</li>
+</ul>
+<p>其中第一点关心的是训练数据如何平均地分配给GPU,也就是dataloader, 这个大多数的训练框架都会实现</p>
+<p>数据并行又分为同步、异步, 这里就不展开了</p>
+<h4 id="模型并行"><a href="#模型并行" class="headerlink" title="模型并行"></a>模型并行</h4><p>相对于数据并行而言，模型并行就是将模型切成若干份放到若干GPU中(<strong>模型就是网络,分为很多层，我们可以将网络层切割分布到不同的GPU上</strong>)</p>
+<p>关于模型并行作者所在的业务中几乎没有用到，而且网络上使用的也不是太多，作者了解不多，这里就不误人子弟了，有空的时候再详细研究研究</p>
+<p>OK, 回到正题, 那么多卡的情况下，他们的通信如何加速呢？</p>
+<h3 id="加速训练"><a href="#加速训练" class="headerlink" title="加速训练"></a>加速训练</h3><p>还是这张图</p>
+<p><img src="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20220529112651.png"></p>
+<p>从这个图我们可以知道，不管是在单机多卡还是多机多卡训练场景下， 如果有parameter server参与，则ps很容易成为瓶颈, 如果想让速度更快，就成本而言，有那么下面几种方式:</p>
+<p>成本小:</p>
+<blockquote>
+<ul>
+<li>把训练时的单卡 batchsize 加大，将计算量增大而传输量不变</li>
+<li>让研究员尽量训更大的网络，让他们多放点 Conv 而不是 FC，这让计算量增加的比参数量（即传输的数据量）更多一些</li>
+<li>说服研究员不要坚持等价的 SGD，换用 ASGD，计算与通讯同时进行</li>
+</ul>
+</blockquote>
+<p>成本小的方案一般需要通过调参得到最优解</p>
+<p>成本大:</p>
+<blockquote>
+<ul>
+<li>把 PS 变成多机版本，每台服务器管一部分 weight，从而带宽压力可以均摊到更多服务器上，降低传输量</li>
+<li>依靠更好的硬件<ul>
+<li>机器间通讯：万兆网络是底线，Infiniband 和 RoCE 的带宽从 56Gbps 一直上升到 100Gbps 甚至 200Gbps，让 <a href="https://link.zhihu.com/?target=https://www.mellanox.com/">Mellanox</a> 这家公司生意越来越好（现在被 NVIDIA 直接收购了）</li>
+<li>机器内通讯：AMD 比牙膏厂更早支持 PCIe 4.0，让带宽翻了个倍；NVIDIA 搞出 NVLink，愣是把通讯带宽搞上了不可思议的 600Gb&#x2F;s……</li>
+</ul>
+</li>
+<li>Mellanox 表示：我们的<strong>智能 Switch</strong> 可以直接当 PS，我没带宽瓶颈！</li>
+</ul>
+</blockquote>
+<p>直接换性能更好的硬件效果是立竿见影，就是太费钱, 所以要千方百计的<strong>降低传输</strong>,又引出了若干niubility的技术</p>
+<h4 id="RDMA"><a href="#RDMA" class="headerlink" title="RDMA"></a>RDMA</h4><p>DMA全称为Direct Memory Access，即直接内存访问。意思是外设对内存的读写过程可以不用CPU参与而直接进行</p>
+<p>如果说DMA解决的是本机外设直接操作内存的话，而RDMA则是Remote Direct Memory Access, 解决的对远程节点的内存直接访问</p>
+<p>关于DMA，这篇博文写的不错，可以参考: <a target="_blank" rel="noopener" href="https://mp.weixin.qq.com/s/UqSydz8hJCFcX5CF30gXSw">海思专家如何看待RDMA技术？</a></p>
+<p>RDMA本身指的是一种技术,不是一类特定的产品, 具体协议层面，包含Infiniband（IB），RDMA over Converged Ethernet（RoCE）和internet Wide Area RDMA Protocol（iWARP）。三种协议都符合RDMA标准。</p>
+<p>DMA需要硬件的支持，所以成本比较贵</p>
+<h4 id="IB"><a href="#IB" class="headerlink" title="IB"></a>IB</h4><p>需要硬件、协议、软件的全套支持，现在IB已经达到了全双工惊人的400Gb&#x2F;s</p>
+<p>这玩意就更贵了,除了网关外，交换机也需要配套</p>
+<p><a target="_blank" rel="noopener" href="https://max.book118.com/html/2019/0609/8101047056002027.shtm">高性能计算知识：高性算InfiniBand网络详解.pdf</a></p>
+<h4 id="RoCE"><a href="#RoCE" class="headerlink" title="RoCE"></a>RoCE</h4><p>RoCE从英文全称就可以看出它是基于以太网链路层的协议，v1版本网络层仍然使用了IB规范，而v2使用了UDP+IP作为网络层，使得数据包也可以被路由</p>
+<p>某种程度上可以做为IB的低成本替代方案，不过性能肯定是不及IB的</p>
+<p><a target="_blank" rel="noopener" href="https://cloud.tencent.com/developer/article/1771431">浅析RoCE网络技术</a></p>
+<h4 id="MPI"><a href="#MPI" class="headerlink" title="MPI"></a>MPI</h4><p>mpi做为老牌的消息通信接口，多用于HPC或者超算的并发编程领域, 作者所在的平台中也使用到了基于mpi实现的mpich2库.</p>
+<p><a target="_blank" rel="noopener" href="https://izsk.me/2022/04/20/MPI-Structure/">MPI框架学习一架构组件</a></p>
+<p>MPI工作大多在CPU端，如果想作用于GPU,则会有些损耗(MPI传递GPU中的数据是有一个步骤是从Device拷贝数据到Host的内存), 所以对GPU来说(切确来说是nvidia gpu),则不得不说nccl</p>
+<p>####NCCL</p>
+<p>Nvidia于2015年公开发布NCCL,一个开源的、基于自身硬件的开源的集合通信库实现。其算法基本实现原理，和mpi的实现是基本类似的，由于其完全基于自家硬件，可以进行充分的优化，所以基于nvidia-gpu时，使用nccl性能是很强的，目前nccl是v2版本</p>
+<p>NCCL 最初只支持单机多 GPU 通信，从 NCCL2 开始支持多机多 GPU 通信</p>
+<p>以nvidia v100 gpu为例，来看看v100的Hardware Architecture</p>
+<p><img src="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20220529172604.png"></p>
+<p>图中不同的连线代表不同的通信方式，有3种通信方式: nvlink、PCIE、QPI</p>
+<h5 id="nvlink"><a href="#nvlink" class="headerlink" title="nvlink"></a>nvlink</h5><p>nvlink是nvidia出品的高速 GPU 互连技术, 目前已经更新至nvlink v3(A100上就是)，v100是 nvlink v2</p>
+<p>由于<strong>nvlink是全双工的通道</strong>，单向通道带宽为25Gb&#x2F;s，双向则为50Gb&#x2F;s，6个的话最大300Gb&#x2F;s</p>
+<p>这里要注意, 一块GPU上的nvlink通道是有限的，v100上最大是6通道，所以从图上可以看到，GPU与GPU之间的通道是nvlink， 但是只有6通道，所以没办法实现一块GPU跟其它的GPU都建立nvlink通道，所以没办法建立nvlink的两块gpu只得通过PCIE来进行通信了</p>
+<h5 id="PCIE"><a href="#PCIE" class="headerlink" title="PCIE"></a>PCIE</h5><p>PCIE(PCI-Express)，实质上是一种高速串行计算机扩展总线标准, 最新为PCIE v5版本，GPU上用的最多的还是PCIE v4</p>
+<p>PCIE v4版本的速度大概在16Gb&#x2F;s，而且还得看PCIE的插槽数量</p>
+<p>所以可看出，如果GPU与GPU之间通过PCIE通道，则会比nvlink v2差很多.</p>
+<p>同样，要注意<strong>PCIE v4直连CPU最大只能有16条</strong></p>
+<h5 id="QPI"><a href="#QPI" class="headerlink" title="QPI"></a>QPI</h5><p>Intel的QuickPath Interconnect技术缩写为QPI，译为快速通道互联,也是全双工的</p>
+<p>每个<a target="_blank" rel="noopener" href="https://product.pconline.com.cn/itbk/diy/cpu/1111/2572054.html">QPI总线</a>总带宽&#x3D;每秒传输次数(即QPI频率)×每次传输的有效数据(即16bit&#x2F;8&#x3D;2Byte)×双向</p>
+<p>即QPI频率为4.8GT&#x2F;s的总带宽&#x3D;4.8GT&#x2F;s×2Byte×2&#x3D;19.2GB&#x2F;s，QPI频率为6.4GT&#x2F;s的总带宽&#x3D;6.4GT&#x2F;s×2Byte×2&#x3D;25.6GB&#x2F;s</p>
+<p>另外说一下，nvidia v100的GPU与cpu也可以通过nvlink实现通信</p>
+<p><img src="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20220529180635.png"></p>
+<p>所以，这就是为什么很多大厂在GPU调度时要做GPU的拓扑感知的原因, 也是为了让<strong>GPU之间的路径更短, 不同的通道不同速度</strong></p>
+<p>最后，来说说在nvidia gpu的场景下，怎么知道走的是哪个方案呢, 使用以下命令</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br></pre></td><td class="code"><pre><span class="line">$ nvidia-smi topo -m</span><br><span class="line">        GPU0    GPU1    GPU2    GPU3    mlx5_0  mlx5_1  CPU Affinity</span><br><span class="line">GPU0     X      PIX     SYS     SYS     SYS     SYS     0-11,24-35</span><br><span class="line">GPU1    PIX      X      SYS     SYS     SYS     SYS     0-11,24-35</span><br><span class="line">GPU2    SYS     SYS      X      PIX     PHB     PHB     12-23,36-47</span><br><span class="line">GPU3    SYS     SYS     PIX      X      PHB     PHB     12-23,36-47</span><br><span class="line">mlx5_0  SYS     SYS     PHB     PHB      X      PIX</span><br><span class="line">mlx5_1  SYS     SYS     PHB     PHB     PIX      X </span><br><span class="line"></span><br><span class="line">Legend:</span><br><span class="line"></span><br><span class="line">  X    = Self</span><br><span class="line">  SYS  = Connection traversing PCIe as well as the SMP interconnect between NUMA nodes (e.g., QPI/UPI)</span><br><span class="line">  NODE = Connection traversing PCIe as well as the interconnect between PCIe Host Bridges within a NUMA node</span><br><span class="line">  PHB  = Connection traversing PCIe as well as a PCIe Host Bridge (typically the CPU)</span><br><span class="line">  PXB  = Connection traversing multiple PCIe switches (without traversing the PCIe Host Bridge)</span><br><span class="line">  PIX  = Connection traversing a single PCIe switch</span><br><span class="line">  NV<span class="comment">#  = Connection traversing a bonded set of # NVLinks</span></span><br></pre></td></tr></table></figure>
+
+<p>可以看到，上述服务器上有4块GPU卡，48个CPU核。</p>
+<p>GPU0和GPU1之间是通过PCIe switch通信的（不经过cpu）；</p>
+<p>GPU2和GPU3之间也是通过PCIe switch通信的；</p>
+<p>其它的GPU卡两两之间是通过QPI通信的（PCIe + QPI总线）；</p>
+<p>而mlx5_0 和mlx5_1是Mellanox ConnectX-4 PCIe网卡设备(10&#x2F;25&#x2F;40&#x2F;50千兆以太网适配器，另外该公司是IBA芯片的主要厂商)。</p>
+<p>当然，就算只说通信方向也还有很多的方法可以加速训练过程. 就CPU来说，外设也有远近之分，NUMA技术就是解决这个问题之一</p>
+<p>百度飞桨的深度学习分布式训练专题非常不错，值得看看.</p>
+<p><a target="_blank" rel="noopener" href="https://zhuanlan.zhihu.com/p/453295832">数据并行：提升训练吞吐的高效方法 |深度学习分布式训练专题</a></p>
+<h3 id="参考文章"><a href="#参考文章" class="headerlink" title="参考文章:"></a><strong>参考文章:</strong></h3><blockquote>
+<ul>
+<li><a target="_blank" rel="noopener" href="https://izsk.me/2022/04/20/MPI-Structure/">https://izsk.me/2022/04/20/MPI-Structure/</a></li>
+<li><a target="_blank" rel="noopener" href="https://mpitutorial.com/tutorials/mpi-introduction/zh_cn/">https://mpitutorial.com/tutorials/mpi-introduction/zh_cn/</a></li>
+<li><a target="_blank" rel="noopener" href="https://developer.aliyun.com/article/11181">https://developer.aliyun.com/article/11181</a></li>
+<li><a target="_blank" rel="noopener" href="https://zhuanlan.zhihu.com/p/33714726">https://zhuanlan.zhihu.com/p/33714726</a></li>
+<li><a target="_blank" rel="noopener" href="https://zhuanlan.zhihu.com/p/453295832">https://zhuanlan.zhihu.com/p/453295832</a></li>
+<li><a target="_blank" rel="noopener" href="https://zhuanlan.zhihu.com/p/367327698">https://zhuanlan.zhihu.com/p/367327698</a></li>
+<li><a target="_blank" rel="noopener" href="https://blog.51cto.com/u_15642578/5316839">https://blog.51cto.com/u_15642578/5316839</a></li>
+<li><a target="_blank" rel="noopener" href="https://zhuanlan.zhihu.com/p/367327698">https://zhuanlan.zhihu.com/p/367327698</a></li>
+<li><a href="https://link.zhihu.com/?target=https://www.mellanox.com/">https://link.zhihu.com/?target=https%3A//www.mellanox.com/</a></li>
+<li><a target="_blank" rel="noopener" href="https://cloud.tencent.com/developer/article/1771431">https://cloud.tencent.com/developer/article/1771431</a></li>
+<li><a target="_blank" rel="noopener" href="https://mp.weixin.qq.com/s/UqSydz8hJCFcX5CF30gXSw">https://mp.weixin.qq.com/s/UqSydz8hJCFcX5CF30gXSw</a></li>
+<li><a target="_blank" rel="noopener" href="https://product.pconline.com.cn/itbk/diy/cpu/1111/2572054.html">https://product.pconline.com.cn/itbk/diy/cpu/1111/2572054.html</a></li>
+<li><a target="_blank" rel="noopener" href="https://max.book118.com/html/2019/0609/8101047056002027.shtm">https://max.book118.com/html/2019/0609/8101047056002027.shtm</a></li>
+</ul>
+</blockquote>
+<h3 id="转载请注明出处https-izsk-me"><a href="#转载请注明出处https-izsk-me" class="headerlink" title="转载请注明出处https://izsk.me"></a><strong>转载请注明出处<a target="_blank" rel="noopener" href="https://izsk.me/">https://izsk.me</a></strong></h3>
+      
+    </div>
+
+    <div>
+      
+        
+<div id="wechat_subscriber" style="display: block; padding: 10px 0; margin: 20px auto; width: 100%; text-align: center">
+    <img id="wechat_subscriber_qcode" src="/images/websitecode250.png" alt=" wechat" style="width: 200px; max-width: 100%;"/>
+    <div>Scan Me To Read on Phone</div>
+</div>
+
+
+      
+    </div>
+
+    <div>
+      
+        
+  <div style="padding: 10px 0; margin: 20px auto; width: 90%; text-align: center;">
+    <div>I know you won't do this,but what if you did?</div>
+    <button id="rewardButton" disable="enable" onclick="var qr = document.getElementById('QR'); if (qr.style.display === 'none') {qr.style.display='block';} else {qr.style.display='none'}">
+      <span>赏</span>
+    </button>
+    <div id="QR" style="display: none;">
+      
+        <div id="wechat" style="display: inline-block">
+          <img id="wechat_qr" src="/images/wechatpayme.png" alt=" WeChat Pay"/>
+          <p>微信打赏</p>
+        </div>
+      
+      
+        <div id="alipay" style="display: inline-block">
+          <img id="alipay_qr" src="/images/alipayme.jpg" alt=" Alipay"/>
+          <p>支付宝打赏</p>
+        </div>
+      
     </div>
   </div>
 
-{% endblock %}
 
-{% block sidebar %}
-  {{ sidebar_template.render(true) }}
-{% endblock %}
+      
+    </div>
 
 
-{% block script_extra %}
-  {% include '_scripts/pages/post-details.swig' %}
-{% endblock %}
+    <footer class="post-footer">
+      
+        <div class="post-tags">
+          
+            <a href="/tags/%E5%88%86%E5%B8%83%E5%BC%8F%E6%9E%B6%E6%9E%84/" rel="tag"># 分布式架构</a>
+          
+        </div>
+      
+
+      
+        <div class="post-nav">
+          <div class="post-nav-next post-nav-item">
+            
+              <a href="/2022/05/15/Loki-log-with-wrong-labels/" rel="next" title="Grafana学习(loki日志存在错误的label)">
+                <i class="fa fa-chevron-left"></i> Grafana学习(loki日志存在错误的label)
+              </a>
+            
+          </div>
+
+          <span class="post-nav-divider"></span>
+
+          <div class="post-nav-prev post-nav-item">
+            
+              <a href="/2022/06/02/System-Understanding-NUMA-Architecture/" rel="prev" title="理解NUMA架构">
+                理解NUMA架构 <i class="fa fa-chevron-right"></i>
+              </a>
+            
+          </div>
+        </div>
+      
+
+      
+      
+    </footer>
+  </article>
+
+
+
+    <div class="post-spread">
+      
+    </div>
+  </div>
+
+
+          </div>
+          
+
+
+          
+  <div class="comments" id="comments">
+    
+  </div>
+
+
+        </div>
+        
+          
+  
+  <div class="sidebar-toggle">
+    <div class="sidebar-toggle-line-wrap">
+      <span class="sidebar-toggle-line sidebar-toggle-line-first"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-middle"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-last"></span>
+    </div>
+  </div>
+
+  <aside id="sidebar" class="sidebar">
+    <div class="sidebar-inner">
+
+      
+
+      
+        <ul class="sidebar-nav motion-element">
+          <li class="sidebar-nav-toc sidebar-nav-active" data-target="post-toc-wrap" >
+            文章目录
+          </li>
+          <li class="sidebar-nav-overview" data-target="site-overview">
+            站点概览
+          </li>
+        </ul>
+      
+
+      <section class="site-overview sidebar-panel">
+        <div class="site-author motion-element" itemprop="author" itemscope itemtype="http://schema.org/Person">
+          <img class="site-author-image" itemprop="image"
+               src="/images/avatar.gif"
+               alt="" />
+          <p class="site-author-name" itemprop="name"></p>
+          <p class="site-description motion-element" itemprop="description"></p>
+        </div>
+        <nav class="site-state motion-element">
+        
+          
+            <div class="site-state-item site-state-posts">
+              <a href="/archives">
+                <span class="site-state-item-count">192</span>
+                <span class="site-state-item-name">日志</span>
+              </a>
+            </div>
+          
+
+          
+            <div class="site-state-item site-state-categories">
+              <a href="/categories">
+                <span class="site-state-item-count">14</span>
+                <span class="site-state-item-name">分类</span>
+              </a>
+            </div>
+          
+
+          
+            <div class="site-state-item site-state-tags">
+              <a href="/tags">
+                <span class="site-state-item-count">14</span>
+                <span class="site-state-item-name">标签</span>
+              </a>
+            </div>
+          
+
+        </nav>
+
+        
+
+        <div class="links-of-author motion-element">
+          
+        </div>
+
+        
+        
+
+        
+        
+
+        
+
+
+      </section>
+
+      
+      <!--noindex-->
+        <section class="post-toc-wrap motion-element sidebar-panel sidebar-panel-active">
+          <div class="post-toc">
+
+            
+              
+            
+
+            
+              <div class="post-toc-content"><ol class="nav"><li class="nav-item nav-level-3"><a class="nav-link" href="#GPU%E4%BD%BF%E7%94%A8"><span class="nav-number">1.</span> <span class="nav-text">GPU使用</span></a><ol class="nav-child"><li class="nav-item nav-level-4"><a class="nav-link" href="#%E5%8D%95%E6%9C%BA%E5%8D%95%E5%8D%A1"><span class="nav-number">1.1.</span> <span class="nav-text">单机单卡</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#%E5%8D%95%E6%9C%BA%E5%A4%9A%E5%8D%A1"><span class="nav-number">1.2.</span> <span class="nav-text">单机多卡</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#%E5%A4%9A%E6%9C%BA%E5%A4%9A%E5%8D%A1"><span class="nav-number">1.3.</span> <span class="nav-text">多机多卡</span></a></li></ol></li><li class="nav-item nav-level-3"><a class="nav-link" href="#GPU%E5%B9%B6%E8%A1%8C"><span class="nav-number">2.</span> <span class="nav-text">GPU并行</span></a><ol class="nav-child"><li class="nav-item nav-level-4"><a class="nav-link" href="#%E6%95%B0%E6%8D%AE%E5%B9%B6%E8%A1%8C"><span class="nav-number">2.1.</span> <span class="nav-text">数据并行</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#%E6%A8%A1%E5%9E%8B%E5%B9%B6%E8%A1%8C"><span class="nav-number">2.2.</span> <span class="nav-text">模型并行</span></a></li></ol></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E5%8A%A0%E9%80%9F%E8%AE%AD%E7%BB%83"><span class="nav-number">3.</span> <span class="nav-text">加速训练</span></a><ol class="nav-child"><li class="nav-item nav-level-4"><a class="nav-link" href="#RDMA"><span class="nav-number">3.1.</span> <span class="nav-text">RDMA</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#IB"><span class="nav-number">3.2.</span> <span class="nav-text">IB</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#RoCE"><span class="nav-number">3.3.</span> <span class="nav-text">RoCE</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#MPI"><span class="nav-number">3.4.</span> <span class="nav-text">MPI</span></a><ol class="nav-child"><li class="nav-item nav-level-5"><a class="nav-link" href="#nvlink"><span class="nav-number">3.4.1.</span> <span class="nav-text">nvlink</span></a></li><li class="nav-item nav-level-5"><a class="nav-link" href="#PCIE"><span class="nav-number">3.4.2.</span> <span class="nav-text">PCIE</span></a></li><li class="nav-item nav-level-5"><a class="nav-link" href="#QPI"><span class="nav-number">3.4.3.</span> <span class="nav-text">QPI</span></a></li></ol></li></ol></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E5%8F%82%E8%80%83%E6%96%87%E7%AB%A0"><span class="nav-number">4.</span> <span class="nav-text">参考文章:</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E8%BD%AC%E8%BD%BD%E8%AF%B7%E6%B3%A8%E6%98%8E%E5%87%BA%E5%A4%84https-izsk-me"><span class="nav-number">5.</span> <span class="nav-text">转载请注明出处https:&#x2F;&#x2F;izsk.me</span></a></li></ol></div>
+            
+
+          </div>
+        </section>
+      <!--/noindex-->
+      
+
+    </div>
+  </aside>
+
+
+        
+      </div>
+    </main>
+
+    <footer id="footer" class="footer">
+      <div class="footer-inner">
+        <div class="copyright" >
+  
+  &copy; 
+  <span itemprop="copyrightYear">2022</span>
+  <span class="with-love">
+    <i class="fa fa-heart"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">Z.S.K.</span>
+</div>
+
+
+<div class="powered-by">
+  Supported by <a class="theme-link" target="_blank" rel="noopener" href="https://hexo.io">Hexo</a>
+</div>
+
+<div class="theme-info">
+  Theme -
+  <a class="theme-link" target="_blank" rel="noopener" href="https://github.com/iissnan/hexo-theme-next">
+    NexT.Mist
+  </a>
+</div>
+
+
+        
+
+        
+      </div>
+    </footer>
+
+    <div class="back-to-top">
+      <i class="fa fa-arrow-up"></i>
+    </div>
+  </div>
+
+  
+
+<script type="text/javascript">
+  if (Object.prototype.toString.call(window.Promise) !== '[object Function]') {
+    window.Promise = null;
+  }
+</script>
+
+
+
+
+
+
+
+
+
+  
+
+
+
+  
+  <script type="text/javascript" src="/lib/jquery/index.js?v=2.1.3"></script>
+
+  
+  <script type="text/javascript" src="/lib/fastclick/lib/fastclick.min.js?v=1.0.6"></script>
+
+  
+  <script type="text/javascript" src="/lib/jquery_lazyload/jquery.lazyload.js?v=1.9.7"></script>
+
+  
+  <script type="text/javascript" src="/lib/velocity/velocity.min.js?v=1.2.1"></script>
+
+  
+  <script type="text/javascript" src="/lib/velocity/velocity.ui.min.js?v=1.2.1"></script>
+
+  
+  <script type="text/javascript" src="/lib/fancybox/source/jquery.fancybox.pack.js?v=2.1.5"></script>
+
+
+  
+
+
+  <script type="text/javascript" src="/js/src/utils.js?v=5.1.0"></script>
+
+  <script type="text/javascript" src="/js/src/motion.js?v=5.1.0"></script>
+
+
+
+  
+  
+
+  
+  <script type="text/javascript" src="/js/src/scrollspy.js?v=5.1.0"></script>
+<script type="text/javascript" src="/js/src/post-details.js?v=5.1.0"></script>
+
+
+
+  
+
+
+  <script type="text/javascript" src="/js/src/bootstrap.js?v=5.1.0"></script>
+
+
+
+  
+
+
+
+  
+
+
+
+
+	
+
+
+
+
+
+  
+
+
+
+
+  
+  
+  <script type="text/javascript">
+    // Popup Window;
+    var isfetched = false;
+    // Search DB path;
+    var search_path = "search.xml";
+    if (search_path.length == 0) {
+      search_path = "search.xml";
+    }
+    var path = "/" + search_path;
+    // monitor main search box;
+
+    function proceedsearch() {
+      $("body").append('<div class="popoverlay">').css('overflow', 'hidden');
+      $('.popup').toggle();
+    }
+    // search function;
+    var searchFunc = function(path, search_id, content_id) {
+      'use strict';
+      $.ajax({
+        url: path,
+        dataType: "xml",
+        async: true,
+        success: function( xmlResponse ) {
+          // get the contents from search data
+          isfetched = true;
+          $('.popup').detach().appendTo('.header-inner');
+          var datas = $( "entry", xmlResponse ).map(function() {
+            return {
+              title: $( "title", this ).text(),
+              content: $("content",this).text(),
+              url: $( "url" , this).text()
+            };
+          }).get();
+          var $input = document.getElementById(search_id);
+          var $resultContent = document.getElementById(content_id);
+          $input.addEventListener('input', function(){
+            var matchcounts = 0;
+            var str='<ul class=\"search-result-list\">';
+            var keywords = this.value.trim().toLowerCase().split(/[\s\-]+/);
+            $resultContent.innerHTML = "";
+            if (this.value.trim().length > 1) {
+              // perform local searching
+              datas.forEach(function(data) {
+                var isMatch = false;
+                var content_index = [];
+                var data_title = data.title.trim().toLowerCase();
+                var data_content = data.content.trim().replace(/<[^>]+>/g,"").toLowerCase();
+                var data_url = decodeURIComponent(data.url);
+                var index_title = -1;
+                var index_content = -1;
+                var first_occur = -1;
+                // only match artiles with not empty titles and contents
+                if(data_title != '') {
+                  keywords.forEach(function(keyword, i) {
+                    index_title = data_title.indexOf(keyword);
+                    index_content = data_content.indexOf(keyword);
+                    if( index_title >= 0 || index_content >= 0 ){
+                      isMatch = true;
+                      if (i == 0) {
+                        first_occur = index_content;
+                      }
+                    }
+
+                  });
+                }
+                // show search results
+                if (isMatch) {
+                  matchcounts += 1;
+                  str += "<li><a href='"+ data_url +"' class='search-result-title'>"+ data_title +"</a>";
+                  var content = data.content.trim().replace(/<[^>]+>/g,"");
+                  if (first_occur >= 0) {
+                    // cut out 100 characters
+                    var start = first_occur - 20;
+                    var end = first_occur + 80;
+                    if(start < 0){
+                      start = 0;
+                    }
+                    if(start == 0){
+                      end = 50;
+                    }
+                    if(end > content.length){
+                      end = content.length;
+                    }
+                    var match_content = content.substring(start, end);
+                    // highlight all keywords
+                    keywords.forEach(function(keyword){
+                      var regS = new RegExp(keyword, "gi");
+                      match_content = match_content.replace(regS, "<b class=\"search-keyword\">"+keyword+"</b>");
+                    });
+
+                    str += "<p class=\"search-result\">" + match_content +"...</p>"
+                  }
+                  str += "</li>";
+                }
+              })};
+            str += "</ul>";
+            if (matchcounts == 0) { str = '<div id="no-result"><i class="fa fa-frown-o fa-5x" /></div>' }
+            if (keywords == "") { str = '<div id="no-result"><i class="fa fa-search fa-5x" /></div>' }
+            $resultContent.innerHTML = str;
+          });
+          proceedsearch();
+        }
+      });}
+
+    // handle and trigger popup window;
+    $('.popup-trigger').click(function(e) {
+      e.stopPropagation();
+      if (isfetched == false) {
+        searchFunc(path, 'local-search-input', 'local-search-result');
+      } else {
+        proceedsearch();
+      };
+    });
+
+    $('.popup-btn-close').click(function(e){
+      $('.popup').hide();
+      $(".popoverlay").remove();
+      $('body').css('overflow', '');
+    });
+    $('.popup').click(function(e){
+      e.stopPropagation();
+    });
+  </script>
+
+
+  
+
+  
+
+  
+
+  
+
+
+</body>
+</html>

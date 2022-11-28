@@ -1,38 +1,925 @@
-{% extends '_layout.swig' %}
-{% import '_macro/post.swig' as post_template %}
-{% import '_macro/sidebar.swig' as sidebar_template %}
+<!doctype html>
 
 
-{% block title %} {{ page.title }} | {{ config.title }} {% endblock %}
 
-{% block page_class %}page-post-detail{% endblock %}
+  
 
 
-{% block content %}
+<html class="theme-next mist use-motion" lang="zh-Hans">
+<head>
+  <meta charset="UTF-8"/>
+<meta http-equiv="X-UA-Compatible" content="IE=edge" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1"/>
+
+
+
+<meta http-equiv="Cache-Control" content="no-transform" />
+<meta http-equiv="Cache-Control" content="no-siteapp" />
+
+
+
+
+
+
+
+
+
+
+
+
+  
+  
+  <link href="/lib/fancybox/source/jquery.fancybox.css?v=2.1.5" rel="stylesheet" type="text/css" />
+
+
+
+
+  
+  
+  
+  
+
+  
+    
+    
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+    
+    
+    <link href="//fonts.googleapis.com/css?family=Lato:300,300italic,400,400italic,700,700italic&subset=latin,latin-ext" rel="stylesheet" type="text/css">
+  
+
+
+
+
+
+
+<link href="/lib/font-awesome/css/font-awesome.min.css?v=4.6.2" rel="stylesheet" type="text/css" />
+
+<link href="/css/main.css?v=5.1.0" rel="stylesheet" type="text/css" />
+
+
+  <meta name="keywords" content="分布式架构," />
+
+
+
+
+
+
+
+
+  <link rel="shortcut icon" type="image/x-icon" href="/favicon.ico?v=5.1.0" />
+
+
+
+
+
+
+<meta name="description" content="VS&#x2F;DR的体系结构:为了阐述方便，我根据官方原理图另外制作了一幅图，如下图所示：">
+<meta property="og:type" content="article">
+<meta property="og:title" content="LVS-DR工作原理图文详解">
+<meta property="og:url" content="https://zhoushuke.github.io/2016/04/13/LVS-DR%E5%B7%A5%E4%BD%9C%E5%8E%9F%E7%90%86%E5%9B%BE%E6%96%87%E8%AF%A6%E8%A7%A3/index.html">
+<meta property="og:site_name" content="Z.S.K.&#39;s Records">
+<meta property="og:description" content="VS&#x2F;DR的体系结构:为了阐述方便，我根据官方原理图另外制作了一幅图，如下图所示：">
+<meta property="og:locale">
+<meta property="og:image" content="https://zskgithubblog.oss-cn-beijing.aliyuncs.com/blogpic/LVS-DR1.jpg">
+<meta property="og:image" content="https://zskgithubblog.oss-cn-beijing.aliyuncs.com/blogpic/LVS-DR2.jpg">
+<meta property="og:image" content="https://zskgithubblog.oss-cn-beijing.aliyuncs.com/blogpic/LVS-DR3.jpg">
+<meta property="og:image" content="https://zskgithubblog.oss-cn-beijing.aliyuncs.com/blogpic/LVS-DR4.jpg">
+<meta property="og:image" content="https://zskgithubblog.oss-cn-beijing.aliyuncs.com/blogpic/LVS-DR5.jpg">
+<meta property="og:image" content="https://zskgithubblog.oss-cn-beijing.aliyuncs.com/blogpic/LVS-DR6.jpg">
+<meta property="article:published_time" content="2016-04-13T10:27:37.000Z">
+<meta property="article:modified_time" content="2022-07-19T03:16:00.952Z">
+<meta property="article:author" content="Z.S.K.">
+<meta property="article:tag" content="分布式架构">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:image" content="https://zskgithubblog.oss-cn-beijing.aliyuncs.com/blogpic/LVS-DR1.jpg">
+
+
+
+<script type="text/javascript" id="hexo.configurations">
+  var NexT = window.NexT || {};
+  var CONFIG = {
+    root: '',
+    scheme: 'Mist',
+    sidebar: {"position":"left","display":"post"},
+    fancybox: true,
+    motion: true,
+    duoshuo: {
+      userId: 'undefined',
+      author: '博主'
+    },
+    algolia: {
+      applicationID: '',
+      apiKey: '',
+      indexName: '',
+      hits: {"per_page":10},
+      labels: {"input_placeholder":"Search for Posts","hits_empty":"We didn't find any results for the search: ${query}","hits_stats":"${hits} results found in ${time} ms"}
+    }
+  };
+</script>
+
+
+
+  <link rel="canonical" href="https://zhoushuke.github.io/2016/04/13/LVS-DR工作原理图文详解/"/>
+
+
+
+
+
+  <title> LVS-DR工作原理图文详解 | Z.S.K.'s Records </title>
+<meta name="generator" content="Hexo 6.2.0"></head>
+
+<body itemscope itemtype="http://schema.org/WebPage" lang="zh-Hans">
+
+  
+
+
+
+
+
+
+
+
+
+
+  
+  
+    
+  
+
+  <div class="container one-collumn sidebar-position-left page-post-detail ">
+    <div class="headband"></div>
+
+    <header id="header" class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-meta ">
+  
+
+  <div class="custom-logo-site-title">
+    <a href="/"  class="brand" rel="start">
+      <span class="logo-line-before"><i></i></span>
+      <span class="site-title">Z.S.K.'s Records</span>
+      <span class="logo-line-after"><i></i></span>
+    </a>
+  </div>
+    
+      <p class="site-subtitle"></p>
+    
+</div>
+
+<div class="site-nav-toggle">
+  <button>
+    <span class="btn-bar"></span>
+    <span class="btn-bar"></span>
+    <span class="btn-bar"></span>
+  </button>
+</div>
+
+<nav class="site-nav">
+  
+
+  
+    <ul id="menu" class="menu">
+      
+        
+        <li class="menu-item menu-item-home">
+          <a href="/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-home"></i> <br />
+            
+            首页
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-categories">
+          <a href="/categories" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-th"></i> <br />
+            
+            分类
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-about">
+          <a href="/about/ZSK-Profile.pdf" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-user"></i> <br />
+            
+            简历
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-archives">
+          <a href="/archives" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-archive"></i> <br />
+            
+            归档
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-tags">
+          <a href="/tags" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-tags"></i> <br />
+            
+            标签
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-commonweal">
+          <a href="/404.html" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-heartbeat"></i> <br />
+            
+            公益404
+          </a>
+        </li>
+      
+
+      
+        <li class="menu-item menu-item-search">
+          
+            <a href="javascript:;" class="popup-trigger">
+          
+            
+              <i class="menu-item-icon fa fa-search fa-fw"></i> <br />
+            
+            搜索
+          </a>
+        </li>
+      
+    </ul>
+  
+
+  
+    <div class="site-search">
+      
+  <div class="popup">
+ <span class="search-icon fa fa-search"></span>
+ <input type="text" id="local-search-input">
+ <div id="local-search-result"></div>
+ <span class="popup-btn-close">close</span>
+</div>
+
+
+    </div>
+  
+</nav>
+
+
+
+ </div>
+    </header>
+
+    <main id="main" class="main">
+      <div class="main-inner">
+        <div class="content-wrap">
+          <div id="content" class="content">
+            
 
   <div id="posts" class="posts-expand">
-    {{ post_template.render(page) }}
+    
 
-    <div class="post-spread">
-      {% if theme.jiathis %}
-        {% include '_partials/share/jiathis.swig' %}
-      {% elseif theme.baidushare %}
-        {% include '_partials/share/baidushare.swig' %}
-      {% elseif theme.add_this_id %}
-        {% include '_partials/share/add-this.swig' %}
-      {% elseif theme.duoshuo_shortname and theme.duoshuo_share %}
-        {% include '_partials/share/duoshuo_share.swig' %}
-      {% endif %}
+  
+
+  
+  
+  
+
+  <article class="post post-type-normal " itemscope itemtype="http://schema.org/Article">
+  <link itemprop="mainEntityOfPage" href="https://zhoushuke.github.io/2016/04/13/LVS-DR%E5%B7%A5%E4%BD%9C%E5%8E%9F%E7%90%86%E5%9B%BE%E6%96%87%E8%AF%A6%E8%A7%A3/">
+
+  <span style="display:none" itemprop="author" itemscope itemtype="http://schema.org/Person">
+    <meta itemprop="name" content="">
+    <meta itemprop="description" content="">
+    <meta itemprop="image" content="/images/avatar.gif">
+  </span>
+
+  <span style="display:none" itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+    <meta itemprop="name" content="Z.S.K.'s Records">
+    <span style="display:none" itemprop="logo" itemscope itemtype="http://schema.org/ImageObject">
+      <img style="display:none;" itemprop="url image" alt="Z.S.K.'s Records" src="">
+    </span>
+  </span>
+
+    
+      <header class="post-header">
+
+        
+        
+          <h1 class="post-title" itemprop="name headline">
+            
+            
+              
+                LVS-DR工作原理图文详解
+              
+            
+          </h1>
+        
+
+        <div class="post-meta">
+          <span class="post-time">
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">发表于</span>
+              
+              <time title="Post created" itemprop="dateCreated datePublished" datetime="2016-04-13T18:27:37+08:00">
+                2016-04-13
+              </time>
+            
+
+            
+
+            
+          </span>
+
+          
+            <span class="post-category" >
+            
+              <span class="post-meta-divider">|</span>
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-folder-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">分类于</span>
+              
+              
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/%E5%88%86%E5%B8%83%E5%BC%8F%E6%9E%B6%E6%9E%84/" itemprop="url" rel="index">
+                    <span itemprop="name">分布式架构</span>
+                  </a>
+                </span>
+
+                
+                
+              
+            </span>
+          
+
+          
+
+          
+
+          
+          
+
+          
+
+          
+
+        </div>
+      </header>
+    
+
+
+    <div class="post-body" itemprop="articleBody">
+
+      
+      
+
+      
+        <h3 id="VS-x2F-DR的体系结构"><a href="#VS-x2F-DR的体系结构" class="headerlink" title="VS&#x2F;DR的体系结构:"></a><strong>VS&#x2F;DR的体系结构:</strong></h3><p>为了阐述方便，我根据官方原理图另外制作了一幅图，如下图所示：</p>
+<span id="more"></span>
+
+<p><img src="https://zskgithubblog.oss-cn-beijing.aliyuncs.com/blogpic/LVS-DR1.jpg" alt="LVS-DR1"></p>
+<p>LVS-DR:</p>
+<p><img src="https://zskgithubblog.oss-cn-beijing.aliyuncs.com/blogpic/LVS-DR2.jpg" alt="LVS-DR2"></p>
+<p>DR 值 Direct Routing，直接路由，DR 模型中，Director 和 Realserver 处在同一网络中，对于 Director，VIP 用于接受客户端请求，DIP 用于和 Realserver 通信。对于 Realserver，每个 Realserver 都配有和 Director 相同的 VIP（此 VIP 隐藏，关闭对 ARP 请求的响应），仅用户响应客户端的请求，RIP 用于和 Director 通信。<br>当客户端请求集群服务时，请求报文发送至 Director 的 VIP（Realserver的 VIP 不会响应 ARP 请求），Director 将客户端报文的源和目标 MAC 地址进行重新封装，将报文转发至 Realserver，Realserver 接收转发的报文。此时报文的源 IP 和目标 IP 都没有被修改，因此 Realserver 接受到的请求报文的目标 IP 地址为本机配置的 VIP，它将使用自己的 VIP 直接响应客户端。<br>LVS-DR 模型中，客户端的响应报文不会经过 Director，因此 Director 的并发能力有很大提升。</p>
+<h3 id="LVS-DR-模型特性"><a href="#LVS-DR-模型特性" class="headerlink" title="LVS-DR 模型特性:"></a><strong>LVS-DR 模型特性:</strong></h3><blockquote>
+<ul>
+<li>保证前端路由器将目标地址为 VIP 的报文通过 ARP 解析后送往 Director。</li>
+<li>静态绑定：在前端路由将 VIP 对应的目标 MAC 地址静态配置为Director VIP 接口的 MAC 地址。</li>
+<li>arptables：在各 Realserver 上，通过 arptables 规则拒绝Realserver响应来自客户端对 VIP 的 ARP 广播请求</li>
+<li>修改内核参数：在 Realserver 上修改内核参数，并结合地址的配置方式实现拒绝响应对 VIP 的 ARP 广播请求</li>
+<li>各RIP 必须与 DIP 在同一个物理网络中</li>
+<li>RS 的 RIP 可以使用私有地址，也可以使用公网地址，以方便配置</li>
+<li>Director 仅负责处理入站请求，响应报文由 Realserver 直接发往客户端</li>
+<li>Realserver 不能将网关指向 DIP，而直接使用前端网关</li>
+<li>不支持端口映射</li>
+</ul>
+</blockquote>
+<p>我将结合这幅原理图及具体的实例来讲解一下LVS-DR的原理，包括数据包、数据帧的走向和转换过程。<br>官方的原理说明：Director接收用户的请求，然后根据负载均衡算法选取一台realserver，将包转发过去，最后由realserver直接回复给用户。</p>
+<p>实例场景设备清单：</p>
+<p><img src="https://zskgithubblog.oss-cn-beijing.aliyuncs.com/blogpic/LVS-DR3.jpg" alt="LVS-DR3"></p>
+<p>说明：我这里为了方便，client是与vip同一网段的机器。如果是外部的用户访问，将client替换成gateway即可，因为IP包头是不变的，变的只是源mac地址。</p>
+<blockquote>
+<p>① client向目标vip发出请求，Director接收。此时IP包头及数据帧头信息如下：<br><img src="https://zskgithubblog.oss-cn-beijing.aliyuncs.com/blogpic/LVS-DR4.jpg" alt="LVS-DR4"><br>② VS根据负载均衡算法选择一台active的realserver(假设是192.168.57.122)，将此RIP所在网卡的mac地址作为目标mac地址，发送到局域网里。此时IP包头及数据帧头信息如下：<br><img src="https://zskgithubblog.oss-cn-beijing.aliyuncs.com/blogpic/LVS-DR5.jpg" alt="LVS-DR5"><br>③ realserver(192.168.57.122)在局域网中收到这个帧，拆开后发现目标IP(VIP)与本地匹配，于是处理这个报文。随后重新封装报文，发送到局域网。此时IP包头及数据帧头信息如下：<br><img src="https://zskgithubblog.oss-cn-beijing.aliyuncs.com/blogpic/LVS-DR6.jpg" alt="LVS-DR6"><br>④ 如果client与VS同一网段，那么client(192.168.57.135)将收到这个回复报文。如果跨了网段，那么报文通过gateway&#x2F;路由器经由Internet返回给用户。</p>
+</blockquote>
+<h3 id="LVS-x2F-DR模式工作原理常见问题"><a href="#LVS-x2F-DR模式工作原理常见问题" class="headerlink" title="LVS&#x2F;DR模式工作原理常见问题:"></a><strong>LVS&#x2F;DR模式工作原理常见问题:</strong></h3><ol>
+<li><p>LVS&#x2F;DR如何处理请求报文的，会修改IP包内容吗？<br>1.1 vs&#x2F;dr本身不会关心IP层以上的信息，即使是端口号也是tcp&#x2F;ip协议栈去判断是否正确，vs&#x2F;dr本身主要做这么几个事：<br>1）接收client的请求，根据你设定的负载均衡算法选取一台realserver的ip；<br>2）以选取的这个ip对应的mac地址作为目标mac，然后重新将IP包封装成帧转发给这台RS；<br>3）在hash table中记录连接信息。<br>vs&#x2F;dr做的事情很少，也很简单，所以它的效率很高，不比硬件负载均衡设备差多少。<br>数据包、数据帧的大致流向是这样的：client –&gt; VS –&gt; RS –&gt; client<br>1.2 前面已作了回答，vs&#x2F;dr不会修改IP包的内容.</p>
+</li>
+<li><p>RealServer为什么要在lo接口上配置VIP？在出口网卡上配置VIP可以吗？<br>2.1 既然要让RS能够处理目标地址为vip的IP包，首先必须要让RS能接收到这个包。<br>在lo上配置vip能够完成接收包并将结果返回client。<br>2.2 答案是不可以将VIP设置在出口网卡上,否则会响应客户端的arp request,造成client&#x2F;gateway arp table紊乱，以至于整个load balance都不能正常工作。</p>
+</li>
+<li><p>RealServer为什么要抑制arp帧？<br>这个问题在上一问题中已经作了说明，这里结合实施命令进一步阐述。我们在具体实施部署的时候都会作如下调整：<br> echo “1” &gt;&#x2F;proc&#x2F;sys&#x2F;net&#x2F;ipv4&#x2F;conf&#x2F;lo&#x2F;arp_ignore<br> echo “2” &gt;&#x2F;proc&#x2F;sys&#x2F;net&#x2F;ipv4&#x2F;conf&#x2F;lo&#x2F;arp_announce<br> echo “1” &gt;&#x2F;proc&#x2F;sys&#x2F;net&#x2F;ipv4&#x2F;conf&#x2F;all&#x2F;arp_ignore<br> echo “2” &gt;&#x2F;proc&#x2F;sys&#x2F;net&#x2F;ipv4&#x2F;conf&#x2F;all&#x2F;arp_announce<br>我相信很多人都不会弄懂它们的作用是什么，只知道一定得有。我这里也不打算拿出来详细讨论，只是作几点说明，就当是补充吧。<br> echo “1” &gt;&#x2F;proc&#x2F;sys&#x2F;net&#x2F;ipv4&#x2F;conf&#x2F;lo&#x2F;arp_ignore<br> echo “2” &gt;&#x2F;proc&#x2F;sys&#x2F;net&#x2F;ipv4&#x2F;conf&#x2F;lo&#x2F;arp_announce<br>这两条是可以不用的，因为arp对逻辑接口没有意义。</p>
+</li>
+<li><p>如果你的RS的外部网络接口是eth0，那么<br> echo “1” &gt;&#x2F;proc&#x2F;sys&#x2F;net&#x2F;ipv4&#x2F;conf&#x2F;all&#x2F;arp_ignore<br> echo “2” &gt;&#x2F;proc&#x2F;sys&#x2F;net&#x2F;ipv4&#x2F;conf&#x2F;all&#x2F;arp_announce<br>其实真正要执行的是：<br> echo “1” &gt;&#x2F;proc&#x2F;sys&#x2F;net&#x2F;ipv4&#x2F;conf&#x2F;eth0&#x2F;arp_ignore<br> echo “2” &gt;&#x2F;proc&#x2F;sys&#x2F;net&#x2F;ipv4&#x2F;conf&#x2F;eth0&#x2F;arp_announce<br>所以我个人建议把上面两条也加到你的脚本里去，因为万一系统里上面两条默认的值不是0，那有可能是会出问题滴。</p>
+<blockquote>
+<ul>
+<li>arp_ignore:<br>定义对目标地址为本地IP的ARP询问不同的应答模式0<br>0 - (默认值): 回应任何网络接口上对任何本地IP地址的arp查询请求<br>1 - 只回答目标IP地址是来访网络接口本地地址的ARP查询请求<br>2 -只回答目标IP地址是来访网络接口本地地址的ARP查询请求,且来访IP必须在该网络接口的子网段内<br>3 - 不回应该网络界面的arp请求，而只对设置的唯一和连接地址做出回应<br>4-7 - 保留未使用<br>8 -不回应所有（本地地址）的arp查询<br>确定了向外发送ARP请求的发出地址 也即使VIP 地址</li>
+<li>arp_announce - INTEGER<br>对网络接口上，本地IP地址的发出的，ARP回应，作出相应级别的限制:<br>确定不同程度的限制,宣布对来自本地源IP地址发出Arp请求的接口<br>0 - (默认) 在任意网络接口（eth0,eth1，lo）上的任何本地地址<br>1 - 尽量避免不在该网络接口子网段的本地地址做出arp回应. 当发起ARP请求的源IP地址是被设置应该经由路由达到此网络接口的时候很有用.此时会检查来访IP是否为所有接口上的子网段内ip之一.如果改来访IP不属于各个网络接口上的子网段内,那么将采用级别2的方式来进行处理.<br>2 - 对查询目标使用最适当的本地地址.在此模式下将忽略这个IP数据包的源地址并尝试选择与能与该地址通信的本地地址.首要是选择所有的网络接口的子网中外出访问子网中包含该目标IP地址的本地地址. 如果没有合适的地址被发现,将选择当前的发送网络接口或其他的有可能接受到该ARP回应的网络接口来进行发送.限制了使用本地的vip地址作为优先的网络接口</li>
+</ul>
+</blockquote>
+</li>
+<li><p>LVS&#x2F;DR load balancer（director）与RS为什么要在同一网段中？<br>从第一个问题中大家应该明白vs&#x2F;dr是如何将请求转发给RS的了吧？它是在数据链路层来实现的，所以director必须和RS在同一网段里面。</p>
+</li>
+<li><p>为什么director上eth0接口除了VIP另外还要配一个ip（即DIP）？</p>
+<blockquote>
+<ul>
+<li>如果是用了keepalived等工具做HA或者Load Balance,则在健康检查时需要用到DIP。</li>
+<li>没有健康检查机制的HA或者Load Balance则没有存在的实际意义。</li>
+</ul>
+</blockquote>
+</li>
+<li><p>LVS&#x2F;DR ip_forward需要开启吗？<br>不需要。因为director跟realserver是同一个网段，无需开启转发。</p>
+</li>
+<li><p>director的vip的netmask一定要是255.255.255.255吗？<br>lvs&#x2F;dr里，director的vip的netmask 没必要设置为255.255.255.255，也不需要再去<br>route add -host $VIP dev eth0:0<br>director的vip本来就是要像正常的ip地址一样对外通告的,不要搞得这么特殊.</p>
+</li>
+</ol>
+<h3 id="参考文章"><a href="#参考文章" class="headerlink" title="参考文章:"></a><strong>参考文章:</strong></h3><blockquote>
+<ul>
+<li><a target="_blank" rel="noopener" href="http://www.cnblogs.com/czh-liyu/archive/2011/11/29/2267963.html">http://www.cnblogs.com/czh-liyu/archive/2011/11/29/2267963.html</a></li>
+</ul>
+</blockquote>
+<h3 id="转载请注明出处https-izsk-me"><a href="#转载请注明出处https-izsk-me" class="headerlink" title="转载请注明出处https://izsk.me"></a><strong>转载请注明出处<a target="_blank" rel="noopener" href="https://izsk.me/">https://izsk.me</a></strong></h3><hr>
+
+      
+    </div>
+
+    <div>
+      
+        
+<div id="wechat_subscriber" style="display: block; padding: 10px 0; margin: 20px auto; width: 100%; text-align: center">
+    <img id="wechat_subscriber_qcode" src="/images/websitecode250.png" alt=" wechat" style="width: 200px; max-width: 100%;"/>
+    <div>Scan Me To Read on Phone</div>
+</div>
+
+
+      
+    </div>
+
+    <div>
+      
+        
+  <div style="padding: 10px 0; margin: 20px auto; width: 90%; text-align: center;">
+    <div>I know you won't do this,but what if you did?</div>
+    <button id="rewardButton" disable="enable" onclick="var qr = document.getElementById('QR'); if (qr.style.display === 'none') {qr.style.display='block';} else {qr.style.display='none'}">
+      <span>赏</span>
+    </button>
+    <div id="QR" style="display: none;">
+      
+        <div id="wechat" style="display: inline-block">
+          <img id="wechat_qr" src="/images/wechatpayme.png" alt=" WeChat Pay"/>
+          <p>微信打赏</p>
+        </div>
+      
+      
+        <div id="alipay" style="display: inline-block">
+          <img id="alipay_qr" src="/images/alipayme.jpg" alt=" Alipay"/>
+          <p>支付宝打赏</p>
+        </div>
+      
     </div>
   </div>
 
-{% endblock %}
 
-{% block sidebar %}
-  {{ sidebar_template.render(true) }}
-{% endblock %}
+      
+    </div>
 
 
-{% block script_extra %}
-  {% include '_scripts/pages/post-details.swig' %}
-{% endblock %}
+    <footer class="post-footer">
+      
+        <div class="post-tags">
+          
+            <a href="/tags/%E5%88%86%E5%B8%83%E5%BC%8F%E6%9E%B6%E6%9E%84/" rel="tag"># 分布式架构</a>
+          
+        </div>
+      
+
+      
+        <div class="post-nav">
+          <div class="post-nav-next post-nav-item">
+            
+              <a href="/2016/02/29/docker%E5%AD%A6%E4%B9%A0%E8%AE%B0%E5%BD%95/" rel="next" title="docker学习记录">
+                <i class="fa fa-chevron-left"></i> docker学习记录
+              </a>
+            
+          </div>
+
+          <span class="post-nav-divider"></span>
+
+          <div class="post-nav-prev post-nav-item">
+            
+              <a href="/2016/07/30/CentOS-6-x%E4%B8%8A%E4%B8%BADocker%E5%AE%B9%E5%99%A8%E9%85%8D%E7%BD%AE%E7%89%A9%E7%90%86%E7%BD%91%E6%AE%B5%E7%9A%84%E9%9D%99%E6%80%81IP/" rel="prev" title="CentOS 6.x上为Docker容器配置物理网段的静态IP">
+                CentOS 6.x上为Docker容器配置物理网段的静态IP <i class="fa fa-chevron-right"></i>
+              </a>
+            
+          </div>
+        </div>
+      
+
+      
+      
+    </footer>
+  </article>
+
+
+
+    <div class="post-spread">
+      
+    </div>
+  </div>
+
+
+          </div>
+          
+
+
+          
+
+        </div>
+        
+          
+  
+  <div class="sidebar-toggle">
+    <div class="sidebar-toggle-line-wrap">
+      <span class="sidebar-toggle-line sidebar-toggle-line-first"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-middle"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-last"></span>
+    </div>
+  </div>
+
+  <aside id="sidebar" class="sidebar">
+    <div class="sidebar-inner">
+
+      
+
+      
+        <ul class="sidebar-nav motion-element">
+          <li class="sidebar-nav-toc sidebar-nav-active" data-target="post-toc-wrap" >
+            文章目录
+          </li>
+          <li class="sidebar-nav-overview" data-target="site-overview">
+            站点概览
+          </li>
+        </ul>
+      
+
+      <section class="site-overview sidebar-panel">
+        <div class="site-author motion-element" itemprop="author" itemscope itemtype="http://schema.org/Person">
+          <img class="site-author-image" itemprop="image"
+               src="/images/avatar.gif"
+               alt="" />
+          <p class="site-author-name" itemprop="name"></p>
+          <p class="site-description motion-element" itemprop="description"></p>
+        </div>
+        <nav class="site-state motion-element">
+        
+          
+            <div class="site-state-item site-state-posts">
+              <a href="/archives">
+                <span class="site-state-item-count">192</span>
+                <span class="site-state-item-name">日志</span>
+              </a>
+            </div>
+          
+
+          
+            <div class="site-state-item site-state-categories">
+              <a href="/categories">
+                <span class="site-state-item-count">14</span>
+                <span class="site-state-item-name">分类</span>
+              </a>
+            </div>
+          
+
+          
+            <div class="site-state-item site-state-tags">
+              <a href="/tags">
+                <span class="site-state-item-count">14</span>
+                <span class="site-state-item-name">标签</span>
+              </a>
+            </div>
+          
+
+        </nav>
+
+        
+
+        <div class="links-of-author motion-element">
+          
+        </div>
+
+        
+        
+
+        
+        
+
+        
+
+
+      </section>
+
+      
+      <!--noindex-->
+        <section class="post-toc-wrap motion-element sidebar-panel sidebar-panel-active">
+          <div class="post-toc">
+
+            
+              
+            
+
+            
+              <div class="post-toc-content"><ol class="nav"><li class="nav-item nav-level-3"><a class="nav-link" href="#VS-x2F-DR%E7%9A%84%E4%BD%93%E7%B3%BB%E7%BB%93%E6%9E%84"><span class="nav-number">1.</span> <span class="nav-text">VS&#x2F;DR的体系结构:</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#LVS-DR-%E6%A8%A1%E5%9E%8B%E7%89%B9%E6%80%A7"><span class="nav-number">2.</span> <span class="nav-text">LVS-DR 模型特性:</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#LVS-x2F-DR%E6%A8%A1%E5%BC%8F%E5%B7%A5%E4%BD%9C%E5%8E%9F%E7%90%86%E5%B8%B8%E8%A7%81%E9%97%AE%E9%A2%98"><span class="nav-number">3.</span> <span class="nav-text">LVS&#x2F;DR模式工作原理常见问题:</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E5%8F%82%E8%80%83%E6%96%87%E7%AB%A0"><span class="nav-number">4.</span> <span class="nav-text">参考文章:</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E8%BD%AC%E8%BD%BD%E8%AF%B7%E6%B3%A8%E6%98%8E%E5%87%BA%E5%A4%84https-izsk-me"><span class="nav-number">5.</span> <span class="nav-text">转载请注明出处https:&#x2F;&#x2F;izsk.me</span></a></li></ol></div>
+            
+
+          </div>
+        </section>
+      <!--/noindex-->
+      
+
+    </div>
+  </aside>
+
+
+        
+      </div>
+    </main>
+
+    <footer id="footer" class="footer">
+      <div class="footer-inner">
+        <div class="copyright" >
+  
+  &copy; 
+  <span itemprop="copyrightYear">2022</span>
+  <span class="with-love">
+    <i class="fa fa-heart"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">Z.S.K.</span>
+</div>
+
+
+<div class="powered-by">
+  Supported by <a class="theme-link" target="_blank" rel="noopener" href="https://hexo.io">Hexo</a>
+</div>
+
+<div class="theme-info">
+  Theme -
+  <a class="theme-link" target="_blank" rel="noopener" href="https://github.com/iissnan/hexo-theme-next">
+    NexT.Mist
+  </a>
+</div>
+
+
+        
+
+        
+      </div>
+    </footer>
+
+    <div class="back-to-top">
+      <i class="fa fa-arrow-up"></i>
+    </div>
+  </div>
+
+  
+
+<script type="text/javascript">
+  if (Object.prototype.toString.call(window.Promise) !== '[object Function]') {
+    window.Promise = null;
+  }
+</script>
+
+
+
+
+
+
+
+
+
+  
+
+
+
+  
+  <script type="text/javascript" src="/lib/jquery/index.js?v=2.1.3"></script>
+
+  
+  <script type="text/javascript" src="/lib/fastclick/lib/fastclick.min.js?v=1.0.6"></script>
+
+  
+  <script type="text/javascript" src="/lib/jquery_lazyload/jquery.lazyload.js?v=1.9.7"></script>
+
+  
+  <script type="text/javascript" src="/lib/velocity/velocity.min.js?v=1.2.1"></script>
+
+  
+  <script type="text/javascript" src="/lib/velocity/velocity.ui.min.js?v=1.2.1"></script>
+
+  
+  <script type="text/javascript" src="/lib/fancybox/source/jquery.fancybox.pack.js?v=2.1.5"></script>
+
+
+  
+
+
+  <script type="text/javascript" src="/js/src/utils.js?v=5.1.0"></script>
+
+  <script type="text/javascript" src="/js/src/motion.js?v=5.1.0"></script>
+
+
+
+  
+  
+
+  
+  <script type="text/javascript" src="/js/src/scrollspy.js?v=5.1.0"></script>
+<script type="text/javascript" src="/js/src/post-details.js?v=5.1.0"></script>
+
+
+
+  
+
+
+  <script type="text/javascript" src="/js/src/bootstrap.js?v=5.1.0"></script>
+
+
+
+  
+
+
+
+  
+
+
+
+
+	
+
+
+
+
+
+  
+
+
+
+
+  
+  
+  <script type="text/javascript">
+    // Popup Window;
+    var isfetched = false;
+    // Search DB path;
+    var search_path = "search.xml";
+    if (search_path.length == 0) {
+      search_path = "search.xml";
+    }
+    var path = "/" + search_path;
+    // monitor main search box;
+
+    function proceedsearch() {
+      $("body").append('<div class="popoverlay">').css('overflow', 'hidden');
+      $('.popup').toggle();
+    }
+    // search function;
+    var searchFunc = function(path, search_id, content_id) {
+      'use strict';
+      $.ajax({
+        url: path,
+        dataType: "xml",
+        async: true,
+        success: function( xmlResponse ) {
+          // get the contents from search data
+          isfetched = true;
+          $('.popup').detach().appendTo('.header-inner');
+          var datas = $( "entry", xmlResponse ).map(function() {
+            return {
+              title: $( "title", this ).text(),
+              content: $("content",this).text(),
+              url: $( "url" , this).text()
+            };
+          }).get();
+          var $input = document.getElementById(search_id);
+          var $resultContent = document.getElementById(content_id);
+          $input.addEventListener('input', function(){
+            var matchcounts = 0;
+            var str='<ul class=\"search-result-list\">';
+            var keywords = this.value.trim().toLowerCase().split(/[\s\-]+/);
+            $resultContent.innerHTML = "";
+            if (this.value.trim().length > 1) {
+              // perform local searching
+              datas.forEach(function(data) {
+                var isMatch = false;
+                var content_index = [];
+                var data_title = data.title.trim().toLowerCase();
+                var data_content = data.content.trim().replace(/<[^>]+>/g,"").toLowerCase();
+                var data_url = decodeURIComponent(data.url);
+                var index_title = -1;
+                var index_content = -1;
+                var first_occur = -1;
+                // only match artiles with not empty titles and contents
+                if(data_title != '') {
+                  keywords.forEach(function(keyword, i) {
+                    index_title = data_title.indexOf(keyword);
+                    index_content = data_content.indexOf(keyword);
+                    if( index_title >= 0 || index_content >= 0 ){
+                      isMatch = true;
+                      if (i == 0) {
+                        first_occur = index_content;
+                      }
+                    }
+
+                  });
+                }
+                // show search results
+                if (isMatch) {
+                  matchcounts += 1;
+                  str += "<li><a href='"+ data_url +"' class='search-result-title'>"+ data_title +"</a>";
+                  var content = data.content.trim().replace(/<[^>]+>/g,"");
+                  if (first_occur >= 0) {
+                    // cut out 100 characters
+                    var start = first_occur - 20;
+                    var end = first_occur + 80;
+                    if(start < 0){
+                      start = 0;
+                    }
+                    if(start == 0){
+                      end = 50;
+                    }
+                    if(end > content.length){
+                      end = content.length;
+                    }
+                    var match_content = content.substring(start, end);
+                    // highlight all keywords
+                    keywords.forEach(function(keyword){
+                      var regS = new RegExp(keyword, "gi");
+                      match_content = match_content.replace(regS, "<b class=\"search-keyword\">"+keyword+"</b>");
+                    });
+
+                    str += "<p class=\"search-result\">" + match_content +"...</p>"
+                  }
+                  str += "</li>";
+                }
+              })};
+            str += "</ul>";
+            if (matchcounts == 0) { str = '<div id="no-result"><i class="fa fa-frown-o fa-5x" /></div>' }
+            if (keywords == "") { str = '<div id="no-result"><i class="fa fa-search fa-5x" /></div>' }
+            $resultContent.innerHTML = str;
+          });
+          proceedsearch();
+        }
+      });}
+
+    // handle and trigger popup window;
+    $('.popup-trigger').click(function(e) {
+      e.stopPropagation();
+      if (isfetched == false) {
+        searchFunc(path, 'local-search-input', 'local-search-result');
+      } else {
+        proceedsearch();
+      };
+    });
+
+    $('.popup-btn-close').click(function(e){
+      $('.popup').hide();
+      $(".popoverlay").remove();
+      $('body').css('overflow', '');
+    });
+    $('.popup').click(function(e){
+      e.stopPropagation();
+    });
+  </script>
+
+
+  
+
+  
+
+  
+
+  
+
+
+</body>
+</html>

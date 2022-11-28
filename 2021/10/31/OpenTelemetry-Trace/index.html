@@ -1,38 +1,961 @@
-{% extends '_layout.swig' %}
-{% import '_macro/post.swig' as post_template %}
-{% import '_macro/sidebar.swig' as sidebar_template %}
+<!doctype html>
 
 
-{% block title %} {{ page.title }} | {{ config.title }} {% endblock %}
 
-{% block page_class %}page-post-detail{% endblock %}
+  
 
 
-{% block content %}
+<html class="theme-next mist use-motion" lang="zh-Hans">
+<head>
+  <meta charset="UTF-8"/>
+<meta http-equiv="X-UA-Compatible" content="IE=edge" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1"/>
+
+
+
+<meta http-equiv="Cache-Control" content="no-transform" />
+<meta http-equiv="Cache-Control" content="no-siteapp" />
+
+
+
+
+
+
+
+
+
+
+
+
+  
+  
+  <link href="/lib/fancybox/source/jquery.fancybox.css?v=2.1.5" rel="stylesheet" type="text/css" />
+
+
+
+
+  
+  
+  
+  
+
+  
+    
+    
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+    
+    
+    <link href="//fonts.googleapis.com/css?family=Lato:300,300italic,400,400italic,700,700italic&subset=latin,latin-ext" rel="stylesheet" type="text/css">
+  
+
+
+
+
+
+
+<link href="/lib/font-awesome/css/font-awesome.min.css?v=4.6.2" rel="stylesheet" type="text/css" />
+
+<link href="/css/main.css?v=5.1.0" rel="stylesheet" type="text/css" />
+
+
+  <meta name="keywords" content="CloudNavi," />
+
+
+
+
+
+
+
+
+  <link rel="shortcut icon" type="image/x-icon" href="/favicon.ico?v=5.1.0" />
+
+
+
+
+
+
+<meta name="description" content="历史文章: 可观测性到底在说什么 opentelemetry架构及名词介绍 在opentelemetry架构及名词介绍 中就引出了一个问题: 无论在数据平面如何做流量劫持，如何透传信息，以及如何生成或者继承Span，入口流量和出口流量之间的链路都存在无法串联的问题， 这个问题要解决还是需服务来埋点透传，将链路信息透传到下一次请求当中去">
+<meta property="og:type" content="article">
+<meta property="og:title" content="Opentelemetry调研实践三(全链路追踪的TraceID与SpanID)">
+<meta property="og:url" content="https://zhoushuke.github.io/2021/10/31/OpenTelemetry-Trace/index.html">
+<meta property="og:site_name" content="Z.S.K.&#39;s Records">
+<meta property="og:description" content="历史文章: 可观测性到底在说什么 opentelemetry架构及名词介绍 在opentelemetry架构及名词介绍 中就引出了一个问题: 无论在数据平面如何做流量劫持，如何透传信息，以及如何生成或者继承Span，入口流量和出口流量之间的链路都存在无法串联的问题， 这个问题要解决还是需服务来埋点透传，将链路信息透传到下一次请求当中去">
+<meta property="og:locale">
+<meta property="og:image" content="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20211031225945.png">
+<meta property="article:published_time" content="2021-10-31T12:30:53.000Z">
+<meta property="article:modified_time" content="2022-07-19T03:16:00.976Z">
+<meta property="article:author" content="Z.S.K.">
+<meta property="article:tag" content="CloudNavi">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:image" content="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20211031225945.png">
+
+
+
+<script type="text/javascript" id="hexo.configurations">
+  var NexT = window.NexT || {};
+  var CONFIG = {
+    root: '',
+    scheme: 'Mist',
+    sidebar: {"position":"left","display":"post"},
+    fancybox: true,
+    motion: true,
+    duoshuo: {
+      userId: 'undefined',
+      author: '博主'
+    },
+    algolia: {
+      applicationID: '',
+      apiKey: '',
+      indexName: '',
+      hits: {"per_page":10},
+      labels: {"input_placeholder":"Search for Posts","hits_empty":"We didn't find any results for the search: ${query}","hits_stats":"${hits} results found in ${time} ms"}
+    }
+  };
+</script>
+
+
+
+  <link rel="canonical" href="https://zhoushuke.github.io/2021/10/31/OpenTelemetry-Trace/"/>
+
+
+
+
+
+  <title> Opentelemetry调研实践三(全链路追踪的TraceID与SpanID) | Z.S.K.'s Records </title>
+<meta name="generator" content="Hexo 6.2.0"></head>
+
+<body itemscope itemtype="http://schema.org/WebPage" lang="zh-Hans">
+
+  
+
+
+
+
+
+
+
+
+
+
+  
+  
+    
+  
+
+  <div class="container one-collumn sidebar-position-left page-post-detail ">
+    <div class="headband"></div>
+
+    <header id="header" class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-meta ">
+  
+
+  <div class="custom-logo-site-title">
+    <a href="/"  class="brand" rel="start">
+      <span class="logo-line-before"><i></i></span>
+      <span class="site-title">Z.S.K.'s Records</span>
+      <span class="logo-line-after"><i></i></span>
+    </a>
+  </div>
+    
+      <p class="site-subtitle"></p>
+    
+</div>
+
+<div class="site-nav-toggle">
+  <button>
+    <span class="btn-bar"></span>
+    <span class="btn-bar"></span>
+    <span class="btn-bar"></span>
+  </button>
+</div>
+
+<nav class="site-nav">
+  
+
+  
+    <ul id="menu" class="menu">
+      
+        
+        <li class="menu-item menu-item-home">
+          <a href="/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-home"></i> <br />
+            
+            首页
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-categories">
+          <a href="/categories" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-th"></i> <br />
+            
+            分类
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-about">
+          <a href="/about/ZSK-Profile.pdf" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-user"></i> <br />
+            
+            简历
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-archives">
+          <a href="/archives" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-archive"></i> <br />
+            
+            归档
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-tags">
+          <a href="/tags" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-tags"></i> <br />
+            
+            标签
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-commonweal">
+          <a href="/404.html" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-heartbeat"></i> <br />
+            
+            公益404
+          </a>
+        </li>
+      
+
+      
+        <li class="menu-item menu-item-search">
+          
+            <a href="javascript:;" class="popup-trigger">
+          
+            
+              <i class="menu-item-icon fa fa-search fa-fw"></i> <br />
+            
+            搜索
+          </a>
+        </li>
+      
+    </ul>
+  
+
+  
+    <div class="site-search">
+      
+  <div class="popup">
+ <span class="search-icon fa fa-search"></span>
+ <input type="text" id="local-search-input">
+ <div id="local-search-result"></div>
+ <span class="popup-btn-close">close</span>
+</div>
+
+
+    </div>
+  
+</nav>
+
+
+
+ </div>
+    </header>
+
+    <main id="main" class="main">
+      <div class="main-inner">
+        <div class="content-wrap">
+          <div id="content" class="content">
+            
 
   <div id="posts" class="posts-expand">
-    {{ post_template.render(page) }}
+    
 
-    <div class="post-spread">
-      {% if theme.jiathis %}
-        {% include '_partials/share/jiathis.swig' %}
-      {% elseif theme.baidushare %}
-        {% include '_partials/share/baidushare.swig' %}
-      {% elseif theme.add_this_id %}
-        {% include '_partials/share/add-this.swig' %}
-      {% elseif theme.duoshuo_shortname and theme.duoshuo_share %}
-        {% include '_partials/share/duoshuo_share.swig' %}
-      {% endif %}
+  
+
+  
+  
+  
+
+  <article class="post post-type-normal " itemscope itemtype="http://schema.org/Article">
+  <link itemprop="mainEntityOfPage" href="https://zhoushuke.github.io/2021/10/31/OpenTelemetry-Trace/">
+
+  <span style="display:none" itemprop="author" itemscope itemtype="http://schema.org/Person">
+    <meta itemprop="name" content="">
+    <meta itemprop="description" content="">
+    <meta itemprop="image" content="/images/avatar.gif">
+  </span>
+
+  <span style="display:none" itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+    <meta itemprop="name" content="Z.S.K.'s Records">
+    <span style="display:none" itemprop="logo" itemscope itemtype="http://schema.org/ImageObject">
+      <img style="display:none;" itemprop="url image" alt="Z.S.K.'s Records" src="">
+    </span>
+  </span>
+
+    
+      <header class="post-header">
+
+        
+        
+          <h1 class="post-title" itemprop="name headline">
+            
+            
+              
+                Opentelemetry调研实践三(全链路追踪的TraceID与SpanID)
+              
+            
+          </h1>
+        
+
+        <div class="post-meta">
+          <span class="post-time">
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">发表于</span>
+              
+              <time title="Post created" itemprop="dateCreated datePublished" datetime="2021-10-31T20:30:53+08:00">
+                2021-10-31
+              </time>
+            
+
+            
+
+            
+          </span>
+
+          
+            <span class="post-category" >
+            
+              <span class="post-meta-divider">|</span>
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-folder-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">分类于</span>
+              
+              
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/CloudNavi/" itemprop="url" rel="index">
+                    <span itemprop="name">CloudNavi</span>
+                  </a>
+                </span>
+
+                
+                
+              
+            </span>
+          
+
+          
+            
+          
+
+          
+
+          
+          
+
+          
+
+          
+
+        </div>
+      </header>
+    
+
+
+    <div class="post-body" itemprop="articleBody">
+
+      
+      
+
+      
+        <p>历史文章:</p>
+<p><a target="_blank" rel="noopener" href="https://izsk.me/2021/10/19/OpenTelemetry-what-is-observability/">可观测性到底在说什么</a></p>
+<p><a target="_blank" rel="noopener" href="https://izsk.me/2021/10/31/OpenTelemetry-Introduct/">opentelemetry架构及名词介绍</a></p>
+<p>在<a target="_blank" rel="noopener" href="https://izsk.me/2021/10/31/OpenTelemetry-Introduct/">opentelemetry架构及名词介绍</a> 中就引出了一个问题: <strong>无论在数据平面如何做流量劫持，如何透传信息，以及如何生成或者继承Span，入口流量和出口流量之间的链路都存在无法串联的问题， 这个问题要解决还是需服务来埋点透传，将链路信息透传到下一次请求当中去</strong></p>
+<span id="more"></span>
+
+
+
+<p>一个最简单的golang的例子</p>
+<p>Main of ServiceA – &gt; FuncionA of ServiceA  – &gt; FunctionB of ServiceA  – &gt; Main of ServiceB</p>
+<p>调用从主函数Main of ServiceA(<strong>入口流量</strong>)到调用Main of ServiceB(<strong>出口流量</strong>）的中间的这段调用，对于大多数的APM都无法捕捉得到，原因是APM不能理解<strong>业务逻辑</strong>，现在大热的Istio也做不到，它本质上还是通过劫持入口及出口流量，对于方法级的调用也无法实现追踪(这里不考虑java使用字节码技术实现)，如果想知道这层调用关系，则需要:</p>
+<blockquote>
+<ul>
+<li>生成一个ID1: 使用该ID可以将所有经过的节点串连起来，按时间排序就是<strong>timeline</strong></li>
+<li>生成一个ID2:可以通过该ID体现父子关系，串起来就是<strong>调用栈</strong></li>
+</ul>
+</blockquote>
+<p>这在分布式链路跟踪中刚好对应两个重要的概念：跟踪（trace）和 跨度（ span）</p>
+<p>trace 是请求在分布式系统中的整个链路视图，span 则代表整个链路中不同服务内部的视图(有向无环图，DAG)</p>
+<p>一个span代表系统中具有开始时间和执行时长的逻辑运行单元, 所有span 组合在一起就是整个 trace 的视图</p>
+<p>这就是Trace要解决的问题， 对于ID1,一般称之为TraceID, 对于ID2，一般称之为Span</p>
+<h3 id="TraceID"><a href="#TraceID" class="headerlink" title="TraceID"></a>TraceID</h3><p>这个很好理解，如果要标记一次请求经过的所有路径，那么给这条请求经过的所有节点都使用同一个标记即可，那么反过来，通过这个标志即可得到这条请求经过的所有节点。</p>
+<p>所以一般情况下，都会在网关处给每次请求都生成一个全局唯一的ID做为TraceID,将该TraceID放在Header中向后传递下去，后面的服务都使用该ID</p>
+<h3 id="SpanID"><a href="#SpanID" class="headerlink" title="SpanID"></a>SpanID</h3><p>很多人不理解为什么需要SpanID？</p>
+<p>既然有了TraceID，如果再加上节点的被调用的时间，是不是也可以还原出整个请求的调用链路视图呢?</p>
+<p>答案是可行的，但是使用调用时间远不如SpanID方便。</p>
+<p>当请求到达每个服务后，服务都会为请求生成spanid，第一个spanid称之为root span，而随请求一起从上游传过来的上游服务的 spanid 会被记录成parent-spanid或者叫 pspanid。当前服务生成的 spanid 随着请求一起再传到下游服务时，这个spanid 又会被下游服务当做 pspanid 记录</p>
+<p>所以，SpanID本身就已经形成了父子关系，而使用调用时间的话，还需要进行时间戳的比对，这在一定量级的场景下对性能是个考验。</p>
+<figure class="highlight go"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">type</span> Span <span class="keyword">struct</span> &#123;</span><br><span class="line">    TraceID    <span class="type">int64</span> <span class="comment">// 用于标示一次完整的请求id</span></span><br><span class="line">    Name       <span class="type">string</span></span><br><span class="line">    ID         <span class="type">int64</span> <span class="comment">// 当前这次调用span_id</span></span><br><span class="line">    ParentID   <span class="type">int64</span> <span class="comment">// 上层服务的调用span_id  最上层服务parent_id为null</span></span><br><span class="line">    Annotation []Annotation <span class="comment">// 用于标记的时间戳</span></span><br><span class="line">    Debug      <span class="type">bool</span></span><br><span class="line"></span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+
+
+<h3 id="调用链"><a href="#调用链" class="headerlink" title="调用链"></a>调用链</h3><p>先来看一张经典图:</p>
+<p><img src="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20211031225945.png"></p>
+<p>当用户发起一个请求时，首先到达前端A服务，然后分别对B服务和C服务进行RPC调用；B服务处理完给A做出响应，但是C服务还需要和后端的D服务和E服务交互之后再返还给A服务，最后由A服务来响应用户的请求</p>
+<p>整个调用过程追踪</p>
+<ul>
+<li><p>请求到来生成一个全局TraceID，通过TraceID可以串联起整个调用链，一个TraceID代表一次请求。</p>
+</li>
+<li><p>除了TraceID外，还需要SpanID用于记录调用父子关系。每个服务会记录下parent id和span id，通过他们可以组织一次完整调用链的父子关系。</p>
+</li>
+<li><p>一个没有parent id的span成为root span，可以看成调用链入口。</p>
+</li>
+<li><p>所有这些ID可用全局唯一的64位整数表示；</p>
+</li>
+<li><p>整个调用过程中每个请求都要透传TraceID和SpanID。</p>
+</li>
+<li><p>每个服务将该次请求附带的TraceID和附带的SpanID作为parent id记录下，并且将自己生成的SpanID也记录下。</p>
+</li>
+<li><p>要查看某次完整的调用则 只要根据TraceID查出所有调用记录，然后通过parent id和span id组织起整个调用父子关系。</p>
+</li>
+<li><p>调用链核心工作</p>
+</li>
+<li><ul>
+<li>调用链数据生成，对整个调用过程的所有应用进行埋点并输出日志。</li>
+<li>调用链数据采集，对各个应用中的日志数据进行采集。</li>
+<li>调用链数据存储及查询，对采集到的数据进行存储，由于日志数据量一般都很大，不仅要能对其存储，还需要能提供快速查询。</li>
+<li>指标运算、存储及查询，对采集到的日志数据进行各种指标运算，将运算结果保存起来。</li>
+<li>告警功能，提供各种阀值警告功能。</li>
+</ul>
+</li>
+</ul>
+<p>目前大部分的全链路追踪实现都是基于Google的Dapper实现</p>
+<p>下面介绍几种可做为ID的方案.</p>
+<h3 id="nginx生成TraceID"><a href="#nginx生成TraceID" class="headerlink" title="nginx生成TraceID"></a>nginx生成TraceID</h3><p>nginx为每一条请求都生成一个唯一的ID，这个ID由nginx本身保证了唯一性，天然是个做为TraceID的好方案，只需要在nginx的配置中开启以下参数即可</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br></pre></td><td class="code"><pre><span class="line">upstream app_server &#123;</span><br><span class="line">    server 10.0.0.1:80;</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line">server &#123;</span><br><span class="line">    listen 80;</span><br><span class="line">    add_header X-Request-ID <span class="variable">$request_id</span>; <span class="comment"># Return to client</span></span><br><span class="line">    location / &#123;</span><br><span class="line">        proxy_pass http://app_server;</span><br><span class="line">        proxy_set_header X-Request-ID <span class="variable">$request_id</span>; <span class="comment"># Pass to app server</span></span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>参考<a target="_blank" rel="noopener" href="https://www.nginx.com/blog/application-tracing-nginx-plus/">application-tracing-nginx-plus</a></p>
+<p>后端代码可直接从http header中获取相应的X-Request-ID的值做为ctx传递即可</p>
+<h3 id="kong生成TraceID"><a href="#kong生成TraceID" class="headerlink" title="kong生成TraceID"></a>kong生成TraceID</h3><p>kong做为ingress controller的场景下，可通过<strong>correlation-id</strong>插件来生成uuid做为traceID</p>
+<p>可以定义全局使用(全局的plugins不需要手工在ingress中进行绑定)</p>
+<figure class="highlight yaml"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br></pre></td><td class="code"><pre><span class="line"><span class="attr">apiVersion:</span> <span class="string">configuration.konghq.com/v1</span></span><br><span class="line"><span class="attr">kind:</span> <span class="string">KongClusterPlugin</span></span><br><span class="line"><span class="attr">metadata:</span></span><br><span class="line">  <span class="attr">name:</span> <span class="string">kong-global-correlation-id</span></span><br><span class="line">  <span class="attr">annotations:</span></span><br><span class="line">    <span class="attr">kubernetes.io/ingress.class:</span> <span class="string">kong</span></span><br><span class="line">  <span class="attr">labels:</span></span><br><span class="line">    <span class="attr">global:</span> <span class="string">&quot;true&quot;</span></span><br><span class="line"><span class="attr">config:</span> </span><br><span class="line">  <span class="attr">header_name:</span> <span class="string">X-Request-Id</span></span><br><span class="line">  <span class="attr">generator:</span> <span class="string">uuid</span></span><br><span class="line">  <span class="attr">echo_downstream:</span> <span class="literal">true</span></span><br><span class="line"><span class="attr">plugin:</span> <span class="string">correlation-id</span></span><br></pre></td></tr></table></figure>
+
+<p>header_name指定header名字</p>
+<p>generator指定使用uuid生产ID</p>
+<p>echo_downstream指定将header返回给调用方</p>
+<p>参考<a target="_blank" rel="noopener" href="https://docs.konghq.com/hub/kong-inc/correlation-id/">correlation-id</a></p>
+<p>如果不是全局的，可在ingress中进行绑定</p>
+<figure class="highlight yaml"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line"><span class="attr">apiVersion:</span> <span class="string">extensions/v1beta1</span></span><br><span class="line"><span class="attr">kind:</span> <span class="string">Ingress</span></span><br><span class="line"><span class="attr">metadata:</span></span><br><span class="line">  <span class="attr">annotations:</span></span><br><span class="line">    <span class="attr">konghq.com/override:</span> <span class="string">kong-global-correlation-id</span></span><br></pre></td></tr></table></figure>
+
+<p>对于已经存在相同名字的header，correlation-id会进行忽略，不进行任何操作</p>
+<h3 id="opentelemetry生成TraceID"><a href="#opentelemetry生成TraceID" class="headerlink" title="opentelemetry生成TraceID"></a>opentelemetry生成TraceID</h3><figure class="highlight golang"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">// IDGenerator allows custom generators for TraceID and SpanID.</span></span><br><span class="line"><span class="keyword">type</span> IDGenerator <span class="keyword">interface</span> &#123;</span><br><span class="line">	<span class="comment">// DO NOT CHANGE: any modification will not be backwards compatible and</span></span><br><span class="line">	<span class="comment">// must never be done outside of a new major release.</span></span><br><span class="line"></span><br><span class="line">	<span class="comment">// NewIDs returns a new trace and span ID.</span></span><br><span class="line">	NewIDs(ctx context.Context) (trace.TraceID, trace.SpanID)</span><br><span class="line">	<span class="comment">// DO NOT CHANGE: any modification will not be backwards compatible and</span></span><br><span class="line">	<span class="comment">// must never be done outside of a new major release.</span></span><br><span class="line"></span><br><span class="line">	<span class="comment">// NewSpanID returns a ID for a new span in the trace with traceID.</span></span><br><span class="line">	NewSpanID(ctx context.Context, traceID trace.TraceID) trace.SpanID</span><br><span class="line">	<span class="comment">// DO NOT CHANGE: any modification will not be backwards compatible and</span></span><br><span class="line">	<span class="comment">// must never be done outside of a new major release.</span></span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="keyword">type</span> randomIDGenerator <span class="keyword">struct</span> &#123;</span><br><span class="line">	sync.Mutex</span><br><span class="line">	randSource *rand.Rand</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="keyword">var</span> _ IDGenerator = &amp;randomIDGenerator&#123;&#125;</span><br><span class="line"></span><br><span class="line"><span class="comment">// NewSpanID returns a non-zero span ID from a randomly-chosen sequence.</span></span><br><span class="line"><span class="function"><span class="keyword">func</span> <span class="params">(gen *randomIDGenerator)</span></span> NewSpanID(ctx context.Context, traceID trace.TraceID) trace.SpanID &#123;</span><br><span class="line">	gen.Lock()</span><br><span class="line">	<span class="keyword">defer</span> gen.Unlock()</span><br><span class="line">	sid := trace.SpanID&#123;&#125;</span><br><span class="line">	gen.randSource.Read(sid[:])</span><br><span class="line">	<span class="keyword">return</span> sid</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="comment">// NewIDs returns a non-zero trace ID and a non-zero span ID from a</span></span><br><span class="line"><span class="comment">// randomly-chosen sequence.</span></span><br><span class="line"><span class="function"><span class="keyword">func</span> <span class="params">(gen *randomIDGenerator)</span></span> NewIDs(ctx context.Context) (trace.TraceID, trace.SpanID) &#123;</span><br><span class="line">	gen.Lock()</span><br><span class="line">	<span class="keyword">defer</span> gen.Unlock()</span><br><span class="line">	tid := trace.TraceID&#123;&#125;</span><br><span class="line">	gen.randSource.Read(tid[:])</span><br><span class="line">	sid := trace.SpanID&#123;&#125;</span><br><span class="line">	gen.randSource.Read(sid[:])</span><br><span class="line">	<span class="keyword">return</span> tid, sid</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="function"><span class="keyword">func</span> <span class="title">defaultIDGenerator</span><span class="params">()</span></span> IDGenerator &#123;</span><br><span class="line">	gen := &amp;randomIDGenerator&#123;&#125;</span><br><span class="line">	<span class="keyword">var</span> rngSeed <span class="type">int64</span></span><br><span class="line">	_ = binary.Read(crand.Reader, binary.LittleEndian, &amp;rngSeed)</span><br><span class="line">	gen.randSource = rand.New(rand.NewSource(rngSeed))</span><br><span class="line">	<span class="keyword">return</span> gen</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>上述是opentelemetry默认生成TraceID跟SpanID的方法，同时，opentelemetry支持使用自定义算法去生成，只需要生写上述的NewIDs及NewSpanID即可，比如:</p>
+<figure class="highlight go"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">// 自定义ID生成规则</span></span><br><span class="line"><span class="keyword">type</span> Generator <span class="keyword">struct</span>&#123;&#125;</span><br><span class="line"><span class="function"><span class="keyword">func</span> <span class="params">(g *Generator)</span></span> NewIDs(ctx context.Context) (trace.TraceID, trace.SpanID) &#123;</span><br><span class="line">  val := ctx.Value(<span class="string">&quot;request_id&quot;</span>).(uuid.UUID)</span><br><span class="line">  tid := trace.TraceID&#123;&#125;</span><br><span class="line">  req, _ := val.MarshalText()</span><br><span class="line">  <span class="built_in">copy</span>(tid[:], req)</span><br><span class="line"></span><br><span class="line">  sid := trace.SpanID&#123;&#125;</span><br><span class="line">  rand.Read(sid[:])</span><br><span class="line"></span><br><span class="line">  <span class="keyword">return</span> tid, sid</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="comment">// 定义NewTracerProvider时使用WithIDGenerator</span></span><br><span class="line">tp := sdktrace.NewTracerProvider(</span><br><span class="line">  sdktrace.WithSpanProcessor(processor),</span><br><span class="line">  sdktrace.WithResource(resource.NewWithAttributes(</span><br><span class="line">    semconv.ServiceNameKey.String(<span class="string">&quot;vault-observe&quot;</span>),</span><br><span class="line">  )),</span><br><span class="line">  sdktrace.WithIDGenerator(&amp;Generator&#123;&#125;),</span><br><span class="line">)</span><br><span class="line"></span><br><span class="line">otel.SetTracerProvider(tp)</span><br></pre></td></tr></table></figure>
+
+
+
+
+
+<h3 id="参考文章"><a href="#参考文章" class="headerlink" title="参考文章:"></a>参考文章:</h3><blockquote>
+<ul>
+<li><a target="_blank" rel="noopener" href="https://cloud.tencent.com/developer/article/1832719">https://cloud.tencent.com/developer/article/1832719</a></li>
+<li><a target="_blank" rel="noopener" href="https://www.nginx.com/blog/application-tracing-nginx-plus/">https://www.nginx.com/blog/application-tracing-nginx-plus/</a></li>
+<li><a target="_blank" rel="noopener" href="https://docs.konghq.com/hub/kong-inc/correlation-id/">https://docs.konghq.com/hub/kong-inc/correlation-id/</a></li>
+<li><a target="_blank" rel="noopener" href="https://andydote.co.uk/2021/05/27/vault-observe/">https://andydote.co.uk/2021/05/27/vault-observe/</a></li>
+</ul>
+</blockquote>
+<h3 id="转载请注明出处https-izsk-me"><a href="#转载请注明出处https-izsk-me" class="headerlink" title="转载请注明出处https://izsk.me"></a><strong>转载请注明出处<a target="_blank" rel="noopener" href="https://izsk.me/">https://izsk.me</a></strong></h3>
+      
+    </div>
+
+    <div>
+      
+        
+<div id="wechat_subscriber" style="display: block; padding: 10px 0; margin: 20px auto; width: 100%; text-align: center">
+    <img id="wechat_subscriber_qcode" src="/images/websitecode250.png" alt=" wechat" style="width: 200px; max-width: 100%;"/>
+    <div>Scan Me To Read on Phone</div>
+</div>
+
+
+      
+    </div>
+
+    <div>
+      
+        
+  <div style="padding: 10px 0; margin: 20px auto; width: 90%; text-align: center;">
+    <div>I know you won't do this,but what if you did?</div>
+    <button id="rewardButton" disable="enable" onclick="var qr = document.getElementById('QR'); if (qr.style.display === 'none') {qr.style.display='block';} else {qr.style.display='none'}">
+      <span>赏</span>
+    </button>
+    <div id="QR" style="display: none;">
+      
+        <div id="wechat" style="display: inline-block">
+          <img id="wechat_qr" src="/images/wechatpayme.png" alt=" WeChat Pay"/>
+          <p>微信打赏</p>
+        </div>
+      
+      
+        <div id="alipay" style="display: inline-block">
+          <img id="alipay_qr" src="/images/alipayme.jpg" alt=" Alipay"/>
+          <p>支付宝打赏</p>
+        </div>
+      
     </div>
   </div>
 
-{% endblock %}
 
-{% block sidebar %}
-  {{ sidebar_template.render(true) }}
-{% endblock %}
+      
+    </div>
 
 
-{% block script_extra %}
-  {% include '_scripts/pages/post-details.swig' %}
-{% endblock %}
+    <footer class="post-footer">
+      
+        <div class="post-tags">
+          
+            <a href="/tags/CloudNavi/" rel="tag"># CloudNavi</a>
+          
+        </div>
+      
+
+      
+        <div class="post-nav">
+          <div class="post-nav-next post-nav-item">
+            
+              <a href="/2021/10/27/OpenTelemetry-Introduct/" rel="next" title="Opentelemetry调研实践二(opentelemetry架构及名词介绍)">
+                <i class="fa fa-chevron-left"></i> Opentelemetry调研实践二(opentelemetry架构及名词介绍)
+              </a>
+            
+          </div>
+
+          <span class="post-nav-divider"></span>
+
+          <div class="post-nav-prev post-nav-item">
+            
+              <a href="/2021/11/07/opentelemetry-Code-Deploy/" rel="prev" title="Opentelemetry调研实践四(k8s中golang应用接入opentelemetry实现可观测性)">
+                Opentelemetry调研实践四(k8s中golang应用接入opentelemetry实现可观测性) <i class="fa fa-chevron-right"></i>
+              </a>
+            
+          </div>
+        </div>
+      
+
+      
+      
+    </footer>
+  </article>
+
+
+
+    <div class="post-spread">
+      
+    </div>
+  </div>
+
+
+          </div>
+          
+
+
+          
+  <div class="comments" id="comments">
+    
+  </div>
+
+
+        </div>
+        
+          
+  
+  <div class="sidebar-toggle">
+    <div class="sidebar-toggle-line-wrap">
+      <span class="sidebar-toggle-line sidebar-toggle-line-first"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-middle"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-last"></span>
+    </div>
+  </div>
+
+  <aside id="sidebar" class="sidebar">
+    <div class="sidebar-inner">
+
+      
+
+      
+        <ul class="sidebar-nav motion-element">
+          <li class="sidebar-nav-toc sidebar-nav-active" data-target="post-toc-wrap" >
+            文章目录
+          </li>
+          <li class="sidebar-nav-overview" data-target="site-overview">
+            站点概览
+          </li>
+        </ul>
+      
+
+      <section class="site-overview sidebar-panel">
+        <div class="site-author motion-element" itemprop="author" itemscope itemtype="http://schema.org/Person">
+          <img class="site-author-image" itemprop="image"
+               src="/images/avatar.gif"
+               alt="" />
+          <p class="site-author-name" itemprop="name"></p>
+          <p class="site-description motion-element" itemprop="description"></p>
+        </div>
+        <nav class="site-state motion-element">
+        
+          
+            <div class="site-state-item site-state-posts">
+              <a href="/archives">
+                <span class="site-state-item-count">192</span>
+                <span class="site-state-item-name">日志</span>
+              </a>
+            </div>
+          
+
+          
+            <div class="site-state-item site-state-categories">
+              <a href="/categories">
+                <span class="site-state-item-count">14</span>
+                <span class="site-state-item-name">分类</span>
+              </a>
+            </div>
+          
+
+          
+            <div class="site-state-item site-state-tags">
+              <a href="/tags">
+                <span class="site-state-item-count">14</span>
+                <span class="site-state-item-name">标签</span>
+              </a>
+            </div>
+          
+
+        </nav>
+
+        
+
+        <div class="links-of-author motion-element">
+          
+        </div>
+
+        
+        
+
+        
+        
+
+        
+
+
+      </section>
+
+      
+      <!--noindex-->
+        <section class="post-toc-wrap motion-element sidebar-panel sidebar-panel-active">
+          <div class="post-toc">
+
+            
+              
+            
+
+            
+              <div class="post-toc-content"><ol class="nav"><li class="nav-item nav-level-3"><a class="nav-link" href="#TraceID"><span class="nav-number">1.</span> <span class="nav-text">TraceID</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#SpanID"><span class="nav-number">2.</span> <span class="nav-text">SpanID</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E8%B0%83%E7%94%A8%E9%93%BE"><span class="nav-number">3.</span> <span class="nav-text">调用链</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#nginx%E7%94%9F%E6%88%90TraceID"><span class="nav-number">4.</span> <span class="nav-text">nginx生成TraceID</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#kong%E7%94%9F%E6%88%90TraceID"><span class="nav-number">5.</span> <span class="nav-text">kong生成TraceID</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#opentelemetry%E7%94%9F%E6%88%90TraceID"><span class="nav-number">6.</span> <span class="nav-text">opentelemetry生成TraceID</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E5%8F%82%E8%80%83%E6%96%87%E7%AB%A0"><span class="nav-number">7.</span> <span class="nav-text">参考文章:</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E8%BD%AC%E8%BD%BD%E8%AF%B7%E6%B3%A8%E6%98%8E%E5%87%BA%E5%A4%84https-izsk-me"><span class="nav-number">8.</span> <span class="nav-text">转载请注明出处https:&#x2F;&#x2F;izsk.me</span></a></li></ol></div>
+            
+
+          </div>
+        </section>
+      <!--/noindex-->
+      
+
+    </div>
+  </aside>
+
+
+        
+      </div>
+    </main>
+
+    <footer id="footer" class="footer">
+      <div class="footer-inner">
+        <div class="copyright" >
+  
+  &copy; 
+  <span itemprop="copyrightYear">2022</span>
+  <span class="with-love">
+    <i class="fa fa-heart"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">Z.S.K.</span>
+</div>
+
+
+<div class="powered-by">
+  Supported by <a class="theme-link" target="_blank" rel="noopener" href="https://hexo.io">Hexo</a>
+</div>
+
+<div class="theme-info">
+  Theme -
+  <a class="theme-link" target="_blank" rel="noopener" href="https://github.com/iissnan/hexo-theme-next">
+    NexT.Mist
+  </a>
+</div>
+
+
+        
+
+        
+      </div>
+    </footer>
+
+    <div class="back-to-top">
+      <i class="fa fa-arrow-up"></i>
+    </div>
+  </div>
+
+  
+
+<script type="text/javascript">
+  if (Object.prototype.toString.call(window.Promise) !== '[object Function]') {
+    window.Promise = null;
+  }
+</script>
+
+
+
+
+
+
+
+
+
+  
+
+
+
+  
+  <script type="text/javascript" src="/lib/jquery/index.js?v=2.1.3"></script>
+
+  
+  <script type="text/javascript" src="/lib/fastclick/lib/fastclick.min.js?v=1.0.6"></script>
+
+  
+  <script type="text/javascript" src="/lib/jquery_lazyload/jquery.lazyload.js?v=1.9.7"></script>
+
+  
+  <script type="text/javascript" src="/lib/velocity/velocity.min.js?v=1.2.1"></script>
+
+  
+  <script type="text/javascript" src="/lib/velocity/velocity.ui.min.js?v=1.2.1"></script>
+
+  
+  <script type="text/javascript" src="/lib/fancybox/source/jquery.fancybox.pack.js?v=2.1.5"></script>
+
+
+  
+
+
+  <script type="text/javascript" src="/js/src/utils.js?v=5.1.0"></script>
+
+  <script type="text/javascript" src="/js/src/motion.js?v=5.1.0"></script>
+
+
+
+  
+  
+
+  
+  <script type="text/javascript" src="/js/src/scrollspy.js?v=5.1.0"></script>
+<script type="text/javascript" src="/js/src/post-details.js?v=5.1.0"></script>
+
+
+
+  
+
+
+  <script type="text/javascript" src="/js/src/bootstrap.js?v=5.1.0"></script>
+
+
+
+  
+
+
+
+  
+
+
+
+
+	
+
+
+
+
+
+  
+
+
+
+
+  
+  
+  <script type="text/javascript">
+    // Popup Window;
+    var isfetched = false;
+    // Search DB path;
+    var search_path = "search.xml";
+    if (search_path.length == 0) {
+      search_path = "search.xml";
+    }
+    var path = "/" + search_path;
+    // monitor main search box;
+
+    function proceedsearch() {
+      $("body").append('<div class="popoverlay">').css('overflow', 'hidden');
+      $('.popup').toggle();
+    }
+    // search function;
+    var searchFunc = function(path, search_id, content_id) {
+      'use strict';
+      $.ajax({
+        url: path,
+        dataType: "xml",
+        async: true,
+        success: function( xmlResponse ) {
+          // get the contents from search data
+          isfetched = true;
+          $('.popup').detach().appendTo('.header-inner');
+          var datas = $( "entry", xmlResponse ).map(function() {
+            return {
+              title: $( "title", this ).text(),
+              content: $("content",this).text(),
+              url: $( "url" , this).text()
+            };
+          }).get();
+          var $input = document.getElementById(search_id);
+          var $resultContent = document.getElementById(content_id);
+          $input.addEventListener('input', function(){
+            var matchcounts = 0;
+            var str='<ul class=\"search-result-list\">';
+            var keywords = this.value.trim().toLowerCase().split(/[\s\-]+/);
+            $resultContent.innerHTML = "";
+            if (this.value.trim().length > 1) {
+              // perform local searching
+              datas.forEach(function(data) {
+                var isMatch = false;
+                var content_index = [];
+                var data_title = data.title.trim().toLowerCase();
+                var data_content = data.content.trim().replace(/<[^>]+>/g,"").toLowerCase();
+                var data_url = decodeURIComponent(data.url);
+                var index_title = -1;
+                var index_content = -1;
+                var first_occur = -1;
+                // only match artiles with not empty titles and contents
+                if(data_title != '') {
+                  keywords.forEach(function(keyword, i) {
+                    index_title = data_title.indexOf(keyword);
+                    index_content = data_content.indexOf(keyword);
+                    if( index_title >= 0 || index_content >= 0 ){
+                      isMatch = true;
+                      if (i == 0) {
+                        first_occur = index_content;
+                      }
+                    }
+
+                  });
+                }
+                // show search results
+                if (isMatch) {
+                  matchcounts += 1;
+                  str += "<li><a href='"+ data_url +"' class='search-result-title'>"+ data_title +"</a>";
+                  var content = data.content.trim().replace(/<[^>]+>/g,"");
+                  if (first_occur >= 0) {
+                    // cut out 100 characters
+                    var start = first_occur - 20;
+                    var end = first_occur + 80;
+                    if(start < 0){
+                      start = 0;
+                    }
+                    if(start == 0){
+                      end = 50;
+                    }
+                    if(end > content.length){
+                      end = content.length;
+                    }
+                    var match_content = content.substring(start, end);
+                    // highlight all keywords
+                    keywords.forEach(function(keyword){
+                      var regS = new RegExp(keyword, "gi");
+                      match_content = match_content.replace(regS, "<b class=\"search-keyword\">"+keyword+"</b>");
+                    });
+
+                    str += "<p class=\"search-result\">" + match_content +"...</p>"
+                  }
+                  str += "</li>";
+                }
+              })};
+            str += "</ul>";
+            if (matchcounts == 0) { str = '<div id="no-result"><i class="fa fa-frown-o fa-5x" /></div>' }
+            if (keywords == "") { str = '<div id="no-result"><i class="fa fa-search fa-5x" /></div>' }
+            $resultContent.innerHTML = str;
+          });
+          proceedsearch();
+        }
+      });}
+
+    // handle and trigger popup window;
+    $('.popup-trigger').click(function(e) {
+      e.stopPropagation();
+      if (isfetched == false) {
+        searchFunc(path, 'local-search-input', 'local-search-result');
+      } else {
+        proceedsearch();
+      };
+    });
+
+    $('.popup-btn-close').click(function(e){
+      $('.popup').hide();
+      $(".popoverlay").remove();
+      $('body').css('overflow', '');
+    });
+    $('.popup').click(function(e){
+      e.stopPropagation();
+    });
+  </script>
+
+
+  
+
+  
+
+  
+
+  
+
+
+</body>
+</html>

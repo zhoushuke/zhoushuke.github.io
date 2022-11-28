@@ -1,38 +1,901 @@
-{% extends '_layout.swig' %}
-{% import '_macro/post.swig' as post_template %}
-{% import '_macro/sidebar.swig' as sidebar_template %}
+<!doctype html>
 
 
-{% block title %} {{ page.title }} | {{ config.title }} {% endblock %}
 
-{% block page_class %}page-post-detail{% endblock %}
+  
 
 
-{% block content %}
+<html class="theme-next mist use-motion" lang="zh-Hans">
+<head>
+  <meta charset="UTF-8"/>
+<meta http-equiv="X-UA-Compatible" content="IE=edge" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1"/>
+
+
+
+<meta http-equiv="Cache-Control" content="no-transform" />
+<meta http-equiv="Cache-Control" content="no-siteapp" />
+
+
+
+
+
+
+
+
+
+
+
+
+  
+  
+  <link href="/lib/fancybox/source/jquery.fancybox.css?v=2.1.5" rel="stylesheet" type="text/css" />
+
+
+
+
+  
+  
+  
+  
+
+  
+    
+    
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+    
+    
+    <link href="//fonts.googleapis.com/css?family=Lato:300,300italic,400,400italic,700,700italic&subset=latin,latin-ext" rel="stylesheet" type="text/css">
+  
+
+
+
+
+
+
+<link href="/lib/font-awesome/css/font-awesome.min.css?v=4.6.2" rel="stylesheet" type="text/css" />
+
+<link href="/css/main.css?v=5.1.0" rel="stylesheet" type="text/css" />
+
+
+  <meta name="keywords" content="FELK," />
+
+
+
+
+
+
+
+
+  <link rel="shortcut icon" type="image/x-icon" href="/favicon.ico?v=5.1.0" />
+
+
+
+
+
+
+<meta name="description" content="使用fluentd收集kubernetes的容器日志，由elastricsearch存储，并由kibana view. 这里不仅收集业务容器的日志, 同时也收集kuberntes集群组件的日志, 由于业务容器跟集群组件的日志打印格式不一致，因此需要单独使用正则进行处理.">
+<meta property="og:type" content="article">
+<meta property="og:title" content="使用fluentd收集Kubernetes容器日志">
+<meta property="og:url" content="https://zhoushuke.github.io/2019/12/17/container-log-fluentd-elasticsearch/index.html">
+<meta property="og:site_name" content="Z.S.K.&#39;s Records">
+<meta property="og:description" content="使用fluentd收集kubernetes的容器日志，由elastricsearch存储，并由kibana view. 这里不仅收集业务容器的日志, 同时也收集kuberntes集群组件的日志, 由于业务容器跟集群组件的日志打印格式不一致，因此需要单独使用正则进行处理.">
+<meta property="og:locale">
+<meta property="article:published_time" content="2019-12-17T00:10:53.000Z">
+<meta property="article:modified_time" content="2022-07-19T03:16:00.987Z">
+<meta property="article:author" content="Z.S.K.">
+<meta property="article:tag" content="FELK">
+<meta name="twitter:card" content="summary">
+
+
+
+<script type="text/javascript" id="hexo.configurations">
+  var NexT = window.NexT || {};
+  var CONFIG = {
+    root: '',
+    scheme: 'Mist',
+    sidebar: {"position":"left","display":"post"},
+    fancybox: true,
+    motion: true,
+    duoshuo: {
+      userId: 'undefined',
+      author: '博主'
+    },
+    algolia: {
+      applicationID: '',
+      apiKey: '',
+      indexName: '',
+      hits: {"per_page":10},
+      labels: {"input_placeholder":"Search for Posts","hits_empty":"We didn't find any results for the search: ${query}","hits_stats":"${hits} results found in ${time} ms"}
+    }
+  };
+</script>
+
+
+
+  <link rel="canonical" href="https://zhoushuke.github.io/2019/12/17/container-log-fluentd-elasticsearch/"/>
+
+
+
+
+
+  <title> 使用fluentd收集Kubernetes容器日志 | Z.S.K.'s Records </title>
+<meta name="generator" content="Hexo 6.2.0"></head>
+
+<body itemscope itemtype="http://schema.org/WebPage" lang="zh-Hans">
+
+  
+
+
+
+
+
+
+
+
+
+
+  
+  
+    
+  
+
+  <div class="container one-collumn sidebar-position-left page-post-detail ">
+    <div class="headband"></div>
+
+    <header id="header" class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-meta ">
+  
+
+  <div class="custom-logo-site-title">
+    <a href="/"  class="brand" rel="start">
+      <span class="logo-line-before"><i></i></span>
+      <span class="site-title">Z.S.K.'s Records</span>
+      <span class="logo-line-after"><i></i></span>
+    </a>
+  </div>
+    
+      <p class="site-subtitle"></p>
+    
+</div>
+
+<div class="site-nav-toggle">
+  <button>
+    <span class="btn-bar"></span>
+    <span class="btn-bar"></span>
+    <span class="btn-bar"></span>
+  </button>
+</div>
+
+<nav class="site-nav">
+  
+
+  
+    <ul id="menu" class="menu">
+      
+        
+        <li class="menu-item menu-item-home">
+          <a href="/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-home"></i> <br />
+            
+            首页
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-categories">
+          <a href="/categories" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-th"></i> <br />
+            
+            分类
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-about">
+          <a href="/about/ZSK-Profile.pdf" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-user"></i> <br />
+            
+            简历
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-archives">
+          <a href="/archives" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-archive"></i> <br />
+            
+            归档
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-tags">
+          <a href="/tags" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-tags"></i> <br />
+            
+            标签
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-commonweal">
+          <a href="/404.html" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-heartbeat"></i> <br />
+            
+            公益404
+          </a>
+        </li>
+      
+
+      
+        <li class="menu-item menu-item-search">
+          
+            <a href="javascript:;" class="popup-trigger">
+          
+            
+              <i class="menu-item-icon fa fa-search fa-fw"></i> <br />
+            
+            搜索
+          </a>
+        </li>
+      
+    </ul>
+  
+
+  
+    <div class="site-search">
+      
+  <div class="popup">
+ <span class="search-icon fa fa-search"></span>
+ <input type="text" id="local-search-input">
+ <div id="local-search-result"></div>
+ <span class="popup-btn-close">close</span>
+</div>
+
+
+    </div>
+  
+</nav>
+
+
+
+ </div>
+    </header>
+
+    <main id="main" class="main">
+      <div class="main-inner">
+        <div class="content-wrap">
+          <div id="content" class="content">
+            
 
   <div id="posts" class="posts-expand">
-    {{ post_template.render(page) }}
+    
 
-    <div class="post-spread">
-      {% if theme.jiathis %}
-        {% include '_partials/share/jiathis.swig' %}
-      {% elseif theme.baidushare %}
-        {% include '_partials/share/baidushare.swig' %}
-      {% elseif theme.add_this_id %}
-        {% include '_partials/share/add-this.swig' %}
-      {% elseif theme.duoshuo_shortname and theme.duoshuo_share %}
-        {% include '_partials/share/duoshuo_share.swig' %}
-      {% endif %}
+  
+
+  
+  
+  
+
+  <article class="post post-type-normal " itemscope itemtype="http://schema.org/Article">
+  <link itemprop="mainEntityOfPage" href="https://zhoushuke.github.io/2019/12/17/container-log-fluentd-elasticsearch/">
+
+  <span style="display:none" itemprop="author" itemscope itemtype="http://schema.org/Person">
+    <meta itemprop="name" content="">
+    <meta itemprop="description" content="">
+    <meta itemprop="image" content="/images/avatar.gif">
+  </span>
+
+  <span style="display:none" itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+    <meta itemprop="name" content="Z.S.K.'s Records">
+    <span style="display:none" itemprop="logo" itemscope itemtype="http://schema.org/ImageObject">
+      <img style="display:none;" itemprop="url image" alt="Z.S.K.'s Records" src="">
+    </span>
+  </span>
+
+    
+      <header class="post-header">
+
+        
+        
+          <h1 class="post-title" itemprop="name headline">
+            
+            
+              
+                使用fluentd收集Kubernetes容器日志
+              
+            
+          </h1>
+        
+
+        <div class="post-meta">
+          <span class="post-time">
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">发表于</span>
+              
+              <time title="Post created" itemprop="dateCreated datePublished" datetime="2019-12-17T08:10:53+08:00">
+                2019-12-17
+              </time>
+            
+
+            
+
+            
+          </span>
+
+          
+            <span class="post-category" >
+            
+              <span class="post-meta-divider">|</span>
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-folder-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">分类于</span>
+              
+              
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/FELK/" itemprop="url" rel="index">
+                    <span itemprop="name">FELK</span>
+                  </a>
+                </span>
+
+                
+                
+              
+            </span>
+          
+
+          
+            
+          
+
+          
+
+          
+          
+
+          
+
+          
+
+        </div>
+      </header>
+    
+
+
+    <div class="post-body" itemprop="articleBody">
+
+      
+      
+
+      
+        <p>使用fluentd收集kubernetes的容器日志，由elastricsearch存储，并由kibana view. 这里不仅收集业务容器的日志, 同时也收集kuberntes集群组件的日志, 由于业务容器跟集群组件的日志打印格式不一致，因此需要单独使用正则进行处理. </p>
+<span id="more"></span>
+
+
+
+<h3 id="dockerd配置"><a href="#dockerd配置" class="headerlink" title="dockerd配置"></a>dockerd配置</h3><p>kubernetes组件本身也是以容器的方式部署</p>
+<p>容器本身需要将日志都重定向到标准输出，同时指定dockerd的日志打印格式为json,这个可以全局修改dockerd的启动参数</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># /etc/docker/daemon.json|grep &quot;log-driver&quot;</span></span><br><span class="line">&#123;</span><br><span class="line">  <span class="string">&quot;log-driver&quot;</span>: <span class="string">&quot;json-file&quot;</span></span><br><span class="line">&#125;</span><br><span class="line"><span class="comment"># 日志格式如下:</span></span><br><span class="line">&#123;<span class="string">&quot;log&quot;</span>:<span class="string">&quot;64 bytes from 14.215.177.39: seq=34 ttl=55 time=7.067 ms\r\n&quot;</span>,<span class="string">&quot;stream&quot;</span>:<span class="string">&quot;stdout&quot;</span>,<span class="string">&quot;time&quot;</span>:<span class="string">&quot;2019-05-16T14:14:15.030612567Z&quot;</span>&#125;</span><br><span class="line"></span><br></pre></td></tr></table></figure>
+
+<p>所有的容器日志都能在目录**&#x2F;var&#x2F;log&#x2F;containers&#x2F;*.log**找到</p>
+<p>因些fluentd就是检测这个目录下的日志变化，类似于tail -f的机制实时获取新增日志.</p>
+<p> fluentd本身也是容器. 配置文件是以configmap的形式存在，如下:</p>
+<h3 id="fluentd-conf"><a href="#fluentd-conf" class="headerlink" title="fluentd.conf"></a>fluentd.conf</h3><details> <summary>fluentd.conf</summary>
+<pre><code>
+<figure class="highlight yaml"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br><span class="line">58</span><br><span class="line">59</span><br><span class="line">60</span><br><span class="line">61</span><br><span class="line">62</span><br><span class="line">63</span><br><span class="line">64</span><br><span class="line">65</span><br><span class="line">66</span><br><span class="line">67</span><br><span class="line">68</span><br><span class="line">69</span><br><span class="line">70</span><br><span class="line">71</span><br><span class="line">72</span><br><span class="line">73</span><br><span class="line">74</span><br><span class="line">75</span><br><span class="line">76</span><br><span class="line">77</span><br><span class="line">78</span><br><span class="line">79</span><br><span class="line">80</span><br><span class="line">81</span><br><span class="line">82</span><br><span class="line">83</span><br><span class="line">84</span><br><span class="line">85</span><br><span class="line">86</span><br><span class="line">87</span><br><span class="line">88</span><br><span class="line">89</span><br><span class="line">90</span><br><span class="line">91</span><br><span class="line">92</span><br><span class="line">93</span><br><span class="line">94</span><br><span class="line">95</span><br><span class="line">96</span><br><span class="line">97</span><br><span class="line">98</span><br><span class="line">99</span><br><span class="line">100</span><br><span class="line">101</span><br><span class="line">102</span><br><span class="line">103</span><br><span class="line">104</span><br><span class="line">105</span><br><span class="line">106</span><br><span class="line">107</span><br><span class="line">108</span><br><span class="line">109</span><br><span class="line">110</span><br><span class="line">111</span><br><span class="line">112</span><br><span class="line">113</span><br><span class="line">114</span><br><span class="line">115</span><br><span class="line">116</span><br><span class="line">117</span><br><span class="line">118</span><br><span class="line">119</span><br><span class="line">120</span><br><span class="line">121</span><br><span class="line">122</span><br><span class="line">123</span><br><span class="line">124</span><br><span class="line">125</span><br><span class="line">126</span><br><span class="line">127</span><br><span class="line">128</span><br><span class="line">129</span><br><span class="line">130</span><br><span class="line">131</span><br><span class="line">132</span><br><span class="line">133</span><br><span class="line">134</span><br><span class="line">135</span><br><span class="line">136</span><br><span class="line">137</span><br><span class="line">138</span><br><span class="line">139</span><br><span class="line">140</span><br><span class="line">141</span><br><span class="line">142</span><br><span class="line">143</span><br><span class="line">144</span><br><span class="line">145</span><br><span class="line">146</span><br><span class="line">147</span><br><span class="line">148</span><br><span class="line">149</span><br><span class="line">150</span><br><span class="line">151</span><br><span class="line">152</span><br><span class="line">153</span><br><span class="line">154</span><br><span class="line">155</span><br><span class="line">156</span><br><span class="line">157</span><br><span class="line">158</span><br><span class="line">159</span><br><span class="line">160</span><br><span class="line">161</span><br><span class="line">162</span><br><span class="line">163</span><br><span class="line">164</span><br><span class="line">165</span><br><span class="line">166</span><br><span class="line">167</span><br><span class="line">168</span><br><span class="line">169</span><br><span class="line">170</span><br><span class="line">171</span><br><span class="line">172</span><br><span class="line">173</span><br><span class="line">174</span><br><span class="line">175</span><br><span class="line">176</span><br><span class="line">177</span><br><span class="line">178</span><br><span class="line">179</span><br><span class="line">180</span><br><span class="line">181</span><br><span class="line">182</span><br><span class="line">183</span><br><span class="line">184</span><br><span class="line">185</span><br><span class="line">186</span><br><span class="line">187</span><br><span class="line">188</span><br><span class="line">189</span><br><span class="line">190</span><br><span class="line">191</span><br><span class="line">192</span><br><span class="line">193</span><br><span class="line">194</span><br><span class="line">195</span><br><span class="line">196</span><br><span class="line">197</span><br><span class="line">198</span><br><span class="line">199</span><br><span class="line">200</span><br><span class="line">201</span><br><span class="line">202</span><br><span class="line">203</span><br><span class="line">204</span><br><span class="line">205</span><br><span class="line">206</span><br><span class="line">207</span><br><span class="line">208</span><br><span class="line">209</span><br><span class="line">210</span><br><span class="line">211</span><br><span class="line">212</span><br><span class="line">213</span><br><span class="line">214</span><br><span class="line">215</span><br><span class="line">216</span><br></pre></td><td class="code"><pre><span class="line"><span class="attr">kind:</span> <span class="string">ConfigMap</span></span><br><span class="line"><span class="attr">apiVersion:</span> <span class="string">v1</span></span><br><span class="line"><span class="attr">metadata:</span></span><br><span class="line">  <span class="attr">name:</span> <span class="string">fluentd-config</span></span><br><span class="line">  <span class="attr">namespace:</span> <span class="string">logging</span></span><br><span class="line">  <span class="attr">labels:</span></span><br><span class="line">    <span class="attr">addonmanager.kubernetes.io/mode:</span> <span class="string">Reconcile</span></span><br><span class="line"><span class="attr">data:</span></span><br><span class="line">  <span class="attr">system.conf:</span> <span class="string">|-</span></span><br><span class="line"><span class="string">    &lt;system&gt;</span></span><br><span class="line"><span class="string">      &lt;log&gt;</span></span><br><span class="line"><span class="string">        format json</span></span><br><span class="line"><span class="string">        log_level warn</span></span><br><span class="line"><span class="string">        time_format %Y-%m-%dT%H:%M:%S</span></span><br><span class="line"><span class="string">      &lt;/log&gt;</span></span><br><span class="line"><span class="string">      root_dir /tmp/fluentd-buffers/</span></span><br><span class="line"><span class="string">    &lt;/system&gt;</span></span><br><span class="line"><span class="string"></span>  <span class="attr">containers.input.conf:</span> <span class="string">|-</span></span><br><span class="line"><span class="string">    &lt;source&gt;</span></span><br><span class="line"><span class="string">      @id fluentd-k8s-containers.log</span></span><br><span class="line"><span class="string">      @type tail</span></span><br><span class="line"><span class="string">      path /var/log/containers/*.log</span></span><br><span class="line"><span class="string"></span><span class="string">​</span>     <span class="string">exclude_path</span> [<span class="string">&quot;/var/log/containers/*install-cni*&quot;</span>, <span class="string">&quot;/var/log/containers/*rke*&quot;</span>]</span><br><span class="line"><span class="string">​</span>     <span class="string">pos_file</span> <span class="string">/var/log/fluentd-k8s-containers.log.pos</span></span><br><span class="line"><span class="string">​</span>     <span class="string">tag</span> <span class="string">kubernetes.*</span></span><br><span class="line"><span class="string">​</span>     <span class="string">&lt;parse&gt;</span></span><br><span class="line"><span class="string">​</span>       <span class="string">@type</span> <span class="string">multi_format</span></span><br><span class="line"><span class="string">​</span>       <span class="string">&lt;pattern&gt;</span></span><br><span class="line"><span class="string">​</span>         <span class="string">format</span> <span class="string">json</span></span><br><span class="line"><span class="string">​</span>         <span class="string">time_key</span> <span class="string">time</span> </span><br><span class="line"><span class="string">​</span>         <span class="string">time_format</span> <span class="string">%Y-%m-%dT%H:%M:%S.%NZ</span></span><br><span class="line"><span class="string">​</span>       <span class="string">&lt;/pattern&gt;</span></span><br><span class="line"><span class="string">​</span>     <span class="string">&lt;/parse&gt;</span></span><br><span class="line"><span class="string">​</span>   <span class="string">&lt;/source&gt;</span></span><br><span class="line"><span class="string">​</span>    <span class="comment"># Enriches records with Kubernetes metadata</span></span><br><span class="line"><span class="string">​</span>    <span class="string">&lt;filter</span> <span class="string">kubernetes.**&gt;</span></span><br><span class="line"><span class="string">​</span>      <span class="string">@id</span> <span class="string">filter_kubernetes_metadata</span></span><br><span class="line"><span class="string">​</span>      <span class="string">@type</span> <span class="string">kubernetes_metadata</span></span><br><span class="line"><span class="string">​</span>      <span class="string">skip_labels</span> <span class="literal">true</span></span><br><span class="line"><span class="string">​</span>      <span class="comment">#skip_container_metadata true</span></span><br><span class="line"><span class="string">​</span>      <span class="string">skip_master_url</span> <span class="literal">true</span></span><br><span class="line"><span class="string">​</span>      <span class="string">skip_namespace_metadata</span> <span class="literal">true</span></span><br><span class="line"><span class="string">​</span>    <span class="string">&lt;/filter&gt;</span></span><br><span class="line"><span class="string">​</span>    <span class="comment"># Transfer docker logging date to Chinese time. 8H issue.</span></span><br><span class="line"><span class="string">​</span>    <span class="string">&lt;filter</span> <span class="string">kubernetes.**&gt;</span></span><br><span class="line"><span class="string">​</span>      <span class="string">@type</span> <span class="string">record_transformer</span></span><br><span class="line"><span class="string">​</span>      <span class="string">enable_ruby</span> <span class="literal">true</span></span><br><span class="line"><span class="string">​</span>      <span class="string">&lt;record&gt;</span></span><br><span class="line"><span class="string">​</span>        <span class="string">service_name</span> <span class="string">$&#123;record[&#x27;kubernetes&#x27;][&#x27;container_name&#x27;]&#125;</span></span><br><span class="line"><span class="string">​</span>        <span class="string">docker_stamp</span> <span class="string">$&#123;time.to_i</span> <span class="string">+</span> <span class="number">3600</span> <span class="string">*</span> <span class="number">8</span><span class="string">&#125;</span></span><br><span class="line"><span class="string">​</span>      <span class="string">&lt;/record&gt;</span></span><br><span class="line"><span class="string">​</span>    <span class="string">&lt;/filter&gt;</span></span><br><span class="line"><span class="string">​</span>    <span class="comment"># Fixes json fields in Elasticsearch</span></span><br><span class="line"><span class="string">​</span>    <span class="string">&lt;filter</span> <span class="string">kubernetes.**&gt;</span></span><br><span class="line"><span class="string">​</span>      <span class="string">@id</span> <span class="string">k8s_filter_parser</span></span><br><span class="line"><span class="string">​</span>      <span class="string">@type</span> <span class="string">parser</span></span><br><span class="line"><span class="string">​</span>      <span class="string">key_name</span> <span class="string">log</span></span><br><span class="line"><span class="string">​</span>      <span class="string">reserve_data</span> <span class="literal">true</span></span><br><span class="line"><span class="string">​</span>      <span class="string">remove_key_name_field</span> <span class="literal">true</span></span><br><span class="line"><span class="string">​</span>      <span class="string">&lt;parse&gt;</span></span><br><span class="line"><span class="string">​</span>        <span class="string">@type</span> <span class="string">multi_format</span></span><br><span class="line"><span class="string">​</span>        <span class="string">&lt;pattern&gt;</span></span><br><span class="line"><span class="string">​</span>          <span class="string">format</span> <span class="string">json</span></span><br><span class="line"><span class="string">​</span>          <span class="string">time_key</span> <span class="string">time</span></span><br><span class="line"><span class="string">​</span>          <span class="string">keep_time_key</span></span><br><span class="line"><span class="string">​</span>          <span class="string">time_format</span> <span class="string">%Y-%m-%dT%H:%M:%S</span></span><br><span class="line"><span class="string">​</span>        <span class="string">&lt;/pattern&gt;</span></span><br><span class="line"><span class="string">​</span>        <span class="string">&lt;pattern&gt;</span></span><br><span class="line"><span class="string">​</span>          <span class="comment">#k8s-Component</span></span><br><span class="line"><span class="string">​</span>          <span class="comment">#&#123;&quot;log&quot;:&quot;I0710 04:12:31.540733       1 vxlan_network.go:60] watching for new subnet leases\n&quot;,&quot;stream&quot;:&quot;stderr&quot;,&quot;time&quot;:&quot;2019-07-10T04:12:31.540798651Z&quot;&#125;</span></span><br><span class="line"><span class="string">​</span>          <span class="string">format</span> <span class="string">/^[A-Z]+(?&lt;logtime&gt;.*)[\s]+(?&lt;request_file&gt;[0-9]+.*)\]</span> <span class="string">(?&lt;msg&gt;.*)$/</span></span><br><span class="line"><span class="string">​</span>        <span class="string">&lt;/pattern&gt;</span></span><br><span class="line"><span class="string">​</span>        <span class="string">&lt;pattern&gt;</span></span><br><span class="line"><span class="string">​</span>          <span class="comment">#cattle-node-agent</span></span><br><span class="line"><span class="string">​</span>          <span class="comment">#&#123;&quot;log&quot;:&quot;time=\&quot;2019-09-20T18:06:03Z\&quot; level=info msg=\&quot;Starting plan monitor\&quot;\n&quot;,&quot;stream&quot;:&quot;stderr&quot;,&quot;time&quot;:&quot;2019-09-20T18:06:03.149115054Z&quot;&#125;</span></span><br><span class="line"><span class="string">​</span>          <span class="comment">#format /^time=.&#123;2&#125;(?&lt;time&gt;.*Z).&#123;2&#125; level=(?&lt;level&gt;.*) msg=(?&lt;log&gt;.*)$/</span></span><br><span class="line"><span class="string">​</span>          <span class="string">format</span> <span class="string">/^(?&lt;logtime&gt;.*)</span> <span class="string">level=(?&lt;level&gt;.*)</span> <span class="string">msg=(?&lt;msg&gt;.*)$/</span></span><br><span class="line"><span class="string">​</span>        <span class="string">&lt;/pattern&gt;</span></span><br><span class="line"><span class="string">​</span>        <span class="string">&lt;pattern&gt;</span></span><br><span class="line"><span class="string">​</span>          <span class="comment">#fluentd-container</span></span><br><span class="line"><span class="string">​</span>          <span class="comment">#&#123;&quot;log&quot;:&quot;/var/lib/gems/2.3.0/gems/fluentd-1.6.3/lib/fluent/plugin/parser_regexp.rb:50: warning: regular expression has &#x27;]&#x27; without escape\n&quot;,&quot;stream&quot;:&quot;stderr&quot;, &quot;time&quot;: &quot;2019-09-20T18:06:03.149115054Z&quot;&#125;</span></span><br><span class="line"><span class="string">​</span>          <span class="string">format</span> <span class="string">/^(?&lt;request_file&gt;.*[0-9]+):</span> <span class="string">(?&lt;level&gt;.*):</span> <span class="string">(?&lt;msg&gt;.*)$/</span></span><br><span class="line"><span class="string">​</span>        <span class="string">&lt;/pattern&gt;</span></span><br><span class="line"><span class="string">​</span>        <span class="string">&lt;pattern&gt;</span></span><br><span class="line"><span class="string">​</span>          <span class="comment">#nginx-container error log</span></span><br><span class="line"><span class="string">​</span>          <span class="comment">#2019/10/18 12&quot;00:00 [warn] 123#123: *xxxyyy zzz...</span></span><br><span class="line"><span class="string">​</span>          <span class="string">format</span> <span class="string">/^(?&lt;logtime&gt;.*)</span> <span class="string">\[(?&lt;level&gt;.*)\]</span> <span class="string">(?&lt;pid&gt;[0-9]+)#(?&lt;tid&gt;[0-9]+):</span> <span class="string">(?&lt;msg&gt;.*)$/</span></span><br><span class="line"><span class="string">​</span>        <span class="string">&lt;/pattern&gt;</span></span><br><span class="line"><span class="string">​</span>      <span class="string">&lt;/parse&gt;</span></span><br><span class="line"><span class="string">​</span>    <span class="string">&lt;/filter&gt;</span></span><br><span class="line"><span class="string">​</span>    <span class="comment"># Modify tag to container name</span></span><br><span class="line"><span class="string">​</span>    <span class="string">&lt;match</span> <span class="string">kubernetes.**&gt;</span></span><br><span class="line"><span class="string">​</span>      <span class="string">@type</span> <span class="string">rewrite_tag_filter</span></span><br><span class="line"><span class="string">​</span>      <span class="string">&lt;rule&gt;</span></span><br><span class="line"><span class="string">​</span>        <span class="string">key</span> <span class="string">$[&#x27;kubernetes&#x27;][&#x27;container_name&#x27;]</span></span><br><span class="line"><span class="string">​</span>        <span class="string">pattern</span> <span class="string">^(.+)$</span></span><br><span class="line"><span class="string">​</span>        <span class="string">tag</span> <span class="string">$1</span></span><br><span class="line"><span class="string">​</span>      <span class="string">&lt;/rule&gt;</span></span><br><span class="line"><span class="string">​</span>    <span class="string">&lt;/match&gt;</span></span><br><span class="line">  <span class="attr">system.input.conf:</span> <span class="string">|-</span></span><br><span class="line"><span class="string">​</span>    <span class="comment">#Logs from systemd-journal for interesting services.</span></span><br><span class="line"><span class="string">​</span>    <span class="comment">#TODO(random-liu): Remove this after cri container runtime rolls out.</span></span><br><span class="line"><span class="string">​</span>    <span class="string">&lt;source&gt;</span></span><br><span class="line"><span class="string">​</span>      <span class="string">@id</span> <span class="string">journald-docker</span></span><br><span class="line"><span class="string">​</span>      <span class="string">@type</span> <span class="string">systemd</span></span><br><span class="line"><span class="string">​</span>      <span class="string">matches</span> [&#123; <span class="attr">&quot;_SYSTEMD_UNIT&quot;:</span> <span class="string">&quot;docker.service&quot;</span> &#125;]</span><br><span class="line"><span class="string">​</span>      <span class="string">&lt;storage&gt;</span></span><br><span class="line"><span class="string">​</span>        <span class="string">@type</span> <span class="string">local</span></span><br><span class="line"><span class="string">​</span>        <span class="string">persistent</span> <span class="literal">true</span></span><br><span class="line"><span class="string">​</span>        <span class="string">path</span> <span class="string">/var/log/journald-docker.pos</span></span><br><span class="line"><span class="string">​</span>      <span class="string">&lt;/storage&gt;</span></span><br><span class="line"><span class="string">​</span>      <span class="string">&lt;entry&gt;</span></span><br><span class="line"><span class="string">​</span>        <span class="string">fields_strip_underscores</span> <span class="literal">true</span></span><br><span class="line"><span class="string">​</span>        <span class="string">fields_lowercase</span> <span class="literal">true</span></span><br><span class="line"><span class="string">​</span>      <span class="string">&lt;/entry&gt;</span></span><br><span class="line"><span class="string">​</span>      <span class="string">tag</span> <span class="string">docker</span></span><br><span class="line"><span class="string">​</span>    <span class="string">&lt;/source&gt;</span></span><br><span class="line"><span class="string">​</span>    <span class="string">&lt;source&gt;</span></span><br><span class="line"><span class="string">​</span>      <span class="string">@id</span> <span class="string">journald-container-runtime</span></span><br><span class="line"><span class="string">​</span>      <span class="string">@type</span> <span class="string">systemd</span></span><br><span class="line"><span class="string">​</span>      <span class="string">matches</span> [&#123; <span class="attr">&quot;_SYSTEMD_UNIT&quot;:</span> <span class="string">&quot;<span class="template-variable">&#123;&#123; fluentd_container_runtime_service &#125;&#125;</span>.service&quot;</span> &#125;]</span><br><span class="line"><span class="string">​</span>      <span class="string">&lt;storage&gt;</span></span><br><span class="line"><span class="string">​</span>        <span class="string">@type</span> <span class="string">local</span></span><br><span class="line"><span class="string">​</span>        <span class="string">persistent</span> <span class="literal">true</span></span><br><span class="line"><span class="string">​</span>        <span class="string">path</span> <span class="string">/var/log/journald-container-runtime.pos</span></span><br><span class="line"><span class="string">​</span>      <span class="string">&lt;/storage&gt;</span></span><br><span class="line"><span class="string">​</span>      <span class="string">&lt;entry&gt;</span></span><br><span class="line"><span class="string">​</span>        <span class="string">fields_strip_underscores</span> <span class="literal">true</span></span><br><span class="line"><span class="string">​</span>        <span class="string">fields_lowercase</span> <span class="literal">true</span></span><br><span class="line"><span class="string">​</span>      <span class="string">&lt;/entry&gt;</span></span><br><span class="line"><span class="string">​</span>      <span class="string">tag</span> <span class="string">container-runtime</span></span><br><span class="line"><span class="string">​</span>    <span class="string">&lt;/source&gt;</span>   </span><br><span class="line"><span class="string">​</span>    <span class="string">&lt;source&gt;</span></span><br><span class="line"><span class="string">​</span>      <span class="string">@id</span> <span class="string">kernel</span></span><br><span class="line"><span class="string">​</span>      <span class="string">@type</span> <span class="string">systemd</span></span><br><span class="line"><span class="string">​</span>      <span class="string">matches</span> [&#123; <span class="attr">&quot;_TRANSPORT&quot;:</span> <span class="string">&quot;kernel&quot;</span> &#125;]</span><br><span class="line"><span class="string">​</span>      <span class="string">&lt;storage&gt;</span></span><br><span class="line"><span class="string">​</span>        <span class="string">@type</span> <span class="string">local</span></span><br><span class="line"><span class="string">​</span>        <span class="string">persistent</span> <span class="literal">true</span></span><br><span class="line"><span class="string">​</span>        <span class="string">path</span> <span class="string">/var/log/kernel.pos</span></span><br><span class="line"><span class="string">​</span>      <span class="string">&lt;/storage&gt;</span></span><br><span class="line"><span class="string">​</span>      <span class="string">&lt;entry&gt;</span></span><br><span class="line"><span class="string">​</span>        <span class="string">fields_strip_underscores</span> <span class="literal">true</span></span><br><span class="line"><span class="string">​</span>        <span class="string">fields_lowercase</span> <span class="literal">true</span></span><br><span class="line"><span class="string">​</span>      <span class="string">&lt;/entry&gt;</span></span><br><span class="line"><span class="string">​</span>      <span class="string">tag</span> <span class="string">kernel</span></span><br><span class="line"><span class="string">​</span>    <span class="string">&lt;/source&gt;</span></span><br><span class="line">  <span class="attr">forward.input.conf:</span> <span class="string">|-</span></span><br><span class="line"><span class="string">​</span>    <span class="comment"># Takes the messages sent over TCP</span></span><br><span class="line"><span class="string">​</span>    <span class="string">&lt;source&gt;</span></span><br><span class="line"><span class="string">​</span>      <span class="string">@id</span> <span class="string">forward</span></span><br><span class="line"><span class="string">​</span>      <span class="string">@type</span> <span class="string">forward</span></span><br><span class="line"><span class="string">​</span>    <span class="string">&lt;/source&gt;</span></span><br><span class="line">  <span class="attr">monitoring.conf:</span> <span class="string">|-</span></span><br><span class="line"><span class="string">​</span>    <span class="comment">#  Prometheus Exporter Plugin</span></span><br><span class="line"><span class="string">​</span>    <span class="comment"># input plugin that exports metrics</span></span><br><span class="line"><span class="string">​</span>    <span class="string">&lt;source&gt;</span></span><br><span class="line"><span class="string">​</span>      <span class="string">@id</span> <span class="string">prometheus</span></span><br><span class="line"><span class="string">​</span>      <span class="string">@type</span> <span class="string">prometheus</span></span><br><span class="line"><span class="string">​</span>    <span class="string">&lt;/source&gt;</span></span><br><span class="line"><span class="string">​</span>    <span class="string">&lt;source&gt;</span></span><br><span class="line"><span class="string">​</span>      <span class="string">@id</span> <span class="string">monitor_agent</span></span><br><span class="line"><span class="string">​</span>      <span class="string">@type</span> <span class="string">monitor_agent</span></span><br><span class="line"><span class="string">​</span>    <span class="string">&lt;/source&gt;</span>   </span><br><span class="line"><span class="string">​</span>    <span class="comment"># input plugin that collects metrics from MonitorAgent</span></span><br><span class="line"><span class="string">​</span>    <span class="string">&lt;source&gt;</span></span><br><span class="line"><span class="string">​</span>      <span class="string">@id</span> <span class="string">prometheus_monitor</span></span><br><span class="line"><span class="string">​</span>      <span class="string">@type</span> <span class="string">prometheus_monitor</span></span><br><span class="line"><span class="string">​</span>      <span class="string">&lt;labels&gt;</span></span><br><span class="line"><span class="string">​</span>        <span class="string">host</span> <span class="string">$&#123;hostname&#125;</span></span><br><span class="line"><span class="string">​</span>      <span class="string">&lt;/labels&gt;</span></span><br><span class="line"><span class="string">​</span>    <span class="string">&lt;/source&gt;</span>   </span><br><span class="line"><span class="string">​</span>    <span class="comment"># input plugin that collects metrics for output plugin</span></span><br><span class="line"><span class="string">​</span>    <span class="string">&lt;source&gt;</span></span><br><span class="line"><span class="string">​</span>      <span class="string">@id</span> <span class="string">prometheus_output_monitor</span></span><br><span class="line"><span class="string">​</span>      <span class="string">@type</span> <span class="string">prometheus_output_monitor</span></span><br><span class="line"><span class="string">​</span>      <span class="string">&lt;labels&gt;</span></span><br><span class="line"><span class="string">​</span>        <span class="string">host</span> <span class="string">$&#123;hostname&#125;</span></span><br><span class="line"><span class="string">​</span>      <span class="string">&lt;/labels&gt;</span></span><br><span class="line"><span class="string">​</span>    <span class="string">&lt;/source&gt;</span>    </span><br><span class="line"><span class="string">​</span>    <span class="comment"># input plugin that collects metrics for in_tail plugin</span></span><br><span class="line"><span class="string">​</span>    <span class="string">&lt;source&gt;</span></span><br><span class="line"><span class="string">​</span>      <span class="string">@id</span> <span class="string">prometheus_tail_monitor</span></span><br><span class="line"><span class="string">​</span>      <span class="string">@type</span> <span class="string">prometheus_tail_monitor</span></span><br><span class="line"><span class="string">​</span>      <span class="string">&lt;labels&gt;</span></span><br><span class="line"><span class="string">​</span>        <span class="string">host</span> <span class="string">$&#123;hostname&#125;</span></span><br><span class="line"><span class="string">​</span>      <span class="string">&lt;/labels&gt;</span></span><br><span class="line"><span class="string">​</span>    <span class="string">&lt;/source&gt;</span></span><br><span class="line">  <span class="attr">output.conf:</span> <span class="string">|-</span></span><br><span class="line"><span class="string">    &lt;match **&gt;</span></span><br><span class="line"><span class="string">      @id elasticsearch</span></span><br><span class="line"><span class="string">      @type elasticsearch</span></span><br><span class="line"><span class="string">      type_name _doc</span></span><br><span class="line"><span class="string">      include_tag_key true</span></span><br><span class="line"><span class="string">      host your-es-cluster-endpoint</span></span><br><span class="line"><span class="string">      port 9200</span></span><br><span class="line"><span class="string">      user your-es-account</span></span><br><span class="line"><span class="string">      password your-es-password</span></span><br><span class="line"><span class="string">      logstash_format true</span></span><br><span class="line"><span class="string">      logstash_prefix your-es-index-prefix.$&#123;tag&#125;</span></span><br><span class="line"><span class="string">      request_timeout 30s</span></span><br><span class="line"><span class="string">      &lt;buffer&gt;</span></span><br><span class="line"><span class="string">        @type file</span></span><br><span class="line"><span class="string">        path /var/log/fluentd-buffers/kubernetes.system.buffer</span></span><br><span class="line"><span class="string">        chunk_limit_size 64MB</span></span><br><span class="line"><span class="string">        total_limit_size 32GB</span></span><br><span class="line"><span class="string">        flush_mode interval</span></span><br><span class="line"><span class="string">        retry_type exponential_backoff</span></span><br><span class="line"><span class="string">        flush_thread_count 2</span></span><br><span class="line"><span class="string">        flush_interval 5s</span></span><br><span class="line"><span class="string">        retry_forever</span></span><br><span class="line"><span class="string">        retry_max_interval 30</span></span><br><span class="line"><span class="string">        queue_limit_length 8</span></span><br><span class="line"><span class="string">        overflow_action block</span></span><br><span class="line"><span class="string">      &lt;/buffer&gt;</span></span><br><span class="line"><span class="string">    &lt;/match&gt;</span></span><br></pre></td></tr></table></figure>
+</code></pre>
+</details>
+
+
+
+<p>从上面可以看到，这里不仅收集业务容器的日志, 同时也收集kuberntes集群组件的日志, 由于业务容器跟集群组件的日志虽然都是json格式，但为了更细粒度的进行数据分析，使用正则进行处理.</p>
+<p>最后需要修改es的集群地址，用户、密码，索引前缀等信息.</p>
+<p>这里没有使用kafka进行缓存, 一来因为使用kafka后，又需要一个logstash进行过度到es，增加了一层,又得维护一层配置，后续增加索引时不是很方便</p>
+<p>二来数据量没达到一个量级, 没有kafka，es也能够抗住.</p>
+<p>如果需要使用kafka的话，也可以使用kafka-connector机制来直接对接elasticsearch， <a target="_blank" rel="noopener" href="https://github.com/confluentinc/kafka-connect-elasticsearch">github</a>上已经有现成的工具, 大家可参考使用, 我这里没用过, </p>
+<h3 id="问题总结"><a href="#问题总结" class="headerlink" title="问题总结"></a>问题总结</h3><p>在体验的时候，由于各个组件打印的日志格式都不尽相同, 为了接收更多的组件日志定位问题，在使用正则表达式匹配的时候花的时候最长, 同时，大家也可开启fluentd的debug日志，或者将收集到的日志直接打印在本地，对定位问题方便一点，最后切记将debug关掉即可, 不然，磁盘会扛不住</p>
+<p>Fluentd本地保存收集日志的配置</p>
+<figure class="highlight yaml"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">#  outputfile.conf: |- </span></span><br><span class="line"><span class="comment">#    &lt;match **&gt;</span></span><br><span class="line"><span class="comment">#      @type file</span></span><br><span class="line"><span class="comment">#      path /var/log/$&#123;tag&#125;.fluentd</span></span><br><span class="line"><span class="comment">#      &lt;buffer tag&gt;</span></span><br><span class="line"><span class="comment">#        @type file</span></span><br><span class="line"><span class="comment">#        path /var/log/xxyy</span></span><br><span class="line"><span class="comment">#      &lt;/buffer&gt;</span></span><br><span class="line"><span class="comment">#    &lt;/match&gt;</span></span><br></pre></td></tr></table></figure>
+
+<p>fluentd开启es的debug, 更多参数可参考<a target="_blank" rel="noopener" href="https://github.com/uken/fluent-plugin-elasticsearch">这里</a></p>
+<p>遇到一个elasticsearch 索引mapping问题，感兴趣的可参考<a target="_blank" rel="noopener" href="https://izsk.me/2019/10/06/ES-FGC-Fix/">这里</a> </p>
+<h3 id="参考文章"><a href="#参考文章" class="headerlink" title="参考文章:"></a><strong>参考文章:</strong></h3><blockquote>
+<ul>
+<li><a target="_blank" rel="noopener" href="https://www.fluentd.org/">https://www.fluentd.org/</a></li>
+<li><a target="_blank" rel="noopener" href="https://www.cnblogs.com/operationhome/p/10907591.html">https://www.cnblogs.com/operationhome/p/10907591.html</a></li>
+<li><a target="_blank" rel="noopener" href="https://github.com/confluentinc/kafka-connect-elasticsearch">https://github.com/confluentinc/kafka-connect-elasticsearch</a></li>
+<li><a target="_blank" rel="noopener" href="https://github.com/uken/fluent-plugin-elasticsearch">https://github.com/uken/fluent-plugin-elasticsearch</a></li>
+<li><a target="_blank" rel="noopener" href="https://izsk.me/2019/10/06/ES-FGC-Fix/">https://izsk.me/2019/10/06/ES-FGC-Fix/</a></li>
+</ul>
+</blockquote>
+<h3 id="转载请注明出处https-izsk-me"><a href="#转载请注明出处https-izsk-me" class="headerlink" title="转载请注明出处https://izsk.me"></a><strong>转载请注明出处<a target="_blank" rel="noopener" href="https://izsk.me/">https://izsk.me</a></strong></h3>
+      
+    </div>
+
+    <div>
+      
+        
+<div id="wechat_subscriber" style="display: block; padding: 10px 0; margin: 20px auto; width: 100%; text-align: center">
+    <img id="wechat_subscriber_qcode" src="/images/websitecode250.png" alt=" wechat" style="width: 200px; max-width: 100%;"/>
+    <div>Scan Me To Read on Phone</div>
+</div>
+
+
+      
+    </div>
+
+    <div>
+      
+        
+  <div style="padding: 10px 0; margin: 20px auto; width: 90%; text-align: center;">
+    <div>I know you won't do this,but what if you did?</div>
+    <button id="rewardButton" disable="enable" onclick="var qr = document.getElementById('QR'); if (qr.style.display === 'none') {qr.style.display='block';} else {qr.style.display='none'}">
+      <span>赏</span>
+    </button>
+    <div id="QR" style="display: none;">
+      
+        <div id="wechat" style="display: inline-block">
+          <img id="wechat_qr" src="/images/wechatpayme.png" alt=" WeChat Pay"/>
+          <p>微信打赏</p>
+        </div>
+      
+      
+        <div id="alipay" style="display: inline-block">
+          <img id="alipay_qr" src="/images/alipayme.jpg" alt=" Alipay"/>
+          <p>支付宝打赏</p>
+        </div>
+      
     </div>
   </div>
 
-{% endblock %}
 
-{% block sidebar %}
-  {{ sidebar_template.render(true) }}
-{% endblock %}
+      
+    </div>
 
 
-{% block script_extra %}
-  {% include '_scripts/pages/post-details.swig' %}
-{% endblock %}
+    <footer class="post-footer">
+      
+        <div class="post-tags">
+          
+            <a href="/tags/FELK/" rel="tag"># FELK</a>
+          
+        </div>
+      
+
+      
+        <div class="post-nav">
+          <div class="post-nav-next post-nav-item">
+            
+              <a href="/2019/12/13/Kubernetes-PSP/" rel="next" title="Kubernetes学习(使用PodSecurityPolicy)">
+                <i class="fa fa-chevron-left"></i> Kubernetes学习(使用PodSecurityPolicy)
+              </a>
+            
+          </div>
+
+          <span class="post-nav-divider"></span>
+
+          <div class="post-nav-prev post-nav-item">
+            
+              <a href="/2019/12/27/Kubernetes-about-deployment-ports/" rel="prev" title="Kubernetes学习(关于deployment中的port定义)">
+                Kubernetes学习(关于deployment中的port定义) <i class="fa fa-chevron-right"></i>
+              </a>
+            
+          </div>
+        </div>
+      
+
+      
+      
+    </footer>
+  </article>
+
+
+
+    <div class="post-spread">
+      
+    </div>
+  </div>
+
+
+          </div>
+          
+
+
+          
+  <div class="comments" id="comments">
+    
+  </div>
+
+
+        </div>
+        
+          
+  
+  <div class="sidebar-toggle">
+    <div class="sidebar-toggle-line-wrap">
+      <span class="sidebar-toggle-line sidebar-toggle-line-first"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-middle"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-last"></span>
+    </div>
+  </div>
+
+  <aside id="sidebar" class="sidebar">
+    <div class="sidebar-inner">
+
+      
+
+      
+        <ul class="sidebar-nav motion-element">
+          <li class="sidebar-nav-toc sidebar-nav-active" data-target="post-toc-wrap" >
+            文章目录
+          </li>
+          <li class="sidebar-nav-overview" data-target="site-overview">
+            站点概览
+          </li>
+        </ul>
+      
+
+      <section class="site-overview sidebar-panel">
+        <div class="site-author motion-element" itemprop="author" itemscope itemtype="http://schema.org/Person">
+          <img class="site-author-image" itemprop="image"
+               src="/images/avatar.gif"
+               alt="" />
+          <p class="site-author-name" itemprop="name"></p>
+          <p class="site-description motion-element" itemprop="description"></p>
+        </div>
+        <nav class="site-state motion-element">
+        
+          
+            <div class="site-state-item site-state-posts">
+              <a href="/archives">
+                <span class="site-state-item-count">192</span>
+                <span class="site-state-item-name">日志</span>
+              </a>
+            </div>
+          
+
+          
+            <div class="site-state-item site-state-categories">
+              <a href="/categories">
+                <span class="site-state-item-count">14</span>
+                <span class="site-state-item-name">分类</span>
+              </a>
+            </div>
+          
+
+          
+            <div class="site-state-item site-state-tags">
+              <a href="/tags">
+                <span class="site-state-item-count">14</span>
+                <span class="site-state-item-name">标签</span>
+              </a>
+            </div>
+          
+
+        </nav>
+
+        
+
+        <div class="links-of-author motion-element">
+          
+        </div>
+
+        
+        
+
+        
+        
+
+        
+
+
+      </section>
+
+      
+      <!--noindex-->
+        <section class="post-toc-wrap motion-element sidebar-panel sidebar-panel-active">
+          <div class="post-toc">
+
+            
+              
+            
+
+            
+              <div class="post-toc-content"><ol class="nav"><li class="nav-item nav-level-3"><a class="nav-link" href="#dockerd%E9%85%8D%E7%BD%AE"><span class="nav-number">1.</span> <span class="nav-text">dockerd配置</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#fluentd-conf"><span class="nav-number">2.</span> <span class="nav-text">fluentd.conf</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E9%97%AE%E9%A2%98%E6%80%BB%E7%BB%93"><span class="nav-number">3.</span> <span class="nav-text">问题总结</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E5%8F%82%E8%80%83%E6%96%87%E7%AB%A0"><span class="nav-number">4.</span> <span class="nav-text">参考文章:</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E8%BD%AC%E8%BD%BD%E8%AF%B7%E6%B3%A8%E6%98%8E%E5%87%BA%E5%A4%84https-izsk-me"><span class="nav-number">5.</span> <span class="nav-text">转载请注明出处https:&#x2F;&#x2F;izsk.me</span></a></li></ol></div>
+            
+
+          </div>
+        </section>
+      <!--/noindex-->
+      
+
+    </div>
+  </aside>
+
+
+        
+      </div>
+    </main>
+
+    <footer id="footer" class="footer">
+      <div class="footer-inner">
+        <div class="copyright" >
+  
+  &copy; 
+  <span itemprop="copyrightYear">2022</span>
+  <span class="with-love">
+    <i class="fa fa-heart"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">Z.S.K.</span>
+</div>
+
+
+<div class="powered-by">
+  Supported by <a class="theme-link" target="_blank" rel="noopener" href="https://hexo.io">Hexo</a>
+</div>
+
+<div class="theme-info">
+  Theme -
+  <a class="theme-link" target="_blank" rel="noopener" href="https://github.com/iissnan/hexo-theme-next">
+    NexT.Mist
+  </a>
+</div>
+
+
+        
+
+        
+      </div>
+    </footer>
+
+    <div class="back-to-top">
+      <i class="fa fa-arrow-up"></i>
+    </div>
+  </div>
+
+  
+
+<script type="text/javascript">
+  if (Object.prototype.toString.call(window.Promise) !== '[object Function]') {
+    window.Promise = null;
+  }
+</script>
+
+
+
+
+
+
+
+
+
+  
+
+
+
+  
+  <script type="text/javascript" src="/lib/jquery/index.js?v=2.1.3"></script>
+
+  
+  <script type="text/javascript" src="/lib/fastclick/lib/fastclick.min.js?v=1.0.6"></script>
+
+  
+  <script type="text/javascript" src="/lib/jquery_lazyload/jquery.lazyload.js?v=1.9.7"></script>
+
+  
+  <script type="text/javascript" src="/lib/velocity/velocity.min.js?v=1.2.1"></script>
+
+  
+  <script type="text/javascript" src="/lib/velocity/velocity.ui.min.js?v=1.2.1"></script>
+
+  
+  <script type="text/javascript" src="/lib/fancybox/source/jquery.fancybox.pack.js?v=2.1.5"></script>
+
+
+  
+
+
+  <script type="text/javascript" src="/js/src/utils.js?v=5.1.0"></script>
+
+  <script type="text/javascript" src="/js/src/motion.js?v=5.1.0"></script>
+
+
+
+  
+  
+
+  
+  <script type="text/javascript" src="/js/src/scrollspy.js?v=5.1.0"></script>
+<script type="text/javascript" src="/js/src/post-details.js?v=5.1.0"></script>
+
+
+
+  
+
+
+  <script type="text/javascript" src="/js/src/bootstrap.js?v=5.1.0"></script>
+
+
+
+  
+
+
+
+  
+
+
+
+
+	
+
+
+
+
+
+  
+
+
+
+
+  
+  
+  <script type="text/javascript">
+    // Popup Window;
+    var isfetched = false;
+    // Search DB path;
+    var search_path = "search.xml";
+    if (search_path.length == 0) {
+      search_path = "search.xml";
+    }
+    var path = "/" + search_path;
+    // monitor main search box;
+
+    function proceedsearch() {
+      $("body").append('<div class="popoverlay">').css('overflow', 'hidden');
+      $('.popup').toggle();
+    }
+    // search function;
+    var searchFunc = function(path, search_id, content_id) {
+      'use strict';
+      $.ajax({
+        url: path,
+        dataType: "xml",
+        async: true,
+        success: function( xmlResponse ) {
+          // get the contents from search data
+          isfetched = true;
+          $('.popup').detach().appendTo('.header-inner');
+          var datas = $( "entry", xmlResponse ).map(function() {
+            return {
+              title: $( "title", this ).text(),
+              content: $("content",this).text(),
+              url: $( "url" , this).text()
+            };
+          }).get();
+          var $input = document.getElementById(search_id);
+          var $resultContent = document.getElementById(content_id);
+          $input.addEventListener('input', function(){
+            var matchcounts = 0;
+            var str='<ul class=\"search-result-list\">';
+            var keywords = this.value.trim().toLowerCase().split(/[\s\-]+/);
+            $resultContent.innerHTML = "";
+            if (this.value.trim().length > 1) {
+              // perform local searching
+              datas.forEach(function(data) {
+                var isMatch = false;
+                var content_index = [];
+                var data_title = data.title.trim().toLowerCase();
+                var data_content = data.content.trim().replace(/<[^>]+>/g,"").toLowerCase();
+                var data_url = decodeURIComponent(data.url);
+                var index_title = -1;
+                var index_content = -1;
+                var first_occur = -1;
+                // only match artiles with not empty titles and contents
+                if(data_title != '') {
+                  keywords.forEach(function(keyword, i) {
+                    index_title = data_title.indexOf(keyword);
+                    index_content = data_content.indexOf(keyword);
+                    if( index_title >= 0 || index_content >= 0 ){
+                      isMatch = true;
+                      if (i == 0) {
+                        first_occur = index_content;
+                      }
+                    }
+
+                  });
+                }
+                // show search results
+                if (isMatch) {
+                  matchcounts += 1;
+                  str += "<li><a href='"+ data_url +"' class='search-result-title'>"+ data_title +"</a>";
+                  var content = data.content.trim().replace(/<[^>]+>/g,"");
+                  if (first_occur >= 0) {
+                    // cut out 100 characters
+                    var start = first_occur - 20;
+                    var end = first_occur + 80;
+                    if(start < 0){
+                      start = 0;
+                    }
+                    if(start == 0){
+                      end = 50;
+                    }
+                    if(end > content.length){
+                      end = content.length;
+                    }
+                    var match_content = content.substring(start, end);
+                    // highlight all keywords
+                    keywords.forEach(function(keyword){
+                      var regS = new RegExp(keyword, "gi");
+                      match_content = match_content.replace(regS, "<b class=\"search-keyword\">"+keyword+"</b>");
+                    });
+
+                    str += "<p class=\"search-result\">" + match_content +"...</p>"
+                  }
+                  str += "</li>";
+                }
+              })};
+            str += "</ul>";
+            if (matchcounts == 0) { str = '<div id="no-result"><i class="fa fa-frown-o fa-5x" /></div>' }
+            if (keywords == "") { str = '<div id="no-result"><i class="fa fa-search fa-5x" /></div>' }
+            $resultContent.innerHTML = str;
+          });
+          proceedsearch();
+        }
+      });}
+
+    // handle and trigger popup window;
+    $('.popup-trigger').click(function(e) {
+      e.stopPropagation();
+      if (isfetched == false) {
+        searchFunc(path, 'local-search-input', 'local-search-result');
+      } else {
+        proceedsearch();
+      };
+    });
+
+    $('.popup-btn-close').click(function(e){
+      $('.popup').hide();
+      $(".popoverlay").remove();
+      $('body').css('overflow', '');
+    });
+    $('.popup').click(function(e){
+      e.stopPropagation();
+    });
+  </script>
+
+
+  
+
+  
+
+  
+
+  
+
+
+</body>
+</html>

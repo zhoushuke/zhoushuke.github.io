@@ -1,38 +1,954 @@
-{% extends '_layout.swig' %}
-{% import '_macro/post.swig' as post_template %}
-{% import '_macro/sidebar.swig' as sidebar_template %}
+<!doctype html>
 
 
-{% block title %} {{ page.title }} | {{ config.title }} {% endblock %}
 
-{% block page_class %}page-post-detail{% endblock %}
+  
 
 
-{% block content %}
+<html class="theme-next mist use-motion" lang="zh-Hans">
+<head>
+  <meta charset="UTF-8"/>
+<meta http-equiv="X-UA-Compatible" content="IE=edge" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1"/>
+
+
+
+<meta http-equiv="Cache-Control" content="no-transform" />
+<meta http-equiv="Cache-Control" content="no-siteapp" />
+
+
+
+
+
+
+
+
+
+
+
+
+  
+  
+  <link href="/lib/fancybox/source/jquery.fancybox.css?v=2.1.5" rel="stylesheet" type="text/css" />
+
+
+
+
+  
+  
+  
+  
+
+  
+    
+    
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+    
+    
+    <link href="//fonts.googleapis.com/css?family=Lato:300,300italic,400,400italic,700,700italic&subset=latin,latin-ext" rel="stylesheet" type="text/css">
+  
+
+
+
+
+
+
+<link href="/lib/font-awesome/css/font-awesome.min.css?v=4.6.2" rel="stylesheet" type="text/css" />
+
+<link href="/css/main.css?v=5.1.0" rel="stylesheet" type="text/css" />
+
+
+  <meta name="keywords" content="FELK," />
+
+
+
+
+
+
+
+
+  <link rel="shortcut icon" type="image/x-icon" href="/favicon.ico?v=5.1.0" />
+
+
+
+
+
+
+<meta name="description" content="elastalert是专门为elastsearch开源的日志关键字监控工具, 支持非常多的告警方式且自定义程度很高, 代码写的也非常清晰, 最近调研了这个开源库进行了二次开发, 用在了业务日志关键字监控上,还是很不错的.这里站在用户使用的角度对邮件告警进行了改造, 期间踩了不少坑. 下次会记录一下常见的监控rule类型及接入微信告警的方式.">
+<meta property="og:type" content="article">
+<meta property="og:title" content="FELK学习(elastalert自定义邮件模板)">
+<meta property="og:url" content="https://zhoushuke.github.io/2020/05/28/EFLK-elastalert-mail/index.html">
+<meta property="og:site_name" content="Z.S.K.&#39;s Records">
+<meta property="og:description" content="elastalert是专门为elastsearch开源的日志关键字监控工具, 支持非常多的告警方式且自定义程度很高, 代码写的也非常清晰, 最近调研了这个开源库进行了二次开发, 用在了业务日志关键字监控上,还是很不错的.这里站在用户使用的角度对邮件告警进行了改造, 期间踩了不少坑. 下次会记录一下常见的监控rule类型及接入微信告警的方式.">
+<meta property="og:locale">
+<meta property="og:image" content="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20200602165705.png">
+<meta property="og:image" content="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20200526124725.png">
+<meta property="og:image" content="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20200526153919.png">
+<meta property="og:image" content="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20200526154551.png">
+<meta property="article:published_time" content="2020-05-28T09:30:53.000Z">
+<meta property="article:modified_time" content="2022-07-19T03:16:00.969Z">
+<meta property="article:author" content="Z.S.K.">
+<meta property="article:tag" content="FELK">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:image" content="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20200602165705.png">
+
+
+
+<script type="text/javascript" id="hexo.configurations">
+  var NexT = window.NexT || {};
+  var CONFIG = {
+    root: '',
+    scheme: 'Mist',
+    sidebar: {"position":"left","display":"post"},
+    fancybox: true,
+    motion: true,
+    duoshuo: {
+      userId: 'undefined',
+      author: '博主'
+    },
+    algolia: {
+      applicationID: '',
+      apiKey: '',
+      indexName: '',
+      hits: {"per_page":10},
+      labels: {"input_placeholder":"Search for Posts","hits_empty":"We didn't find any results for the search: ${query}","hits_stats":"${hits} results found in ${time} ms"}
+    }
+  };
+</script>
+
+
+
+  <link rel="canonical" href="https://zhoushuke.github.io/2020/05/28/EFLK-elastalert-mail/"/>
+
+
+
+
+
+  <title> FELK学习(elastalert自定义邮件模板) | Z.S.K.'s Records </title>
+<meta name="generator" content="Hexo 6.2.0"></head>
+
+<body itemscope itemtype="http://schema.org/WebPage" lang="zh-Hans">
+
+  
+
+
+
+
+
+
+
+
+
+
+  
+  
+    
+  
+
+  <div class="container one-collumn sidebar-position-left page-post-detail ">
+    <div class="headband"></div>
+
+    <header id="header" class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-meta ">
+  
+
+  <div class="custom-logo-site-title">
+    <a href="/"  class="brand" rel="start">
+      <span class="logo-line-before"><i></i></span>
+      <span class="site-title">Z.S.K.'s Records</span>
+      <span class="logo-line-after"><i></i></span>
+    </a>
+  </div>
+    
+      <p class="site-subtitle"></p>
+    
+</div>
+
+<div class="site-nav-toggle">
+  <button>
+    <span class="btn-bar"></span>
+    <span class="btn-bar"></span>
+    <span class="btn-bar"></span>
+  </button>
+</div>
+
+<nav class="site-nav">
+  
+
+  
+    <ul id="menu" class="menu">
+      
+        
+        <li class="menu-item menu-item-home">
+          <a href="/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-home"></i> <br />
+            
+            首页
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-categories">
+          <a href="/categories" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-th"></i> <br />
+            
+            分类
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-about">
+          <a href="/about/ZSK-Profile.pdf" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-user"></i> <br />
+            
+            简历
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-archives">
+          <a href="/archives" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-archive"></i> <br />
+            
+            归档
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-tags">
+          <a href="/tags" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-tags"></i> <br />
+            
+            标签
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-commonweal">
+          <a href="/404.html" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-heartbeat"></i> <br />
+            
+            公益404
+          </a>
+        </li>
+      
+
+      
+        <li class="menu-item menu-item-search">
+          
+            <a href="javascript:;" class="popup-trigger">
+          
+            
+              <i class="menu-item-icon fa fa-search fa-fw"></i> <br />
+            
+            搜索
+          </a>
+        </li>
+      
+    </ul>
+  
+
+  
+    <div class="site-search">
+      
+  <div class="popup">
+ <span class="search-icon fa fa-search"></span>
+ <input type="text" id="local-search-input">
+ <div id="local-search-result"></div>
+ <span class="popup-btn-close">close</span>
+</div>
+
+
+    </div>
+  
+</nav>
+
+
+
+ </div>
+    </header>
+
+    <main id="main" class="main">
+      <div class="main-inner">
+        <div class="content-wrap">
+          <div id="content" class="content">
+            
 
   <div id="posts" class="posts-expand">
-    {{ post_template.render(page) }}
+    
 
-    <div class="post-spread">
-      {% if theme.jiathis %}
-        {% include '_partials/share/jiathis.swig' %}
-      {% elseif theme.baidushare %}
-        {% include '_partials/share/baidushare.swig' %}
-      {% elseif theme.add_this_id %}
-        {% include '_partials/share/add-this.swig' %}
-      {% elseif theme.duoshuo_shortname and theme.duoshuo_share %}
-        {% include '_partials/share/duoshuo_share.swig' %}
-      {% endif %}
+  
+
+  
+  
+  
+
+  <article class="post post-type-normal " itemscope itemtype="http://schema.org/Article">
+  <link itemprop="mainEntityOfPage" href="https://zhoushuke.github.io/2020/05/28/EFLK-elastalert-mail/">
+
+  <span style="display:none" itemprop="author" itemscope itemtype="http://schema.org/Person">
+    <meta itemprop="name" content="">
+    <meta itemprop="description" content="">
+    <meta itemprop="image" content="/images/avatar.gif">
+  </span>
+
+  <span style="display:none" itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+    <meta itemprop="name" content="Z.S.K.'s Records">
+    <span style="display:none" itemprop="logo" itemscope itemtype="http://schema.org/ImageObject">
+      <img style="display:none;" itemprop="url image" alt="Z.S.K.'s Records" src="">
+    </span>
+  </span>
+
+    
+      <header class="post-header">
+
+        
+        
+          <h1 class="post-title" itemprop="name headline">
+            
+            
+              
+                FELK学习(elastalert自定义邮件模板)
+              
+            
+          </h1>
+        
+
+        <div class="post-meta">
+          <span class="post-time">
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">发表于</span>
+              
+              <time title="Post created" itemprop="dateCreated datePublished" datetime="2020-05-28T17:30:53+08:00">
+                2020-05-28
+              </time>
+            
+
+            
+
+            
+          </span>
+
+          
+            <span class="post-category" >
+            
+              <span class="post-meta-divider">|</span>
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-folder-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">分类于</span>
+              
+              
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/FELK/" itemprop="url" rel="index">
+                    <span itemprop="name">FELK</span>
+                  </a>
+                </span>
+
+                
+                
+              
+            </span>
+          
+
+          
+            
+          
+
+          
+
+          
+          
+
+          
+
+          
+
+        </div>
+      </header>
+    
+
+
+    <div class="post-body" itemprop="articleBody">
+
+      
+      
+
+      
+        <p>elastalert是专门为elastsearch开源的日志关键字监控工具, 支持非常多的告警方式且自定义程度很高, 代码写的也非常清晰, 最近调研了这个开源库进行了二次开发, 用在了业务日志关键字监控上,还是很不错的.这里站在用户使用的角度对邮件告警进行了改造, 期间踩了不少坑.</p>
+<p>下次会记录一下常见的监控<code>rule</code>类型及接入微信告警的方式.</p>
+<span id="more"></span>
+
+
+
+<h3 id="安装"><a href="#安装" class="headerlink" title="安装"></a>安装</h3><figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">pip3 install elastalert</span><br></pre></td></tr></table></figure>
+
+
+
+<h3 id="启动"><a href="#启动" class="headerlink" title="启动"></a>启动</h3><h4 id="物理机"><a href="#物理机" class="headerlink" title="物理机"></a>物理机</h4><figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">/usr/bin/python -m elastalert.elastalert --rule /etc/elastalert/rules/my_rule.yaml --verbose</span><br></pre></td></tr></table></figure>
+
+<h4 id="容器"><a href="#容器" class="headerlink" title="容器"></a>容器</h4><p>官方给出的docker启动方式, 但比较粗糙, 不建议, 建议直接运行在k8s中.</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line">git <span class="built_in">clone</span> https://github.com/bitsensor/elastalert.git; <span class="built_in">cd</span> elastalert</span><br><span class="line">docker run -d -p 3030:3030 \</span><br><span class="line">    -v `<span class="built_in">pwd</span>`/config/elastalert.yaml:/opt/elastalert/config.yaml \</span><br><span class="line">    -v `<span class="built_in">pwd</span>`/config/config.json:/opt/elastalert-server/config/config.json \</span><br><span class="line">    -v `<span class="built_in">pwd</span>`/rules:/opt/elastalert/rules \</span><br><span class="line">    -v `<span class="built_in">pwd</span>`/rule_templates:/opt/elastalert/rule_templates \</span><br><span class="line">    --net=<span class="string">&quot;host&quot;</span> \</span><br><span class="line">    --name elastalert bitsensor/elastalert:latest</span><br></pre></td></tr></table></figure>
+
+<h4 id="k8s"><a href="#k8s" class="headerlink" title="k8s"></a>k8s</h4><p>这里推荐一个在elastalert的基础上集成restfulapi接口的库, <a target="_blank" rel="noopener" href="https://github.com/nsano-rururu/elastalert-server">elastalert-server</a></p>
+<p>直接支持最新的<code>python3.8+elastalert2.0.4</code>, 可通过http 接口进行<code>CURD</code></p>
+<h3 id="创建索引"><a href="#创建索引" class="headerlink" title="创建索引"></a>创建索引</h3><p>elastalert在启动时会自动创建相关索引，当然也可事先使用<code>elastalert-create-index</code>提示创建索引</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br></pre></td><td class="code"><pre><span class="line">root@python-debug-5fdd9d9cd5-fkfkh:/usr/local/lib/python3.5<span class="comment"># elastalert-create-index</span></span><br><span class="line">Enter Elasticsearch host: 127.0.0.1</span><br><span class="line">Enter Elasticsearch port: 9200</span><br><span class="line">Use SSL? t/f: f</span><br><span class="line">Enter optional basic-auth username (or leave blank): </span><br><span class="line">Enter optional basic-auth password (or leave blank): </span><br><span class="line">Enter optional Elasticsearch URL prefix (prepends a string to the URL of every request): </span><br><span class="line">New index name? (Default elastalert_status) realtysense.elastalert_status</span><br><span class="line">New <span class="built_in">alias</span> name? (Default elastalert_alerts) realtysense.elastalert_status</span><br><span class="line">Name of existing index to copy? (Default None) </span><br><span class="line">Elastic Version: 5.4.1</span><br><span class="line">Reading Elastic 5 index mappings:</span><br><span class="line">Reading index mapping <span class="string">&#x27;es_mappings/5/silence.json&#x27;</span></span><br><span class="line">Reading index mapping <span class="string">&#x27;es_mappings/5/elastalert_status.json&#x27;</span></span><br><span class="line">Reading index mapping <span class="string">&#x27;es_mappings/5/elastalert.json&#x27;</span></span><br><span class="line">Reading index mapping <span class="string">&#x27;es_mappings/5/past_elastalert.json&#x27;</span></span><br><span class="line">Reading index mapping <span class="string">&#x27;es_mappings/5/elastalert_error.json&#x27;</span></span><br><span class="line">New index realtysense.elastalert_status created</span><br><span class="line">Done!</span><br></pre></td></tr></table></figure>
+
+<p>上述的5个索引主要用于保存elastalert运行期间的相关数据, 会直接写回到es中, 主要用于计算比如聚合,发现日志关键字时的日志现场等,同时也会记录elastalert本身的数据.</p>
+<h3 id="配置热更新"><a href="#配置热更新" class="headerlink" title="配置热更新"></a>配置热更新</h3><p>elastalert代码中使用apscheduler库定时检查rule文件的hash值，在运行周期到达时会比对rules的hash值是否有变化从而修改apscheduler的modify_job来实现热更新</p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br></pre></td><td class="code"><pre><span class="line">new_rule_hashes = self.rules_loader.get_hashes(self.conf, self.args.rule)</span><br><span class="line">        <span class="comment"># Check each current rule for changes</span></span><br><span class="line">        <span class="keyword">for</span> rule_file, hash_value <span class="keyword">in</span> self.rule_hashes.items():</span><br><span class="line">            <span class="keyword">if</span> rule_file <span class="keyword">not</span> <span class="keyword">in</span> new_rule_hashes:</span><br><span class="line">                <span class="comment"># Rule file was deleted</span></span><br><span class="line">                elastalert_logger.info(<span class="string">&#x27;Rule file %s not found, stopping rule execution&#x27;</span> % (rule_file))</span><br><span class="line">                <span class="keyword">for</span> rule <span class="keyword">in</span> self.rules:</span><br><span class="line">                    <span class="keyword">if</span> rule[<span class="string">&#x27;rule_file&#x27;</span>] == rule_file:</span><br><span class="line">                        <span class="keyword">break</span></span><br><span class="line">                <span class="keyword">else</span>:</span><br><span class="line">                    <span class="keyword">continue</span></span><br><span class="line">                self.scheduler.remove_job(job_id=rule[<span class="string">&#x27;name&#x27;</span>])</span><br><span class="line">                self.rules.remove(rule)</span><br><span class="line">                <span class="keyword">continue</span></span><br><span class="line">            <span class="keyword">if</span> hash_value != new_rule_hashes[rule_file]:</span><br><span class="line">                <span class="comment"># Rule file was changed, reload rule</span></span><br><span class="line">                <span class="keyword">try</span>:</span><br><span class="line">                    new_rule = self.rules_loader.load_configuration(rule_file, self.conf)</span><br><span class="line">                    <span class="keyword">if</span> <span class="keyword">not</span> new_rule:</span><br><span class="line">                        logging.error(<span class="string">&#x27;Invalid rule file skipped: %s&#x27;</span> % rule_file)</span><br><span class="line">                        <span class="keyword">continue</span></span><br><span class="line">                    <span class="keyword">if</span> <span class="string">&#x27;is_enabled&#x27;</span> <span class="keyword">in</span> new_rule <span class="keyword">and</span> <span class="keyword">not</span> new_rule[<span class="string">&#x27;is_enabled&#x27;</span>]:</span><br><span class="line">                        elastalert_logger.info(<span class="string">&#x27;Rule file %s is now disabled.&#x27;</span> % (rule_file))</span><br><span class="line">                        <span class="comment"># Remove this rule if it&#x27;s been disabled</span></span><br><span class="line">                        self.rules = [rule <span class="keyword">for</span> rule <span class="keyword">in</span> self.rules <span class="keyword">if</span> rule[<span class="string">&#x27;rule_file&#x27;</span>] != rule_file]</span><br><span class="line">                        <span class="keyword">continue</span></span><br></pre></td></tr></table></figure>
+
+<p>因此如果是rule文件是使用的k8s的configmap进行部署, 则可直接修改configmap，不需要重启.</p>
+<h3 id="告警方式"><a href="#告警方式" class="headerlink" title="告警方式"></a>告警方式</h3><p>elastalert支持非常多的报警方式, 而且官方也支持直接对报警方式进行二次开发，只要实现对应的类即可, 详情<a target="_blank" rel="noopener" href="https://elastalert.readthedocs.io/en/latest/ruletypes.html#alerts">alerts</a>, 这里以邮件为例来自定义邮件模板</p>
+<h3 id="自定义邮件格式"><a href="#自定义邮件格式" class="headerlink" title="自定义邮件格式"></a>自定义邮件格式</h3><h4 id="邮件subject"><a href="#邮件subject" class="headerlink" title="邮件subject"></a>邮件subject</h4><p>默认的邮件的subject的格式是<code>ElastAlert: index realty contain is invalid</code></p>
+<p><code>index realty contain is invalid</code>为rule文件中定义的名字</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line">alert_subject: <span class="string">&quot;Issue &#123;0&#125; occurred at &#123;1&#125;&quot;</span></span><br><span class="line">alert_subject_args:  <span class="comment"># 这两个参数会被替换到上面两个占位参数中.</span></span><br><span class="line">- issue.name</span><br><span class="line">- <span class="string">&quot;@timestamp&quot;</span></span><br></pre></td></tr></table></figure>
+
+<p>这里使用的python中的字符串占位替换.类似于<code>&quot;&#123;&#125;, &#123;&#125;&quot;.format(xxx, yyy)</code></p>
+<h4 id="邮件内容"><a href="#邮件内容" class="headerlink" title="邮件内容"></a>邮件内容</h4><p>官方支持的邮件内容是纯文本的，非常不美观， 好在直接在rule文件中使用<code>alert_text</code>字段来指定使用的模板,可以使用html格式，同样，使用参数来进行占位替换.</p>
+<p><strong>但这存在一个问题是,每一个rule文件都需要写一大坨的html模板,虽然内容相差无几, 但还是需要根据需要展示的参数的个数来修改html模板, 因此，这里使用固定的html模板样式动态地对参数个数进行支持, 使用到jinja2来做, 最终实现的效果是: 使用者不需要关注模板内容, 直接指定alert_text_args的参数即可</strong></p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br></pre></td><td class="code"><pre><span class="line">alert:</span><br><span class="line">- <span class="string">&quot;email&quot;</span></span><br><span class="line">email_format: html</span><br><span class="line">alert_text_type: alert_text_only <span class="comment"># alert_text_only: 不发送默认模板内容</span></span><br><span class="line">alert_subject: <span class="string">&quot;IDS Event From &#123;0&#125; Priority: &#123;1&#125;&quot;</span></span><br><span class="line">alert_subject_args:</span><br><span class="line">- hostname</span><br><span class="line">- priority</span><br><span class="line"><span class="comment">#alert_text: | # 不需要指定模板，由jinja根据alert_text_args字段动态生成.</span></span><br><span class="line"><span class="comment">#	&lt;html content&gt;</span></span><br><span class="line">alert_text_args:</span><br><span class="line">- msg</span><br><span class="line">- <span class="string">&quot;@timestamp&quot;</span></span><br><span class="line">- <span class="string">&quot;@version&quot;</span></span><br><span class="line">- _id</span><br><span class="line">- _index</span><br><span class="line">- _type</span><br><span class="line">- service_name</span><br><span class="line">- kubernetes.host <span class="comment"># 如果是嵌套的json. 需要用.的方式引用</span></span><br><span class="line">- num_hits</span><br><span class="line">- num_matches</span><br><span class="line">email:</span><br><span class="line">- <span class="string">&quot;zhoushuke@sensetime.com&quot;</span></span><br></pre></td></tr></table></figure>
+
+<p>邮件效果如下:</p>
+<p><img src="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20200602165705.png"></p>
+<h3 id="问题"><a href="#问题" class="headerlink" title="问题"></a>问题</h3><ol>
+<li>镜像编译时提示以下<code>invalid syntax</code></li>
+</ol>
+<p><img src="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20200526124725.png"></p>
+<p>原因: python3.7的版本需要jira2.0以上的版本, 默认requirements.txt中指定的jira版本为1.x的版本, 不相容.</p>
+<p>解决: 升级jira的版本.</p>
+<ol start="2">
+<li>启动时提示 <code>duplicate rule name</code></li>
+</ol>
+<p><img src="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20200526153919.png"></p>
+<p>原因: 由于elastalert是递归的遍历rules规则，如果rules是使用的kubernetes的configmap挂载进来的，最终在rules目录下生成的文件会是下面的这样</p>
+<p><img src="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20200526154551.png"></p>
+<p>在..2020_05_26_07_37_04.030814278目录下也会存在一个同名的规则文件, 因此会提示rule 重复.</p>
+<p>解决: 在elastalert的配置文件中可指定<code>scan_subdirectories: False</code>即不对rules目录下的子目录进行扫描即可解决.</p>
+<ol start="3">
+<li>发送邮件时出现以下错误:</li>
+</ol>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br></pre></td><td class="code"><pre><span class="line">ERROR elastalert-server:</span><br><span class="line">ProcessController:  ERROR:root:Traceback (most recent call last):</span><br><span class="line">  File <span class="string">&quot;/opt/elastalert/elastalert/elastalert.py&quot;</span>, line 1450, <span class="keyword">in</span> alert</span><br><span class="line">    <span class="built_in">return</span> self.send_alert(matches, rule, alert_time=alert_time, retried=retried)</span><br><span class="line">  File <span class="string">&quot;/opt/elastalert/elastalert/elastalert.py&quot;</span>, line 1544, <span class="keyword">in</span> send_alert</span><br><span class="line">    alert.alert(matches)</span><br><span class="line">  File <span class="string">&quot;/opt/elastalert/elastalert/alerts.py&quot;</span>, line 484, <span class="keyword">in</span> alert</span><br><span class="line">    body = self.create_alert_body(matches)</span><br><span class="line">  File <span class="string">&quot;/opt/elastalert/elastalert/alerts.py&quot;</span>, line 291, <span class="keyword">in</span> create_alert_body</span><br><span class="line">    body += str(BasicMatchString(self.rule, match))</span><br><span class="line">  File <span class="string">&quot;/opt/elastalert/elastalert/alerts.py&quot;</span>, line 171, <span class="keyword">in</span> __str__</span><br><span class="line">    self._add_custom_alert_text()</span><br><span class="line">  File <span class="string">&quot;/opt/elastalert/elastalert/alerts.py&quot;</span>, line 99, <span class="keyword">in</span> _add_custom_alert_text</span><br><span class="line">    alert_text = alert_text.format(*alert_text_values)</span><br><span class="line">KeyError: <span class="string">&#x27;\n            background-color&#x27;</span></span><br></pre></td></tr></table></figure>
+
+<p>原因: 由于使用了jinja2的语法, 在hmtl模板文件中会使用大括号来占位, 但是html的style有时也会使用大括号, 不知道为何jinja2错误地把style中的大括号当成是占位参数，从而出现以下错误, 类似下面这种</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line">&lt;style&gt;</span><br><span class="line">  table<span class="comment">#t01 tr:nth-child(even) &#123;</span></span><br><span class="line">     background-color: <span class="comment">#eee;</span></span><br><span class="line">  &#125;</span><br><span class="line">&lt;/style&gt;</span><br></pre></td></tr></table></figure>
+
+<p>我直接把以下内容删掉后就没问题了,这个有点坑，要注意.</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">&#123;</span><br><span class="line">     background-color: <span class="comment">#eee;</span></span><br><span class="line"> &#125;</span><br></pre></td></tr></table></figure>
+
+
+
+<h3 id="调试"><a href="#调试" class="headerlink" title="调试"></a>调试</h3><p>如果在日志中出现query hits为0的多半原因是因为转换后的es 查询语句查询出来的结果就是为0</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line">ProcessController:  INFO:elastalert:Queried rule index realty find invalid keyword from 2020-05-27 06:55 UTC to 2020-05-27 07:00 UTC: 0 / 0 hits</span><br><span class="line">    </span><br><span class="line">07:00:51.888Z ERROR elastalert-server:</span><br><span class="line">    ProcessController:  INFO:elastalert:Ran index realty find invalid keyword from 2020-05-27 06:55 UTC to 2020-05-27 07:00 UTC: 0 query hits (0 already seen), 0 matches, 0 alerts sent</span><br></pre></td></tr></table></figure>
+
+<p>可打开<code>es_debug_trace</code>将es查询记录到指定的文件中, 如下:</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br></pre></td><td class="code"><pre><span class="line">curl -H <span class="string">&#x27;Content-Type: application/json&#x27;</span> -XGET <span class="string">&#x27;http://localhost:9200/demo.demo-*/_search?pretty&amp;_source_include=%2A%2C%40timestamp&amp;ignore_unavailable=true&amp;scroll=30s&amp;size=10&#x27;</span> -d <span class="string">&#x27;&#123;</span></span><br><span class="line"><span class="string">  &quot;query&quot;: &#123;</span></span><br><span class="line"><span class="string">    &quot;bool&quot;: &#123;</span></span><br><span class="line"><span class="string">      &quot;filter&quot;: &#123;</span></span><br><span class="line"><span class="string">        &quot;bool&quot;: &#123;</span></span><br><span class="line"><span class="string">          &quot;must&quot;: [</span></span><br><span class="line"><span class="string">            &#123;</span></span><br><span class="line"><span class="string">              &quot;range&quot;: &#123;</span></span><br><span class="line"><span class="string">                &quot;@timestamp&quot;: &#123;</span></span><br><span class="line"><span class="string">                  &quot;gt&quot;: &quot;2020-05-27T08:31:43.695209Z&quot;,</span></span><br><span class="line"><span class="string">                  &quot;lte&quot;: &quot;2020-05-27T08:33:15.189058Z&quot;</span></span><br><span class="line"><span class="string">                &#125;</span></span><br><span class="line"><span class="string">              &#125;</span></span><br><span class="line"><span class="string">            &#125;,</span></span><br><span class="line"><span class="string">            &#123;</span></span><br><span class="line"><span class="string">              &quot;wildcard&quot;: &#123; # 重点关注这里</span></span><br><span class="line"><span class="string">                &quot;msg&quot;: &quot;*unaryInterceptor*&quot;</span></span><br><span class="line"><span class="string">              &#125;</span></span><br><span class="line"><span class="string">            &#125;</span></span><br><span class="line"><span class="string">          ]</span></span><br><span class="line"><span class="string">        &#125;</span></span><br><span class="line"><span class="string">      &#125;</span></span><br><span class="line"><span class="string">    &#125;</span></span><br><span class="line"><span class="string">  &#125;,</span></span><br><span class="line"><span class="string">  &quot;sort&quot;: [</span></span><br><span class="line"><span class="string">    &#123;</span></span><br><span class="line"><span class="string">      &quot;@timestamp&quot;: &#123;</span></span><br><span class="line"><span class="string">        &quot;order&quot;: &quot;asc&quot;</span></span><br><span class="line"><span class="string">      &#125;</span></span><br><span class="line"><span class="string">    &#125;</span></span><br><span class="line"><span class="string">  ]</span></span><br><span class="line"><span class="string">&#125;&#x27;</span></span><br></pre></td></tr></table></figure>
+
+<p>在这里要注意的是es的语法中, 使用<code>wildcard</code>时只能使用小写的字符串, 这是一个坑, 原因可参考<a target="_blank" rel="noopener" href="https://izsk.me/2020/05/27/EFK-prombles/">zsk-blog</a></p>
+<h4 id="使用关键字参数"><a href="#使用关键字参数" class="headerlink" title="使用关键字参数"></a>使用关键字参数</h4><p>除了使用位置参数外，也支持在模板中使用关键字参数, 如下:</p>
+<figure class="highlight yaml"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br></pre></td><td class="code"><pre><span class="line"><span class="attr">type:</span> <span class="string">any</span></span><br><span class="line"><span class="attr">filter:</span></span><br><span class="line">    <span class="bullet">-</span> <span class="attr">term:</span></span><br><span class="line">        <span class="attr">_type:</span> <span class="string">elastalert_error</span></span><br><span class="line"><span class="attr">index:</span> <span class="string">elastalert_status</span></span><br><span class="line"><span class="attr">alert_subject:</span> <span class="string">&quot;Error on rule elastalert &quot;</span></span><br><span class="line"><span class="attr">alert_text_kw:</span></span><br><span class="line">     <span class="attr">data:</span> <span class="string">data</span></span><br><span class="line"><span class="attr">alert_text:</span> <span class="string">|</span></span><br><span class="line"><span class="string">    Error elastalert :</span></span><br><span class="line"><span class="string">    - &#123;data&#125;</span></span><br></pre></td></tr></table></figure>
+
+<h4 id="elastalert-server支持es-debug-trace"><a href="#elastalert-server支持es-debug-trace" class="headerlink" title="elastalert-server支持es_debug_trace"></a>elastalert-server支持es_debug_trace</h4><p>默认的elastalert-server对elastalert参够使用的参数不是很多, 目前只支持<code>--verbose</code>跟<code>--debug</code>这两个调试参数, 但是elastalert还有一个参数<code>es_debug_trace</code>在elastalert-server的配置文件中是不支持的，这对于需要debug es的查询语句时很不方便，需要修改源码支持</p>
+<p><code>elastalert-server/src/controllers/process/index.js</code></p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">if</span> (config.get(<span class="string">&#x27;es_debug_trace&#x27;</span>) !== undefined &amp;&amp; config.get(<span class="string">&#x27;es_debug_trace&#x27;</span>) !== <span class="string">&#x27;&#x27;</span>) &#123;</span><br><span class="line">  logger.info(<span class="string">&#x27;Setting ElastAlert es_debug_trace mode. Enable logging from Elasticsearch queries as curl command. Queries will be logged to file.&#x27;</span>);</span><br><span class="line">  startArguments.push(<span class="string">&#x27;--es_debug_trace&#x27;</span>, config.get(<span class="string">&#x27;es_debug_trace&#x27;</span>));</span><br></pre></td></tr></table></figure>
+
+<p><code>elastalert-server/config/config.json</code>添加&#96;  “es_debug_trace”: “&#x2F;tmp&#x2F;“即可</p>
+<h3 id="参考文章"><a href="#参考文章" class="headerlink" title="参考文章:"></a><strong>参考文章:</strong></h3><blockquote>
+<ul>
+<li><a target="_blank" rel="noopener" href="https://github.com/Yelp/elastalert/issues/2690">https://github.com/Yelp/elastalert/issues/2690</a></li>
+<li><a target="_blank" rel="noopener" href="https://github.com/nsano-rururu/elastalert-server">https://github.com/nsano-rururu/elastalert-server</a></li>
+<li><a target="_blank" rel="noopener" href="https://chunlife.top/2019/03/27/es%E5%91%8A%E8%AD%A6%E5%8A%9F%E8%83%BD%E2%80%94%E2%80%94elastalert/">https://chunlife.top/2019/03/27/es%E5%91%8A%E8%AD%A6%E5%8A%9F%E8%83%BD%E2%80%94%E2%80%94elastalert/</a></li>
+<li><a target="_blank" rel="noopener" href="https://segmentfault.com/a/1190000017553282">https://segmentfault.com/a/1190000017553282</a></li>
+<li><a target="_blank" rel="noopener" href="http://www.mamicode.com/info-detail-2269787.html">http://www.mamicode.com/info-detail-2269787.html</a></li>
+</ul>
+</blockquote>
+<h3 id="转载请注明出处https-izsk-me"><a href="#转载请注明出处https-izsk-me" class="headerlink" title="转载请注明出处https://izsk.me"></a><strong>转载请注明出处<a target="_blank" rel="noopener" href="https://izsk.me/">https://izsk.me</a></strong></h3>
+      
+    </div>
+
+    <div>
+      
+        
+<div id="wechat_subscriber" style="display: block; padding: 10px 0; margin: 20px auto; width: 100%; text-align: center">
+    <img id="wechat_subscriber_qcode" src="/images/websitecode250.png" alt=" wechat" style="width: 200px; max-width: 100%;"/>
+    <div>Scan Me To Read on Phone</div>
+</div>
+
+
+      
+    </div>
+
+    <div>
+      
+        
+  <div style="padding: 10px 0; margin: 20px auto; width: 90%; text-align: center;">
+    <div>I know you won't do this,but what if you did?</div>
+    <button id="rewardButton" disable="enable" onclick="var qr = document.getElementById('QR'); if (qr.style.display === 'none') {qr.style.display='block';} else {qr.style.display='none'}">
+      <span>赏</span>
+    </button>
+    <div id="QR" style="display: none;">
+      
+        <div id="wechat" style="display: inline-block">
+          <img id="wechat_qr" src="/images/wechatpayme.png" alt=" WeChat Pay"/>
+          <p>微信打赏</p>
+        </div>
+      
+      
+        <div id="alipay" style="display: inline-block">
+          <img id="alipay_qr" src="/images/alipayme.jpg" alt=" Alipay"/>
+          <p>支付宝打赏</p>
+        </div>
+      
     </div>
   </div>
 
-{% endblock %}
 
-{% block sidebar %}
-  {{ sidebar_template.render(true) }}
-{% endblock %}
+      
+    </div>
 
 
-{% block script_extra %}
-  {% include '_scripts/pages/post-details.swig' %}
-{% endblock %}
+    <footer class="post-footer">
+      
+        <div class="post-tags">
+          
+            <a href="/tags/FELK/" rel="tag"># FELK</a>
+          
+        </div>
+      
+
+      
+        <div class="post-nav">
+          <div class="post-nav-next post-nav-item">
+            
+              <a href="/2020/05/27/EFK-prombles/" rel="next" title="FELK学习(踩坑记)">
+                <i class="fa fa-chevron-left"></i> FELK学习(踩坑记)
+              </a>
+            
+          </div>
+
+          <span class="post-nav-divider"></span>
+
+          <div class="post-nav-prev post-nav-item">
+            
+              <a href="/2020/05/29/EFLK-elastalert-rules/" rel="prev" title="FELK学习(elastalertRule常用规则)">
+                FELK学习(elastalertRule常用规则) <i class="fa fa-chevron-right"></i>
+              </a>
+            
+          </div>
+        </div>
+      
+
+      
+      
+    </footer>
+  </article>
+
+
+
+    <div class="post-spread">
+      
+    </div>
+  </div>
+
+
+          </div>
+          
+
+
+          
+  <div class="comments" id="comments">
+    
+  </div>
+
+
+        </div>
+        
+          
+  
+  <div class="sidebar-toggle">
+    <div class="sidebar-toggle-line-wrap">
+      <span class="sidebar-toggle-line sidebar-toggle-line-first"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-middle"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-last"></span>
+    </div>
+  </div>
+
+  <aside id="sidebar" class="sidebar">
+    <div class="sidebar-inner">
+
+      
+
+      
+        <ul class="sidebar-nav motion-element">
+          <li class="sidebar-nav-toc sidebar-nav-active" data-target="post-toc-wrap" >
+            文章目录
+          </li>
+          <li class="sidebar-nav-overview" data-target="site-overview">
+            站点概览
+          </li>
+        </ul>
+      
+
+      <section class="site-overview sidebar-panel">
+        <div class="site-author motion-element" itemprop="author" itemscope itemtype="http://schema.org/Person">
+          <img class="site-author-image" itemprop="image"
+               src="/images/avatar.gif"
+               alt="" />
+          <p class="site-author-name" itemprop="name"></p>
+          <p class="site-description motion-element" itemprop="description"></p>
+        </div>
+        <nav class="site-state motion-element">
+        
+          
+            <div class="site-state-item site-state-posts">
+              <a href="/archives">
+                <span class="site-state-item-count">192</span>
+                <span class="site-state-item-name">日志</span>
+              </a>
+            </div>
+          
+
+          
+            <div class="site-state-item site-state-categories">
+              <a href="/categories">
+                <span class="site-state-item-count">14</span>
+                <span class="site-state-item-name">分类</span>
+              </a>
+            </div>
+          
+
+          
+            <div class="site-state-item site-state-tags">
+              <a href="/tags">
+                <span class="site-state-item-count">14</span>
+                <span class="site-state-item-name">标签</span>
+              </a>
+            </div>
+          
+
+        </nav>
+
+        
+
+        <div class="links-of-author motion-element">
+          
+        </div>
+
+        
+        
+
+        
+        
+
+        
+
+
+      </section>
+
+      
+      <!--noindex-->
+        <section class="post-toc-wrap motion-element sidebar-panel sidebar-panel-active">
+          <div class="post-toc">
+
+            
+              
+            
+
+            
+              <div class="post-toc-content"><ol class="nav"><li class="nav-item nav-level-3"><a class="nav-link" href="#%E5%AE%89%E8%A3%85"><span class="nav-number">1.</span> <span class="nav-text">安装</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E5%90%AF%E5%8A%A8"><span class="nav-number">2.</span> <span class="nav-text">启动</span></a><ol class="nav-child"><li class="nav-item nav-level-4"><a class="nav-link" href="#%E7%89%A9%E7%90%86%E6%9C%BA"><span class="nav-number">2.1.</span> <span class="nav-text">物理机</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#%E5%AE%B9%E5%99%A8"><span class="nav-number">2.2.</span> <span class="nav-text">容器</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#k8s"><span class="nav-number">2.3.</span> <span class="nav-text">k8s</span></a></li></ol></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E5%88%9B%E5%BB%BA%E7%B4%A2%E5%BC%95"><span class="nav-number">3.</span> <span class="nav-text">创建索引</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E9%85%8D%E7%BD%AE%E7%83%AD%E6%9B%B4%E6%96%B0"><span class="nav-number">4.</span> <span class="nav-text">配置热更新</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E5%91%8A%E8%AD%A6%E6%96%B9%E5%BC%8F"><span class="nav-number">5.</span> <span class="nav-text">告警方式</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E8%87%AA%E5%AE%9A%E4%B9%89%E9%82%AE%E4%BB%B6%E6%A0%BC%E5%BC%8F"><span class="nav-number">6.</span> <span class="nav-text">自定义邮件格式</span></a><ol class="nav-child"><li class="nav-item nav-level-4"><a class="nav-link" href="#%E9%82%AE%E4%BB%B6subject"><span class="nav-number">6.1.</span> <span class="nav-text">邮件subject</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#%E9%82%AE%E4%BB%B6%E5%86%85%E5%AE%B9"><span class="nav-number">6.2.</span> <span class="nav-text">邮件内容</span></a></li></ol></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E9%97%AE%E9%A2%98"><span class="nav-number">7.</span> <span class="nav-text">问题</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E8%B0%83%E8%AF%95"><span class="nav-number">8.</span> <span class="nav-text">调试</span></a><ol class="nav-child"><li class="nav-item nav-level-4"><a class="nav-link" href="#%E4%BD%BF%E7%94%A8%E5%85%B3%E9%94%AE%E5%AD%97%E5%8F%82%E6%95%B0"><span class="nav-number">8.1.</span> <span class="nav-text">使用关键字参数</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#elastalert-server%E6%94%AF%E6%8C%81es-debug-trace"><span class="nav-number">8.2.</span> <span class="nav-text">elastalert-server支持es_debug_trace</span></a></li></ol></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E5%8F%82%E8%80%83%E6%96%87%E7%AB%A0"><span class="nav-number">9.</span> <span class="nav-text">参考文章:</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E8%BD%AC%E8%BD%BD%E8%AF%B7%E6%B3%A8%E6%98%8E%E5%87%BA%E5%A4%84https-izsk-me"><span class="nav-number">10.</span> <span class="nav-text">转载请注明出处https:&#x2F;&#x2F;izsk.me</span></a></li></ol></div>
+            
+
+          </div>
+        </section>
+      <!--/noindex-->
+      
+
+    </div>
+  </aside>
+
+
+        
+      </div>
+    </main>
+
+    <footer id="footer" class="footer">
+      <div class="footer-inner">
+        <div class="copyright" >
+  
+  &copy; 
+  <span itemprop="copyrightYear">2022</span>
+  <span class="with-love">
+    <i class="fa fa-heart"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">Z.S.K.</span>
+</div>
+
+
+<div class="powered-by">
+  Supported by <a class="theme-link" target="_blank" rel="noopener" href="https://hexo.io">Hexo</a>
+</div>
+
+<div class="theme-info">
+  Theme -
+  <a class="theme-link" target="_blank" rel="noopener" href="https://github.com/iissnan/hexo-theme-next">
+    NexT.Mist
+  </a>
+</div>
+
+
+        
+
+        
+      </div>
+    </footer>
+
+    <div class="back-to-top">
+      <i class="fa fa-arrow-up"></i>
+    </div>
+  </div>
+
+  
+
+<script type="text/javascript">
+  if (Object.prototype.toString.call(window.Promise) !== '[object Function]') {
+    window.Promise = null;
+  }
+</script>
+
+
+
+
+
+
+
+
+
+  
+
+
+
+  
+  <script type="text/javascript" src="/lib/jquery/index.js?v=2.1.3"></script>
+
+  
+  <script type="text/javascript" src="/lib/fastclick/lib/fastclick.min.js?v=1.0.6"></script>
+
+  
+  <script type="text/javascript" src="/lib/jquery_lazyload/jquery.lazyload.js?v=1.9.7"></script>
+
+  
+  <script type="text/javascript" src="/lib/velocity/velocity.min.js?v=1.2.1"></script>
+
+  
+  <script type="text/javascript" src="/lib/velocity/velocity.ui.min.js?v=1.2.1"></script>
+
+  
+  <script type="text/javascript" src="/lib/fancybox/source/jquery.fancybox.pack.js?v=2.1.5"></script>
+
+
+  
+
+
+  <script type="text/javascript" src="/js/src/utils.js?v=5.1.0"></script>
+
+  <script type="text/javascript" src="/js/src/motion.js?v=5.1.0"></script>
+
+
+
+  
+  
+
+  
+  <script type="text/javascript" src="/js/src/scrollspy.js?v=5.1.0"></script>
+<script type="text/javascript" src="/js/src/post-details.js?v=5.1.0"></script>
+
+
+
+  
+
+
+  <script type="text/javascript" src="/js/src/bootstrap.js?v=5.1.0"></script>
+
+
+
+  
+
+
+
+  
+
+
+
+
+	
+
+
+
+
+
+  
+
+
+
+
+  
+  
+  <script type="text/javascript">
+    // Popup Window;
+    var isfetched = false;
+    // Search DB path;
+    var search_path = "search.xml";
+    if (search_path.length == 0) {
+      search_path = "search.xml";
+    }
+    var path = "/" + search_path;
+    // monitor main search box;
+
+    function proceedsearch() {
+      $("body").append('<div class="popoverlay">').css('overflow', 'hidden');
+      $('.popup').toggle();
+    }
+    // search function;
+    var searchFunc = function(path, search_id, content_id) {
+      'use strict';
+      $.ajax({
+        url: path,
+        dataType: "xml",
+        async: true,
+        success: function( xmlResponse ) {
+          // get the contents from search data
+          isfetched = true;
+          $('.popup').detach().appendTo('.header-inner');
+          var datas = $( "entry", xmlResponse ).map(function() {
+            return {
+              title: $( "title", this ).text(),
+              content: $("content",this).text(),
+              url: $( "url" , this).text()
+            };
+          }).get();
+          var $input = document.getElementById(search_id);
+          var $resultContent = document.getElementById(content_id);
+          $input.addEventListener('input', function(){
+            var matchcounts = 0;
+            var str='<ul class=\"search-result-list\">';
+            var keywords = this.value.trim().toLowerCase().split(/[\s\-]+/);
+            $resultContent.innerHTML = "";
+            if (this.value.trim().length > 1) {
+              // perform local searching
+              datas.forEach(function(data) {
+                var isMatch = false;
+                var content_index = [];
+                var data_title = data.title.trim().toLowerCase();
+                var data_content = data.content.trim().replace(/<[^>]+>/g,"").toLowerCase();
+                var data_url = decodeURIComponent(data.url);
+                var index_title = -1;
+                var index_content = -1;
+                var first_occur = -1;
+                // only match artiles with not empty titles and contents
+                if(data_title != '') {
+                  keywords.forEach(function(keyword, i) {
+                    index_title = data_title.indexOf(keyword);
+                    index_content = data_content.indexOf(keyword);
+                    if( index_title >= 0 || index_content >= 0 ){
+                      isMatch = true;
+                      if (i == 0) {
+                        first_occur = index_content;
+                      }
+                    }
+
+                  });
+                }
+                // show search results
+                if (isMatch) {
+                  matchcounts += 1;
+                  str += "<li><a href='"+ data_url +"' class='search-result-title'>"+ data_title +"</a>";
+                  var content = data.content.trim().replace(/<[^>]+>/g,"");
+                  if (first_occur >= 0) {
+                    // cut out 100 characters
+                    var start = first_occur - 20;
+                    var end = first_occur + 80;
+                    if(start < 0){
+                      start = 0;
+                    }
+                    if(start == 0){
+                      end = 50;
+                    }
+                    if(end > content.length){
+                      end = content.length;
+                    }
+                    var match_content = content.substring(start, end);
+                    // highlight all keywords
+                    keywords.forEach(function(keyword){
+                      var regS = new RegExp(keyword, "gi");
+                      match_content = match_content.replace(regS, "<b class=\"search-keyword\">"+keyword+"</b>");
+                    });
+
+                    str += "<p class=\"search-result\">" + match_content +"...</p>"
+                  }
+                  str += "</li>";
+                }
+              })};
+            str += "</ul>";
+            if (matchcounts == 0) { str = '<div id="no-result"><i class="fa fa-frown-o fa-5x" /></div>' }
+            if (keywords == "") { str = '<div id="no-result"><i class="fa fa-search fa-5x" /></div>' }
+            $resultContent.innerHTML = str;
+          });
+          proceedsearch();
+        }
+      });}
+
+    // handle and trigger popup window;
+    $('.popup-trigger').click(function(e) {
+      e.stopPropagation();
+      if (isfetched == false) {
+        searchFunc(path, 'local-search-input', 'local-search-result');
+      } else {
+        proceedsearch();
+      };
+    });
+
+    $('.popup-btn-close').click(function(e){
+      $('.popup').hide();
+      $(".popoverlay").remove();
+      $('body').css('overflow', '');
+    });
+    $('.popup').click(function(e){
+      e.stopPropagation();
+    });
+  </script>
+
+
+  
+
+  
+
+  
+
+  
+
+
+</body>
+</html>

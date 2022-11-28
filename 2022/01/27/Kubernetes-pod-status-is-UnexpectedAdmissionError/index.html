@@ -1,38 +1,956 @@
-{% extends '_layout.swig' %}
-{% import '_macro/post.swig' as post_template %}
-{% import '_macro/sidebar.swig' as sidebar_template %}
+<!doctype html>
 
 
-{% block title %} {{ page.title }} | {{ config.title }} {% endblock %}
 
-{% block page_class %}page-post-detail{% endblock %}
+  
 
 
-{% block content %}
+<html class="theme-next mist use-motion" lang="zh-Hans">
+<head>
+  <meta charset="UTF-8"/>
+<meta http-equiv="X-UA-Compatible" content="IE=edge" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1"/>
+
+
+
+<meta http-equiv="Cache-Control" content="no-transform" />
+<meta http-equiv="Cache-Control" content="no-siteapp" />
+
+
+
+
+
+
+
+
+
+
+
+
+  
+  
+  <link href="/lib/fancybox/source/jquery.fancybox.css?v=2.1.5" rel="stylesheet" type="text/css" />
+
+
+
+
+  
+  
+  
+  
+
+  
+    
+    
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+    
+    
+    <link href="//fonts.googleapis.com/css?family=Lato:300,300italic,400,400italic,700,700italic&subset=latin,latin-ext" rel="stylesheet" type="text/css">
+  
+
+
+
+
+
+
+<link href="/lib/font-awesome/css/font-awesome.min.css?v=4.6.2" rel="stylesheet" type="text/css" />
+
+<link href="/css/main.css?v=5.1.0" rel="stylesheet" type="text/css" />
+
+
+  <meta name="keywords" content="Kubernetes," />
+
+
+
+
+
+
+
+
+  <link rel="shortcut icon" type="image/x-icon" href="/favicon.ico?v=5.1.0" />
+
+
+
+
+
+
+<meta name="description" content="今天在排查集群一个问题时，发现相关的pod的状态为UnexpectedAdmissionError,在这之前从未没遇到过pod还有这种状态的，一脸好奇，在解决问题的过程中，发现越挖越深, 里面涉及到的信息也是相当的多，特此记录一下.">
+<meta property="og:type" content="article">
+<meta property="og:title" content="pod的状态出现UnexpectedAdmissionError是什么鬼?">
+<meta property="og:url" content="https://zhoushuke.github.io/2022/01/27/Kubernetes-pod-status-is-UnexpectedAdmissionError/index.html">
+<meta property="og:site_name" content="Z.S.K.&#39;s Records">
+<meta property="og:description" content="今天在排查集群一个问题时，发现相关的pod的状态为UnexpectedAdmissionError,在这之前从未没遇到过pod还有这种状态的，一脸好奇，在解决问题的过程中，发现越挖越深, 里面涉及到的信息也是相当的多，特此记录一下.">
+<meta property="og:locale">
+<meta property="og:image" content="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20220125180525.png">
+<meta property="og:image" content="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20220126203956.png">
+<meta property="og:image" content="https://img-blog.csdnimg.cn/20181122102312898.jpg?x-oss-process=image/watermark,type_ZmFuZ3poZW5naGVpdGk,shadow_10,text_aHR0cHM6Ly9ibG9nLmNzZG4ubmV0L3M4MTIyODk0ODA=,size_16,color_FFFFFF,t_70">
+<meta property="article:published_time" content="2022-01-27T15:30:53.000Z">
+<meta property="article:modified_time" content="2022-07-19T03:16:00.947Z">
+<meta property="article:author" content="Z.S.K.">
+<meta property="article:tag" content="Kubernetes">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:image" content="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20220125180525.png">
+
+
+
+<script type="text/javascript" id="hexo.configurations">
+  var NexT = window.NexT || {};
+  var CONFIG = {
+    root: '',
+    scheme: 'Mist',
+    sidebar: {"position":"left","display":"post"},
+    fancybox: true,
+    motion: true,
+    duoshuo: {
+      userId: 'undefined',
+      author: '博主'
+    },
+    algolia: {
+      applicationID: '',
+      apiKey: '',
+      indexName: '',
+      hits: {"per_page":10},
+      labels: {"input_placeholder":"Search for Posts","hits_empty":"We didn't find any results for the search: ${query}","hits_stats":"${hits} results found in ${time} ms"}
+    }
+  };
+</script>
+
+
+
+  <link rel="canonical" href="https://zhoushuke.github.io/2022/01/27/Kubernetes-pod-status-is-UnexpectedAdmissionError/"/>
+
+
+
+
+
+  <title> pod的状态出现UnexpectedAdmissionError是什么鬼? | Z.S.K.'s Records </title>
+<meta name="generator" content="Hexo 6.2.0"></head>
+
+<body itemscope itemtype="http://schema.org/WebPage" lang="zh-Hans">
+
+  
+
+
+
+
+
+
+
+
+
+
+  
+  
+    
+  
+
+  <div class="container one-collumn sidebar-position-left page-post-detail ">
+    <div class="headband"></div>
+
+    <header id="header" class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-meta ">
+  
+
+  <div class="custom-logo-site-title">
+    <a href="/"  class="brand" rel="start">
+      <span class="logo-line-before"><i></i></span>
+      <span class="site-title">Z.S.K.'s Records</span>
+      <span class="logo-line-after"><i></i></span>
+    </a>
+  </div>
+    
+      <p class="site-subtitle"></p>
+    
+</div>
+
+<div class="site-nav-toggle">
+  <button>
+    <span class="btn-bar"></span>
+    <span class="btn-bar"></span>
+    <span class="btn-bar"></span>
+  </button>
+</div>
+
+<nav class="site-nav">
+  
+
+  
+    <ul id="menu" class="menu">
+      
+        
+        <li class="menu-item menu-item-home">
+          <a href="/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-home"></i> <br />
+            
+            首页
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-categories">
+          <a href="/categories" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-th"></i> <br />
+            
+            分类
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-about">
+          <a href="/about/ZSK-Profile.pdf" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-user"></i> <br />
+            
+            简历
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-archives">
+          <a href="/archives" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-archive"></i> <br />
+            
+            归档
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-tags">
+          <a href="/tags" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-tags"></i> <br />
+            
+            标签
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-commonweal">
+          <a href="/404.html" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-heartbeat"></i> <br />
+            
+            公益404
+          </a>
+        </li>
+      
+
+      
+        <li class="menu-item menu-item-search">
+          
+            <a href="javascript:;" class="popup-trigger">
+          
+            
+              <i class="menu-item-icon fa fa-search fa-fw"></i> <br />
+            
+            搜索
+          </a>
+        </li>
+      
+    </ul>
+  
+
+  
+    <div class="site-search">
+      
+  <div class="popup">
+ <span class="search-icon fa fa-search"></span>
+ <input type="text" id="local-search-input">
+ <div id="local-search-result"></div>
+ <span class="popup-btn-close">close</span>
+</div>
+
+
+    </div>
+  
+</nav>
+
+
+
+ </div>
+    </header>
+
+    <main id="main" class="main">
+      <div class="main-inner">
+        <div class="content-wrap">
+          <div id="content" class="content">
+            
 
   <div id="posts" class="posts-expand">
-    {{ post_template.render(page) }}
+    
 
-    <div class="post-spread">
-      {% if theme.jiathis %}
-        {% include '_partials/share/jiathis.swig' %}
-      {% elseif theme.baidushare %}
-        {% include '_partials/share/baidushare.swig' %}
-      {% elseif theme.add_this_id %}
-        {% include '_partials/share/add-this.swig' %}
-      {% elseif theme.duoshuo_shortname and theme.duoshuo_share %}
-        {% include '_partials/share/duoshuo_share.swig' %}
-      {% endif %}
+  
+
+  
+  
+  
+
+  <article class="post post-type-normal " itemscope itemtype="http://schema.org/Article">
+  <link itemprop="mainEntityOfPage" href="https://zhoushuke.github.io/2022/01/27/Kubernetes-pod-status-is-UnexpectedAdmissionError/">
+
+  <span style="display:none" itemprop="author" itemscope itemtype="http://schema.org/Person">
+    <meta itemprop="name" content="">
+    <meta itemprop="description" content="">
+    <meta itemprop="image" content="/images/avatar.gif">
+  </span>
+
+  <span style="display:none" itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+    <meta itemprop="name" content="Z.S.K.'s Records">
+    <span style="display:none" itemprop="logo" itemscope itemtype="http://schema.org/ImageObject">
+      <img style="display:none;" itemprop="url image" alt="Z.S.K.'s Records" src="">
+    </span>
+  </span>
+
+    
+      <header class="post-header">
+
+        
+        
+          <h1 class="post-title" itemprop="name headline">
+            
+            
+              
+                pod的状态出现UnexpectedAdmissionError是什么鬼?
+              
+            
+          </h1>
+        
+
+        <div class="post-meta">
+          <span class="post-time">
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">发表于</span>
+              
+              <time title="Post created" itemprop="dateCreated datePublished" datetime="2022-01-27T23:30:53+08:00">
+                2022-01-27
+              </time>
+            
+
+            
+
+            
+          </span>
+
+          
+            <span class="post-category" >
+            
+              <span class="post-meta-divider">|</span>
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-folder-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">分类于</span>
+              
+              
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/Kubernetes/" itemprop="url" rel="index">
+                    <span itemprop="name">Kubernetes</span>
+                  </a>
+                </span>
+
+                
+                
+              
+            </span>
+          
+
+          
+            
+          
+
+          
+
+          
+          
+
+          
+
+          
+
+        </div>
+      </header>
+    
+
+
+    <div class="post-body" itemprop="articleBody">
+
+      
+      
+
+      
+        <p>今天在排查集群一个问题时，发现相关的pod的状态为<code>UnexpectedAdmissionError</code>,在这之前从未没遇到过pod还有这种状态的，一脸好奇，在解决问题的过程中，发现越挖越深, 里面涉及到的信息也是相当的多，特此记录一下.</p>
+<span id="more"></span>
+
+
+
+<h3 id="集群信息"><a href="#集群信息" class="headerlink" title="集群信息"></a>集群信息</h3><p><code>k8s</code>版本为<code>K8s v1.15.5, 3 master + N node</code>的形式，由于业务特殊，集群中同时存在的<code>node</code>有<code>amd64</code>及<code>arm64</code>两种异构节点，但这些都不重要，重要的一点是，集群中同时存在2种<code>scheduler</code>:</p>
+<ol>
+<li><code>default scheduler</code>: 这个不用多说，<code>k8s</code>默认的调度器，本质上来说，是个串行的调度器</li>
+<li><code>x-scheduler</code>: 自定义调度器, 用于批量去调度资源，如果有任一请求的资源不满足，其它的资源也不会调度，pod处于一直Pending状态，直到资源都满足</li>
+<li>在不同的业务中会使用不现的调度器，以实现资源的合理分配，记住，<strong>集群中有两个调度器</strong>, 这个是本次问题的关键</li>
+</ol>
+<p>同时还要说明一点的是，这次引起问题的资源是<code>nvidia.com/gpu</code>,涉及到<strong>kubelet对于device是如何管理的</strong>，这部分是本次的重点内容</p>
+<p>下述出现的资源，device，其实是一个意思，资源可能在日常中使用的较多，而官方都把资源比较是一种<code>device</code></p>
+<p>慢慢道来…</p>
+<h3 id="问题现象"><a href="#问题现象" class="headerlink" title="问题现象"></a>问题现象</h3><p>问题现象就是工作流(这里不展开细说，简单理解就是运行完就销毁的<code>pod</code>吧)的<code>pod</code>出现了如下图的状态</p>
+<p><img src="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20220125180525.png"></p>
+<p>在作者多年丰富的工作(自吹)经验中，<code>pod</code>的状态从未出现<code>UnexpectedAdmissionError</code>这种状态，甚至作者都不知道除了常见的那几种状态外还有其它的状态，看到这作者还是有点高兴的，因为作者知道，嗯，应该会挖出个盲区</p>
+<p>另外，工作流控制器返回的信息为: </p>
+<p><code>Pod Update plugin resources failed due to  requested number of devices unavailable for nvidia.com/gpu. Requested: 1, Available: 0, which is unexpected</code></p>
+<p>该报错在<code>kubelet</code>的日志中也有出现</p>
+<p>另外，经过作者的多次尝试，发现上述问题并不总是存在，也有成功的时候</p>
+<h3 id="排查过程"><a href="#排查过程" class="headerlink" title="排查过程"></a>排查过程</h3><p>看到上述的报错<code>message</code>，翻译一下:</p>
+<p><strong>pod更新Plugin资源失败, 失败的原因是由于请求的nvidia.com&#x2F;gpu资源需要1个，但现在只有0个</strong></p>
+<p>报错意思很明显，但作者第一时间想到的是以下3个问题:</p>
+<ol>
+<li>正常来讲不会出现因为资源不够而调度的情况，如果资源不够，是不应该被调度的，但从上面的报错来看，已经过了调度那个环节,因为已经配置到了<code>node</code>上</li>
+<li>如果忽略问题1，就算是资源不够，也应该是<code>Pending</code>状态，而不应该是<code>UnexpectedAdmissionError</code>这种状态</li>
+<li><code>pod</code>去更新plugin的什么资源，为什么需要更新？</li>
+</ol>
+<p>问题1跟问题2应该是同一个问题，就放一起排查吧</p>
+<p>作者的猜测: 由于集群中同时存在2种调度器，对于同一<code>device</code>(比如<code>nvidia.com/gpu</code>)就可能会发生竞争关系,比如以下场景:</p>
+<p>某一<code>node</code>上<code>nvidia.com/gpu</code>资源只有1个</p>
+<p><code>Pod1</code>，使用了<code>default-scheduler</code>,消耗了<code>nvidia.com/gpu=1</code>，此时，<code>nvidia.com/gpu</code>为0</p>
+<p><code>Pod2</code>，使用了<code>default-scheduler</code>,请求了<code>nvidia.com/gpu=1</code>，状态<code>Pending</code></p>
+<p><code>Pod3</code>，使用了<code>x-scheduler</code>,请求了<code>nvidia.com/gpu=1</code>,状态<code>Pending</code></p>
+<p>在特定的场景下，存在<code>pod2</code>,<code>pod3</code>都调度到这个<code>node</code>上的可能，那么在<code>pod1</code>执行完成之后，就有可能出现<code>default-scheduler</code>与<code>x-scheduler</code>同时拿到<code>nvidia.com/gpu=1</code>,对<code>Pod2</code>及<code>Pod3</code>从<code>Pending</code>状态唤醒，但是在接下来的某一时候，只会有一个<code>Pod</code>创建成功，另一个<code>Pod</code>就有可能会出现<code>UnexpectedAdmissionError</code></p>
+<p><strong>如果这样的Pod越多的话,发生的可能性就越大</strong></p>
+<p>因为是<code>race</code>,所以也不一定总是会发生，这也解释了【问题现】中提到的<strong>问题并不总是存在</strong>的问题</p>
+<p>从后续的排查情况来看，也证实了上述猜想，开发侧对调度器引用不当，对于<code>nvidia.com/gpu</code>的资源，应该使用<code>x-scheduler</code>，但有些被调整成了<code>default-scheduler</code>也就是说，如果上面的场景，所有请求同一资源的<code>pod</code>，使用相同的<code>scheduler</code>那么就不会出现这种问题，因为相同的<code>scheduler</code>内部的加锁机制是相同的.</p>
+<p>解决也很简单，<strong>对同一资源的请求，<code>schedulerName</code>设成一致即可</strong></p>
+<p>问题虽然解决，但依然没有解决很多疑惑，比如:</p>
+<ol>
+<li><code>UnexpectedAdmissionError</code>状态怎么来的</li>
+<li>pod去更新plugin的什么资源，什么时候更新等？</li>
+</ol>
+<p>没办法，只能去查源码了</p>
+<h3 id="源码分析"><a href="#源码分析" class="headerlink" title="源码分析"></a>源码分析</h3><p>首先，从<code>kubelet</code>中看到了相关的报错信息，那么就从<code>kubelet</code>开始吧, 由于环境中的<code>kubelet</code>的日志级别不高，先调整成<code>--v 4</code>,代表<code>debug</code>日志，发现以下日志:</p>
+<p><img src="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20220126203956.png"></p>
+<p>结合<code>kubelet</code>侧关于<code>cm(containermanager的缩写)</code>代码,大体的调用过程: <code>scheduler(predicate.go) --&gt; kubelet(predicate.go) --&gt; manager.go </code></p>
+<p><a target="_blank" rel="noopener" href="https://github.com/kubernetes/kubernetes/blob/v1.15.5/pkg/kubelet/lifecycle/predicate.go">predictate.go</a>中也确认存在<code>UnexpectedAdmissionError</code></p>
+<figure class="highlight go"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">func</span> <span class="params">(w *predicateAdmitHandler)</span></span> Admit(attrs *PodAdmitAttributes) PodAdmitResult &#123;</span><br><span class="line">	node, err := w.getNodeAnyWayFunc()</span><br><span class="line">	<span class="keyword">if</span> err != <span class="literal">nil</span> &#123;</span><br><span class="line">		klog.Errorf(<span class="string">&quot;Cannot get Node info: %v&quot;</span>, err)</span><br><span class="line">		<span class="keyword">return</span> PodAdmitResult&#123;</span><br><span class="line">			Admit:   <span class="literal">false</span>,</span><br><span class="line">			Reason:  <span class="string">&quot;InvalidNodeInfo&quot;</span>,</span><br><span class="line">			Message: <span class="string">&quot;Kubelet cannot get node info.&quot;</span>,</span><br><span class="line">		&#125;</span><br><span class="line">	&#125;</span><br><span class="line">	admitPod := attrs.Pod</span><br><span class="line">	pods := attrs.OtherPods</span><br><span class="line">	nodeInfo := schedulernodeinfo.NewNodeInfo(pods...)</span><br><span class="line">	nodeInfo.SetNode(node)</span><br><span class="line">	<span class="comment">// ensure the node has enough plugin resources for that required in pods</span></span><br><span class="line">	<span class="keyword">if</span> err = w.pluginResourceUpdateFunc(nodeInfo, attrs); err != <span class="literal">nil</span> &#123;</span><br><span class="line">		message := fmt.Sprintf(<span class="string">&quot;Update plugin resources failed due to %v, which is unexpected.&quot;</span>, err)</span><br><span class="line">		klog.Warningf(<span class="string">&quot;Failed to admit pod %v - %s&quot;</span>, format.Pod(admitPod), message)</span><br><span class="line">		<span class="keyword">return</span> PodAdmitResult&#123;</span><br><span class="line">			Admit:   <span class="literal">false</span>,</span><br><span class="line">			Reason:  <span class="string">&quot;UnexpectedAdmissionError&quot;</span>,</span><br><span class="line">			Message: message,</span><br><span class="line">		&#125;</span><br><span class="line">	&#125;</span><br><span class="line"> <span class="comment">// 省略代码 ...</span></span><br></pre></td></tr></table></figure>
+
+<p>跟上面<code>kubelet</code>中打印出来的日志是吻合的，经过摸排发现，调用路径主要集中在<a target="_blank" rel="noopener" href="https://github.com/kubernetes/kubernetes/blob/v1.15.5/pkg/kubelet/cm/devicemanager/manager.go">manager.go</a>如下:</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">Allocate --&gt; allocatePodResources --&gt; allocateContainerResources --&gt; devicesToAllocate</span><br></pre></td></tr></table></figure>
+
+<p>最终在<code>devicesToAllocate</code>中报出<code>requested number of devices unavailable for </code>的错误一直按上述路径返向传回给<code>Allocate</code>，也就是上图中红色的部分</p>
+<p>同时又可以知道，<code>predictate</code>一般属于调度相关，因此，应该是从scheduler传过来的, 从Allocate函数定义就可以看出</p>
+<figure class="highlight go"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">func</span> <span class="params">(m *ManagerImpl)</span></span> Allocate(node *schedulernodeinfo.NodeInfo, attrs *lifecycle.PodAdmitAttributes)</span><br></pre></td></tr></table></figure>
+
+<p>再根据<code>node *schedulernodeinfo.NodeInfo</code>就可一层层追到<code>scheduler</code>的代码中，由于篇幅原因，就不在这里贴了</p>
+<p><code>Allocate()</code>方法作用是根据<code>scheduler</code>传来的条件为某pod分配<code>device</code>，而<code>device</code>则是根据<code>resource.limit</code>做为条件进行计算</p>
+<figure class="highlight go"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">func</span> <span class="params">(m *ManagerImpl)</span></span> allocateContainerResources(pod *v1.Pod, container *v1.Container, devicesToReuse <span class="keyword">map</span>[<span class="type">string</span>]sets.String) <span class="type">error</span> &#123;</span><br><span class="line">	podUID := <span class="type">string</span>(pod.UID)</span><br><span class="line">	contName := container.Name</span><br><span class="line">	allocatedDevicesUpdated := <span class="literal">false</span></span><br><span class="line">	<span class="keyword">for</span> k, v := <span class="keyword">range</span> container.Resources.Limits &#123; <span class="comment">//根据limit进行计算</span></span><br><span class="line">		resource := <span class="type">string</span>(k)</span><br><span class="line">		needed := <span class="type">int</span>(v.Value())</span><br><span class="line">		klog.V(<span class="number">3</span>).Infof(<span class="string">&quot;needs %d %s&quot;</span>, needed, resource) <span class="comment">//这行在kubelet代码中也出现过</span></span><br><span class="line">		<span class="keyword">if</span> !m.isDevicePluginResource(resource) &#123;</span><br><span class="line">			<span class="keyword">continue</span></span><br><span class="line">		&#125;</span><br><span class="line">    <span class="comment">// 省略代码 ...</span></span><br><span class="line">  &#125;</span><br></pre></td></tr></table></figure>
+
+<p>这里面有个有意思的对象:<code>deviceToReuse</code>,可重用的设备, <code>Allocate</code>调了的<code>allocatePodResources</code></p>
+<figure class="highlight go"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">func</span> <span class="params">(m *ManagerImpl)</span></span> allocatePodResources(pod *v1.Pod) <span class="type">error</span> &#123;</span><br><span class="line">	devicesToReuse := <span class="built_in">make</span>(<span class="keyword">map</span>[<span class="type">string</span>]sets.String)</span><br><span class="line">	<span class="keyword">for</span> _, container := <span class="keyword">range</span> pod.Spec.InitContainers &#123;</span><br><span class="line">		<span class="keyword">if</span> err := m.allocateContainerResources(pod, &amp;container, devicesToReuse); err != <span class="literal">nil</span> &#123;</span><br><span class="line">			<span class="keyword">return</span> err</span><br><span class="line">		&#125;</span><br><span class="line">    <span class="comment">// 对于initContainer，将所分配的device不断地加入到可重用设置列表中，以便提供给container使用</span></span><br><span class="line">		m.podDevices.addContainerAllocatedResources(<span class="type">string</span>(pod.UID), container.Name, devicesToReuse)</span><br><span class="line">	&#125;</span><br><span class="line">	<span class="keyword">for</span> _, container := <span class="keyword">range</span> pod.Spec.Containers &#123;</span><br><span class="line">		<span class="keyword">if</span> err := m.allocateContainerResources(pod, &amp;container, devicesToReuse); err != <span class="literal">nil</span> &#123;</span><br><span class="line">			<span class="keyword">return</span> err</span><br><span class="line">		&#125;</span><br><span class="line">    <span class="comment">// 而对于container，则不断地从可重用设置列表中将分配出去的设备删除</span></span><br><span class="line">		m.podDevices.removeContainerAllocatedResources(<span class="type">string</span>(pod.UID), container.Name, devicesToReuse)</span><br><span class="line">	&#125;</span><br><span class="line">	<span class="keyword">return</span> <span class="literal">nil</span></span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>原因是<code>k8s</code>中有<code>initContainer</code>，<code>initContainer</code>可以有多个，先于<code>container</code>执行，每个<code>initContainer</code>按顺序依次执行完毕后<code>container</code>才会开始创建，而在为<code>container</code>或<code>initContainer</code>分配设备的时候会优先利用<code>deviceToReuse</code>的设备，这样可避免资源浪费</p>
+<p>还有一些比较重要的功能，比如:</p>
+<p><code>updateAllocatedDevices</code>函数的功能是从<code>podDevices</code>中删除所有处于终结状态的<code>pod</code>，并回收其占用的资源，所以有时会在<code>kubelet</code>的日志中看到<code>pods to be removed:xxxx</code>字样 </p>
+<p><code>devicesToAllocate</code>用来生成需要向<code>plugin</code>请求的设备列表，如果可重用设备已经够用或者没有设备需求时则不向<code>plugin</code>请求分配新的设备，否则调用<code>grpc</code>向<code>plugin</code>申请分配新的设备。<br>设备分配的逻辑是首先看<code>container</code>中是否已经分配了设备，如果设备够用则返回<code>nil</code>，否则查看<code>reusableDevices</code>，取出里面的设备分配，否则根据最终缺少的设备量返回<code>healthdevice - inusedevice(m.allocatedDevices[resource])</code>，中的前<code>needed</code>个，这便是其分配设备的策略</p>
+<figure class="highlight go"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">func</span> <span class="params">(m *ManagerImpl)</span></span> devicesToAllocate(podUID, contName, resource <span class="type">string</span>, required <span class="type">int</span>, reusableDevices sets.String) (sets.String, <span class="type">error</span>) &#123;</span><br><span class="line">  <span class="comment">// 省略代码...</span></span><br><span class="line"> <span class="comment">// Gets Devices in use.</span></span><br><span class="line">	devicesInUse := m.allocatedDevices[resource]</span><br><span class="line">	<span class="comment">// Gets a list of available devices.</span></span><br><span class="line">	available := m.healthyDevices[resource].Difference(devicesInUse)</span><br><span class="line">	<span class="keyword">if</span> available.Len() &lt; needed &#123;</span><br><span class="line">		<span class="keyword">return</span> <span class="literal">nil</span>, fmt.Errorf(<span class="string">&quot;requested number of devices unavailable for %s. Requested: %d, Available: %d&quot;</span>, resource, needed, available.Len())</span><br><span class="line">	&#125;</span><br><span class="line">  <span class="comment">// 省略代码... </span></span><br></pre></td></tr></table></figure>
+
+<p>因此，<strong>报错的最终原因也是在这里，因为pod此时已经分配到了node上，但node上的可用device小于pod申请的device</strong>,导致在启动<code>container</code>时<code>predicate.go</code>报错返回</p>
+<p><code>device</code>的<code>predicate</code>过程会执行二次，第一次是对<code>scheduler</code>对<code>node</code>进行筛选的时候，第二次<code>kubelet</code>在<code>container</code>启动之前会再次进行<code>device</code>的确认，而上述报错则是出现在<code>kubelet</code></p>
+<p>最后除一张牛人的<code>manager.go</code>中代码调用图吧，非常清晰，<a target="_blank" rel="noopener" href="https://blog.csdn.net/s812289480/article/details/84314239">原图地址</a>在这里</p>
+<p><img src="https://img-blog.csdnimg.cn/20181122102312898.jpg?x-oss-process=image/watermark,type_ZmFuZ3poZW5naGVpdGk,shadow_10,text_aHR0cHM6Ly9ibG9nLmNzZG4ubmV0L3M4MTIyODk0ODA=,size_16,color_FFFFFF,t_70" alt="Allocate()"></p>
+<p>到这里，其实第2个问题还是没有讲的很清楚，即<strong>kubelet怎么去管理devie-plugin资源,device-plugin注册、跟api-server同步等</strong></p>
+<p>这个主要涉及到<code>kubelet</code>是如何管理<code>device</code>的，即<code>device-plugin</code>是实现原理，做为下次作业吧</p>
+<h3 id="参考文章"><a href="#参考文章" class="headerlink" title="参考文章:"></a><strong>参考文章:</strong></h3><blockquote>
+<ul>
+<li><a target="_blank" rel="noopener" href="http://www.dockone.io/article/8653">http://www.dockone.io/article/8653</a></li>
+<li><a target="_blank" rel="noopener" href="https://www.kubernetes.org.cn/4391.html">https://www.kubernetes.org.cn/4391.html</a></li>
+<li><a target="_blank" rel="noopener" href="https://www.cnblogs.com/oolo/p/11672720.html#dm-%E8%B0%83%E7%94%A8-dp-listandwatch-%E7%9A%84%E6%97%B6%E6%9C%BA">https://www.cnblogs.com/oolo/p/11672720.html#dm-%E8%B0%83%E7%94%A8-dp-listandwatch-%E7%9A%84%E6%97%B6%E6%9C%BA</a></li>
+<li><a target="_blank" rel="noopener" href="https://github.com/kubernetes/kubernetes/issues/60176">https://github.com/kubernetes/kubernetes/issues/60176</a></li>
+<li><a target="_blank" rel="noopener" href="https://blog.csdn.net/s812289480/article/details/84314239">https://blog.csdn.net/s812289480/article/details/84314239</a></li>
+<li><a target="_blank" rel="noopener" href="https://zwforrest.github.io/post/devicemanager%E5%8E%9F%E7%90%86%E5%8F%8A%E5%88%86%E6%9E%90/#allocate%E5%88%86%E9%85%8D%E8%B5%84%E6%BA%90">https://zwforrest.github.io/post/devicemanager%E5%8E%9F%E7%90%86%E5%8F%8A%E5%88%86%E6%9E%90/#allocate%E5%88%86%E9%85%8D%E8%B5%84%E6%BA%90</a></li>
+<li><a target="_blank" rel="noopener" href="https://github.com/kubernetes-sigs/kube-batch/issues/931">https://github.com/kubernetes-sigs/kube-batch/issues/931</a></li>
+<li><a target="_blank" rel="noopener" href="https://sourcegraph.com/github.com/kubernetes/kubernetes/-/blob/pkg/kubelet/lifecycle/predicate.go">https://sourcegraph.com/github.com/kubernetes/kubernetes/-/blob/pkg/kubelet/lifecycle/predicate.go</a></li>
+<li><a target="_blank" rel="noopener" href="https://github.com/kubernetes/kubernetes/blob/v1.15.9/pkg/kubelet/cm/devicemanager/manager.go">https://github.com/kubernetes/kubernetes/blob/v1.15.9/pkg/kubelet/cm/devicemanager/manager.go</a></li>
+</ul>
+</blockquote>
+<h3 id="转载请注明出处https-izsk-me"><a href="#转载请注明出处https-izsk-me" class="headerlink" title="转载请注明出处https://izsk.me"></a><strong>转载请注明出处<a target="_blank" rel="noopener" href="https://izsk.me/">https://izsk.me</a></strong></h3>
+      
+    </div>
+
+    <div>
+      
+        
+<div id="wechat_subscriber" style="display: block; padding: 10px 0; margin: 20px auto; width: 100%; text-align: center">
+    <img id="wechat_subscriber_qcode" src="/images/websitecode250.png" alt=" wechat" style="width: 200px; max-width: 100%;"/>
+    <div>Scan Me To Read on Phone</div>
+</div>
+
+
+      
+    </div>
+
+    <div>
+      
+        
+  <div style="padding: 10px 0; margin: 20px auto; width: 90%; text-align: center;">
+    <div>I know you won't do this,but what if you did?</div>
+    <button id="rewardButton" disable="enable" onclick="var qr = document.getElementById('QR'); if (qr.style.display === 'none') {qr.style.display='block';} else {qr.style.display='none'}">
+      <span>赏</span>
+    </button>
+    <div id="QR" style="display: none;">
+      
+        <div id="wechat" style="display: inline-block">
+          <img id="wechat_qr" src="/images/wechatpayme.png" alt=" WeChat Pay"/>
+          <p>微信打赏</p>
+        </div>
+      
+      
+        <div id="alipay" style="display: inline-block">
+          <img id="alipay_qr" src="/images/alipayme.jpg" alt=" Alipay"/>
+          <p>支付宝打赏</p>
+        </div>
+      
     </div>
   </div>
 
-{% endblock %}
 
-{% block sidebar %}
-  {{ sidebar_template.render(true) }}
-{% endblock %}
+      
+    </div>
 
 
-{% block script_extra %}
-  {% include '_scripts/pages/post-details.swig' %}
-{% endblock %}
+    <footer class="post-footer">
+      
+        <div class="post-tags">
+          
+            <a href="/tags/Kubernetes/" rel="tag"># Kubernetes</a>
+          
+        </div>
+      
+
+      
+        <div class="post-nav">
+          <div class="post-nav-next post-nav-item">
+            
+              <a href="/2022/01/27/Kubernetes-prombles/" rel="next" title="Kubernetes学习(Kubernetes踩坑记)">
+                <i class="fa fa-chevron-left"></i> Kubernetes学习(Kubernetes踩坑记)
+              </a>
+            
+          </div>
+
+          <span class="post-nav-divider"></span>
+
+          <div class="post-nav-prev post-nav-item">
+            
+              <a href="/2022/03/25/Kubernetes-Flannel-Vxlan/" rel="prev" title="Flannel Vxlan封包原理剖析">
+                Flannel Vxlan封包原理剖析 <i class="fa fa-chevron-right"></i>
+              </a>
+            
+          </div>
+        </div>
+      
+
+      
+      
+    </footer>
+  </article>
+
+
+
+    <div class="post-spread">
+      
+    </div>
+  </div>
+
+
+          </div>
+          
+
+
+          
+  <div class="comments" id="comments">
+    
+  </div>
+
+
+        </div>
+        
+          
+  
+  <div class="sidebar-toggle">
+    <div class="sidebar-toggle-line-wrap">
+      <span class="sidebar-toggle-line sidebar-toggle-line-first"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-middle"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-last"></span>
+    </div>
+  </div>
+
+  <aside id="sidebar" class="sidebar">
+    <div class="sidebar-inner">
+
+      
+
+      
+        <ul class="sidebar-nav motion-element">
+          <li class="sidebar-nav-toc sidebar-nav-active" data-target="post-toc-wrap" >
+            文章目录
+          </li>
+          <li class="sidebar-nav-overview" data-target="site-overview">
+            站点概览
+          </li>
+        </ul>
+      
+
+      <section class="site-overview sidebar-panel">
+        <div class="site-author motion-element" itemprop="author" itemscope itemtype="http://schema.org/Person">
+          <img class="site-author-image" itemprop="image"
+               src="/images/avatar.gif"
+               alt="" />
+          <p class="site-author-name" itemprop="name"></p>
+          <p class="site-description motion-element" itemprop="description"></p>
+        </div>
+        <nav class="site-state motion-element">
+        
+          
+            <div class="site-state-item site-state-posts">
+              <a href="/archives">
+                <span class="site-state-item-count">192</span>
+                <span class="site-state-item-name">日志</span>
+              </a>
+            </div>
+          
+
+          
+            <div class="site-state-item site-state-categories">
+              <a href="/categories">
+                <span class="site-state-item-count">14</span>
+                <span class="site-state-item-name">分类</span>
+              </a>
+            </div>
+          
+
+          
+            <div class="site-state-item site-state-tags">
+              <a href="/tags">
+                <span class="site-state-item-count">14</span>
+                <span class="site-state-item-name">标签</span>
+              </a>
+            </div>
+          
+
+        </nav>
+
+        
+
+        <div class="links-of-author motion-element">
+          
+        </div>
+
+        
+        
+
+        
+        
+
+        
+
+
+      </section>
+
+      
+      <!--noindex-->
+        <section class="post-toc-wrap motion-element sidebar-panel sidebar-panel-active">
+          <div class="post-toc">
+
+            
+              
+            
+
+            
+              <div class="post-toc-content"><ol class="nav"><li class="nav-item nav-level-3"><a class="nav-link" href="#%E9%9B%86%E7%BE%A4%E4%BF%A1%E6%81%AF"><span class="nav-number">1.</span> <span class="nav-text">集群信息</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E9%97%AE%E9%A2%98%E7%8E%B0%E8%B1%A1"><span class="nav-number">2.</span> <span class="nav-text">问题现象</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E6%8E%92%E6%9F%A5%E8%BF%87%E7%A8%8B"><span class="nav-number">3.</span> <span class="nav-text">排查过程</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E6%BA%90%E7%A0%81%E5%88%86%E6%9E%90"><span class="nav-number">4.</span> <span class="nav-text">源码分析</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E5%8F%82%E8%80%83%E6%96%87%E7%AB%A0"><span class="nav-number">5.</span> <span class="nav-text">参考文章:</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E8%BD%AC%E8%BD%BD%E8%AF%B7%E6%B3%A8%E6%98%8E%E5%87%BA%E5%A4%84https-izsk-me"><span class="nav-number">6.</span> <span class="nav-text">转载请注明出处https:&#x2F;&#x2F;izsk.me</span></a></li></ol></div>
+            
+
+          </div>
+        </section>
+      <!--/noindex-->
+      
+
+    </div>
+  </aside>
+
+
+        
+      </div>
+    </main>
+
+    <footer id="footer" class="footer">
+      <div class="footer-inner">
+        <div class="copyright" >
+  
+  &copy; 
+  <span itemprop="copyrightYear">2022</span>
+  <span class="with-love">
+    <i class="fa fa-heart"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">Z.S.K.</span>
+</div>
+
+
+<div class="powered-by">
+  Supported by <a class="theme-link" target="_blank" rel="noopener" href="https://hexo.io">Hexo</a>
+</div>
+
+<div class="theme-info">
+  Theme -
+  <a class="theme-link" target="_blank" rel="noopener" href="https://github.com/iissnan/hexo-theme-next">
+    NexT.Mist
+  </a>
+</div>
+
+
+        
+
+        
+      </div>
+    </footer>
+
+    <div class="back-to-top">
+      <i class="fa fa-arrow-up"></i>
+    </div>
+  </div>
+
+  
+
+<script type="text/javascript">
+  if (Object.prototype.toString.call(window.Promise) !== '[object Function]') {
+    window.Promise = null;
+  }
+</script>
+
+
+
+
+
+
+
+
+
+  
+
+
+
+  
+  <script type="text/javascript" src="/lib/jquery/index.js?v=2.1.3"></script>
+
+  
+  <script type="text/javascript" src="/lib/fastclick/lib/fastclick.min.js?v=1.0.6"></script>
+
+  
+  <script type="text/javascript" src="/lib/jquery_lazyload/jquery.lazyload.js?v=1.9.7"></script>
+
+  
+  <script type="text/javascript" src="/lib/velocity/velocity.min.js?v=1.2.1"></script>
+
+  
+  <script type="text/javascript" src="/lib/velocity/velocity.ui.min.js?v=1.2.1"></script>
+
+  
+  <script type="text/javascript" src="/lib/fancybox/source/jquery.fancybox.pack.js?v=2.1.5"></script>
+
+
+  
+
+
+  <script type="text/javascript" src="/js/src/utils.js?v=5.1.0"></script>
+
+  <script type="text/javascript" src="/js/src/motion.js?v=5.1.0"></script>
+
+
+
+  
+  
+
+  
+  <script type="text/javascript" src="/js/src/scrollspy.js?v=5.1.0"></script>
+<script type="text/javascript" src="/js/src/post-details.js?v=5.1.0"></script>
+
+
+
+  
+
+
+  <script type="text/javascript" src="/js/src/bootstrap.js?v=5.1.0"></script>
+
+
+
+  
+
+
+
+  
+
+
+
+
+	
+
+
+
+
+
+  
+
+
+
+
+  
+  
+  <script type="text/javascript">
+    // Popup Window;
+    var isfetched = false;
+    // Search DB path;
+    var search_path = "search.xml";
+    if (search_path.length == 0) {
+      search_path = "search.xml";
+    }
+    var path = "/" + search_path;
+    // monitor main search box;
+
+    function proceedsearch() {
+      $("body").append('<div class="popoverlay">').css('overflow', 'hidden');
+      $('.popup').toggle();
+    }
+    // search function;
+    var searchFunc = function(path, search_id, content_id) {
+      'use strict';
+      $.ajax({
+        url: path,
+        dataType: "xml",
+        async: true,
+        success: function( xmlResponse ) {
+          // get the contents from search data
+          isfetched = true;
+          $('.popup').detach().appendTo('.header-inner');
+          var datas = $( "entry", xmlResponse ).map(function() {
+            return {
+              title: $( "title", this ).text(),
+              content: $("content",this).text(),
+              url: $( "url" , this).text()
+            };
+          }).get();
+          var $input = document.getElementById(search_id);
+          var $resultContent = document.getElementById(content_id);
+          $input.addEventListener('input', function(){
+            var matchcounts = 0;
+            var str='<ul class=\"search-result-list\">';
+            var keywords = this.value.trim().toLowerCase().split(/[\s\-]+/);
+            $resultContent.innerHTML = "";
+            if (this.value.trim().length > 1) {
+              // perform local searching
+              datas.forEach(function(data) {
+                var isMatch = false;
+                var content_index = [];
+                var data_title = data.title.trim().toLowerCase();
+                var data_content = data.content.trim().replace(/<[^>]+>/g,"").toLowerCase();
+                var data_url = decodeURIComponent(data.url);
+                var index_title = -1;
+                var index_content = -1;
+                var first_occur = -1;
+                // only match artiles with not empty titles and contents
+                if(data_title != '') {
+                  keywords.forEach(function(keyword, i) {
+                    index_title = data_title.indexOf(keyword);
+                    index_content = data_content.indexOf(keyword);
+                    if( index_title >= 0 || index_content >= 0 ){
+                      isMatch = true;
+                      if (i == 0) {
+                        first_occur = index_content;
+                      }
+                    }
+
+                  });
+                }
+                // show search results
+                if (isMatch) {
+                  matchcounts += 1;
+                  str += "<li><a href='"+ data_url +"' class='search-result-title'>"+ data_title +"</a>";
+                  var content = data.content.trim().replace(/<[^>]+>/g,"");
+                  if (first_occur >= 0) {
+                    // cut out 100 characters
+                    var start = first_occur - 20;
+                    var end = first_occur + 80;
+                    if(start < 0){
+                      start = 0;
+                    }
+                    if(start == 0){
+                      end = 50;
+                    }
+                    if(end > content.length){
+                      end = content.length;
+                    }
+                    var match_content = content.substring(start, end);
+                    // highlight all keywords
+                    keywords.forEach(function(keyword){
+                      var regS = new RegExp(keyword, "gi");
+                      match_content = match_content.replace(regS, "<b class=\"search-keyword\">"+keyword+"</b>");
+                    });
+
+                    str += "<p class=\"search-result\">" + match_content +"...</p>"
+                  }
+                  str += "</li>";
+                }
+              })};
+            str += "</ul>";
+            if (matchcounts == 0) { str = '<div id="no-result"><i class="fa fa-frown-o fa-5x" /></div>' }
+            if (keywords == "") { str = '<div id="no-result"><i class="fa fa-search fa-5x" /></div>' }
+            $resultContent.innerHTML = str;
+          });
+          proceedsearch();
+        }
+      });}
+
+    // handle and trigger popup window;
+    $('.popup-trigger').click(function(e) {
+      e.stopPropagation();
+      if (isfetched == false) {
+        searchFunc(path, 'local-search-input', 'local-search-result');
+      } else {
+        proceedsearch();
+      };
+    });
+
+    $('.popup-btn-close').click(function(e){
+      $('.popup').hide();
+      $(".popoverlay").remove();
+      $('body').css('overflow', '');
+    });
+    $('.popup').click(function(e){
+      e.stopPropagation();
+    });
+  </script>
+
+
+  
+
+  
+
+  
+
+  
+
+
+</body>
+</html>

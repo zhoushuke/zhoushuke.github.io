@@ -1,38 +1,961 @@
-{% extends '_layout.swig' %}
-{% import '_macro/post.swig' as post_template %}
-{% import '_macro/sidebar.swig' as sidebar_template %}
+<!doctype html>
 
 
-{% block title %} {{ page.title }} | {{ config.title }} {% endblock %}
 
-{% block page_class %}page-post-detail{% endblock %}
+  
 
 
-{% block content %}
+<html class="theme-next mist use-motion" lang="zh-Hans">
+<head>
+  <meta charset="UTF-8"/>
+<meta http-equiv="X-UA-Compatible" content="IE=edge" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1"/>
+
+
+
+<meta http-equiv="Cache-Control" content="no-transform" />
+<meta http-equiv="Cache-Control" content="no-siteapp" />
+
+
+
+
+
+
+
+
+
+
+
+
+  
+  
+  <link href="/lib/fancybox/source/jquery.fancybox.css?v=2.1.5" rel="stylesheet" type="text/css" />
+
+
+
+
+  
+  
+  
+  
+
+  
+    
+    
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+    
+    
+    <link href="//fonts.googleapis.com/css?family=Lato:300,300italic,400,400italic,700,700italic&subset=latin,latin-ext" rel="stylesheet" type="text/css">
+  
+
+
+
+
+
+
+<link href="/lib/font-awesome/css/font-awesome.min.css?v=4.6.2" rel="stylesheet" type="text/css" />
+
+<link href="/css/main.css?v=5.1.0" rel="stylesheet" type="text/css" />
+
+
+  <meta name="keywords" content="Kubernetes," />
+
+
+
+
+
+
+
+
+  <link rel="shortcut icon" type="image/x-icon" href="/favicon.ico?v=5.1.0" />
+
+
+
+
+
+
+<meta name="description" content="WHAT etcd  go language, open-source distributed,highly-available key-value store shared configuration service discovery">
+<meta property="og:type" content="article">
+<meta property="og:title" content="Kubernetes学习(etcd)">
+<meta property="og:url" content="https://zhoushuke.github.io/2018/08/16/Kubernetes%E5%AD%A6%E4%B9%A0(etcd)/index.html">
+<meta property="og:site_name" content="Z.S.K.&#39;s Records">
+<meta property="og:description" content="WHAT etcd  go language, open-source distributed,highly-available key-value store shared configuration service discovery">
+<meta property="og:locale">
+<meta property="og:image" content="http://zskgithubblog.oss-cn-beijing.aliyuncs.com/blogpic/cap1.jpg">
+<meta property="og:image" content="http://zskgithubblog.oss-cn-beijing.aliyuncs.com/blogpic/cap2.png">
+<meta property="og:image" content="http://zskgithubblog.oss-cn-beijing.aliyuncs.com/blogpic/etcd2.png">
+<meta property="og:image" content="http://zskgithubblog.oss-cn-beijing.aliyuncs.com/blogpic/etcd3.jpg">
+<meta property="og:image" content="http://zskgithubblog.oss-cn-beijing.aliyuncs.com/blogpic/etcd4.jpg">
+<meta property="og:image" content="http://zskgithubblog.oss-cn-beijing.aliyuncs.com/blogpic/etcd5.jpg">
+<meta property="og:image" content="http://zskgithubblog.oss-cn-beijing.aliyuncs.com/blogpic/etcd_vs_zookeeper.png">
+<meta property="article:published_time" content="2018-08-16T10:20:53.000Z">
+<meta property="article:modified_time" content="2022-07-19T03:16:00.941Z">
+<meta property="article:author" content="Z.S.K.">
+<meta property="article:tag" content="Kubernetes">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:image" content="http://zskgithubblog.oss-cn-beijing.aliyuncs.com/blogpic/cap1.jpg">
+
+
+
+<script type="text/javascript" id="hexo.configurations">
+  var NexT = window.NexT || {};
+  var CONFIG = {
+    root: '',
+    scheme: 'Mist',
+    sidebar: {"position":"left","display":"post"},
+    fancybox: true,
+    motion: true,
+    duoshuo: {
+      userId: 'undefined',
+      author: '博主'
+    },
+    algolia: {
+      applicationID: '',
+      apiKey: '',
+      indexName: '',
+      hits: {"per_page":10},
+      labels: {"input_placeholder":"Search for Posts","hits_empty":"We didn't find any results for the search: ${query}","hits_stats":"${hits} results found in ${time} ms"}
+    }
+  };
+</script>
+
+
+
+  <link rel="canonical" href="https://zhoushuke.github.io/2018/08/16/Kubernetes学习(etcd)/"/>
+
+
+
+
+
+  <title> Kubernetes学习(etcd) | Z.S.K.'s Records </title>
+<meta name="generator" content="Hexo 6.2.0"></head>
+
+<body itemscope itemtype="http://schema.org/WebPage" lang="zh-Hans">
+
+  
+
+
+
+
+
+
+
+
+
+
+  
+  
+    
+  
+
+  <div class="container one-collumn sidebar-position-left page-post-detail ">
+    <div class="headband"></div>
+
+    <header id="header" class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-meta ">
+  
+
+  <div class="custom-logo-site-title">
+    <a href="/"  class="brand" rel="start">
+      <span class="logo-line-before"><i></i></span>
+      <span class="site-title">Z.S.K.'s Records</span>
+      <span class="logo-line-after"><i></i></span>
+    </a>
+  </div>
+    
+      <p class="site-subtitle"></p>
+    
+</div>
+
+<div class="site-nav-toggle">
+  <button>
+    <span class="btn-bar"></span>
+    <span class="btn-bar"></span>
+    <span class="btn-bar"></span>
+  </button>
+</div>
+
+<nav class="site-nav">
+  
+
+  
+    <ul id="menu" class="menu">
+      
+        
+        <li class="menu-item menu-item-home">
+          <a href="/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-home"></i> <br />
+            
+            首页
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-categories">
+          <a href="/categories" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-th"></i> <br />
+            
+            分类
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-about">
+          <a href="/about/ZSK-Profile.pdf" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-user"></i> <br />
+            
+            简历
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-archives">
+          <a href="/archives" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-archive"></i> <br />
+            
+            归档
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-tags">
+          <a href="/tags" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-tags"></i> <br />
+            
+            标签
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-commonweal">
+          <a href="/404.html" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-heartbeat"></i> <br />
+            
+            公益404
+          </a>
+        </li>
+      
+
+      
+        <li class="menu-item menu-item-search">
+          
+            <a href="javascript:;" class="popup-trigger">
+          
+            
+              <i class="menu-item-icon fa fa-search fa-fw"></i> <br />
+            
+            搜索
+          </a>
+        </li>
+      
+    </ul>
+  
+
+  
+    <div class="site-search">
+      
+  <div class="popup">
+ <span class="search-icon fa fa-search"></span>
+ <input type="text" id="local-search-input">
+ <div id="local-search-result"></div>
+ <span class="popup-btn-close">close</span>
+</div>
+
+
+    </div>
+  
+</nav>
+
+
+
+ </div>
+    </header>
+
+    <main id="main" class="main">
+      <div class="main-inner">
+        <div class="content-wrap">
+          <div id="content" class="content">
+            
 
   <div id="posts" class="posts-expand">
-    {{ post_template.render(page) }}
+    
 
-    <div class="post-spread">
-      {% if theme.jiathis %}
-        {% include '_partials/share/jiathis.swig' %}
-      {% elseif theme.baidushare %}
-        {% include '_partials/share/baidushare.swig' %}
-      {% elseif theme.add_this_id %}
-        {% include '_partials/share/add-this.swig' %}
-      {% elseif theme.duoshuo_shortname and theme.duoshuo_share %}
-        {% include '_partials/share/duoshuo_share.swig' %}
-      {% endif %}
+  
+
+  
+  
+  
+
+  <article class="post post-type-normal " itemscope itemtype="http://schema.org/Article">
+  <link itemprop="mainEntityOfPage" href="https://zhoushuke.github.io/2018/08/16/Kubernetes%E5%AD%A6%E4%B9%A0(etcd)/">
+
+  <span style="display:none" itemprop="author" itemscope itemtype="http://schema.org/Person">
+    <meta itemprop="name" content="">
+    <meta itemprop="description" content="">
+    <meta itemprop="image" content="/images/avatar.gif">
+  </span>
+
+  <span style="display:none" itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+    <meta itemprop="name" content="Z.S.K.'s Records">
+    <span style="display:none" itemprop="logo" itemscope itemtype="http://schema.org/ImageObject">
+      <img style="display:none;" itemprop="url image" alt="Z.S.K.'s Records" src="">
+    </span>
+  </span>
+
+    
+      <header class="post-header">
+
+        
+        
+          <h1 class="post-title" itemprop="name headline">
+            
+            
+              
+                Kubernetes学习(etcd)
+              
+            
+          </h1>
+        
+
+        <div class="post-meta">
+          <span class="post-time">
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">发表于</span>
+              
+              <time title="Post created" itemprop="dateCreated datePublished" datetime="2018-08-16T18:20:53+08:00">
+                2018-08-16
+              </time>
+            
+
+            
+
+            
+          </span>
+
+          
+            <span class="post-category" >
+            
+              <span class="post-meta-divider">|</span>
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-folder-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">分类于</span>
+              
+              
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/Kubernetes/" itemprop="url" rel="index">
+                    <span itemprop="name">Kubernetes</span>
+                  </a>
+                </span>
+
+                
+                
+              
+            </span>
+          
+
+          
+            
+          
+
+          
+
+          
+          
+
+          
+
+          
+
+        </div>
+      </header>
+    
+
+
+    <div class="post-body" itemprop="articleBody">
+
+      
+      
+
+      
+        <h3 id="WHAT-etcd"><a href="#WHAT-etcd" class="headerlink" title="WHAT etcd"></a><strong>WHAT etcd</strong></h3><blockquote>
+<ul>
+<li>go language, open-source</li>
+<li>distributed,highly-available key-value store</li>
+<li>shared configuration</li>
+<li>service discovery</li>
+</ul>
+</blockquote>
+<span id="more"></span>
+
+<h3 id="WHY-etcd"><a href="#WHY-etcd" class="headerlink" title="WHY etcd"></a><strong>WHY etcd</strong></h3><blockquote>
+<ul>
+<li>API based on HTTP+JSON</li>
+<li>support SSL&#x2F;TLS Auth</li>
+<li>1000 request&#x2F;s&#x2F;n</li>
+<li>high performance,highly-available high-consistency</li>
+</ul>
+</blockquote>
+<h3 id="CAP理论"><a href="#CAP理论" class="headerlink" title="CAP理论"></a><strong>CAP理论</strong></h3><p>谈到分布式系统,不得不提CAP理论,先从两张经典的照片说起:</p>
+<p><img src="http://zskgithubblog.oss-cn-beijing.aliyuncs.com/blogpic/cap1.jpg" alt="cap1"></p>
+<p><code>名词解析:</code></p>
+<blockquote>
+<ul>
+<li>Partition Tolerance:分区容错性,在分布式系统中,可能会出现分区之间无法通信</li>
+<li>Consistency: 一致性:同一个数据在集群中的所有节点,同一时刻是否都是同样的值</li>
+<li>Availability: 可用性:集群中一部分节点故障后,集群整体是否还能处理客户端的请求</li>
+</ul>
+</blockquote>
+<p><img src="http://zskgithubblog.oss-cn-beijing.aliyuncs.com/blogpic/cap2.png" alt="cap2"></p>
+<p><strong>CAP理论:对于分布式系统,C,A,P无法同时满足</strong></p>
+<blockquote>
+<ul>
+<li>分区容错(P)是基本要求,C跟A不能同时满足,CAP理论的C指的是强一致性</li>
+<li>强一致性: 当更新操作完成之后,任何多个后续进程的访问都会返回最新的更新过的值.这种是对用户最友好的,就是用户上一次写什么,下一次就保证能读到什么.根据 CAP 理论,这种实现需要牺牲可用性</li>
+<li>弱一致性:   系统并不保证后续进程访问都会返回最新的更新过的值.系统在数据写入成功之后,不承诺立即可以读到最新写入的值,也不会具体的承诺多久之后可以读到.</li>
+<li>最终一致性: 弱一致性的特定形式,即系统保证在没有后续更新的前提下,经过一个时间窗口后能访问到更新后的数据</li>
+</ul>
+</blockquote>
+<p><strong>一致性问题是由并发问题产生的</strong></p>
+<p><strong>CAP无法同时满足是由网络分区产生的</strong></p>
+<p><code>etcd是如何保证强一致性同时可用性也很高的呢?</code></p>
+<h3 id="etcd架构"><a href="#etcd架构" class="headerlink" title="etcd架构"></a><strong>etcd架构</strong></h3><p><img src="http://zskgithubblog.oss-cn-beijing.aliyuncs.com/blogpic/etcd2.png" alt="etcd2"></p>
+<blockquote>
+<ul>
+<li>HTTP Server: 用于接收用户发送的API请求及心跳请求转发到具体模块.</li>
+<li>Raft: etcd数据强一致性算法的具体实现.</li>
+<li>WAL: etcd的数据存储方式.</li>
+<li>Store: 用于处理etcd支持的各类功能的事务,包括数据索引、节点状态变更、监控与反馈、事件处理与执行等等,是etcd 对用户提供的大多数API功能的具体实现.</li>
+</ul>
+</blockquote>
+<h3 id="etcd角色"><a href="#etcd角色" class="headerlink" title="etcd角色"></a><strong>etcd角色</strong></h3><p><img src="http://zskgithubblog.oss-cn-beijing.aliyuncs.com/blogpic/etcd3.jpg" alt="etcd3"></p>
+<h3 id="工作原理"><a href="#工作原理" class="headerlink" title="工作原理"></a><strong>工作原理</strong></h3><p>etcd通常做为一个分布式系统,由多个节点相互通信构成整体对外服务,任意时刻至多存在一个有效的Leader节点,同时每个etcd节点都维护了一个状态机,每个节点都存储了完整的数据.<br>主节点处理所有来自客户端写操作,每次写请求都需要集群中大多数据节点投票能过后Leader节点才能将修改内部状态机,并返回将结果返回给客户端<br>follower节点只响应来自领导人和候选人的请求.领导人来处理所有来自客户端的请求(默认设置下,如果一个客户端与追随者进行通信,追随者会将信息发送给领导人)<br><strong>通过Raft协议保证集群所有节点的数据是一致的</strong></p>
+<h3 id="etcd选举"><a href="#etcd选举" class="headerlink" title="etcd选举"></a><strong>etcd选举</strong></h3><p>当集群初始化时候,每个节点都是Follower角色,集群中存在至多1个有效的主节点,通过心跳与其他节点同步数据,心跳周期默认为100ms.<br>当Follower在一定时间内没有收到来自主节点的心跳,会将自己角色改变为Candidate,并发起一次选主投票；当收到包括自己在内超过半数节点赞成后,选举成功(选举为Leader的节点一定包含所有已提交的日志),当收到票数不足半数选举失败,或者选举超时,(默认选举时间为1000ms).若本轮未选出主节点,将进行下一轮选举(出现这种情况,是由于多个节点同时选举,所有节点均为获得过半选票,为了避免陷入选主失败循环,每个节点未收到心跳发起选举的时间是一定范围内的随机值,这样能够避免2个节点同时发起选主).<br>Candidate节点收到来自主节点的信息后,会立即终止选举过程,进入Follower角色.<br><strong>通过RAFT协议保证在符合条件的下一定能够选主成功</strong></p>
+<h3 id="RAFT协议"><a href="#RAFT协议" class="headerlink" title="RAFT协议"></a><strong>RAFT协议</strong></h3><p>关于Raft的几个重要的<code>结论</code>:</p>
+<blockquote>
+<ul>
+<li>RAFT充分利用了go语言的并发模型,使得etcd性能强悍.</li>
+<li>节点数据一致性通过日志复制(wal, Write Ahead Log,预写日志)实现,每次有数据更新的时候产生二阶段提交(two-phase commit),第一阶段先提交日志,通过heartbeat把该日志广播给其它follow,如果超过半数的follower都成功写了log,那么leader开始第二阶段的提交:正式写入数据,然后同样广播给follower,follower也根据自身情况选择写入或者不写入并返回结果给leader。leader先写自己的数据,然后告诉follower也开始持久化数据.这两阶段中如果任意一个都有超过半数的follower返回false或者根本没有返回,那么这个分布式事务是不成功的.</li>
+<li>领导人完全原则(Leader Completeness Property):被选举为领导人的节点一定拥有所有已经被提交的日志条目,读写请求只向主节点发送(v2版本),以此保证一致性,(v3版本中,支持在客户端指定读请求方式,默认为etcdctl –consistency&#x3D;’l’,说明使用线性读,&#x3D;’s’则使用串行读,这种方式读可以落到集群任一节点上,该节点直接从本地读取结束返回给客户端,不再需要把请求转给leader, 但可能会返回脏数据).</li>
+<li>默认配置下,领导人在处理只读的请求之前必须检查自己是否还是Leader(如果一个更新的领导人被选举出来,它自己的信息就已经过期了).</li>
+</ul>
+</blockquote>
+<h3 id="日志复制"><a href="#日志复制" class="headerlink" title="日志复制"></a><strong>日志复制</strong></h3><p>etcd的数据一致性是通过raft的日志复制实现的,在etcd&#x2F;member&#x2F;目录中有两个子目录,snap和wal.那么为什么Etcd会有snap目录呢？<br>主要有两个原因:</p>
+<blockquote>
+<ul>
+<li>snapshot是wal快照,wal一直在追加日志占用资源大,为了节约磁盘空间,当wal文件达到一定数据,就会对之前的数据进行压缩,形成快照,但对于etcd来说,snapshot是一种昂贵的操作,默认情况下,每10000次变更会生成一次,可通过api修改,etcd –snapshot-count&#x3D;5000</li>
+<li>当新的节点加入到集群中,为了同步数据,就会把snapshot发送到新节点,这样能够节约传输数据(生成的快照文件比wal文件要小很多,5倍左右),使之尽快加入到集群中</li>
+</ul>
+</blockquote>
+<h3 id="etcd在云翼中的使用"><a href="#etcd在云翼中的使用" class="headerlink" title="etcd在云翼中的使用"></a><strong>etcd在云翼中的使用</strong></h3><p>现阶段云翼中使用到的etcd有hubor(hubor正逐渐实现用mysql替换etcd),captain.balloon中借用k8s向etcd写入deployment数据.captain中使用etcd存储网段信息,最后容器在node上启动之后通过cni调用captain获取容器ip.</p>
+<p>每个机房部署一个k8s-master,3个etcd组成一个集群,各机房集群独立,etcd服务相对稳定,加上日常的定时备份机制,同时出现两个节点都契机的可能性很小,万一出现整个机房故障的话,master都挂了,etcd也无法服务.</p>
+<p>同时,etcd的raft机制不太合适跨机房部署, <code>网络延迟高的话,很容易重新选举</code>,两个机房部署一套集群,如果一个机房整体故障,别一个机房还是无法正常工作.而如果采用两个机房部署两套集群,再通过其它工具在这两个集群之间同步数据,则受网络因素影响较大.</p>
+<p>etcd的接口分为v2,v3接口,默认使用v2接口,v3接口中存留了k8s的包括deployment,servcice等元信息,而在v2保留有pod的业务数据</p>
+<p><code>从上面也可看出,etcd做为配置共享的k-v系统,key跟value的值不能太大,官方建议value大小为1m.</code></p>
+<h3 id="etcd常用命令"><a href="#etcd常用命令" class="headerlink" title="etcd常用命令"></a><strong>etcd常用命令</strong></h3><figure class="highlight shell"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta prompt_"># </span><span class="language-bash">etcd集群启动</span></span><br><span class="line">/export/servers/etcd/etcd --data-dir=/export/Data/etcd --listen-peer-urls http://10.226.1.168:2380 --initial-advertise-peer-urls http://10.226.1.168:2380 --listen-client-urls http://10.226.1.168:2379,http://10.226.1.13:2379 --advertise-client-urls http://10.226.1.168:2379 --name 10.226.1.168  --initial-cluster 10.226.1.13=http://10.226.1.13:2380,10.226.1.45=http://10.226.1.45:2380,10.226.1.168=http://10.226.1.168:2380 --initial-cluster-state new</span><br><span class="line"><span class="meta prompt_"># </span><span class="language-bash">启动命令参数说明:</span> </span><br><span class="line"><span class="meta prompt_">#</span><span class="language-bash">data-dir: 指定节点的数据存储目录,这些数据包括节点ID,集群ID,集群初始化配置,Snapshot文件,若未指定—wal-dir,还会存储WAL文件,集群中所有节点的数据存储目录都必须保持一致</span></span><br><span class="line"><span class="meta prompt_">#</span><span class="language-bash">wal-dir: 指定节点的was文件的存储目录,若指定了该参数,wal文件会和其他数据文件分开存储。</span></span><br><span class="line"><span class="meta prompt_">#</span><span class="language-bash">name: 节点名称</span></span><br><span class="line"><span class="meta prompt_">#</span><span class="language-bash">initial-advertise-peer-urls: 告知集群其它节点通信url</span></span><br><span class="line"><span class="meta prompt_">#</span><span class="language-bash">listen-peer-urls: 告知客户端监控url</span></span><br><span class="line"><span class="meta prompt_">#</span><span class="language-bash">advertise-client-urls: 告知客户端url, 也就是服务的url</span></span><br><span class="line"><span class="meta prompt_">#</span><span class="language-bash">initial-cluster-token: 集群的ID,为了防止同一台机器上有多个etcd集群混淆</span></span><br><span class="line"><span class="meta prompt_">#</span><span class="language-bash">initial-cluster: 集群中所有节点</span></span><br><span class="line"><span class="meta prompt_">#</span><span class="language-bash">initial-cluster-state new 一般用于事先已知节点信息</span></span><br><span class="line"><span class="meta prompt_">#</span><span class="language-bash">initial-cluster-state existing 往已存在的集群中增加或删除节点</span></span><br><span class="line"><span class="meta prompt_">#</span><span class="language-bash">initial-cluster-state --force-new 强制启动一个新集群，会重置集群<span class="built_in">id</span>和集群所有成员信息</span></span><br><span class="line"><span class="meta prompt_">#</span><span class="language-bash">默认情况下通过etcd的2379/4001接收客户端请求,2380/7001 端口在各个节点中同步 raft 状态及数据</span></span><br><span class="line"><span class="meta prompt_"></span></span><br><span class="line"><span class="meta prompt_"># </span><span class="language-bash">查看集群状态:</span></span><br><span class="line">/export/server/etcd/etcdctl --endpoint http://10.226.1.13:2379 cluster-health</span><br><span class="line"><span class="meta prompt_"></span></span><br><span class="line"><span class="meta prompt_"># </span><span class="language-bash">查看集群成员</span></span><br><span class="line">/export/servers/etcd/etcdctl --endpoints http://10.226.1.13:2379 member list</span><br><span class="line"><span class="meta prompt_"></span></span><br><span class="line"><span class="meta prompt_"># </span><span class="language-bash">导出集群所有数据到文件中</span></span><br><span class="line">/export/server/etcd/etcdctl --endpoint http://10.226.1.13:2379 ls --recursive -p | grep -v &#x27;/$&#x27; | xargs -n 1 -I% sh -c &#x27;echo -n %:; ./etcdctl --endpoint http://10.226.1.13:2379 get %;&#x27; &gt; etcd_keys.txt</span><br><span class="line"><span class="meta prompt_"></span></span><br><span class="line"><span class="meta prompt_"># </span><span class="language-bash">备份</span></span><br><span class="line">/export/server/etcd/etcdctl backup --data-dir /export/Data/etcd --backup-dir /tmp/etcd_bkup</span><br><span class="line"><span class="meta prompt_"></span></span><br><span class="line"><span class="meta prompt_"># </span><span class="language-bash">恢复</span></span><br><span class="line">/export/servers/etcd/etcd -data-dir=/tmp/etcd_backup/ --force-new-cluster</span><br><span class="line"><span class="meta prompt_"></span></span><br><span class="line"><span class="meta prompt_"># </span><span class="language-bash">清空集群指定目录下的所有数据</span></span><br><span class="line">/export/servers/etcd/etcdctl --endpoint http://10.226.1.13:2379 rm --recursive /captain</span><br><span class="line"><span class="meta prompt_"></span></span><br><span class="line"><span class="meta prompt_"># </span><span class="language-bash">增加key</span></span><br><span class="line">/export/servers/etcd/etcdctl --endpoint http://10.226.1.13:2379 put /captain/pod/10.226.96.2 xxx</span><br><span class="line"><span class="meta prompt_"></span></span><br><span class="line"><span class="meta prompt_"># </span><span class="language-bash">删除key</span></span><br><span class="line">/export/servers/etcd/etcdctl --endpoint http://10.226.1.13:2379 del /captain/pod/10.226.96.2</span><br><span class="line"><span class="meta prompt_"></span></span><br><span class="line"><span class="meta prompt_"># </span><span class="language-bash">查看key</span></span><br><span class="line">/export/servers/etcd/etcdctl --endpoint http://10.226.1.13:2379 get /captain/pod/10.226.96.2</span><br><span class="line"><span class="meta prompt_"></span></span><br><span class="line"><span class="meta prompt_"># </span><span class="language-bash">修改key</span></span><br><span class="line">/export/servers/etcd/etcdctl --endpoint http://10.226.1.13:2379 set /captain/pod/10.226.97.23 &quot;$(/export/servers/etcd/etcdctl --endpoint http://10.226.1.13:2379 get /captain/pod/10.226.97.23 |sed &#x27;s/jstack-31-41-3164228140-jbkgv/jstack-31-41-3819379906-vm2sj/g&#x27;)&quot;</span><br></pre></td></tr></table></figure>
+
+<h3 id="etcd性能"><a href="#etcd性能" class="headerlink" title="etcd性能"></a><strong>etcd性能</strong></h3><p><a href="">etcd官网</a>上的性能测试数据</p>
+<p>google cloud computer engine&#x2F;3 machine of 8 CPUs+16GB mem+50GB ssd&#x2F;ubuntu 17.04&#x2F;etd3.2.0,go1.8.3</p>
+<p><img src="http://zskgithubblog.oss-cn-beijing.aliyuncs.com/blogpic/etcd4.jpg" alt="etcd4"></p>
+<p><img src="http://zskgithubblog.oss-cn-beijing.aliyuncs.com/blogpic/etcd5.jpg" alt="etcd5"></p>
+<h3 id="etcd-VS-zookeeper"><a href="#etcd-VS-zookeeper" class="headerlink" title="etcd VS zookeeper"></a><strong>etcd VS zookeeper</strong></h3><p><img src="http://zskgithubblog.oss-cn-beijing.aliyuncs.com/blogpic/etcd_vs_zookeeper.png" alt="etcd_vs_zookeeper"></p>
+<p>关于zookeeper,下次单独做个分享.</p>
+<h3 id="参考文章"><a href="#参考文章" class="headerlink" title="参考文章:"></a><strong>参考文章:</strong></h3><blockquote>
+<ul>
+<li><a target="_blank" rel="noopener" href="https://www.hi-linux.com/posts/40915.html">etcd入门</a></li>
+<li><a target="_blank" rel="noopener" href="https://coreos.com/etcd/docs/latest/demo.html">etcd Demo</a></li>
+<li><a target="_blank" rel="noopener" href="https://coreos.com/etcd/docs/latest/">etcd Doc</a></li>
+<li><a target="_blank" rel="noopener" href="http://www.infoq.com/cn/articles/etcd-interpretation-application-scenario-implement-principle">etcd:从应用场景到实现原理的全方位解读</a></li>
+<li><a target="_blank" rel="noopener" href="https://raft.github.io/">RAFT</a></li>
+</ul>
+</blockquote>
+<h3 id="转载请注明出处https-izsk-me"><a href="#转载请注明出处https-izsk-me" class="headerlink" title="转载请注明出处https://izsk.me"></a><strong>转载请注明出处<a target="_blank" rel="noopener" href="https://izsk.me/">https://izsk.me</a></strong></h3><hr>
+
+      
+    </div>
+
+    <div>
+      
+        
+<div id="wechat_subscriber" style="display: block; padding: 10px 0; margin: 20px auto; width: 100%; text-align: center">
+    <img id="wechat_subscriber_qcode" src="/images/websitecode250.png" alt=" wechat" style="width: 200px; max-width: 100%;"/>
+    <div>Scan Me To Read on Phone</div>
+</div>
+
+
+      
+    </div>
+
+    <div>
+      
+        
+  <div style="padding: 10px 0; margin: 20px auto; width: 90%; text-align: center;">
+    <div>I know you won't do this,but what if you did?</div>
+    <button id="rewardButton" disable="enable" onclick="var qr = document.getElementById('QR'); if (qr.style.display === 'none') {qr.style.display='block';} else {qr.style.display='none'}">
+      <span>赏</span>
+    </button>
+    <div id="QR" style="display: none;">
+      
+        <div id="wechat" style="display: inline-block">
+          <img id="wechat_qr" src="/images/wechatpayme.png" alt=" WeChat Pay"/>
+          <p>微信打赏</p>
+        </div>
+      
+      
+        <div id="alipay" style="display: inline-block">
+          <img id="alipay_qr" src="/images/alipayme.jpg" alt=" Alipay"/>
+          <p>支付宝打赏</p>
+        </div>
+      
     </div>
   </div>
 
-{% endblock %}
 
-{% block sidebar %}
-  {{ sidebar_template.render(true) }}
-{% endblock %}
+      
+    </div>
 
 
-{% block script_extra %}
-  {% include '_scripts/pages/post-details.swig' %}
-{% endblock %}
+    <footer class="post-footer">
+      
+        <div class="post-tags">
+          
+            <a href="/tags/Kubernetes/" rel="tag"># Kubernetes</a>
+          
+        </div>
+      
+
+      
+        <div class="post-nav">
+          <div class="post-nav-next post-nav-item">
+            
+              <a href="/2018/04/28/Ceph%E5%AD%A6%E4%B9%A0(%E6%9E%B6%E6%9E%84)/" rel="next" title="Ceph学习(架构)">
+                <i class="fa fa-chevron-left"></i> Ceph学习(架构)
+              </a>
+            
+          </div>
+
+          <span class="post-nav-divider"></span>
+
+          <div class="post-nav-prev post-nav-item">
+            
+              <a href="/2018/09/23/Kubernetes%E5%AD%A6%E4%B9%A0(%E4%BA%B2%E5%92%8C%E6%80%A7%E5%8F%8A%E5%8F%8D%E4%BA%B2%E5%92%8C%E6%80%A7)/" rel="prev" title="Kubernetes学习(亲和性及反亲和性)">
+                Kubernetes学习(亲和性及反亲和性) <i class="fa fa-chevron-right"></i>
+              </a>
+            
+          </div>
+        </div>
+      
+
+      
+      
+    </footer>
+  </article>
+
+
+
+    <div class="post-spread">
+      
+    </div>
+  </div>
+
+
+          </div>
+          
+
+
+          
+  <div class="comments" id="comments">
+    
+  </div>
+
+
+        </div>
+        
+          
+  
+  <div class="sidebar-toggle">
+    <div class="sidebar-toggle-line-wrap">
+      <span class="sidebar-toggle-line sidebar-toggle-line-first"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-middle"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-last"></span>
+    </div>
+  </div>
+
+  <aside id="sidebar" class="sidebar">
+    <div class="sidebar-inner">
+
+      
+
+      
+        <ul class="sidebar-nav motion-element">
+          <li class="sidebar-nav-toc sidebar-nav-active" data-target="post-toc-wrap" >
+            文章目录
+          </li>
+          <li class="sidebar-nav-overview" data-target="site-overview">
+            站点概览
+          </li>
+        </ul>
+      
+
+      <section class="site-overview sidebar-panel">
+        <div class="site-author motion-element" itemprop="author" itemscope itemtype="http://schema.org/Person">
+          <img class="site-author-image" itemprop="image"
+               src="/images/avatar.gif"
+               alt="" />
+          <p class="site-author-name" itemprop="name"></p>
+          <p class="site-description motion-element" itemprop="description"></p>
+        </div>
+        <nav class="site-state motion-element">
+        
+          
+            <div class="site-state-item site-state-posts">
+              <a href="/archives">
+                <span class="site-state-item-count">192</span>
+                <span class="site-state-item-name">日志</span>
+              </a>
+            </div>
+          
+
+          
+            <div class="site-state-item site-state-categories">
+              <a href="/categories">
+                <span class="site-state-item-count">14</span>
+                <span class="site-state-item-name">分类</span>
+              </a>
+            </div>
+          
+
+          
+            <div class="site-state-item site-state-tags">
+              <a href="/tags">
+                <span class="site-state-item-count">14</span>
+                <span class="site-state-item-name">标签</span>
+              </a>
+            </div>
+          
+
+        </nav>
+
+        
+
+        <div class="links-of-author motion-element">
+          
+        </div>
+
+        
+        
+
+        
+        
+
+        
+
+
+      </section>
+
+      
+      <!--noindex-->
+        <section class="post-toc-wrap motion-element sidebar-panel sidebar-panel-active">
+          <div class="post-toc">
+
+            
+              
+            
+
+            
+              <div class="post-toc-content"><ol class="nav"><li class="nav-item nav-level-3"><a class="nav-link" href="#WHAT-etcd"><span class="nav-number">1.</span> <span class="nav-text">WHAT etcd</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#WHY-etcd"><span class="nav-number">2.</span> <span class="nav-text">WHY etcd</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#CAP%E7%90%86%E8%AE%BA"><span class="nav-number">3.</span> <span class="nav-text">CAP理论</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#etcd%E6%9E%B6%E6%9E%84"><span class="nav-number">4.</span> <span class="nav-text">etcd架构</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#etcd%E8%A7%92%E8%89%B2"><span class="nav-number">5.</span> <span class="nav-text">etcd角色</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E5%B7%A5%E4%BD%9C%E5%8E%9F%E7%90%86"><span class="nav-number">6.</span> <span class="nav-text">工作原理</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#etcd%E9%80%89%E4%B8%BE"><span class="nav-number">7.</span> <span class="nav-text">etcd选举</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#RAFT%E5%8D%8F%E8%AE%AE"><span class="nav-number">8.</span> <span class="nav-text">RAFT协议</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E6%97%A5%E5%BF%97%E5%A4%8D%E5%88%B6"><span class="nav-number">9.</span> <span class="nav-text">日志复制</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#etcd%E5%9C%A8%E4%BA%91%E7%BF%BC%E4%B8%AD%E7%9A%84%E4%BD%BF%E7%94%A8"><span class="nav-number">10.</span> <span class="nav-text">etcd在云翼中的使用</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#etcd%E5%B8%B8%E7%94%A8%E5%91%BD%E4%BB%A4"><span class="nav-number">11.</span> <span class="nav-text">etcd常用命令</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#etcd%E6%80%A7%E8%83%BD"><span class="nav-number">12.</span> <span class="nav-text">etcd性能</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#etcd-VS-zookeeper"><span class="nav-number">13.</span> <span class="nav-text">etcd VS zookeeper</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E5%8F%82%E8%80%83%E6%96%87%E7%AB%A0"><span class="nav-number">14.</span> <span class="nav-text">参考文章:</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E8%BD%AC%E8%BD%BD%E8%AF%B7%E6%B3%A8%E6%98%8E%E5%87%BA%E5%A4%84https-izsk-me"><span class="nav-number">15.</span> <span class="nav-text">转载请注明出处https:&#x2F;&#x2F;izsk.me</span></a></li></ol></div>
+            
+
+          </div>
+        </section>
+      <!--/noindex-->
+      
+
+    </div>
+  </aside>
+
+
+        
+      </div>
+    </main>
+
+    <footer id="footer" class="footer">
+      <div class="footer-inner">
+        <div class="copyright" >
+  
+  &copy; 
+  <span itemprop="copyrightYear">2022</span>
+  <span class="with-love">
+    <i class="fa fa-heart"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">Z.S.K.</span>
+</div>
+
+
+<div class="powered-by">
+  Supported by <a class="theme-link" target="_blank" rel="noopener" href="https://hexo.io">Hexo</a>
+</div>
+
+<div class="theme-info">
+  Theme -
+  <a class="theme-link" target="_blank" rel="noopener" href="https://github.com/iissnan/hexo-theme-next">
+    NexT.Mist
+  </a>
+</div>
+
+
+        
+
+        
+      </div>
+    </footer>
+
+    <div class="back-to-top">
+      <i class="fa fa-arrow-up"></i>
+    </div>
+  </div>
+
+  
+
+<script type="text/javascript">
+  if (Object.prototype.toString.call(window.Promise) !== '[object Function]') {
+    window.Promise = null;
+  }
+</script>
+
+
+
+
+
+
+
+
+
+  
+
+
+
+  
+  <script type="text/javascript" src="/lib/jquery/index.js?v=2.1.3"></script>
+
+  
+  <script type="text/javascript" src="/lib/fastclick/lib/fastclick.min.js?v=1.0.6"></script>
+
+  
+  <script type="text/javascript" src="/lib/jquery_lazyload/jquery.lazyload.js?v=1.9.7"></script>
+
+  
+  <script type="text/javascript" src="/lib/velocity/velocity.min.js?v=1.2.1"></script>
+
+  
+  <script type="text/javascript" src="/lib/velocity/velocity.ui.min.js?v=1.2.1"></script>
+
+  
+  <script type="text/javascript" src="/lib/fancybox/source/jquery.fancybox.pack.js?v=2.1.5"></script>
+
+
+  
+
+
+  <script type="text/javascript" src="/js/src/utils.js?v=5.1.0"></script>
+
+  <script type="text/javascript" src="/js/src/motion.js?v=5.1.0"></script>
+
+
+
+  
+  
+
+  
+  <script type="text/javascript" src="/js/src/scrollspy.js?v=5.1.0"></script>
+<script type="text/javascript" src="/js/src/post-details.js?v=5.1.0"></script>
+
+
+
+  
+
+
+  <script type="text/javascript" src="/js/src/bootstrap.js?v=5.1.0"></script>
+
+
+
+  
+
+
+
+  
+
+
+
+
+	
+
+
+
+
+
+  
+
+
+
+
+  
+  
+  <script type="text/javascript">
+    // Popup Window;
+    var isfetched = false;
+    // Search DB path;
+    var search_path = "search.xml";
+    if (search_path.length == 0) {
+      search_path = "search.xml";
+    }
+    var path = "/" + search_path;
+    // monitor main search box;
+
+    function proceedsearch() {
+      $("body").append('<div class="popoverlay">').css('overflow', 'hidden');
+      $('.popup').toggle();
+    }
+    // search function;
+    var searchFunc = function(path, search_id, content_id) {
+      'use strict';
+      $.ajax({
+        url: path,
+        dataType: "xml",
+        async: true,
+        success: function( xmlResponse ) {
+          // get the contents from search data
+          isfetched = true;
+          $('.popup').detach().appendTo('.header-inner');
+          var datas = $( "entry", xmlResponse ).map(function() {
+            return {
+              title: $( "title", this ).text(),
+              content: $("content",this).text(),
+              url: $( "url" , this).text()
+            };
+          }).get();
+          var $input = document.getElementById(search_id);
+          var $resultContent = document.getElementById(content_id);
+          $input.addEventListener('input', function(){
+            var matchcounts = 0;
+            var str='<ul class=\"search-result-list\">';
+            var keywords = this.value.trim().toLowerCase().split(/[\s\-]+/);
+            $resultContent.innerHTML = "";
+            if (this.value.trim().length > 1) {
+              // perform local searching
+              datas.forEach(function(data) {
+                var isMatch = false;
+                var content_index = [];
+                var data_title = data.title.trim().toLowerCase();
+                var data_content = data.content.trim().replace(/<[^>]+>/g,"").toLowerCase();
+                var data_url = decodeURIComponent(data.url);
+                var index_title = -1;
+                var index_content = -1;
+                var first_occur = -1;
+                // only match artiles with not empty titles and contents
+                if(data_title != '') {
+                  keywords.forEach(function(keyword, i) {
+                    index_title = data_title.indexOf(keyword);
+                    index_content = data_content.indexOf(keyword);
+                    if( index_title >= 0 || index_content >= 0 ){
+                      isMatch = true;
+                      if (i == 0) {
+                        first_occur = index_content;
+                      }
+                    }
+
+                  });
+                }
+                // show search results
+                if (isMatch) {
+                  matchcounts += 1;
+                  str += "<li><a href='"+ data_url +"' class='search-result-title'>"+ data_title +"</a>";
+                  var content = data.content.trim().replace(/<[^>]+>/g,"");
+                  if (first_occur >= 0) {
+                    // cut out 100 characters
+                    var start = first_occur - 20;
+                    var end = first_occur + 80;
+                    if(start < 0){
+                      start = 0;
+                    }
+                    if(start == 0){
+                      end = 50;
+                    }
+                    if(end > content.length){
+                      end = content.length;
+                    }
+                    var match_content = content.substring(start, end);
+                    // highlight all keywords
+                    keywords.forEach(function(keyword){
+                      var regS = new RegExp(keyword, "gi");
+                      match_content = match_content.replace(regS, "<b class=\"search-keyword\">"+keyword+"</b>");
+                    });
+
+                    str += "<p class=\"search-result\">" + match_content +"...</p>"
+                  }
+                  str += "</li>";
+                }
+              })};
+            str += "</ul>";
+            if (matchcounts == 0) { str = '<div id="no-result"><i class="fa fa-frown-o fa-5x" /></div>' }
+            if (keywords == "") { str = '<div id="no-result"><i class="fa fa-search fa-5x" /></div>' }
+            $resultContent.innerHTML = str;
+          });
+          proceedsearch();
+        }
+      });}
+
+    // handle and trigger popup window;
+    $('.popup-trigger').click(function(e) {
+      e.stopPropagation();
+      if (isfetched == false) {
+        searchFunc(path, 'local-search-input', 'local-search-result');
+      } else {
+        proceedsearch();
+      };
+    });
+
+    $('.popup-btn-close').click(function(e){
+      $('.popup').hide();
+      $(".popoverlay").remove();
+      $('body').css('overflow', '');
+    });
+    $('.popup').click(function(e){
+      e.stopPropagation();
+    });
+  </script>
+
+
+  
+
+  
+
+  
+
+  
+
+
+</body>
+</html>

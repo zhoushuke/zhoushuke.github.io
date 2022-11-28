@@ -1,38 +1,1016 @@
-{% extends '_layout.swig' %}
-{% import '_macro/post.swig' as post_template %}
-{% import '_macro/sidebar.swig' as sidebar_template %}
+<!doctype html>
 
 
-{% block title %} {{ page.title }} | {{ config.title }} {% endblock %}
 
-{% block page_class %}page-post-detail{% endblock %}
+  
 
 
-{% block content %}
+<html class="theme-next mist use-motion" lang="zh-Hans">
+<head>
+  <meta charset="UTF-8"/>
+<meta http-equiv="X-UA-Compatible" content="IE=edge" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1"/>
+
+
+
+<meta http-equiv="Cache-Control" content="no-transform" />
+<meta http-equiv="Cache-Control" content="no-siteapp" />
+
+
+
+
+
+
+
+
+
+
+
+
+  
+  
+  <link href="/lib/fancybox/source/jquery.fancybox.css?v=2.1.5" rel="stylesheet" type="text/css" />
+
+
+
+
+  
+  
+  
+  
+
+  
+    
+    
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+    
+    
+    <link href="//fonts.googleapis.com/css?family=Lato:300,300italic,400,400italic,700,700italic&subset=latin,latin-ext" rel="stylesheet" type="text/css">
+  
+
+
+
+
+
+
+<link href="/lib/font-awesome/css/font-awesome.min.css?v=4.6.2" rel="stylesheet" type="text/css" />
+
+<link href="/css/main.css?v=5.1.0" rel="stylesheet" type="text/css" />
+
+
+  <meta name="keywords" content="Kubernetes," />
+
+
+
+
+
+
+
+
+  <link rel="shortcut icon" type="image/x-icon" href="/favicon.ico?v=5.1.0" />
+
+
+
+
+
+
+<meta name="description" content="最近接到一个需求，用户在进入基于k8s内的容器时能否只以特定的用户进入? 听起来是一个很平常且合理的需求，但细想起来并不简单.">
+<meta property="og:type" content="article">
+<meta property="og:title" content="kubectl exec 如何实现进入容器时指定用户">
+<meta property="og:url" content="https://zhoushuke.github.io/2022/11/27/Kubernetes-kubectl-exec-specify-username/index.html">
+<meta property="og:site_name" content="Z.S.K.&#39;s Records">
+<meta property="og:description" content="最近接到一个需求，用户在进入基于k8s内的容器时能否只以特定的用户进入? 听起来是一个很平常且合理的需求，但细想起来并不简单.">
+<meta property="og:locale">
+<meta property="og:image" content="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20221128103819.png">
+<meta property="og:image" content="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20221128103921.png">
+<meta property="og:image" content="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20221128103704.png">
+<meta property="og:image" content="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20221128104430.png">
+<meta property="article:published_time" content="2022-11-27T09:30:53.000Z">
+<meta property="article:modified_time" content="2022-11-28T12:05:38.144Z">
+<meta property="article:author" content="Z.S.K.">
+<meta property="article:tag" content="Kubernetes">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:image" content="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20221128103819.png">
+
+
+
+<script type="text/javascript" id="hexo.configurations">
+  var NexT = window.NexT || {};
+  var CONFIG = {
+    root: '',
+    scheme: 'Mist',
+    sidebar: {"position":"left","display":"post"},
+    fancybox: true,
+    motion: true,
+    duoshuo: {
+      userId: 'undefined',
+      author: '博主'
+    },
+    algolia: {
+      applicationID: '',
+      apiKey: '',
+      indexName: '',
+      hits: {"per_page":10},
+      labels: {"input_placeholder":"Search for Posts","hits_empty":"We didn't find any results for the search: ${query}","hits_stats":"${hits} results found in ${time} ms"}
+    }
+  };
+</script>
+
+
+
+  <link rel="canonical" href="https://zhoushuke.github.io/2022/11/27/Kubernetes-kubectl-exec-specify-username/"/>
+
+
+
+
+
+  <title> kubectl exec 如何实现进入容器时指定用户 | Z.S.K.'s Records </title>
+<meta name="generator" content="Hexo 6.2.0"></head>
+
+<body itemscope itemtype="http://schema.org/WebPage" lang="zh-Hans">
+
+  
+
+
+
+
+
+
+
+
+
+
+  
+  
+    
+  
+
+  <div class="container one-collumn sidebar-position-left page-post-detail ">
+    <div class="headband"></div>
+
+    <header id="header" class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-meta ">
+  
+
+  <div class="custom-logo-site-title">
+    <a href="/"  class="brand" rel="start">
+      <span class="logo-line-before"><i></i></span>
+      <span class="site-title">Z.S.K.'s Records</span>
+      <span class="logo-line-after"><i></i></span>
+    </a>
+  </div>
+    
+      <p class="site-subtitle"></p>
+    
+</div>
+
+<div class="site-nav-toggle">
+  <button>
+    <span class="btn-bar"></span>
+    <span class="btn-bar"></span>
+    <span class="btn-bar"></span>
+  </button>
+</div>
+
+<nav class="site-nav">
+  
+
+  
+    <ul id="menu" class="menu">
+      
+        
+        <li class="menu-item menu-item-home">
+          <a href="/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-home"></i> <br />
+            
+            首页
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-categories">
+          <a href="/categories" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-th"></i> <br />
+            
+            分类
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-about">
+          <a href="/about/ZSK-Profile.pdf" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-user"></i> <br />
+            
+            简历
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-archives">
+          <a href="/archives" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-archive"></i> <br />
+            
+            归档
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-tags">
+          <a href="/tags" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-tags"></i> <br />
+            
+            标签
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-commonweal">
+          <a href="/404.html" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-heartbeat"></i> <br />
+            
+            公益404
+          </a>
+        </li>
+      
+
+      
+        <li class="menu-item menu-item-search">
+          
+            <a href="javascript:;" class="popup-trigger">
+          
+            
+              <i class="menu-item-icon fa fa-search fa-fw"></i> <br />
+            
+            搜索
+          </a>
+        </li>
+      
+    </ul>
+  
+
+  
+    <div class="site-search">
+      
+  <div class="popup">
+ <span class="search-icon fa fa-search"></span>
+ <input type="text" id="local-search-input">
+ <div id="local-search-result"></div>
+ <span class="popup-btn-close">close</span>
+</div>
+
+
+    </div>
+  
+</nav>
+
+
+
+ </div>
+    </header>
+
+    <main id="main" class="main">
+      <div class="main-inner">
+        <div class="content-wrap">
+          <div id="content" class="content">
+            
 
   <div id="posts" class="posts-expand">
-    {{ post_template.render(page) }}
+    
 
-    <div class="post-spread">
-      {% if theme.jiathis %}
-        {% include '_partials/share/jiathis.swig' %}
-      {% elseif theme.baidushare %}
-        {% include '_partials/share/baidushare.swig' %}
-      {% elseif theme.add_this_id %}
-        {% include '_partials/share/add-this.swig' %}
-      {% elseif theme.duoshuo_shortname and theme.duoshuo_share %}
-        {% include '_partials/share/duoshuo_share.swig' %}
-      {% endif %}
+  
+
+  
+  
+  
+
+  <article class="post post-type-normal " itemscope itemtype="http://schema.org/Article">
+  <link itemprop="mainEntityOfPage" href="https://zhoushuke.github.io/2022/11/27/Kubernetes-kubectl-exec-specify-username/">
+
+  <span style="display:none" itemprop="author" itemscope itemtype="http://schema.org/Person">
+    <meta itemprop="name" content="">
+    <meta itemprop="description" content="">
+    <meta itemprop="image" content="/images/avatar.gif">
+  </span>
+
+  <span style="display:none" itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+    <meta itemprop="name" content="Z.S.K.'s Records">
+    <span style="display:none" itemprop="logo" itemscope itemtype="http://schema.org/ImageObject">
+      <img style="display:none;" itemprop="url image" alt="Z.S.K.'s Records" src="">
+    </span>
+  </span>
+
+    
+      <header class="post-header">
+
+        
+        
+          <h1 class="post-title" itemprop="name headline">
+            
+            
+              
+                kubectl exec 如何实现进入容器时指定用户
+              
+            
+          </h1>
+        
+
+        <div class="post-meta">
+          <span class="post-time">
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">发表于</span>
+              
+              <time title="Post created" itemprop="dateCreated datePublished" datetime="2022-11-27T17:30:53+08:00">
+                2022-11-27
+              </time>
+            
+
+            
+
+            
+          </span>
+
+          
+            <span class="post-category" >
+            
+              <span class="post-meta-divider">|</span>
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-folder-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">分类于</span>
+              
+              
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/Kubernetes/" itemprop="url" rel="index">
+                    <span itemprop="name">Kubernetes</span>
+                  </a>
+                </span>
+
+                
+                
+              
+            </span>
+          
+
+          
+            
+          
+
+          
+
+          
+          
+
+          
+
+          
+
+        </div>
+      </header>
+    
+
+
+    <div class="post-body" itemprop="articleBody">
+
+      
+      
+
+      
+        <p>最近接到一个需求，用户在进入基于k8s内的容器时能否只以特定的用户进入?</p>
+<p>听起来是一个很平常且合理的需求，但细想起来并不简单.</p>
+<span id="more"></span>
+
+<h3 id="背景信息"><a href="#背景信息" class="headerlink" title="背景信息"></a>背景信息</h3><p>k8s: v1.22</p>
+<p>CRI: docker v20.10.18</p>
+<p>CNI: cilium v1.9(并不涉及)</p>
+<h3 id="问题引申"><a href="#问题引申" class="headerlink" title="问题引申"></a>问题引申</h3><p>首先，目前的kubectl exec 目前不支持使用参数指定用户进入到容器中, 即无法执行Kubectl exec –username，熟悉docker的人都知道，docker 是支持在exec 使用-u指定用户的,这时抛出第一个问题:</p>
+<p><strong>为什么kubectl exec 不支持指定username进入容器?</strong></p>
+<p>说实话，作者在这之前还真没有想过这个问题，但在想这个问题的时候，引出了另一个问题,因此上面的问题先放一放，先来回答另一个问题:</p>
+<p><strong>当执行kubectl exec时，进入的是哪个用户?</strong></p>
+<p>这个问题比较简单，当然进入的是默认的用户，那默认的用户是从何而来? 那自然是Dockerfile中指定的用户，默认情况下即为root用户，如果想进入后不为root怎么办?</p>
+<p>在Dockerfile中使用<code>USER</code>关键字指定某个用户为默认用户，这样当kubectl exec进入到容器后即为该用户而非root，但毕竟dockerfile只build一次，不可能在需要更换用户的时候对镜像进行重新build只为切换用户，这样显然成本较大，而在使用docker时就比较容易，因为本身支持exec -u username,那么只要是容器中存在的用户，都可使用-u进行切换。</p>
+<p>因此回到第一个问题：</p>
+<p><strong>为什么kubectl exec 不支持指定username进入容器?</strong></p>
+<p>作者翻阅了一些官方的issue, 很早就有人提出了相关需求，但官方给的反馈总结起来就是基于安全及整体架构考虑，<strong>这个参数涉及到多个k8s组件的修改</strong>，同时又存在user mapping问题，相关issue感兴趣的可阅读参考文章的前几个链接</p>
+<p>也确实有人提了个<a target="_blank" rel="noopener" href="https://github.com/kubernetes/kubernetes/pull/81883/commits">MR</a>来支持这个参数，但由于提交的代码与docker CRI绑定较为密切，而kubernetes本身是支持多种CRI的，因此并未合并进主干，直到现在也未支持该参数</p>
+<p>需求注意的是， kubectl 目前有–user, –username这两个参数，但都不是实现上述目的的</p>
+<blockquote>
+<ul>
+<li><p>–user: 指的是kubectl 使用的config文件集群相应的username</p>
+</li>
+<li><p>–username: 指的是kubectl 与apiServer通信的用户名</p>
+</li>
+</ul>
+</blockquote>
+<p>综上所述，在不改变现状的情况下，有没有办法让kubectl exec 支持指定username呢?</p>
+<p>答案是肯定的，docker exec -u就是好的参考例子</p>
+<h3 id="问题拆解"><a href="#问题拆解" class="headerlink" title="问题拆解"></a>问题拆解</h3><p>由于kubectl exec最终也是进入到容器中，那自然可以把kubectl exec命令转换成docker exec命令，那如何对应起来呢? 两者的桥梁就是DOCKER CONTAINER ID</p>
+<p>简单来说就是以下流程:</p>
+<ol>
+<li><p>通过解析目标pod的yaml内容拿到相关信息，主要是nodeName, podnamespace, containerid, nodeName的作用是: 由于最终要转换成docker 命令，因此需要拿到pod运行在哪台什么主机上, 这样doker命令也必须运行在该主机上</p>
+</li>
+<li><p>新构建一个pod， pod里运行一个docker client，然后把主机上的docker.sock挂载到pod中(docker in docker)，这样再结合CONTAINER ID, 即可实现docker exec -u xxx ${CONTAINER ID}</p>
+</li>
+</ol>
+<p>是不是很简单，更兴奋的是， 已经有人专门写了个kubectl plugin来实现这个功能，<a target="_blank" rel="noopener" href="https://github.com/jordanwilson230/kubectl-plugins/blob/krew/kubectl-exec-as"><code>exec-as</code></a>,也叫<code>kubectl ssh</code></p>
+<h4 id="krew"><a href="#krew" class="headerlink" title="krew"></a>krew</h4><p>kubectl有自己的插件体系，叫<a target="_blank" rel="noopener" href="https://krew.sigs.k8s.io/"><code>krew</code></a>, 由于篇幅有限，不在这里展开，这里只放krew在线及离线安装方式供大家参考</p>
+<p><a target="_blank" rel="noopener" href="https://krew.sigs.k8s.io/docs/user-guide/setup/install">krew在线安装</a></p>
+<p>安装完krew后即可使用Kubectl krew命令了</p>
+<p>krew插件在线安装</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">kubectl krew install exec-as</span><br></pre></td></tr></table></figure>
+
+<p><a target="_blank" rel="noopener" href="https://www.jianshu.com/p/4238dd05f143">krew插件离线安装</a></p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">./krew-linux_amd64 install --manifest=krew.yaml --archive=krew-linux_amd64.tar.gz</span><br></pre></td></tr></table></figure>
+
+<h4 id="exec-as"><a href="#exec-as" class="headerlink" title="exec-as"></a>exec-as</h4><p>在exec-as插件安装完之后即可实现以下命令实现指定用户</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">kubectl exec-as -u xxx podname -- bash</span><br></pre></td></tr></table></figure>
+
+<p>安装完之后可以看出, exec-as其实就是一个shell脚本，下面的代码是他的核心逻辑</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># 省略获取pod相关信息的代码</span></span><br><span class="line"><span class="keyword">if</span> [[ <span class="variable">$&#123;CONTAINER&#125;</span> != <span class="string">&quot;NONE&quot;</span> ]]; <span class="keyword">then</span></span><br><span class="line">  DOCKER_CONTAINERID=$( <span class="built_in">eval</span> <span class="string">&quot;<span class="variable">$KUBECTL</span>&quot;</span> get pod <span class="string">&quot;<span class="variable">$&#123;POD&#125;</span>&quot;</span> -o go-template=<span class="string">&quot;&#x27;&#123;&#123; range .status.containerStatuses &#125;&#125;&#123;&#123; if eq .name \&quot;<span class="variable">$&#123;CONTAINER&#125;</span>\&quot; &#125;&#125;&#123;&#123; .containerID &#125;&#125;&#123;&#123; end &#125;&#125;&#123;&#123; end &#125;&#125;&#x27;&quot;</span> )</span><br><span class="line"><span class="keyword">else</span></span><br><span class="line">  DOCKER_CONTAINERID=$( <span class="variable">$KUBECTL</span> get pod <span class="string">&quot;<span class="variable">$&#123;POD&#125;</span>&quot;</span> -o go-template=<span class="string">&#x27;&#123;&#123; (index .status.containerStatuses 0).containerID &#125;&#125;&#x27;</span> )</span><br><span class="line"><span class="keyword">fi</span></span><br><span class="line">CONTAINERID=<span class="variable">$&#123;DOCKER_CONTAINERID#*//&#125;</span></span><br><span class="line"></span><br><span class="line"><span class="built_in">read</span> -r -d <span class="string">&#x27;&#x27;</span> OVERRIDES &lt;&lt;<span class="string">EOF || :</span></span><br><span class="line"><span class="string">&#123;</span></span><br><span class="line"><span class="string">    &quot;apiVersion&quot;: &quot;v1&quot;,</span></span><br><span class="line"><span class="string">    &quot;metadata&quot;: &#123;</span></span><br><span class="line"><span class="string">      &quot;annotations&quot;: &#123;</span></span><br><span class="line"><span class="string">        &quot;sidecar.istio.io/inject&quot; : &quot;false&quot;</span></span><br><span class="line"><span class="string">      &#125;</span></span><br><span class="line"><span class="string">    &#125;,</span></span><br><span class="line"><span class="string">    &quot;spec&quot;: &#123;</span></span><br><span class="line"><span class="string">        &quot;securityContext&quot;: &#123; &quot;runAsUser&quot;: 0 &#125;,</span></span><br><span class="line"><span class="string">        &quot;containers&quot;: [</span></span><br><span class="line"><span class="string">            &#123;</span></span><br><span class="line"><span class="string">                &quot;image&quot;: &quot;docker&quot;,</span></span><br><span class="line"><span class="string">                &quot;name&quot;: &quot;&#x27;$container&#x27;&quot;,</span></span><br><span class="line"><span class="string">                &quot;stdin&quot;: true,</span></span><br><span class="line"><span class="string">                &quot;stdinOnce&quot;: true,</span></span><br><span class="line"><span class="string">                &quot;tty&quot;: true,</span></span><br><span class="line"><span class="string">                &quot;restartPolicy&quot;: &quot;Never&quot;,</span></span><br><span class="line"><span class="string">                &quot;args&quot;: [</span></span><br><span class="line"><span class="string">                  &quot;exec&quot;,</span></span><br><span class="line"><span class="string">                  &quot;-it&quot;,</span></span><br><span class="line"><span class="string">                  &quot;-u&quot;,</span></span><br><span class="line"><span class="string">                  &quot;$&#123;USERNAME&#125;&quot;,</span></span><br><span class="line"><span class="string">                  &quot;$&#123;CONTAINERID&#125;&quot;,</span></span><br><span class="line"><span class="string">                  $(to_json &quot;$&#123;COMMAND&#125;&quot;)</span></span><br><span class="line"><span class="string">                ],</span></span><br><span class="line"><span class="string">                &quot;volumeMounts&quot;: [</span></span><br><span class="line"><span class="string">                    &#123;</span></span><br><span class="line"><span class="string">                        &quot;mountPath&quot;: &quot;/var/run/docker.sock&quot;,</span></span><br><span class="line"><span class="string">                        &quot;name&quot;: &quot;docker&quot;</span></span><br><span class="line"><span class="string">                    &#125;</span></span><br><span class="line"><span class="string">                ]</span></span><br><span class="line"><span class="string">            &#125;</span></span><br><span class="line"><span class="string">        ],</span></span><br><span class="line"><span class="string">        $NODESELECTOR</span></span><br><span class="line"><span class="string">        $TOLERATIONS</span></span><br><span class="line"><span class="string">        &quot;volumes&quot;: [</span></span><br><span class="line"><span class="string">            &#123;</span></span><br><span class="line"><span class="string">                &quot;name&quot;: &quot;docker&quot;,</span></span><br><span class="line"><span class="string">                &quot;hostPath&quot;: &#123;</span></span><br><span class="line"><span class="string">                    &quot;path&quot;: &quot;/var/run/docker.sock&quot;</span></span><br><span class="line"><span class="string">                &#125;</span></span><br><span class="line"><span class="string">            &#125;</span></span><br><span class="line"><span class="string">        ]</span></span><br><span class="line"><span class="string">    &#125;</span></span><br><span class="line"><span class="string">&#125;</span></span><br><span class="line"><span class="string">EOF</span></span><br><span class="line"><span class="built_in">trap</span> <span class="string">&#x27;$KUBECTL delete pod $container &gt;/dev/null 2&gt;&amp;1 &amp;&#x27;</span> 0 1 2 3 15</span><br><span class="line"><span class="built_in">eval</span> <span class="string">&quot;<span class="variable">$KUBECTL</span>&quot;</span> run -it --restart=Never --image=docker --overrides=<span class="string">&quot;&#x27;<span class="variable">$&#123;OVERRIDES&#125;</span>&#x27;&quot;</span> <span class="string">&quot;<span class="variable">$container</span>&quot;</span></span><br></pre></td></tr></table></figure>
+
+<p>其实就是上述的一二点的实现，是不是很简单，但是这远远不够，再回想一下我们的需求:</p>
+<p><strong>kubectl exec命令中能否只以特定的用户进入容器</strong></p>
+<p>通过<code>kubectl exec-as -u </code>是可以指定用户了，但这没办法控制用户指定什么用户，选择权是在用户侧，所以并没有达到限制<strong>只</strong>特定用户的目的</p>
+<p>同时，还有如下的几点缺点:</p>
+<ol>
+<li><p>由于exec-as只是一个shell脚本，如果权限控制不好的话，用户随时可以改脚本的内容，并不安全</p>
+</li>
+<li><p>上面的代码中可以看到，新创建的pod中使用的是docker exec -u username ${containerID}进入到容器中，多数情况下要进入到容器只是用于debug场景，用完就应该退出，在这种场景下，不能直接做成一个deployment服务，因为它是long run的，会造成docker exec 一直是连着docker server的，也并不安全。</p>
+</li>
+<li><p>因为要使用到kubectl, 相对于给每个开发同学配置一遍环境，有没有更好、更快的办法?</p>
+</li>
+</ol>
+<p>所以，要想达到目的，只能在exec-as上层再做一层，一是限制用户直接使用exec-as且不能修改exec-as shell脚本，二是用完即可退出docker exec</p>
+<h4 id="webkubectl"><a href="#webkubectl" class="headerlink" title="webkubectl"></a>webkubectl</h4><p>webkubectl做为一个kubectl web化的开源工具，因为之前体验过，可以解决第3个缺点，先来说一下webkubectl的实现</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br></pre></td><td class="code"><pre><span class="line">_______________________________________________________________________</span><br><span class="line">|   Local Network     |          DMZ           |      VPC/Datacenter  |</span><br><span class="line">|                     |                        |                      |</span><br><span class="line">|                     |    _______________     |   ----------------   |</span><br><span class="line">|   ---------------   |    |             |  /~~~~~&gt;| Kubernetes A |   |</span><br><span class="line">|   | Your Laptop |~~~~~~~&gt;| Web Kubectl | /   |   ----------------   |</span><br><span class="line">|   ---------------   |    |             | \   |                      |</span><br><span class="line">|                     |    ---------------  \  |   ----------------   |</span><br><span class="line">|                     |                      \~~~~&gt;| Kubernetes B |   |</span><br><span class="line">|                     |                        |   ----------------   |</span><br><span class="line">-----------------------------------------------------------------------</span><br></pre></td></tr></table></figure>
+
+<p>也很简单，就是用户通过上传kube config文件或者一个合法的token来连接k8s集群，</p>
+<p>webkubectl是支持多用户、多session，它会为每个session开辟独立的内存空间，从而做到访问隔离.</p>
+<p>截止目前，多用户这块做的并不完善，只支持用户预设定，新增用户需要重启webkubectl, 也不支持对接LDAP&#x2F;AD等账号体系.</p>
+<p>多session的隔离是通过挂载temp内存文件系统(退出即销毁)，结合一些kubens、kubectx等工具实现的.</p>
+<p>但也还不够，webkubectl只是一个kubectl web化的工具，需要将它与exec-as整合，</p>
+<p>最后我们要实现的目的是:</p>
+<p><strong>当用户登录到webkubectl后，通过kubeconfig连接session后直接进入到对应的容器中</strong>，不给用户执行exec-as的机会，从而实现文章开头的目的，其中,登录webkubectl的用户即为需要进入到容器中的用户.</p>
+<p>那如何告诉kubectl exec-as接受的参数?</p>
+<p>很简单，通过webkubectl登录时指定，即:</p>
+<ol>
+<li><p>登录webkubectl的用户即为进入到容器中的用户, 即，docker exec 中-u 的值</p>
+</li>
+<li><p>其它的两个参数:podname、namespace,这里<strong>为了改造最小化</strong>，就直接放在了登录webkubectl时的密码中了，通过分隔符来限定.</p>
+</li>
+</ol>
+<p>因为最终变成:</p>
+<p>登录webkubectl的用户名密码为: username:password_namespace_podname</p>
+<p>在webkubectl的源码中获取到这几个参数，然后直接os.Setenv到session的环境变量(因为session是隔离的，因为不会出现错乱)中，再让执行kubectl exec-as时从session环境变量中获取即可.</p>
+<p>这样，就可实现用户以指定用户进入到某个pod的容器中.</p>
+<p>还有以下几优化的点:</p>
+<blockquote>
+<ul>
+<li><p>webkubectl由于采用的内存隔离，因此在当用户退出session后(退出浏览器tab页面)，就不会保存任何数据，新创建的pod也会随之删除(看exec-as中的trap调用)</p>
+</li>
+<li><p>为了能够支持同一个session可以多次连接，对exec-as做了些改造，即，当新创建的pod存在且为Running状态时，就直接使用docker exec 进入，而不是每次都创建新的pod, 这样可以提高效率</p>
+</li>
+</ul>
+</blockquote>
+<p>另外，还有几个权限问题需要注意一下:</p>
+<blockquote>
+<ul>
+<li><p>由于webkubectl中使用了unshare、mount等命令，因此当使用容器启动时需要使用privileged启动</p>
+</li>
+<li><p>由于exec-as中使用了kubectl delete pod，因此上传的kube config文件中对应的用户需要具备对ns pod删除的权限，注意，<strong>删除pod的ns并不是用户需要进入的pod所在的ns，而是新创建的pod(也就是由exec-as创建出来的)所在的ns的删除权限，需要进入的pod所在的ns其实只需要get&#x2F;list pod的权限即可.</strong></p>
+</li>
+</ul>
+</blockquote>
+<p>改造成本不高，目的<strong>基本</strong>达成</p>
+<p>等等，为什么要说基本达成呢? 其实在<strong>易用</strong>上进行优化的空间: </p>
+<blockquote>
+<ul>
+<li><p>改造webkubectl的用户认证模块，支持从CMDB中动态地获取用户，这样在有新用户添加时不需要重启webkubectl</p>
+</li>
+<li><p>username:password_namespace_podname这样糅合在一起用还是挺low的，如果有一个CMDB来记录用户与要访问pod的对应关系，用户对自己具备的pod可随时增删调整就更友好了</p>
+</li>
+</ul>
+</blockquote>
+<h3 id="成果图"><a href="#成果图" class="headerlink" title="成果图"></a>成果图</h3><p>由于时间有限, 除了易用上可优化的点外，上述提到的点作者都已改造完成，贴几张图</p>
+<p>登录</p>
+<p><img src="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20221128103819.png"></p>
+<p>创建session, 上传kube config文件</p>
+<p><img src="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20221128103921.png"></p>
+<p>使用webkubectl登录用户连接对应的pod</p>
+<p><img src="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20221128103704.png"></p>
+<p>进入到pod中</p>
+<p><img src="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20221128104430.png"></p>
+<p>当然，由于时间有限, 对webkubectl、exec-as都做了些改造，目前凑合使用</p>
+<p>作者深知，这么个工具要能在生产上使用，简直是简陋至极，最好的解决方案肯定是kubectl exec官方来支持</p>
+<p>最后，发现一个更简单的工具, 通过改写kubectl exec – su - username来实现，不过有个限制是，容器中必须存在su命令，而且不支持自定义command，嗯，是个办法，感兴趣的可看看这个<a target="_blank" rel="noopener" href="https://github.com/zhangweiqaz/po_pod.git">go_pod</a></p>
+<p>请叫我工具组合侠…</p>
+<h3 id="参考文章"><a href="#参考文章" class="headerlink" title="参考文章:"></a><strong>参考文章:</strong></h3><h3 id="转载请注明出处https-izsk-me"><a href="#转载请注明出处https-izsk-me" class="headerlink" title="转载请注明出处https://izsk.me"></a><strong>转载请注明出处<a target="_blank" rel="noopener" href="https://izsk.me/">https://izsk.me</a></strong></h3><blockquote>
+<ul>
+<li><p><a target="_blank" rel="noopener" href="https://github.com/kubernetes/kubernetes/issues/30656">https://github.com/kubernetes/kubernetes/issues/30656</a></p>
+</li>
+<li><p><a target="_blank" rel="noopener" href="https://github.com/kubernetes/kubectl/blob/a0af655b7abaf06983c99ad5a4dc8f02ae5eb3e5/pkg/cmd/exec/exec.go#L100">https://github.com/kubernetes/kubectl/blob/a0af655b7abaf06983c99ad5a4dc8f02ae5eb3e5/pkg/cmd/exec/exec.go#L100</a></p>
+</li>
+<li><p><a target="_blank" rel="noopener" href="https://github.com/kubernetes-client/python/issues/1223">run connect-get-namespaced-pod-exec as a specific user · Issue #1223 · kubernetes-client&#x2F;python · GitHub</a></p>
+</li>
+<li><p><a target="_blank" rel="noopener" href="https://github.com/kubernetes/enhancements/pull/3372">[WIP] To add username option in kubectl exec by hanamantagoudvk · Pull Request #3372 · kubernetes&#x2F;enhancements · GitHub</a></p>
+</li>
+<li><p><a target="_blank" rel="noopener" href="https://github.com/kubernetes/kubernetes/pull/81883">[WIP]exec: supprt exec as a specific user by max88991 · Pull Request #81883 · kubernetes&#x2F;kubernetes · GitHub</a></p>
+</li>
+<li><p><a target="_blank" rel="noopener" href="https://github.com/kubernetes/enhancements/pull/1224">Add exec as user KEP by max88991 · Pull Request #1224 · kubernetes&#x2F;enhancements · GitHub</a></p>
+</li>
+<li><p><a target="_blank" rel="noopener" href="https://blog.csdn.net/whatday/article/details/104874055">linux shell trap捕捉信号 附信号表 SIGTERM SIGKILL_whatday的博客-CSDN博客_sigkill 捕捉</a></p>
+</li>
+<li><p><a target="_blank" rel="noopener" href="https://github.com/kubernetes/kubernetes/pull/81883#issuecomment-524544951"> WIPexec: supprt exec as a specific user by max88991 · Pull Request #81883 · kubernetes&#x2F;kubernetes · GitHub</a></p>
+</li>
+<li><p><a target="_blank" rel="noopener" href="https://krew.sigs.k8s.io/">https://krew.sigs.k8s.io/</a></p>
+</li>
+<li><p><a target="_blank" rel="noopener" href="https://github.com/zhangweiqaz/po_pod.git">https://github.com/zhangweiqaz/po_pod.git</a></p>
+</li>
+<li><p><a target="_blank" rel="noopener" href="https://www.jianshu.com/p/4238dd05f143">kubectl krew 离线安装插件 - 简书</a></p>
+</li>
+</ul>
+</blockquote>
+
+      
+    </div>
+
+    <div>
+      
+        
+<div id="wechat_subscriber" style="display: block; padding: 10px 0; margin: 20px auto; width: 100%; text-align: center">
+    <img id="wechat_subscriber_qcode" src="/images/websitecode250.png" alt=" wechat" style="width: 200px; max-width: 100%;"/>
+    <div>Scan Me To Read on Phone</div>
+</div>
+
+
+      
+    </div>
+
+    <div>
+      
+        
+  <div style="padding: 10px 0; margin: 20px auto; width: 90%; text-align: center;">
+    <div>I know you won't do this,but what if you did?</div>
+    <button id="rewardButton" disable="enable" onclick="var qr = document.getElementById('QR'); if (qr.style.display === 'none') {qr.style.display='block';} else {qr.style.display='none'}">
+      <span>赏</span>
+    </button>
+    <div id="QR" style="display: none;">
+      
+        <div id="wechat" style="display: inline-block">
+          <img id="wechat_qr" src="/images/wechatpayme.png" alt=" WeChat Pay"/>
+          <p>微信打赏</p>
+        </div>
+      
+      
+        <div id="alipay" style="display: inline-block">
+          <img id="alipay_qr" src="/images/alipayme.jpg" alt=" Alipay"/>
+          <p>支付宝打赏</p>
+        </div>
+      
     </div>
   </div>
 
-{% endblock %}
 
-{% block sidebar %}
-  {{ sidebar_template.render(true) }}
-{% endblock %}
+      
+    </div>
 
 
-{% block script_extra %}
-  {% include '_scripts/pages/post-details.swig' %}
-{% endblock %}
+    <footer class="post-footer">
+      
+        <div class="post-tags">
+          
+            <a href="/tags/Kubernetes/" rel="tag"># Kubernetes</a>
+          
+        </div>
+      
+
+      
+        <div class="post-nav">
+          <div class="post-nav-next post-nav-item">
+            
+              <a href="/2022/07/19/hello-world/" rel="next" title="Hello World">
+                <i class="fa fa-chevron-left"></i> Hello World
+              </a>
+            
+          </div>
+
+          <span class="post-nav-divider"></span>
+
+          <div class="post-nav-prev post-nav-item">
+            
+          </div>
+        </div>
+      
+
+      
+      
+    </footer>
+  </article>
+
+
+
+    <div class="post-spread">
+      
+    </div>
+  </div>
+
+
+          </div>
+          
+
+
+          
+  <div class="comments" id="comments">
+    
+  </div>
+
+
+        </div>
+        
+          
+  
+  <div class="sidebar-toggle">
+    <div class="sidebar-toggle-line-wrap">
+      <span class="sidebar-toggle-line sidebar-toggle-line-first"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-middle"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-last"></span>
+    </div>
+  </div>
+
+  <aside id="sidebar" class="sidebar">
+    <div class="sidebar-inner">
+
+      
+
+      
+        <ul class="sidebar-nav motion-element">
+          <li class="sidebar-nav-toc sidebar-nav-active" data-target="post-toc-wrap" >
+            文章目录
+          </li>
+          <li class="sidebar-nav-overview" data-target="site-overview">
+            站点概览
+          </li>
+        </ul>
+      
+
+      <section class="site-overview sidebar-panel">
+        <div class="site-author motion-element" itemprop="author" itemscope itemtype="http://schema.org/Person">
+          <img class="site-author-image" itemprop="image"
+               src="/images/avatar.gif"
+               alt="" />
+          <p class="site-author-name" itemprop="name"></p>
+          <p class="site-description motion-element" itemprop="description"></p>
+        </div>
+        <nav class="site-state motion-element">
+        
+          
+            <div class="site-state-item site-state-posts">
+              <a href="/archives">
+                <span class="site-state-item-count">192</span>
+                <span class="site-state-item-name">日志</span>
+              </a>
+            </div>
+          
+
+          
+            <div class="site-state-item site-state-categories">
+              <a href="/categories">
+                <span class="site-state-item-count">14</span>
+                <span class="site-state-item-name">分类</span>
+              </a>
+            </div>
+          
+
+          
+            <div class="site-state-item site-state-tags">
+              <a href="/tags">
+                <span class="site-state-item-count">14</span>
+                <span class="site-state-item-name">标签</span>
+              </a>
+            </div>
+          
+
+        </nav>
+
+        
+
+        <div class="links-of-author motion-element">
+          
+        </div>
+
+        
+        
+
+        
+        
+
+        
+
+
+      </section>
+
+      
+      <!--noindex-->
+        <section class="post-toc-wrap motion-element sidebar-panel sidebar-panel-active">
+          <div class="post-toc">
+
+            
+              
+            
+
+            
+              <div class="post-toc-content"><ol class="nav"><li class="nav-item nav-level-3"><a class="nav-link" href="#%E8%83%8C%E6%99%AF%E4%BF%A1%E6%81%AF"><span class="nav-number">1.</span> <span class="nav-text">背景信息</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E9%97%AE%E9%A2%98%E5%BC%95%E7%94%B3"><span class="nav-number">2.</span> <span class="nav-text">问题引申</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E9%97%AE%E9%A2%98%E6%8B%86%E8%A7%A3"><span class="nav-number">3.</span> <span class="nav-text">问题拆解</span></a><ol class="nav-child"><li class="nav-item nav-level-4"><a class="nav-link" href="#krew"><span class="nav-number">3.1.</span> <span class="nav-text">krew</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#exec-as"><span class="nav-number">3.2.</span> <span class="nav-text">exec-as</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#webkubectl"><span class="nav-number">3.3.</span> <span class="nav-text">webkubectl</span></a></li></ol></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E6%88%90%E6%9E%9C%E5%9B%BE"><span class="nav-number">4.</span> <span class="nav-text">成果图</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E5%8F%82%E8%80%83%E6%96%87%E7%AB%A0"><span class="nav-number">5.</span> <span class="nav-text">参考文章:</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E8%BD%AC%E8%BD%BD%E8%AF%B7%E6%B3%A8%E6%98%8E%E5%87%BA%E5%A4%84https-izsk-me"><span class="nav-number">6.</span> <span class="nav-text">转载请注明出处https:&#x2F;&#x2F;izsk.me</span></a></li></ol></div>
+            
+
+          </div>
+        </section>
+      <!--/noindex-->
+      
+
+    </div>
+  </aside>
+
+
+        
+      </div>
+    </main>
+
+    <footer id="footer" class="footer">
+      <div class="footer-inner">
+        <div class="copyright" >
+  
+  &copy; 
+  <span itemprop="copyrightYear">2022</span>
+  <span class="with-love">
+    <i class="fa fa-heart"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">Z.S.K.</span>
+</div>
+
+
+<div class="powered-by">
+  Supported by <a class="theme-link" target="_blank" rel="noopener" href="https://hexo.io">Hexo</a>
+</div>
+
+<div class="theme-info">
+  Theme -
+  <a class="theme-link" target="_blank" rel="noopener" href="https://github.com/iissnan/hexo-theme-next">
+    NexT.Mist
+  </a>
+</div>
+
+
+        
+
+        
+      </div>
+    </footer>
+
+    <div class="back-to-top">
+      <i class="fa fa-arrow-up"></i>
+    </div>
+  </div>
+
+  
+
+<script type="text/javascript">
+  if (Object.prototype.toString.call(window.Promise) !== '[object Function]') {
+    window.Promise = null;
+  }
+</script>
+
+
+
+
+
+
+
+
+
+  
+
+
+
+  
+  <script type="text/javascript" src="/lib/jquery/index.js?v=2.1.3"></script>
+
+  
+  <script type="text/javascript" src="/lib/fastclick/lib/fastclick.min.js?v=1.0.6"></script>
+
+  
+  <script type="text/javascript" src="/lib/jquery_lazyload/jquery.lazyload.js?v=1.9.7"></script>
+
+  
+  <script type="text/javascript" src="/lib/velocity/velocity.min.js?v=1.2.1"></script>
+
+  
+  <script type="text/javascript" src="/lib/velocity/velocity.ui.min.js?v=1.2.1"></script>
+
+  
+  <script type="text/javascript" src="/lib/fancybox/source/jquery.fancybox.pack.js?v=2.1.5"></script>
+
+
+  
+
+
+  <script type="text/javascript" src="/js/src/utils.js?v=5.1.0"></script>
+
+  <script type="text/javascript" src="/js/src/motion.js?v=5.1.0"></script>
+
+
+
+  
+  
+
+  
+  <script type="text/javascript" src="/js/src/scrollspy.js?v=5.1.0"></script>
+<script type="text/javascript" src="/js/src/post-details.js?v=5.1.0"></script>
+
+
+
+  
+
+
+  <script type="text/javascript" src="/js/src/bootstrap.js?v=5.1.0"></script>
+
+
+
+  
+
+
+
+  
+
+
+
+
+	
+
+
+
+
+
+  
+
+
+
+
+  
+  
+  <script type="text/javascript">
+    // Popup Window;
+    var isfetched = false;
+    // Search DB path;
+    var search_path = "search.xml";
+    if (search_path.length == 0) {
+      search_path = "search.xml";
+    }
+    var path = "/" + search_path;
+    // monitor main search box;
+
+    function proceedsearch() {
+      $("body").append('<div class="popoverlay">').css('overflow', 'hidden');
+      $('.popup').toggle();
+    }
+    // search function;
+    var searchFunc = function(path, search_id, content_id) {
+      'use strict';
+      $.ajax({
+        url: path,
+        dataType: "xml",
+        async: true,
+        success: function( xmlResponse ) {
+          // get the contents from search data
+          isfetched = true;
+          $('.popup').detach().appendTo('.header-inner');
+          var datas = $( "entry", xmlResponse ).map(function() {
+            return {
+              title: $( "title", this ).text(),
+              content: $("content",this).text(),
+              url: $( "url" , this).text()
+            };
+          }).get();
+          var $input = document.getElementById(search_id);
+          var $resultContent = document.getElementById(content_id);
+          $input.addEventListener('input', function(){
+            var matchcounts = 0;
+            var str='<ul class=\"search-result-list\">';
+            var keywords = this.value.trim().toLowerCase().split(/[\s\-]+/);
+            $resultContent.innerHTML = "";
+            if (this.value.trim().length > 1) {
+              // perform local searching
+              datas.forEach(function(data) {
+                var isMatch = false;
+                var content_index = [];
+                var data_title = data.title.trim().toLowerCase();
+                var data_content = data.content.trim().replace(/<[^>]+>/g,"").toLowerCase();
+                var data_url = decodeURIComponent(data.url);
+                var index_title = -1;
+                var index_content = -1;
+                var first_occur = -1;
+                // only match artiles with not empty titles and contents
+                if(data_title != '') {
+                  keywords.forEach(function(keyword, i) {
+                    index_title = data_title.indexOf(keyword);
+                    index_content = data_content.indexOf(keyword);
+                    if( index_title >= 0 || index_content >= 0 ){
+                      isMatch = true;
+                      if (i == 0) {
+                        first_occur = index_content;
+                      }
+                    }
+
+                  });
+                }
+                // show search results
+                if (isMatch) {
+                  matchcounts += 1;
+                  str += "<li><a href='"+ data_url +"' class='search-result-title'>"+ data_title +"</a>";
+                  var content = data.content.trim().replace(/<[^>]+>/g,"");
+                  if (first_occur >= 0) {
+                    // cut out 100 characters
+                    var start = first_occur - 20;
+                    var end = first_occur + 80;
+                    if(start < 0){
+                      start = 0;
+                    }
+                    if(start == 0){
+                      end = 50;
+                    }
+                    if(end > content.length){
+                      end = content.length;
+                    }
+                    var match_content = content.substring(start, end);
+                    // highlight all keywords
+                    keywords.forEach(function(keyword){
+                      var regS = new RegExp(keyword, "gi");
+                      match_content = match_content.replace(regS, "<b class=\"search-keyword\">"+keyword+"</b>");
+                    });
+
+                    str += "<p class=\"search-result\">" + match_content +"...</p>"
+                  }
+                  str += "</li>";
+                }
+              })};
+            str += "</ul>";
+            if (matchcounts == 0) { str = '<div id="no-result"><i class="fa fa-frown-o fa-5x" /></div>' }
+            if (keywords == "") { str = '<div id="no-result"><i class="fa fa-search fa-5x" /></div>' }
+            $resultContent.innerHTML = str;
+          });
+          proceedsearch();
+        }
+      });}
+
+    // handle and trigger popup window;
+    $('.popup-trigger').click(function(e) {
+      e.stopPropagation();
+      if (isfetched == false) {
+        searchFunc(path, 'local-search-input', 'local-search-result');
+      } else {
+        proceedsearch();
+      };
+    });
+
+    $('.popup-btn-close').click(function(e){
+      $('.popup').hide();
+      $(".popoverlay").remove();
+      $('body').css('overflow', '');
+    });
+    $('.popup').click(function(e){
+      e.stopPropagation();
+    });
+  </script>
+
+
+  
+
+  
+
+  
+
+  
+
+
+</body>
+</html>
