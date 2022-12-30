@@ -1,0 +1,938 @@
+<!doctype html>
+
+
+
+  
+
+
+<html class="theme-next mist use-motion" lang="zh-Hans">
+<head>
+  <meta charset="UTF-8"/>
+<meta http-equiv="X-UA-Compatible" content="IE=edge" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1"/>
+
+
+
+<meta http-equiv="Cache-Control" content="no-transform" />
+<meta http-equiv="Cache-Control" content="no-siteapp" />
+
+
+
+
+
+
+
+
+
+
+
+
+  
+  
+  <link href="/lib/fancybox/source/jquery.fancybox.css?v=2.1.5" rel="stylesheet" type="text/css" />
+
+
+
+
+  
+  
+  
+  
+
+  
+    
+    
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+    
+    
+    <link href="//fonts.googleapis.com/css?family=Lato:300,300italic,400,400italic,700,700italic&subset=latin,latin-ext" rel="stylesheet" type="text/css">
+  
+
+
+
+
+
+
+<link href="/lib/font-awesome/css/font-awesome.min.css?v=4.6.2" rel="stylesheet" type="text/css" />
+
+<link href="/css/main.css?v=5.1.0" rel="stylesheet" type="text/css" />
+
+
+  <meta name="keywords" content="Kubernetes," />
+
+
+
+
+
+
+
+
+  <link rel="shortcut icon" type="image/x-icon" href="/favicon.ico?v=5.1.0" />
+
+
+
+
+
+
+<meta name="description" content="emptyDir这种local storage在Kubernetes中使用频率还是比较高的，今天就来详细说一说emptyDir中使用共享内存的相关知识，希望可以帮助大家更好的理解emptyDir">
+<meta property="og:type" content="article">
+<meta property="og:title" content="Kubernetes学习(深入理解本emptyDir)">
+<meta property="og:url" content="https://zhoushuke.github.io/2022/12/30/Kubernetes-emptyDir/index.html">
+<meta property="og:site_name" content="Z.S.K.&#39;s Records">
+<meta property="og:description" content="emptyDir这种local storage在Kubernetes中使用频率还是比较高的，今天就来详细说一说emptyDir中使用共享内存的相关知识，希望可以帮助大家更好的理解emptyDir">
+<meta property="og:locale">
+<meta property="article:published_time" content="2022-12-30T05:30:53.000Z">
+<meta property="article:modified_time" content="2022-12-30T05:37:35.108Z">
+<meta property="article:author" content="Z.S.K.">
+<meta property="article:tag" content="Kubernetes">
+<meta name="twitter:card" content="summary">
+
+
+
+<script type="text/javascript" id="hexo.configurations">
+  var NexT = window.NexT || {};
+  var CONFIG = {
+    root: '',
+    scheme: 'Mist',
+    sidebar: {"position":"left","display":"post"},
+    fancybox: true,
+    motion: true,
+    duoshuo: {
+      userId: 'undefined',
+      author: '博主'
+    },
+    algolia: {
+      applicationID: '',
+      apiKey: '',
+      indexName: '',
+      hits: {"per_page":10},
+      labels: {"input_placeholder":"Search for Posts","hits_empty":"We didn't find any results for the search: ${query}","hits_stats":"${hits} results found in ${time} ms"}
+    }
+  };
+</script>
+
+
+
+  <link rel="canonical" href="https://zhoushuke.github.io/2022/12/30/Kubernetes-emptyDir/"/>
+
+
+
+
+
+  <title> Kubernetes学习(深入理解本emptyDir) | Z.S.K.'s Records </title>
+<meta name="generator" content="Hexo 6.2.0"></head>
+
+<body itemscope itemtype="http://schema.org/WebPage" lang="zh-Hans">
+
+  
+
+
+
+
+
+
+
+
+
+
+  
+  
+    
+  
+
+  <div class="container one-collumn sidebar-position-left page-post-detail ">
+    <div class="headband"></div>
+
+    <header id="header" class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-meta ">
+  
+
+  <div class="custom-logo-site-title">
+    <a href="/"  class="brand" rel="start">
+      <span class="logo-line-before"><i></i></span>
+      <span class="site-title">Z.S.K.'s Records</span>
+      <span class="logo-line-after"><i></i></span>
+    </a>
+  </div>
+    
+      <p class="site-subtitle"></p>
+    
+</div>
+
+<div class="site-nav-toggle">
+  <button>
+    <span class="btn-bar"></span>
+    <span class="btn-bar"></span>
+    <span class="btn-bar"></span>
+  </button>
+</div>
+
+<nav class="site-nav">
+  
+
+  
+    <ul id="menu" class="menu">
+      
+        
+        <li class="menu-item menu-item-home">
+          <a href="/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-home"></i> <br />
+            
+            首页
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-categories">
+          <a href="/categories" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-th"></i> <br />
+            
+            分类
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-about">
+          <a href="/about/ZSK-Profile.pdf" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-user"></i> <br />
+            
+            简历
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-archives">
+          <a href="/archives" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-archive"></i> <br />
+            
+            归档
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-tags">
+          <a href="/tags" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-tags"></i> <br />
+            
+            标签
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-commonweal">
+          <a href="/404.html" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-heartbeat"></i> <br />
+            
+            公益404
+          </a>
+        </li>
+      
+
+      
+        <li class="menu-item menu-item-search">
+          
+            <a href="javascript:;" class="popup-trigger">
+          
+            
+              <i class="menu-item-icon fa fa-search fa-fw"></i> <br />
+            
+            搜索
+          </a>
+        </li>
+      
+    </ul>
+  
+
+  
+    <div class="site-search">
+      
+  <div class="popup">
+ <span class="search-icon fa fa-search"></span>
+ <input type="text" id="local-search-input">
+ <div id="local-search-result"></div>
+ <span class="popup-btn-close">close</span>
+</div>
+
+
+    </div>
+  
+</nav>
+
+
+
+ </div>
+    </header>
+
+    <main id="main" class="main">
+      <div class="main-inner">
+        <div class="content-wrap">
+          <div id="content" class="content">
+            
+
+  <div id="posts" class="posts-expand">
+    
+
+  
+
+  
+  
+  
+
+  <article class="post post-type-normal " itemscope itemtype="http://schema.org/Article">
+  <link itemprop="mainEntityOfPage" href="https://zhoushuke.github.io/2022/12/30/Kubernetes-emptyDir/">
+
+  <span style="display:none" itemprop="author" itemscope itemtype="http://schema.org/Person">
+    <meta itemprop="name" content="">
+    <meta itemprop="description" content="">
+    <meta itemprop="image" content="/images/avatar.gif">
+  </span>
+
+  <span style="display:none" itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+    <meta itemprop="name" content="Z.S.K.'s Records">
+    <span style="display:none" itemprop="logo" itemscope itemtype="http://schema.org/ImageObject">
+      <img style="display:none;" itemprop="url image" alt="Z.S.K.'s Records" src="">
+    </span>
+  </span>
+
+    
+      <header class="post-header">
+
+        
+        
+          <h1 class="post-title" itemprop="name headline">
+            
+            
+              
+                Kubernetes学习(深入理解本emptyDir)
+              
+            
+          </h1>
+        
+
+        <div class="post-meta">
+          <span class="post-time">
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">发表于</span>
+              
+              <time title="Post created" itemprop="dateCreated datePublished" datetime="2022-12-30T13:30:53+08:00">
+                2022-12-30
+              </time>
+            
+
+            
+
+            
+          </span>
+
+          
+            <span class="post-category" >
+            
+              <span class="post-meta-divider">|</span>
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-folder-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">分类于</span>
+              
+              
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/Kubernetes/" itemprop="url" rel="index">
+                    <span itemprop="name">Kubernetes</span>
+                  </a>
+                </span>
+
+                
+                
+              
+            </span>
+          
+
+          
+            
+          
+
+          
+
+          
+          
+
+          
+
+          
+
+        </div>
+      </header>
+    
+
+
+    <div class="post-body" itemprop="articleBody">
+
+      
+      
+
+      
+        <p>emptyDir这种local storage在Kubernetes中使用频率还是比较高的，今天就来详细说一说emptyDir中使用共享内存的相关知识，希望可以帮助大家更好的理解emptyDir</p>
+<span id="more"></span> 
+
+
+<h3 id="共享目录"><a href="#共享目录" class="headerlink" title="共享目录"></a>共享目录</h3><p>先来看看emptyDir的常规使用方法，相信大家也非常熟悉了，简单举几个例子</p>
+<p>应用场景：在一个pod中准备两个容器nginx和busybox，然后声明一个Volume分别挂到两个容器的目录中，然后nginx容器负责想Volume中写日志，busybox中通过命令将日志内容读取到控制台， 多个容器间共享路径，这个应该是使用最为频繁的</p>
+<p>yaml如下:</p>
+<figure class="highlight yaml"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br></pre></td><td class="code"><pre><span class="line"><span class="attr">apiVersion:</span> <span class="string">v1</span></span><br><span class="line"><span class="attr">kind:</span> <span class="string">Pod</span></span><br><span class="line"><span class="attr">metadata:</span></span><br><span class="line">  <span class="attr">name:</span> <span class="string">volume-emptydir</span></span><br><span class="line">  <span class="attr">namespace:</span> <span class="string">dev</span></span><br><span class="line"><span class="attr">spec:</span></span><br><span class="line">  <span class="attr">containers:</span></span><br><span class="line">  <span class="bullet">-</span> <span class="attr">name:</span> <span class="string">nginx</span></span><br><span class="line">    <span class="attr">image:</span> <span class="string">nginx:1.17.1</span></span><br><span class="line">    <span class="attr">ports:</span></span><br><span class="line">    <span class="bullet">-</span> <span class="attr">containerPort:</span> <span class="number">80</span></span><br><span class="line">    <span class="attr">volumeMounts:</span></span><br><span class="line">    <span class="bullet">-</span> <span class="attr">name:</span> <span class="string">logs-volume</span></span><br><span class="line">      <span class="attr">mountPath:</span> <span class="string">/var/log/nginx</span></span><br><span class="line">  <span class="bullet">-</span> <span class="attr">name:</span> <span class="string">busybox</span></span><br><span class="line">    <span class="attr">image:</span> <span class="string">busybox:1.30</span></span><br><span class="line">    <span class="attr">command:</span> [<span class="string">&quot;/bin/sh&quot;</span>,<span class="string">&quot;-c&quot;</span>,<span class="string">&quot;tail -f /logs/access.log&quot;</span>]</span><br><span class="line">    <span class="attr">volumeMounts:</span></span><br><span class="line">    <span class="bullet">-</span> <span class="attr">name:</span> <span class="string">logs-volume</span></span><br><span class="line">      <span class="attr">mountPath:</span> <span class="string">/logs</span></span><br><span class="line">  <span class="attr">volumes:</span></span><br><span class="line">  <span class="bullet">-</span> <span class="attr">name:</span> <span class="string">logs-volume</span></span><br><span class="line">    <span class="attr">emptyDir:</span> &#123;&#125;</span><br></pre></td></tr></table></figure>
+
+<p>emptyDir在被创建之初是一个空目录，并且会一直存在于Pod的生命周期中，当Pod被移除(node重启时)时，emptyDir中的数据也会被随之删除，emptyDir可以被挂载到Pod的任意容器下的任意路径下，并且被Pod中的所有容器所共享</p>
+<p>这种只适用于数据不重要的场景:</p>
+<p><strong>问题1: 这个共享形式其实是个目录，但这个目录存在于哪里?跟node有什么关联?</strong></p>
+<p>在kubelet的工作目录(root-dir参数控制)，默认为&#x2F;var&#x2F;lib&#x2F;kubelet, 会为每个使用了<code>emptyDir: &#123;&#125;</code>的pod创建一个目录，格式如<code>/var/lib/kubelet/pods/&#123;podid&#125;/volumes/kubernetes.io~empty-dir/</code>, 所有放在emptyDir中数据，最终都是落在了node的上述路径中， 从这里可以看出，<strong>由于默认情况下这个路径是挂载在根目录上的</strong>，因此建议还是对kubernetes集群中使用<code>emptyDir: &#123;&#125;</code>的使用情况进行监控，以免某些pod写入大量的数据导致node根目录被打爆，从而引发Evicted</p>
+<p>这里有个因<code>emptyDir: &#123;&#125;</code>使用不当导致集群异常的案例<a target="_blank" rel="noopener" href="https://juejin.cn/post/7005942213255381000">skywalking-agent使用emptyDir导致磁盘空间不足 - 掘金</a>)</p>
+<p>总结一下: <code>emptyDir: &#123;&#125;</code>占用的是node的<strong>存储资源</strong></p>
+<h3 id="共享内存"><a href="#共享内存" class="headerlink" title="共享内存"></a>共享内存</h3><p>先解释一下共享内存与内存的区别:</p>
+<blockquote>
+<ul>
+<li>内存一般指node的物理内存,就是我们常说的某某机器内存多大</li>
+<li>共享内存是进程单通信的一种方式，多个进程都可访问同一块内存空间.</li>
+</ul>
+</blockquote>
+<p>emptyDir可以指定memory做为存储介质, 这个是重点要讨论的地方，看yaml</p>
+<figure class="highlight yaml"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br></pre></td><td class="code"><pre><span class="line"><span class="attr">apiVersion:</span> <span class="string">v1</span></span><br><span class="line"><span class="attr">kind:</span> <span class="string">Pod</span></span><br><span class="line"><span class="attr">metadata:</span></span><br><span class="line">  <span class="attr">name:</span> <span class="string">volume-emptydir</span></span><br><span class="line">  <span class="attr">namespace:</span> <span class="string">dev</span></span><br><span class="line"><span class="attr">spec:</span></span><br><span class="line">  <span class="attr">containers:</span></span><br><span class="line">  <span class="bullet">-</span> <span class="attr">name:</span> <span class="string">nginx</span></span><br><span class="line">    <span class="attr">image:</span> <span class="string">nginx:1.17.1</span></span><br><span class="line">    <span class="attr">ports:</span></span><br><span class="line">    <span class="bullet">-</span> <span class="attr">containerPort:</span> <span class="number">80</span></span><br><span class="line">    <span class="attr">resources:</span></span><br><span class="line">      <span class="attr">limits:</span></span><br><span class="line">        <span class="attr">cpu:</span> <span class="string">&quot;1&quot;</span></span><br><span class="line">        <span class="attr">memory:</span> <span class="string">1024Mi</span></span><br><span class="line">      <span class="attr">requests:</span></span><br><span class="line">        <span class="attr">cpu:</span> <span class="string">&quot;1&quot;</span></span><br><span class="line">        <span class="attr">memory:</span> <span class="string">1024Mi</span></span><br><span class="line">    <span class="attr">volumeMounts:</span></span><br><span class="line">    <span class="bullet">-</span> <span class="attr">name:</span> <span class="string">logs-volume</span></span><br><span class="line">      <span class="attr">mountPath:</span> <span class="string">/var/log/nginx</span></span><br><span class="line">  <span class="attr">volumes:</span></span><br><span class="line">  <span class="bullet">-</span> <span class="attr">name:</span> <span class="string">logs-volume</span></span><br><span class="line">    <span class="attr">emptyDir:</span></span><br><span class="line">      <span class="attr">medium:</span> <span class="string">Memory</span></span><br><span class="line">      <span class="attr">sizeLimit:</span> <span class="string">512Mi</span></span><br></pre></td></tr></table></figure>
+
+<p>ps: 以上yaml只是举个例子，真实场景并不会把昂贵的内存资源用于存储日志</p>
+<p>这里要特别说明的是，由于是内存，所以在pod或者是node重启时，也会导致存储丢失</p>
+<p>这里指定了medium&#x3D;Memory(没有指定medium时如第一个case), 且指定sizeLimit为500Mi</p>
+<p>在这里引出第2个问题: </p>
+<p><strong>问题2: 这个Memory占用的是谁的内存，是pod的resource中limit内存的一部分还是会额外占用Node的内存? 对于使用sizeLimit参数，设置与不设置有什么不同?</strong></p>
+<p>先说结论，<strong>medium&#x3D;Memory指定的内存不能超过pod中所有容器limit.memory资源之和</strong>，其中的大小关系由sizeLimit限定</p>
+<h4 id="linux共享内存"><a href="#linux共享内存" class="headerlink" title="linux共享内存"></a>linux共享内存</h4><p>这里不得不先说一说linux中的共享内存(这里不考虑swap分区)，在linux中，常常能看到<code>tmpfs</code>类型的文件系统， tmpfs是一种<strong>虚拟内存</strong>文件系统,最常用的虚拟内存就是&#x2F;dev&#x2F;shm了，经常会被来做为内存使用，可以提高数据的读写速度，在linux中，声明一块共享内存非常简单，如下命令即可将&#x2F;tmp挂载到共享内存上，大小为20m</p>
+<p><code>mount -t tmpfs -o size=20m tmpfs /tmp</code></p>
+<p>tmpfs有一个特点就是， 虽然size&#x3D;20m, 但<strong>它是按照实际情况计算内存的，只是说最大能用到20m</strong>,这个特性很重要.</p>
+<h4 id="medium-x3D-Memory的实现"><a href="#medium-x3D-Memory的实现" class="headerlink" title="medium&#x3D;Memory的实现"></a>medium&#x3D;Memory的实现</h4><p>回到问题2，kubernetes在处理medium&#x3D;Memory类型的emptyDir时，就是使用了tmpfs，可以从代码看到: </p>
+<p><code>kubernetes/pkg/volume/emptydir/empty_dir.go</code></p>
+<figure class="highlight go"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">// 省略其它代码</span></span><br><span class="line"><span class="keyword">switch</span> &#123;</span><br><span class="line">	<span class="keyword">case</span> ed.medium == v1.StorageMediumDefault:</span><br><span class="line">		err = ed.setupDir(dir)</span><br><span class="line">	<span class="keyword">case</span> ed.medium == v1.StorageMediumMemory:</span><br><span class="line">		err = ed.setupTmpfs(dir)</span><br><span class="line">	<span class="keyword">case</span> v1helper.IsHugePageMedium(ed.medium): <span class="comment">// 不讨论这种情况</span></span><br><span class="line">		err = ed.setupHugepages(dir)</span><br><span class="line">	<span class="keyword">default</span>:</span><br><span class="line">		err = fmt.Errorf(<span class="string">&quot;unknown storage medium %q&quot;</span>, ed.medium)</span><br><span class="line">	&#125;</span><br><span class="line"><span class="comment">// 省略其它代码</span></span><br><span class="line"></span><br><span class="line"><span class="comment">// setupTmpfs creates a tmpfs mount at the specified directory.</span></span><br><span class="line"><span class="function"><span class="keyword">func</span> <span class="params">(ed *emptyDir)</span></span> setupTmpfs(dir <span class="type">string</span>) <span class="type">error</span> &#123;</span><br><span class="line">	<span class="keyword">if</span> ed.mounter == <span class="literal">nil</span> &#123;</span><br><span class="line">		<span class="keyword">return</span> fmt.Errorf(<span class="string">&quot;memory storage requested, but mounter is nil&quot;</span>)</span><br><span class="line">	&#125;</span><br><span class="line">	<span class="keyword">if</span> err := ed.setupDir(dir); err != <span class="literal">nil</span> &#123;</span><br><span class="line">		<span class="keyword">return</span> err</span><br><span class="line">	&#125;</span><br><span class="line">	<span class="comment">// Make SetUp idempotent.</span></span><br><span class="line">	medium, isMnt, _, err := ed.mountDetector.GetMountMedium(dir, ed.medium)</span><br><span class="line">	<span class="keyword">if</span> err != <span class="literal">nil</span> &#123;</span><br><span class="line">		<span class="keyword">return</span> err</span><br><span class="line">	&#125;</span><br><span class="line">	<span class="comment">// If the directory is a mountpoint with medium memory, there is no</span></span><br><span class="line">	<span class="comment">// work to do since we are already in the desired state.</span></span><br><span class="line">	<span class="keyword">if</span> isMnt &amp;&amp; medium == v1.StorageMediumMemory &#123;</span><br><span class="line">		<span class="keyword">return</span> <span class="literal">nil</span></span><br><span class="line">	&#125;</span><br><span class="line"></span><br><span class="line">	<span class="keyword">var</span> options []<span class="type">string</span></span><br><span class="line">	<span class="comment">// Linux system default is 50% of capacity.</span></span><br><span class="line">	<span class="keyword">if</span> ed.sizeLimit != <span class="literal">nil</span> &amp;&amp; ed.sizeLimit.Value() &gt; <span class="number">0</span> &#123;</span><br><span class="line">		options = []<span class="type">string</span>&#123;fmt.Sprintf(<span class="string">&quot;size=%d&quot;</span>, ed.sizeLimit.Value())&#125;</span><br><span class="line">	&#125;</span><br><span class="line"></span><br><span class="line">	klog.V(<span class="number">3</span>).Infof(<span class="string">&quot;pod %v: mounting tmpfs for volume %v&quot;</span>, ed.pod.UID, ed.volName)</span><br><span class="line">	<span class="keyword">return</span> ed.mounter.MountSensitiveWithoutSystemd(<span class="string">&quot;tmpfs&quot;</span>, dir, <span class="string">&quot;tmpfs&quot;</span>, options, <span class="literal">nil</span>)</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>重点就是最后一句话，最终转化成执行 mount tmpfs命令创建了一个共享内存挂载到pod中</p>
+<h4 id="是否会影响调度"><a href="#是否会影响调度" class="headerlink" title="是否会影响调度"></a>是否会影响调度</h4><p>再来看看如下的yaml</p>
+<figure class="highlight yaml"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># 省略其它字段</span></span><br><span class="line">  <span class="attr">resources:</span></span><br><span class="line">      <span class="attr">limits:</span></span><br><span class="line">        <span class="attr">cpu:</span> <span class="string">&quot;1&quot;</span></span><br><span class="line">        <span class="attr">memory:</span> <span class="string">1Gi</span></span><br><span class="line">      <span class="attr">requests:</span></span><br><span class="line">        <span class="attr">cpu:</span> <span class="string">&quot;1&quot;</span></span><br><span class="line">        <span class="attr">memory:</span> <span class="string">1Gi</span></span><br><span class="line">  <span class="attr">volumes:</span></span><br><span class="line">  <span class="bullet">-</span> <span class="attr">name:</span> <span class="string">logs-volume</span></span><br><span class="line">    <span class="attr">emptyDir:</span></span><br><span class="line">      <span class="attr">medium:</span> <span class="string">Memory</span></span><br><span class="line">      <span class="attr">sizeLimit:</span> <span class="string">512Mi</span></span><br></pre></td></tr></table></figure>
+
+<p>pod即申请了resource资源，又指定的emptyDir.medium，那么pod真正占用的资源是1024Mi还是1024Mi+512Mi?  medium.sizeLimit如何影响调度器调度？</p>
+<p>答案是1024Mi, 因为medium.memory指定的内存会包含在limit的指定的内存数值中，这个很好理解，举个例子，我们常说一个node的内存是4G, 那么如果有共享内存，那么共享内存的大小最大也只能在4Gi这个范围(同样这里不考虑swap分区)</p>
+<p>源码中定义了sizeLimit的使用范围</p>
+<p><code>kubernetes/pkg/volume/emptydir/empty_dir.go</code></p>
+<figure class="highlight go"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">func</span> <span class="title">calculateEmptyDirMemorySize</span><span class="params">(nodeAllocatableMemory *resource.Quantity, spec *volume.Spec, pod *v1.Pod)</span></span> *resource.Quantity &#123;</span><br><span class="line">	<span class="comment">// if feature is disabled, continue the default behavior of linux host default</span></span><br><span class="line">	sizeLimit := &amp;resource.Quantity&#123;&#125;</span><br><span class="line">	<span class="keyword">if</span> !utilfeature.DefaultFeatureGate.Enabled(features.SizeMemoryBackedVolumes) &#123;</span><br><span class="line">		<span class="keyword">return</span> sizeLimit</span><br><span class="line">	&#125;</span><br><span class="line"></span><br><span class="line">	<span class="comment">// size limit defaults to node allocatable (pods can&#x27;t consume more memory than all pods)</span></span><br><span class="line">	sizeLimit = nodeAllocatableMemory</span><br><span class="line">	zero := resource.MustParse(<span class="string">&quot;0&quot;</span>)</span><br><span class="line"></span><br><span class="line">	<span class="comment">// determine pod resource allocation</span></span><br><span class="line">	<span class="comment">// we use the same function for pod cgroup assignment to maintain consistent behavior</span></span><br><span class="line">	<span class="comment">// <span class="doctag">NOTE:</span> this could be nil on systems that do not support pod memory containment (i.e. windows)</span></span><br><span class="line">	podResourceConfig := cm.ResourceConfigForPod(pod, <span class="literal">false</span>, <span class="type">uint64</span>(<span class="number">100000</span>), <span class="literal">false</span>)</span><br><span class="line">	<span class="keyword">if</span> podResourceConfig != <span class="literal">nil</span> &amp;&amp; podResourceConfig.Memory != <span class="literal">nil</span> &#123;</span><br><span class="line">		podMemoryLimit := resource.NewQuantity(*(podResourceConfig.Memory), resource.BinarySI)</span><br><span class="line">		<span class="comment">// ensure 0 &lt; value &lt; size</span></span><br><span class="line">		<span class="keyword">if</span> podMemoryLimit.Cmp(zero) &gt; <span class="number">0</span> &amp;&amp; podMemoryLimit.Cmp(*sizeLimit) &lt; <span class="number">1</span> &#123;</span><br><span class="line">			sizeLimit = podMemoryLimit</span><br><span class="line">		&#125;</span><br><span class="line">	&#125;</span><br><span class="line"></span><br><span class="line">	<span class="comment">// volume local size is  used if and only if less than what pod could consume</span></span><br><span class="line">	<span class="keyword">if</span> spec.Volume.EmptyDir.SizeLimit != <span class="literal">nil</span> &#123;</span><br><span class="line">		volumeSizeLimit := spec.Volume.EmptyDir.SizeLimit</span><br><span class="line">		<span class="comment">// ensure 0 &lt; value &lt; size</span></span><br><span class="line">		<span class="keyword">if</span> volumeSizeLimit.Cmp(zero) &gt; <span class="number">0</span> &amp;&amp; volumeSizeLimit.Cmp(*sizeLimit) &lt; <span class="number">1</span> &#123;</span><br><span class="line">			sizeLimit = volumeSizeLimit</span><br><span class="line">		&#125;</span><br><span class="line">	&#125;</span><br><span class="line">	<span class="keyword">return</span> sizeLimit</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>上述代码中存在一句很重要的注释，即</p>
+<figure class="highlight go"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">// volume local size is  used if and only if less than what pod could consume</span></span><br></pre></td></tr></table></figure>
+
+<p><strong>也就是说使用的volume size不能超过pod所能消耗的资源总和</strong></p>
+<p>上述代码指定了如下的等量关系:</p>
+<ol>
+<li>当 Pod 并没有设置memory limit时，此时 shm大小为node的Allocateable Memory大小,该配置刚好与node中的shm默认设置一致，即默认情况下，shm大小等于内存1&#x2F;2</li>
+<li>当Pod 设置了Memory Limit 但是在medium的emptyDir未设置sizeLimit时，shm 大小为Pod 的memory Limit</li>
+<li>当Pod的medium emptyDir设置sizeLimit时，shm大小为sizeLimit, 注意，如果设置的值超过pod的的memory Limit，则会被自动设置等于pod的的memoryLimit</li>
+</ol>
+<p>正因为如此，<strong>medium.memory并不会影响调度器的调度，调度器还是会以pod requests中的资源进行调度，然后cgroup以按limits中的资源设置</strong></p>
+<p><strong>问题3: medium.memory受不受cgroup的限制?</strong></p>
+<p>是受限制的，由于这部分内存本就是resource.limits中的一部分，当medium.memory对应的目录使用超过了sizelimit时，也会被kubelet Evicted，但不是立即被Evicted， 而是会等kubelet Evicte周期探测后发生，默认大概1-2分钟。</p>
+<p>总结一下: <code>emptyDir: medium.memory</code>占用的是node的<strong>内存资源</strong></p>
+<h3 id="建议"><a href="#建议" class="headerlink" title="建议"></a>建议</h3><p>因此在需要Pod中使用共享内存的场景，建议如下:</p>
+<ol>
+<li><p>务必配置pod的memory limits</p>
+</li>
+<li><p>挂载emptyDir.medium.memory挂载到pod的&#x2F;dev&#x2F;shm(其它路径也可)</p>
+</li>
+<li><p>设置sizeLimit为limits的50%</p>
+</li>
+<li><p>限制emptyDir的使用并且做好emptyDir的监控措施以免发生集群雪崩</p>
+</li>
+</ol>
+<h3 id="参考文章"><a href="#参考文章" class="headerlink" title="参考文章:"></a><strong>参考文章:</strong></h3><h3 id="转载请注明出处https-izsk-me"><a href="#转载请注明出处https-izsk-me" class="headerlink" title="转载请注明出处https://izsk.me"></a><strong>转载请注明出处<a target="_blank" rel="noopener" href="https://izsk.me/">https://izsk.me</a></strong></h3><blockquote>
+<ul>
+<li><a target="_blank" rel="noopener" href="https://www.sobyte.net/post/2022-04/k8s-pod-shared-memory/">Setting up the shared memory of a kubernetes Pod - SoByte</a></li>
+<li><a target="_blank" rel="noopener" href="https://juejin.cn/post/7005942213255381000">skywalking-agent使用emptyDir导致磁盘空间不足 - 掘金</a></li>
+<li><a target="_blank" rel="noopener" href="https://zhuanlan.zhihu.com/p/38359775">https://zhuanlan.zhihu.com/p/38359775</a></li>
+<li><a target="_blank" rel="noopener" href="https://damonyi.cc/2021/03/31/k8s-pod-%E9%85%8D%E7%BD%AEshareMemory/">k8s pod 配置shareMemory | 云里雾里</a></li>
+</ul>
+</blockquote>
+
+      
+    </div>
+
+    <div>
+      
+        
+<div id="wechat_subscriber" style="display: block; padding: 10px 0; margin: 20px auto; width: 100%; text-align: center">
+    <img id="wechat_subscriber_qcode" src="/images/websitecode250.png" alt=" wechat" style="width: 200px; max-width: 100%;"/>
+    <div>Scan Me To Read on Phone</div>
+</div>
+
+
+      
+    </div>
+
+    <div>
+      
+        
+  <div style="padding: 10px 0; margin: 20px auto; width: 90%; text-align: center;">
+    <div>I know you won't do this,but what if you did?</div>
+    <button id="rewardButton" disable="enable" onclick="var qr = document.getElementById('QR'); if (qr.style.display === 'none') {qr.style.display='block';} else {qr.style.display='none'}">
+      <span>赏</span>
+    </button>
+    <div id="QR" style="display: none;">
+      
+        <div id="wechat" style="display: inline-block">
+          <img id="wechat_qr" src="/images/wechatpayme.png" alt=" WeChat Pay"/>
+          <p>微信打赏</p>
+        </div>
+      
+      
+        <div id="alipay" style="display: inline-block">
+          <img id="alipay_qr" src="/images/alipayme.jpg" alt=" Alipay"/>
+          <p>支付宝打赏</p>
+        </div>
+      
+    </div>
+  </div>
+
+
+      
+    </div>
+
+
+    <footer class="post-footer">
+      
+        <div class="post-tags">
+          
+            <a href="/tags/Kubernetes/" rel="tag"># Kubernetes</a>
+          
+        </div>
+      
+
+      
+        <div class="post-nav">
+          <div class="post-nav-next post-nav-item">
+            
+              <a href="/2022/11/27/Kubernetes-kubectl-exec-specify-username/" rel="next" title="kubectl exec 如何实现进入容器时指定用户">
+                <i class="fa fa-chevron-left"></i> kubectl exec 如何实现进入容器时指定用户
+              </a>
+            
+          </div>
+
+          <span class="post-nav-divider"></span>
+
+          <div class="post-nav-prev post-nav-item">
+            
+          </div>
+        </div>
+      
+
+      
+      
+    </footer>
+  </article>
+
+
+
+    <div class="post-spread">
+      
+    </div>
+  </div>
+
+
+          </div>
+          
+
+
+          
+  <div class="comments" id="comments">
+    
+  </div>
+
+
+        </div>
+        
+          
+  
+  <div class="sidebar-toggle">
+    <div class="sidebar-toggle-line-wrap">
+      <span class="sidebar-toggle-line sidebar-toggle-line-first"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-middle"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-last"></span>
+    </div>
+  </div>
+
+  <aside id="sidebar" class="sidebar">
+    <div class="sidebar-inner">
+
+      
+
+      
+        <ul class="sidebar-nav motion-element">
+          <li class="sidebar-nav-toc sidebar-nav-active" data-target="post-toc-wrap" >
+            文章目录
+          </li>
+          <li class="sidebar-nav-overview" data-target="site-overview">
+            站点概览
+          </li>
+        </ul>
+      
+
+      <section class="site-overview sidebar-panel">
+        <div class="site-author motion-element" itemprop="author" itemscope itemtype="http://schema.org/Person">
+          <img class="site-author-image" itemprop="image"
+               src="/images/avatar.gif"
+               alt="" />
+          <p class="site-author-name" itemprop="name"></p>
+          <p class="site-description motion-element" itemprop="description"></p>
+        </div>
+        <nav class="site-state motion-element">
+        
+          
+            <div class="site-state-item site-state-posts">
+              <a href="/archives">
+                <span class="site-state-item-count">193</span>
+                <span class="site-state-item-name">日志</span>
+              </a>
+            </div>
+          
+
+          
+            <div class="site-state-item site-state-categories">
+              <a href="/categories">
+                <span class="site-state-item-count">14</span>
+                <span class="site-state-item-name">分类</span>
+              </a>
+            </div>
+          
+
+          
+            <div class="site-state-item site-state-tags">
+              <a href="/tags">
+                <span class="site-state-item-count">14</span>
+                <span class="site-state-item-name">标签</span>
+              </a>
+            </div>
+          
+
+        </nav>
+
+        
+
+        <div class="links-of-author motion-element">
+          
+        </div>
+
+        
+        
+
+        
+        
+
+        
+
+
+      </section>
+
+      
+      <!--noindex-->
+        <section class="post-toc-wrap motion-element sidebar-panel sidebar-panel-active">
+          <div class="post-toc">
+
+            
+              
+            
+
+            
+              <div class="post-toc-content"><ol class="nav"><li class="nav-item nav-level-3"><a class="nav-link" href="#%E5%85%B1%E4%BA%AB%E7%9B%AE%E5%BD%95"><span class="nav-number">1.</span> <span class="nav-text">共享目录</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E5%85%B1%E4%BA%AB%E5%86%85%E5%AD%98"><span class="nav-number">2.</span> <span class="nav-text">共享内存</span></a><ol class="nav-child"><li class="nav-item nav-level-4"><a class="nav-link" href="#linux%E5%85%B1%E4%BA%AB%E5%86%85%E5%AD%98"><span class="nav-number">2.1.</span> <span class="nav-text">linux共享内存</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#medium-x3D-Memory%E7%9A%84%E5%AE%9E%E7%8E%B0"><span class="nav-number">2.2.</span> <span class="nav-text">medium&#x3D;Memory的实现</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#%E6%98%AF%E5%90%A6%E4%BC%9A%E5%BD%B1%E5%93%8D%E8%B0%83%E5%BA%A6"><span class="nav-number">2.3.</span> <span class="nav-text">是否会影响调度</span></a></li></ol></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E5%BB%BA%E8%AE%AE"><span class="nav-number">3.</span> <span class="nav-text">建议</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E5%8F%82%E8%80%83%E6%96%87%E7%AB%A0"><span class="nav-number">4.</span> <span class="nav-text">参考文章:</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E8%BD%AC%E8%BD%BD%E8%AF%B7%E6%B3%A8%E6%98%8E%E5%87%BA%E5%A4%84https-izsk-me"><span class="nav-number">5.</span> <span class="nav-text">转载请注明出处https:&#x2F;&#x2F;izsk.me</span></a></li></ol></div>
+            
+
+          </div>
+        </section>
+      <!--/noindex-->
+      
+
+    </div>
+  </aside>
+
+
+        
+      </div>
+    </main>
+
+    <footer id="footer" class="footer">
+      <div class="footer-inner">
+        <div class="copyright" >
+  
+  &copy; 
+  <span itemprop="copyrightYear">2022</span>
+  <span class="with-love">
+    <i class="fa fa-heart"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">Z.S.K.</span>
+</div>
+
+
+<div class="powered-by">
+  Supported by <a class="theme-link" target="_blank" rel="noopener" href="https://hexo.io">Hexo</a>
+</div>
+
+<div class="theme-info">
+  Theme -
+  <a class="theme-link" target="_blank" rel="noopener" href="https://github.com/iissnan/hexo-theme-next">
+    NexT.Mist
+  </a>
+</div>
+
+
+        
+
+        
+      </div>
+    </footer>
+
+    <div class="back-to-top">
+      <i class="fa fa-arrow-up"></i>
+    </div>
+  </div>
+
+  
+
+<script type="text/javascript">
+  if (Object.prototype.toString.call(window.Promise) !== '[object Function]') {
+    window.Promise = null;
+  }
+</script>
+
+
+
+
+
+
+
+
+
+  
+
+
+
+  
+  <script type="text/javascript" src="/lib/jquery/index.js?v=2.1.3"></script>
+
+  
+  <script type="text/javascript" src="/lib/fastclick/lib/fastclick.min.js?v=1.0.6"></script>
+
+  
+  <script type="text/javascript" src="/lib/jquery_lazyload/jquery.lazyload.js?v=1.9.7"></script>
+
+  
+  <script type="text/javascript" src="/lib/velocity/velocity.min.js?v=1.2.1"></script>
+
+  
+  <script type="text/javascript" src="/lib/velocity/velocity.ui.min.js?v=1.2.1"></script>
+
+  
+  <script type="text/javascript" src="/lib/fancybox/source/jquery.fancybox.pack.js?v=2.1.5"></script>
+
+
+  
+
+
+  <script type="text/javascript" src="/js/src/utils.js?v=5.1.0"></script>
+
+  <script type="text/javascript" src="/js/src/motion.js?v=5.1.0"></script>
+
+
+
+  
+  
+
+  
+  <script type="text/javascript" src="/js/src/scrollspy.js?v=5.1.0"></script>
+<script type="text/javascript" src="/js/src/post-details.js?v=5.1.0"></script>
+
+
+
+  
+
+
+  <script type="text/javascript" src="/js/src/bootstrap.js?v=5.1.0"></script>
+
+
+
+  
+
+
+
+  
+
+
+
+
+	
+
+
+
+
+
+  
+
+
+
+
+  
+  
+  <script type="text/javascript">
+    // Popup Window;
+    var isfetched = false;
+    // Search DB path;
+    var search_path = "search.xml";
+    if (search_path.length == 0) {
+      search_path = "search.xml";
+    }
+    var path = "/" + search_path;
+    // monitor main search box;
+
+    function proceedsearch() {
+      $("body").append('<div class="popoverlay">').css('overflow', 'hidden');
+      $('.popup').toggle();
+    }
+    // search function;
+    var searchFunc = function(path, search_id, content_id) {
+      'use strict';
+      $.ajax({
+        url: path,
+        dataType: "xml",
+        async: true,
+        success: function( xmlResponse ) {
+          // get the contents from search data
+          isfetched = true;
+          $('.popup').detach().appendTo('.header-inner');
+          var datas = $( "entry", xmlResponse ).map(function() {
+            return {
+              title: $( "title", this ).text(),
+              content: $("content",this).text(),
+              url: $( "url" , this).text()
+            };
+          }).get();
+          var $input = document.getElementById(search_id);
+          var $resultContent = document.getElementById(content_id);
+          $input.addEventListener('input', function(){
+            var matchcounts = 0;
+            var str='<ul class=\"search-result-list\">';
+            var keywords = this.value.trim().toLowerCase().split(/[\s\-]+/);
+            $resultContent.innerHTML = "";
+            if (this.value.trim().length > 1) {
+              // perform local searching
+              datas.forEach(function(data) {
+                var isMatch = false;
+                var content_index = [];
+                var data_title = data.title.trim().toLowerCase();
+                var data_content = data.content.trim().replace(/<[^>]+>/g,"").toLowerCase();
+                var data_url = decodeURIComponent(data.url);
+                var index_title = -1;
+                var index_content = -1;
+                var first_occur = -1;
+                // only match artiles with not empty titles and contents
+                if(data_title != '') {
+                  keywords.forEach(function(keyword, i) {
+                    index_title = data_title.indexOf(keyword);
+                    index_content = data_content.indexOf(keyword);
+                    if( index_title >= 0 || index_content >= 0 ){
+                      isMatch = true;
+                      if (i == 0) {
+                        first_occur = index_content;
+                      }
+                    }
+
+                  });
+                }
+                // show search results
+                if (isMatch) {
+                  matchcounts += 1;
+                  str += "<li><a href='"+ data_url +"' class='search-result-title'>"+ data_title +"</a>";
+                  var content = data.content.trim().replace(/<[^>]+>/g,"");
+                  if (first_occur >= 0) {
+                    // cut out 100 characters
+                    var start = first_occur - 20;
+                    var end = first_occur + 80;
+                    if(start < 0){
+                      start = 0;
+                    }
+                    if(start == 0){
+                      end = 50;
+                    }
+                    if(end > content.length){
+                      end = content.length;
+                    }
+                    var match_content = content.substring(start, end);
+                    // highlight all keywords
+                    keywords.forEach(function(keyword){
+                      var regS = new RegExp(keyword, "gi");
+                      match_content = match_content.replace(regS, "<b class=\"search-keyword\">"+keyword+"</b>");
+                    });
+
+                    str += "<p class=\"search-result\">" + match_content +"...</p>"
+                  }
+                  str += "</li>";
+                }
+              })};
+            str += "</ul>";
+            if (matchcounts == 0) { str = '<div id="no-result"><i class="fa fa-frown-o fa-5x" /></div>' }
+            if (keywords == "") { str = '<div id="no-result"><i class="fa fa-search fa-5x" /></div>' }
+            $resultContent.innerHTML = str;
+          });
+          proceedsearch();
+        }
+      });}
+
+    // handle and trigger popup window;
+    $('.popup-trigger').click(function(e) {
+      e.stopPropagation();
+      if (isfetched == false) {
+        searchFunc(path, 'local-search-input', 'local-search-result');
+      } else {
+        proceedsearch();
+      };
+    });
+
+    $('.popup-btn-close').click(function(e){
+      $('.popup').hide();
+      $(".popoverlay").remove();
+      $('body').css('overflow', '');
+    });
+    $('.popup').click(function(e){
+      e.stopPropagation();
+    });
+  </script>
+
+
+  
+
+  
+
+  
+
+  
+
+
+</body>
+</html>
