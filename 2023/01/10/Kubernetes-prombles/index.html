@@ -84,12 +84,12 @@
 
 
 
-<meta name="description" content="记录在使用Kubernetes中遇到的各种问题及解决方案, 好记性不如烂笔头 不定期更新 prometheus logs: compaction failed, 对数的性质uption in segment xxxx at yyyy: unexpected non-zero byte in padded page原因: prometheus在对wal进行压缩时出现segment错误，导致创建che">
+<meta name="description" content="记录在使用Kubernetes中遇到的各种问题及解决方案, 好记性不如烂笔头 不定期更新">
 <meta property="og:type" content="article">
 <meta property="og:title" content="Kubernetes学习(Kubernetes踩坑记)">
 <meta property="og:url" content="https://zhoushuke.github.io/2023/01/10/Kubernetes-prombles/index.html">
 <meta property="og:site_name" content="Z.S.K.&#39;s Records">
-<meta property="og:description" content="记录在使用Kubernetes中遇到的各种问题及解决方案, 好记性不如烂笔头 不定期更新 prometheus logs: compaction failed, 对数的性质uption in segment xxxx at yyyy: unexpected non-zero byte in padded page原因: prometheus在对wal进行压缩时出现segment错误，导致创建che">
+<meta property="og:description" content="记录在使用Kubernetes中遇到的各种问题及解决方案, 好记性不如烂笔头 不定期更新">
 <meta property="og:locale">
 <meta property="og:image" content="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20220125180525.png">
 <meta property="og:image" content="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20220106144313.png">
@@ -128,7 +128,7 @@
 <meta property="og:image" content="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20200506120040.png">
 <meta property="og:image" content="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20200511180743.png">
 <meta property="article:published_time" content="2023-01-10T02:30:53.000Z">
-<meta property="article:modified_time" content="2023-01-10T03:01:14.827Z">
+<meta property="article:modified_time" content="2023-01-11T06:44:45.125Z">
 <meta property="article:author" content="Z.S.K.">
 <meta property="article:tag" content="Kubernetes">
 <meta name="twitter:card" content="summary">
@@ -431,6 +431,8 @@
       
         <p>记录在使用Kubernetes中遇到的各种问题及解决方案, 好记性不如烂笔头</p>
 <p><strong>不定期更新</strong></p>
+<span id="more"></span>
+
 <h3 id="prometheus-logs-compaction-failed-对数的性质uption-in-segment-xxxx-at-yyyy-unexpected-non-zero-byte-in-padded-page"><a href="#prometheus-logs-compaction-failed-对数的性质uption-in-segment-xxxx-at-yyyy-unexpected-non-zero-byte-in-padded-page" class="headerlink" title="prometheus logs: compaction failed, 对数的性质uption in segment xxxx at yyyy: unexpected non-zero byte in padded page"></a>prometheus logs: compaction failed, 对数的性质uption in segment xxxx at yyyy: unexpected non-zero byte in padded page</h3><p>原因: prometheus在对wal进行压缩时出现segment错误，导致创建checkout失败</p>
 <p>解决: 在prometheus持久化目录下删除上述xxxx的目录，然后重启prometheus</p>
 <p>重启后可能会出现unexpected gap to last checkpoint, expect: xxx, requested: yyy</p>
@@ -438,8 +440,6 @@
 <h3 id="is-forbidden-User-xxx-cannot-get-resource-“services-x2F-proxy”"><a href="#is-forbidden-User-xxx-cannot-get-resource-“services-x2F-proxy”" class="headerlink" title="is forbidden: User xxx cannot get resource “services&#x2F;proxy”"></a>is forbidden: User xxx cannot get resource “services&#x2F;proxy”</h3><p>在rancher中使用非admin用户无法显示grafana的 workload metrics, 请求中提示: services http:rancher-monitoring-grafana:80 is forbidden: User xxx cannot get resource “services&#x2F;proxy” in API group “” in the namespace cattle-monitoring-system</p>
 <p>原因: 需要为该用户在cattle-monitoring-system ns中授权 service&#x2F;proxy权限, 同时该用户所对应的角色需要继承 project-monitoring-view角色，这样非admin用户才能看到metrics菜单</p>
 <p>参考: <a target="_blank" rel="noopener" href="https://forums.rancher.com/t/cluster-member-cant-see-use-grafana-or-monitoring-stuff/15814">https://forums.rancher.com/t/cluster-member-cant-see-use-grafana-or-monitoring-stuff/15814</a></p>
-<span id="more"></span>
-
 <h3 id="pod状态提示UnexpectedAdmissionError"><a href="#pod状态提示UnexpectedAdmissionError" class="headerlink" title="pod状态提示UnexpectedAdmissionError"></a>pod状态提示UnexpectedAdmissionError</h3><p><img src="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20220125180525.png"></p>
 <p>原因: 在排查的过程中，发现这个问题涉及的东西太多，写了篇专门的文章来说明这个问题，可参考<a target="_blank" rel="noopener" href="https://izsk.me/2022/01/27/Kubernetes-pod-status-is-UnexpectedAdmissionError/">Kubernetes-pod-status-is-UnexpectedAdmissionError</a></p>
 <h3 id="nvidia-device-plugin-提示bind-address-already-in-use"><a href="#nvidia-device-plugin-提示bind-address-already-in-use" class="headerlink" title="nvidia-device-plugin 提示bind: address already in use"></a>nvidia-device-plugin 提示bind: address already in use</h3><p><img src="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20220106144313.png"></p>

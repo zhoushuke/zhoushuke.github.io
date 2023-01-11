@@ -397,13 +397,6 @@
         
           <p>记录在使用Kubernetes中遇到的各种问题及解决方案, 好记性不如烂笔头</p>
 <p><strong>不定期更新</strong></p>
-<h3 id="prometheus-logs-compaction-failed-对数的性质uption-in-segment-xxxx-at-yyyy-unexpected-non-zero-byte-in-padded-page"><a href="#prometheus-logs-compaction-failed-对数的性质uption-in-segment-xxxx-at-yyyy-unexpected-non-zero-byte-in-padded-page" class="headerlink" title="prometheus logs: compaction failed, 对数的性质uption in segment xxxx at yyyy: unexpected non-zero byte in padded page"></a>prometheus logs: compaction failed, 对数的性质uption in segment xxxx at yyyy: unexpected non-zero byte in padded page</h3><p>原因: prometheus在对wal进行压缩时出现segment错误，导致创建checkout失败</p>
-<p>解决: 在prometheus持久化目录下删除上述xxxx的目录，然后重启prometheus</p>
-<p>重启后可能会出现unexpected gap to last checkpoint, expect: xxx, requested: yyy</p>
-<p>需要将checkout目录也进行删除，然后重启prometheus实例 </p>
-<h3 id="is-forbidden-User-xxx-cannot-get-resource-“services-x2F-proxy”"><a href="#is-forbidden-User-xxx-cannot-get-resource-“services-x2F-proxy”" class="headerlink" title="is forbidden: User xxx cannot get resource “services&#x2F;proxy”"></a>is forbidden: User xxx cannot get resource “services&#x2F;proxy”</h3><p>在rancher中使用非admin用户无法显示grafana的 workload metrics, 请求中提示: services http:rancher-monitoring-grafana:80 is forbidden: User xxx cannot get resource “services&#x2F;proxy” in API group “” in the namespace cattle-monitoring-system</p>
-<p>原因: 需要为该用户在cattle-monitoring-system ns中授权 service&#x2F;proxy权限, 同时该用户所对应的角色需要继承 project-monitoring-view角色，这样非admin用户才能看到metrics菜单</p>
-<p>参考: <a target="_blank" rel="noopener" href="https://forums.rancher.com/t/cluster-member-cant-see-use-grafana-or-monitoring-stuff/15814">https://forums.rancher.com/t/cluster-member-cant-see-use-grafana-or-monitoring-stuff/15814</a></p>
           <!--noindex-->
           <div class="post-more-link text-center">
             <a class="btn" href="/2023/01/10/Kubernetes-prombles/#more" rel="contents">
