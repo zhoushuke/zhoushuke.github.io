@@ -1,0 +1,1106 @@
+<!doctype html>
+
+
+
+  
+
+
+<html class="theme-next mist use-motion" lang="zh-Hans">
+<head>
+  <meta charset="UTF-8"/>
+<meta http-equiv="X-UA-Compatible" content="IE=edge" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1"/>
+
+
+
+<meta http-equiv="Cache-Control" content="no-transform" />
+<meta http-equiv="Cache-Control" content="no-siteapp" />
+
+
+
+
+
+
+
+
+
+
+
+
+  
+  
+  <link href="/lib/fancybox/source/jquery.fancybox.css?v=2.1.5" rel="stylesheet" type="text/css" />
+
+
+
+
+  
+  
+  
+  
+
+  
+    
+    
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+    
+    
+    <link href="//fonts.googleapis.com/css?family=Lato:300,300italic,400,400italic,700,700italic&subset=latin,latin-ext" rel="stylesheet" type="text/css">
+  
+
+
+
+
+
+
+<link href="/lib/font-awesome/css/font-awesome.min.css?v=4.6.2" rel="stylesheet" type="text/css" />
+
+<link href="/css/main.css?v=5.1.0" rel="stylesheet" type="text/css" />
+
+
+  <meta name="keywords" content="Kubernetes," />
+
+
+
+
+
+
+
+
+  <link rel="shortcut icon" type="image/x-icon" href="/favicon.ico?v=5.1.0" />
+
+
+
+
+
+
+<meta name="description" content="最过在深入排查oom问题时有幸看到一个在kubernetes中探讨oom-killer问题的文章，我觉得写得非常详尽且解答了本人的诸多疑惑，遂决定翻译成中文，方便日后求解。 在翻译的过程中，我会尽可能地使用原文的意思，同时也会补充一些知识，同时会添加一些的本人的理解">
+<meta property="og:type" content="article">
+<meta property="og:title" content="Kubernetes学习(kubernetes中的OOMOOM-killer和应用程序运行时含义)">
+<meta property="og:url" content="https://zhoushuke.github.io/2022/02/09/Kubernetes-Out-Of-Memory-1/index.html">
+<meta property="og:site_name" content="Z.S.K.&#39;s Records">
+<meta property="og:description" content="最过在深入排查oom问题时有幸看到一个在kubernetes中探讨oom-killer问题的文章，我觉得写得非常详尽且解答了本人的诸多疑惑，遂决定翻译成中文，方便日后求解。 在翻译的过程中，我会尽可能地使用原文的意思，同时也会补充一些知识，同时会添加一些的本人的理解">
+<meta property="og:locale">
+<meta property="og:image" content="https://luckerbyhome.files.wordpress.com/2021/11/linux_overcommit_1tb.png?w=1024">
+<meta property="og:image" content="https://luckerbyhome.files.wordpress.com/2021/11/testnoovercommit_params.png?w=1017">
+<meta property="og:image" content="https://luckerbyhome.files.wordpress.com/2021/11/testnoovercommit_outcome1.png">
+<meta property="og:image" content="https://luckerbyhome.files.wordpress.com/2021/11/testnoovercommit_ratio_over_one.png?w=1024">
+<meta property="article:published_time" content="2022-02-09T15:10:53.000Z">
+<meta property="article:modified_time" content="2023-02-10T07:55:10.193Z">
+<meta property="article:author" content="Z.S.K.">
+<meta property="article:tag" content="Kubernetes">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:image" content="https://luckerbyhome.files.wordpress.com/2021/11/linux_overcommit_1tb.png?w=1024">
+
+
+
+<script type="text/javascript" id="hexo.configurations">
+  var NexT = window.NexT || {};
+  var CONFIG = {
+    root: '',
+    scheme: 'Mist',
+    sidebar: {"position":"left","display":"post"},
+    fancybox: true,
+    motion: true,
+    duoshuo: {
+      userId: 'undefined',
+      author: '博主'
+    },
+    algolia: {
+      applicationID: '',
+      apiKey: '',
+      indexName: '',
+      hits: {"per_page":10},
+      labels: {"input_placeholder":"Search for Posts","hits_empty":"We didn't find any results for the search: ${query}","hits_stats":"${hits} results found in ${time} ms"}
+    }
+  };
+</script>
+
+
+
+  <link rel="canonical" href="https://zhoushuke.github.io/2022/02/09/Kubernetes-Out-Of-Memory-1/"/>
+
+
+
+
+
+  <title> Kubernetes学习(kubernetes中的OOMOOM-killer和应用程序运行时含义) | Z.S.K.'s Records </title>
+<meta name="generator" content="Hexo 6.2.0"></head>
+
+<body itemscope itemtype="http://schema.org/WebPage" lang="zh-Hans">
+
+  
+
+
+
+
+
+
+
+
+
+
+  
+  
+    
+  
+
+  <div class="container one-collumn sidebar-position-left page-post-detail ">
+    <div class="headband"></div>
+
+    <header id="header" class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-meta ">
+  
+
+  <div class="custom-logo-site-title">
+    <a href="/"  class="brand" rel="start">
+      <span class="logo-line-before"><i></i></span>
+      <span class="site-title">Z.S.K.'s Records</span>
+      <span class="logo-line-after"><i></i></span>
+    </a>
+  </div>
+    
+      <p class="site-subtitle"></p>
+    
+</div>
+
+<div class="site-nav-toggle">
+  <button>
+    <span class="btn-bar"></span>
+    <span class="btn-bar"></span>
+    <span class="btn-bar"></span>
+  </button>
+</div>
+
+<nav class="site-nav">
+  
+
+  
+    <ul id="menu" class="menu">
+      
+        
+        <li class="menu-item menu-item-home">
+          <a href="/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-home"></i> <br />
+            
+            首页
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-categories">
+          <a href="/categories" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-th"></i> <br />
+            
+            分类
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-about">
+          <a href="/about/ZSK-Profile.pdf" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-user"></i> <br />
+            
+            简历
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-archives">
+          <a href="/archives" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-archive"></i> <br />
+            
+            归档
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-tags">
+          <a href="/tags" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-tags"></i> <br />
+            
+            标签
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-commonweal">
+          <a href="/404.html" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-heartbeat"></i> <br />
+            
+            公益404
+          </a>
+        </li>
+      
+
+      
+        <li class="menu-item menu-item-search">
+          
+            <a href="javascript:;" class="popup-trigger">
+          
+            
+              <i class="menu-item-icon fa fa-search fa-fw"></i> <br />
+            
+            搜索
+          </a>
+        </li>
+      
+    </ul>
+  
+
+  
+    <div class="site-search">
+      
+  <div class="popup">
+ <span class="search-icon fa fa-search"></span>
+ <input type="text" id="local-search-input">
+ <div id="local-search-result"></div>
+ <span class="popup-btn-close">close</span>
+</div>
+
+
+    </div>
+  
+</nav>
+
+
+
+ </div>
+    </header>
+
+    <main id="main" class="main">
+      <div class="main-inner">
+        <div class="content-wrap">
+          <div id="content" class="content">
+            
+
+  <div id="posts" class="posts-expand">
+    
+
+  
+
+  
+  
+  
+
+  <article class="post post-type-normal " itemscope itemtype="http://schema.org/Article">
+  <link itemprop="mainEntityOfPage" href="https://zhoushuke.github.io/2022/02/09/Kubernetes-Out-Of-Memory-1/">
+
+  <span style="display:none" itemprop="author" itemscope itemtype="http://schema.org/Person">
+    <meta itemprop="name" content="">
+    <meta itemprop="description" content="">
+    <meta itemprop="image" content="/images/avatar.gif">
+  </span>
+
+  <span style="display:none" itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+    <meta itemprop="name" content="Z.S.K.'s Records">
+    <span style="display:none" itemprop="logo" itemscope itemtype="http://schema.org/ImageObject">
+      <img style="display:none;" itemprop="url image" alt="Z.S.K.'s Records" src="">
+    </span>
+  </span>
+
+    
+      <header class="post-header">
+
+        
+        
+          <h1 class="post-title" itemprop="name headline">
+            
+            
+              
+                Kubernetes学习(kubernetes中的OOMOOM-killer和应用程序运行时含义)
+              
+            
+          </h1>
+        
+
+        <div class="post-meta">
+          <span class="post-time">
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">发表于</span>
+              
+              <time title="Post created" itemprop="dateCreated datePublished" datetime="2022-02-09T23:10:53+08:00">
+                2022-02-09
+              </time>
+            
+
+            
+
+            
+          </span>
+
+          
+            <span class="post-category" >
+            
+              <span class="post-meta-divider">|</span>
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-folder-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">分类于</span>
+              
+              
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/Kubernetes/" itemprop="url" rel="index">
+                    <span itemprop="name">Kubernetes</span>
+                  </a>
+                </span>
+
+                
+                
+              
+            </span>
+          
+
+          
+            
+          
+
+          
+
+          
+          
+
+          
+
+          
+
+        </div>
+      </header>
+    
+
+
+    <div class="post-body" itemprop="articleBody">
+
+      
+      
+
+      
+        <p>最过在深入排查oom问题时有幸看到一个在kubernetes中探讨oom-killer问题的文章，我觉得写得非常详尽且解答了本人的诸多疑惑，遂决定翻译成中文，方便日后求解。</p>
+<p>在翻译的过程中，我会尽可能地使用原文的意思，同时也会补充一些知识，同时会添加一些的本人的理解</p>
+<span id="more"></span>
+
+<h2 id="前序"><a href="#前序" class="headerlink" title="前序"></a>前序</h2><p>以下是原文信息，感兴趣且英文好的可直接阅读</p>
+<p>原文: <a target="_blank" rel="noopener" href="https://mihai-albert.com/2022/02/13/out-of-memory-oom-in-kubernetes-part-2-the-oom-killer-and-application-runtime-implications/">Kubernetes中的内存不足（OOM）–第2部分：OOM-Killer和应用程序运行时含义</a></p>
+<p>作者: <a target="_blank" rel="noopener" href="https://mihai-albert.com/author/mihaialbert/">Mihai Albert</a></p>
+<p>系列总共由四部分组成的文章，本人将对第2、4章节进行翻译，每章的大概内容如下:</p>
+<blockquote>
+<ul>
+<li><p><a target="_blank" rel="noopener" href="https://mihai-albert.com/2022/02/13/out-of-memory-oom-in-kubernetes-part-1-intro-and-topics-discussed/">第一章</a>: 主要列了一下这个系统的主要内容，相当于大纲</p>
+</li>
+<li><p><a target="_blank" rel="noopener" href="https://mihai-albert.com/2022/02/13/out-of-memory-oom-in-kubernetes-part-2-the-oom-killer-and-application-runtime-implications/">第二章</a>: oom-killer机制及在应用部署在kubernetes中如何处理oom事件</p>
+</li>
+<li><p><a target="_blank" rel="noopener" href="https://mihai-albert.com/2022/02/13/out-of-memory-oom-in-kubernetes-part-3-memory-metrics-sources-and-tools-to-collect-them/">第三章</a>: 非常详细的介绍了kubernetes中的内存相关的metrics items及常用收集工具的使用</p>
+</li>
+<li><p><a target="_blank" rel="noopener" href="https://mihai-albert.com/2022/02/13/out-of-memory-oom-in-kubernetes-part-4-pod-evictions-oom-scenarios-and-flows-leading-to-them/">第四章</a>: kubernetes中驱逐机制及oom-killer如何协调响应</p>
+</li>
+</ul>
+</blockquote>
+<p>作者将对第2章及第4章进行翻译，本文是第2章: <strong>oom-killer及衣服洗程序运行态含义</strong></p>
+<p>以下是我【为什么翻译这个系列】前碰到的问题,先交代一下背景</p>
+<h2 id="背景"><a href="#背景" class="headerlink" title="背景"></a>背景</h2><p>某台node的kubelet中出现如下的错误日志:</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br></pre></td><td class="code"><pre><span class="line">- Jan 14 18:01:55 aks-agentpool-20086390-vmss00003C kernel: [ 1432.394489] dotnet invoked oom-killer: gfp_mask=0xcc0(GFP_KERNEL), order=0, oom_score_adj=1000</span><br><span class="line">- Jan 14 18:01:55 aks-agentpool-20086390-vmss00003C kernel: [ 1432.394506]  oom_kill_process+0xe6/0x120</span><br><span class="line">- Jan 14 18:01:55 aks-agentpool-20086390-vmss00003C kernel: [ 1432.394642] oom-kill:constraint=CONSTRAINT_MEMCG,nodemask=(null),cpuset=f90b24151029555d49a49d82159ec90c4fec53ba8515bd51a5633d1ff45d8f53,mems_allowed=0,oom_memcg=/kubepods,task_memcg=/kubepods/besteffort/pod5f3d2447-f535-4b3d-979c-216d4980cc3f/f90b24151029555d49a49d82159ec90c4fec53ba8515bd51a5633d1ff45d8f53,task=dotnet,pid=20341,uid=0</span><br><span class="line">- Jan 14 18:01:55 aks-agentpool-20086390-vmss00003C kernel: [ 1432.394676] Memory cgroup out of memory: Killed process 20341 (dotnet) total-vm:172181696kB, anon-rss:4776416kB, file-rss:25296kB, shmem-rss:0kB, UID:0 pgtables:9620kB oom_score_adj:1000</span><br><span class="line">- Jan 14 18:02:17 aks-agentpool-20086390-vmss00003C kubelet[3044]: I0114 18:02:17.686538    3044 kuberuntime_container.go:661] <span class="string">&quot;Killing container with a grace period override&quot;</span> pod=<span class="string">&quot;alloc-tests/alloc-mem-leak&quot;</span> podUID=5f3d2447-f535-4b3d-979c-216d4980cc3f containerName=<span class="string">&quot;alloc-mem&quot;</span> containerID=<span class="string">&quot;containerd://d3f3b2f7f02b832711593044c30a165bd991b4af5b1eadbb0c6d313d57660616&quot;</span> gracePeriod=0</span><br><span class="line">- Jan 14 18:02:17 aks-agentpool-20086390-vmss00003C containerd[2758]: time=<span class="string">&quot;2022-01-14T18:02:17.687846041Z&quot;</span> level=info msg=<span class="string">&quot;Kill container \&quot;d3f3b2f7f02b832711593044c30a165bd991b4af5b1eadbb0c6d313d57660616\&quot;&quot;</span></span><br><span class="line">- Jan 14 18:02:18 aks-agentpool-20086390-vmss00003C kubelet[3044]: I0114 18:02:18.923106    3044 kubelet_pods.go:1285] <span class="string">&quot;Killing unwanted pod&quot;</span> podName=<span class="string">&quot;alloc-mem-leak&quot;</span></span><br><span class="line">- Jan 14 18:02:18 aks-agentpool-20086390-vmss00003C kubelet[3044]: E0114 18:02:18.924926    3044 kuberuntime_container.go:691] <span class="string">&quot;Kill container failed&quot;</span> err=<span class="string">&quot;rpc error: code = NotFound desc = an error occurred when try to find container \&quot;d3f3b2f7f02b832711593044c30a165bd991b4af5b1eadbb0c6d313d57660616\&quot;: not found&quot;</span> pod=<span class="string">&quot;alloc-tests/alloc-mem-leak&quot;</span> podUID=5f3d2447-f535-4b3d-979c-216d4980cc3f containerName=<span class="string">&quot;alloc-mem&quot;</span> containerID=&#123;Type:containerd ID:d3f3b2f7f02b832711593044c30a165bd991b4af5b1eadbb0c6d313d57660616&#125;</span><br><span class="line">- Jan 14 18:02:19 aks-agentpool-20086390-vmss00003C kubelet[3044]: E0114 18:02:19.001858    3044 kubelet_pods.go:1288] <span class="string">&quot;Failed killing the pod&quot;</span> err=<span class="string">&quot;failed to \&quot;KillContainer\&quot; for \&quot;alloc-mem\&quot; with KillContainerError: \&quot;rpc error: code = NotFound desc = an error occurred when try to find container \\\&quot;d3f3b2f7f02b832711593044c30a165bd991b4af5b1eadbb0c6d313d57660616\\\&quot;: not found\&quot;&quot;</span> podName=<span class="string">&quot;alloc-mem-leak&quot;</span></span><br></pre></td></tr></table></figure>
+
+<p>从日志其实很容易发现问题，就是有app的内存超限被oom了, 重点在于日志中的最后几行，<strong>为什么kubelet会提示Failed killing the pod， container Not Found</strong></p>
+<p>问题: <strong>难道app被oom不是通过kubelet吗？</strong></p>
+<p>由于篇幅较长，在翻译开始前，本人将对本章内容给出本人认为比较重要的几条结论</p>
+<h2 id="结论"><a href="#结论" class="headerlink" title="结论"></a>结论</h2><h3 id="overcommit"><a href="#overcommit" class="headerlink" title="overcommit"></a>overcommit</h3><blockquote>
+<ul>
+<li><p>设置overcommit后，系统对内存的处理是使用时分配，而不是申明时分配</p>
+</li>
+<li><p>即使关闭了overcommit，当系统内存不足时，OOM-killer仍将被调用。它的任务是在内存不足时杀死进程，它并不特别关心overcommit是否打开</p>
+</li>
+</ul>
+</blockquote>
+<h3 id="cgroups"><a href="#cgroups" class="headerlink" title="cgroups"></a>cgroups</h3><blockquote>
+<ul>
+<li><p>cgroups不限制进程可以<code>看到</code>多少资源，而是限制它可以<code>使用</code>多少资源</p>
+</li>
+<li><p>一旦启用分层计算(memory.use_hierarchy)，root cgroup包含该计算机上运行的所有进程的统计信息</p>
+</li>
+<li><p>容器中所有的进程都属于一个cgroup组，比如通过<code>kubectl exec</code>进入pod中运行一个<code>bash</code>，则bash运行的进程都将成为pod现有cgroup组的成员</p>
+</li>
+<li><p>当cgroup组整体超过其设置的limit时，内核首先会尝试从cgroup内部回收内存，如果回收不成功，将调用OOM程序来选择(打分)并终止cgroup内<code>最庞大</code>的任务</p>
+</li>
+<li><p>一旦突破了cgroup组超过limit，oom-killer一定会选择一个进程kill掉，但是被Kill掉的进程不一定是我们主客认为的最有可能被Kill的那个进程</p>
+</li>
+</ul>
+</blockquote>
+<h3 id="kubernetes"><a href="#kubernetes" class="headerlink" title="kubernetes"></a>kubernetes</h3><blockquote>
+<ul>
+<li><p>在Kubernetes中，只有当pid为1的程序为OOM-killer杀死时，Containers才会被标记为OOM killed, 有些应用程序可以容忍非init进程的OOM kill，因此现在kubernetes并不会跟踪非init进程OOM kill事件，目前认为是预期的现象</p>
+</li>
+<li><p>当您为Pod中的容器指定资源请求时，kube-schedule将使用此信息来决定将Pod放置在哪个节点上。当您为容器指定资源限制时，kubelet将强制执行这些限制，以便运行的容器不允许使用超过您设置的限制的资源</p>
+</li>
+</ul>
+</blockquote>
+<p>注意: </p>
+<ol>
+<li><p>原作者在原文中添加了一些视频演示来复现实现，由于时长较多，没有放到翻译中，请自行到原文中查看</p>
+</li>
+<li><p>在原文中，原作者为了更方便理解，举了一些生活中的例子来说明，为了减少篇幅，在不影响理解的情况下，去掉了一些例子的翻译</p>
+</li>
+<li><p>由于原作者在写该系列文章时出现的结论在现在看来已经过时，因此作者会进行适当的调整，以满足现阶段的状态</p>
+</li>
+</ol>
+<h2 id="翻译全文"><a href="#翻译全文" class="headerlink" title="翻译全文"></a>翻译全文</h2><h3 id="overcommit-1"><a href="#overcommit-1" class="headerlink" title="overcommit"></a>overcommit</h3><p><strong>作者注</strong>: </p>
+<ol>
+<li><p>这里将overcommit翻译为<strong>超量</strong>提交,为了便于理解，以下内容都直接使用overcommit</p>
+</li>
+<li><p>overcommit是操作系统的一个参数，可进行配置,控制内存的分配</p>
+</li>
+</ol>
+<p>如果大家像我一样熟悉Windows操作系统，首先我们需要讨论一下overcommit意味着什么，否则接下来的一些内容将毫无意义。简单地说，<strong>操作系统分配给进程的内存超过了它可以安全保证的内存</strong>。</p>
+<p>举个例子：我们有一个运行着12 GB RAM和4 GB swap的Linux系统。该系统可以是裸机、VM、在Windows上运行的WSL发行版等，因为从overcommit的角度来看，操作系统并不重要。假设OS的内核和运行的各种组件使用1 GB。进程A出现并请求分配8 GB。OS（操作系统）欣然确认，进程A在其虚拟地址空间中获得了一个8GB的区域，可以使用。下一个进程B出现并请求9 GB内存。启用了overcommit（通常是默认设置）后，操作系统也很乐意成功处理此请求，因此现在进程B在其自己的虚拟地址空间中有一个9 GB的区域。当然，如果我们将1+8+9相加，这将超过操作系统知道它可以使用的内存总量（12+4），但只要进程A和B不需要一次性使用所有内存，一切都很好。</p>
+<p>因为Linux（无论是否使用overcommit）不会急于为所有分配的内存创建内存页，并想着“如果我请求的内存实际上永远不会被占用呢？”。换句话说，<strong>操作系统对内存是使用时才分配</strong></p>
+<p>为了说明overcommit，这里有一个Linux系统，它配置了大约12 GB的RAM和4 GB的swap，并设置为总是overcommit，很高兴地分配了1 TB并继续使用。左侧突出显示的两个值分别是RAM和交换的数量，而右下方的一个值是工具迄今为止成功分配的数量：</p>
+<p><a target="_blank" rel="noopener" href="https://luckerbyhome.files.wordpress.com/2021/11/linux_overcommit_1tb.png"><img src="https://luckerbyhome.files.wordpress.com/2021/11/linux_overcommit_1tb.png?w=1024"></a></p>
+<p>图1–overcommit的表现</p>
+<p>有三个值可以控制overcommit的行为，下面将对它们进行<a target="_blank" rel="noopener" href="https://www.kernel.org/doc/Documentation/vm/overcommit-accounting.">解释</a></p>
+<p>可以通过使用<code>sysctl vm.overcommit_memory=&lt;value&gt;</code>动态修改它的值：</p>
+<blockquote>
+<ul>
+<li><p>0：启用了overcommit，但Linux会根据需要进行调整</p>
+</li>
+<li><p>1：在满足任何内存分配请求的意义上总是使用overcommit。上面看到的分配1 TB的系统是这样配置的</p>
+</li>
+<li><p>2：不要使用overcommit。有一个给定的提交限制(commit limit)，操作系统不会超过该限制</p>
+</li>
+</ul>
+</blockquote>
+<p>如果您使用Windows的时间足够长，您会发现上面的“模式2”与Linux的行为类似。我们已经超过了Windows中的提交限制(commit limit),<a target="_blank" rel="noopener" href="https://mihai-albert.com/2019/04/21/out-of-memory-exception/#your-resevevation-now-is-confirmd%EF%BC%89%E3%80%82%E5%A6%82%E6%9E%9C%E6%82%A8%E4%BB%94%E7%BB%86%E9%98%85%E8%AF%BB%E4%BA%86%E5%86%85%E6%A0%B8%E6%96%87%E6%A1%A3[%E6%AD%A4%E5%A4%84](https://www.kernel.org/doc/Documentation/vm/overcommit-accounting">此处</a>，您注意到了&#96;vm.overcommit_rat提交限制(commit limit)定在“模式2”中计算提交限制时包含的物理RAM的百分比。默认值为50%，这意味着Linux将以swap大小加上物理RAM的50%来限制分配。</p>
+<p>让我们通过设置<code>vm.overcommit_memory=2</code>不使用overcommit,这里的配置显示了相同数量的物理RAM（约12 GB）和swap（4 GB）以及我们的新的overcommit设置。</p>
+<p><a target="_blank" rel="noopener" href="https://luckerbyhome.files.wordpress.com/2021/11/testnoovercommit_params.png"><img src="https://luckerbyhome.files.wordpress.com/2021/11/testnoovercommit_params.png?w=1017"></a>图2–不使用overcommit</p>
+<p>所示的提交限制(commit limit)值计算为50%x ~12 GB+4 GB，略高于10 GB。当然，我们不期望能够使用我们的测试工具进行那么多的分配，因为内核和其他已经运行的程序已经进行了一些分配。它的价值体现在“Committed_AS”值中，该值接近4 GB。因此，我们希望能够在被拒绝额外内存之前分配大约6 GB：</p>
+<p><img src="https://luckerbyhome.files.wordpress.com/2021/11/testnoovercommit_outcome1.png"></p>
+<p>图3–不使用overcommit时内存分配失败速度更快</p>
+<p>事实已经证明。</p>
+<p>注意，在<code>vm.overcommit_ratio</code>低于100%–例如，将其设置为200%，尽管<code>vm.overcommit_ratio</code>设置为一个记录为禁用overcommit的值，但我们还是回到了overcommit。将比率从50%修改为200%后，测试：</p>
+<p><a target="_blank" rel="noopener" href="https://luckerbyhome.files.wordpress.com/2021/11/testnoovercommit_ratio_over_one.png"><img src="https://luckerbyhome.files.wordpress.com/2021/11/testnoovercommit_ratio_over_one.png?w=1024"></a></p>
+<p>图4–修改使用overcommit参数</p>
+<p>综上所述：从内存管理的角度来看，将overcommit设置为2，比率值为100%，以指定物理RAM+swap的提交限制(commit limit)时，Linux的工作方式与Windows分配多少内存一致。但这并不是默认情况下Linux的工作方式，在使用overcommit下，它将允许内存分配，而无需使用实际内存存储进行备份。如果所有进程都表现得很好，并且实际上没有尝试使用大量（成功）分配的内存，那么一切都很好；当游戏不再是这种情况时，应用程序开始被拒绝访问本应属于他们自己的内存（但自从他们分配了内存之后，还没有真正使用到这些内存）。</p>
+<p>但为什么一开始就使用overcommit？至少有两个原因：</p>
+<blockquote>
+<ul>
+<li><p>1）适应那些分配大量内存的应用程序，不完全使用所有内存，但如果不能首先分配内存块，则中断（显然在Linux下有相当多的应用程序）</p>
+</li>
+<li><p>2） 当fork（这是Linux系统上所有用户进程启动的唯一方式）并且各个进程已经分配了大量内存时，这又涉及到复制“源”进程的虚拟地址空间，进而有可能将系统的总提交大小增加到提交限制(commit limit)以上,<a target="_blank" rel="noopener" href="https://stackoverflow.com/a/4597931/5853218">此处详细介绍</a>,不管新进程是单独使用任何新内存；如果启用并正确设置了overc提交限制(commit limit)t，那么就不会有超出提交限制的风险，因为这已经足够高了（或者没有考虑到）。</p>
+</li>
+</ul>
+</blockquote>
+<p>overcommit是好事吗？我可以看到赞成和反对的论点，但我可能在形成观点方面有偏见，因为我首先学习的Windows模型不允许这种机制。然而，围绕这一问题存在着激烈的<a href="%5Bhttps://lwn.net/Articles/104179/%5D(https://lwn.net/Articles/104179/">争论</a> </p>
+<h3 id="OOM-killer"><a href="#OOM-killer" class="headerlink" title="OOM-killer"></a>OOM-killer</h3><p>我们需要解决的另一个重要问题是OOM-killer。<strong>OOM-killer是什么？这是一个Linux组件，它的任务是监视系统内存严重不足的情况，并在发生这种情况时采取严厉措施以摆脱这种状态。它如何释放内存？它只需根据特定的指标杀死一个进程，然后继续这样做，直到确定系统内存不再严重不足</strong>。有清晰简洁文档描述OOM-killer是如何<a target="_blank" rel="noopener" href="https://www.kernel.org/doc/gorman/html/understand/understand016.html">运作</a></p>
+<p>我们调用OOM-killer。非常简单，我们必须使其在目标Linux系统上的实际可用内存尽可能接近0。这反过来导致触发OOM-killer，试图释放一些内存并保持稳定。因此，我们的任务是用尽操作系统可以用来备份分配的内存：RAM和swap</p>
+<p>首先，我们设置系统使用overcommit。通过这种方式，我们可以触发OOM-killer。接下来，我们将使用与之前相同的工具(一个内存泄漏程序)来分配内存，但这次我们将触及其中的很大一部分，只是为了确保减少可用内存。选择了50%，因此对于每个100 MB的块，我们将向其中的50 MB写入数据。让我们在下面的操作中看到这一点，并关注htop中的内存和swap使用情况: </p>
+<p><del>视频1: 调用oom-killer</del></p>
+<p>该进程正在写入正在分配的所有内存的一半。这一数量最终超过了物理RAM和swap容量，因此系统根本没有其他地方来分配更多内存。如果没有足够的内存来操作，内核就会调用OOM-killer，控制台收到一条“_Killed_”消息，而左边的内核日OOM-killer细地说明了OOM-killer执行的决策和操作。</p>
+<p>关键是确定系统何时真正内存不足。OOM-killer会在[图1]中的场景中被调用吗？不会，至少不会很快，因为系统可以使用的实际内存仍然很高。我们确实分配了1 TB的内存——在使用<code>overcommit</code>模式下，<strong>这意味着每一个内存请求都会得到批准——但我们并没有真正使用这些内存</strong>，所以操作系统一开始就没有真正构建内存页面。因此，1 TB的进程既没有分配物理RAM也没有分配swap。</p>
+<p>请记住，overcommit允许进程分配内存，但当需要使用这些内存时，它们都在为操作系统拥有的实际有限内存资源（物理RAM和swap）而斗争。</p>
+<p><strong>即使关闭了overcommit（因此硬提交限制(commit limit)等于物理内存加交换的总和），当系统内存不足时，OOM-killer仍将被调用。请记住，它的任务是在内存不足时杀死进程，它并不特别关心过度提交是否打开</strong>。因此，即使关闭了提交限制(commit limit)ommit，但设置了提交限制，使得系统可能会遇到低内存问题（例如，<code>vm.overcommit_memory=2</code> and <code>vm.overcommit_ratio=100</code>），并且分配的块将触及其100%内存，让我们仔细检查一下：</p>
+<p><del>视频2: 即使关闭了overcommit，也会调用OOM-killer</del></p>
+<p>您可能会发现对显式禁用OOM killer(而不是简单地禁用overcommit)，例如<code>vm.oom_kill</code>。不幸的是，到目前为止（2021 11月），这似乎已经不存在了（至少在最新版本的Ubuntu上，尝试运行sysctl配置它时会出错），文档中也没有。然后，你可能会问，要禁用OOM-killer吗？这似乎不是一种直接的方法，尽管可以间接地做到这一点，方法是确保触发OOM杀手的条件在第一个地方永远不被满足。。</p>
+<p>我们已经看到，将提交限制(commit limit)限制为RAM大小加上swap仍然可以让OOM-killer运行，因为本质上没有故障保提交限制(commit limit)；但您可以进一步降低提交限提交限制(commit limit)在实际使用分配的所有内存时提供可用空间。您应该将提交限制推到多低？可能不是很低，因为那时你会有足够的缓冲区——从大容量的RAM的意义上来说——你可能永远也不会使用上被你标记为缓冲区的内存。</p>
+<p>下面是一个极端例子，当最大提交限制(commit limit)仅设置为swap的大小时。请注意，分配器工具只能使用与交换大小相等的RAM，而系统永远无法使用超过4GB的RAM。是什么把应用停止了呢？ 提交限制(commit limit)达到了（相对较小的）提交限制，操作系统不再分配内存块：</p>
+<p><del>视频3–不再调用OOM-killer，但RAM被浪费</del></p>
+<p>但总的来说，<strong>如果你遇到了OOM-killer，也许最好直接解决OOM问题的根本原因</strong></p>
+<p>但是，假设系统内存不足同时OOM-killer不工作，那么系统会如何运行呢？</p>
+<p>事实证明，有一种简单的方法可以进入这种状态：正常启动Linux系统（例如<code>vm.overcommit_memory=0</code>），消耗大量RAM，但不要过于极端——比如70%，然后切换<code>vm.overcommit_memory</code>设置为2，并使用足够低的<code>vm.overcommitratio</code>值默认值为50%。这实际上会使系统进入一种状态，即分配的内容（<code>/proc/meminfo</code>中的<code>Committed_AS </code>）大于提交限制(commit limit)（<code>/proc.meminfo</code>的<code>CommitLimit </code>）</p>
+<p>尝试运行任何命令，您应该得到：</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">root@DESKTOP-VOD028C:/var/log<span class="comment"># tail -f kern.log</span></span><br><span class="line">-bash: fork: Cannot allocate memory</span><br></pre></td></tr></table></figure>
+
+<p>请记住，<a href="(https://man7.org/linux/man-pages/man2/fork.2.html)">fork</a>需要复制进程地址空间，父级的整个虚拟地址空间在子级中复制, 此外，在Linux下，fork是使用写页复制来实现的，因此它所带来的唯一代价是复制父页表所需的时间和内存”——这意味着最初不会消耗实际的新内存，</p>
+<p>因为在我们实验场景中，我们基本上已经立即超过了提交限制，因为不能再分配了，</p>
+<p>我们基本上已经立即超过了提交限制(commit limit)，现在Linux拒绝任何新的内存分配，因为提交大小突然变得太高。另一方面，OOM-killer也出现中——为什么会出现这样的情况，因为内存（RAM和swap）仍有很内存可用？</p>
+<h3 id="cgroups-1"><a href="#cgroups-1" class="headerlink" title="cgroups"></a>cgroups</h3><p>请注意，本节不是对cgroups的介绍。有很多优秀的文章已经介绍了这一点，例如<a target="_blank" rel="noopener" href="https://man7.org/linux/man-pages/man7/cgroups.7.html">cgroups手册页</a>. 对于容器，请查看<a target="_blank" rel="noopener" href="https://developers.redhat.com/blog/2018/02/22/container-terminology-practical-introduction">这篇写得很好的文章</a>由Red Hat提供。</p>
+<p>下面的段落试图通过这些cgroups概念来理解某些度量是如何提取的，并解释Kubernetes在内存不足的情况下，内部是如何工作处理的</p>
+<p>什么是cgroup？我们为什么关心它们？</p>
+<p>cgroups是Linux上用于限制和计算资源的机制 </p>
+<p><strong>限制</strong>，如防止进程使用的资源多于分配给它的资源</p>
+<p><strong>计算</strong>，如计算一个进程及其子进程在某个特定时间点从某个资源类型使用了多少资源。</p>
+<p>为什么cgroups很重要？因为容器的整个概念都建立在它之上。容器的限制是通过cgroups在OS级别强制执行的，容器的内存使用情况信息是从cgroups获得的。</p>
+<p>需要记住的一个重要方面是，<strong>cgroups不限制进程在资源方面可以“看到”什么，而是限制它可以使用什么</strong>。这篇精彩的文章:<a target="_blank" rel="noopener" href="https://ops.tips/blog/why-top-inside-container-wrong-memory/">为什么顶部和自由内部容器不能显示正确的容器内存</a>解释了为什么从容器中查看空闲内存并不会报告它是否超出了其设置的限制，而是返回底层OS可用内存（加分：本文还讨论了当容器内运行的进程试图分配内存时，如何在后台工作，以及如何跟踪这些操作）。</p>
+<p>让我们问一个相当奇怪的问题： <code>root cgroup 是显示所有进程的数据，还是只显示容器的数据？容器本身是由进程支持的</code>（请参阅上面引用的Red Hat文章了解容器简介），因此问题可以重新表述为<code>root cgroup是否显示所有进程的数据，还是仅显示属于容器的那些进程的数据？</code>。让我们试着回答这个问题。</p>
+<p>根据<a target="_blank" rel="noopener" href="https://man7.org/linux/man-pages/man7/cgroups.7.html">cgroups</a>, cgroup文件系统最初包含一个root cgroup，即<code>/</code>。如果您检查root cgroup下的进程（对于任何cgroup控制器，如内存），您很可能会发现它们与 <code>ps aux</code>中列出的进程不同（使用根shell返回该主机上运行的所有进程）事实证明，进程只能属于特定的cgroup，而root cgroup并不特殊。因此，如果一个进程是cgroup控制器层次结构深处某个cgroup的一部分，那么该进程将不在相应控制器的root cgroup中。通过比较<code>ps-aux|wc-l</code>和<code>find /sys/fs/cgroup/memory-namecgroup</code>的输出，可以很容易地测试所有进程（&#x2F;threads）是否都在层次结构中。<code>cgroup.procs -exec cat &#39;&#123;&#125;&#39;\；|wc-l</code>，它将给出相同的值（当然，如果一个接一个执行得足够近）。</p>
+<p>此时，您可能会认为问题的答案是“否”，因为毕竟root cgroup中的进程列表只是机器上运行的进程的子集。这就是cgroups分级核算的特点（cgroups文档的<a href="%5Bhttps://www.kernel.org/doc/Documentation/cgroup-v1/memory.txt%5D(https://www.kernel.org/doc/Documentation/cgroup-v1/memory.txt)">第6节</a>. 事实证明，确实启用了分层计算)</p>
+<p>事实证明，一旦启用（通过查看root cgroup中的<code>memory.use_hierarchy</code>文件并看到它的值为1，可以很容易地验证），值就不能轻易更改</p>
+<p>如果cgroup下面已经创建了其他cgroup，或者父cgroup使用了_hierarchy enabled_，那么启用&#x2F;禁用将失败（如果确实要验证这一点，那么只需运行&#96;find &#x2F;sys&#x2F;fs&#x2F;cgroup&#x2F;memory-name memory.use_hierarchy -exec cat ‘{}’ \；并生成一长串1），因此root cgroup内存值确实涉及所有进程）。因此，答案是，root cgroup确实包含该计算机上运行的所有进程的统计信息，只要启用了分层计算。</p>
+<p>Kubernetes根据memory root cgroup的统计数据计算节点级别的节点内存使用情况。如上所述，memory root cgroup可以安全地用于获取有关在相应节点上运行的所有进程（包括操作系统和系统组件）的内存使用信息。</p>
+<h3 id="cgroups及Kubernetes"><a href="#cgroups及Kubernetes" class="headerlink" title="cgroups及Kubernetes"></a>cgroups及Kubernetes</h3><p>让我们来谈谈涉及cgroups和Kubernetes的一些事情</p>
+<p>第一, 在Kubernetes中创建的每个容器是否只有一个cgroup？事实上，只有一个,从<a target="_blank" rel="noopener" href="https://stackoverflow.com/questions/62716970/are-the-container-in-a-kubernetes-pod-part-of-same-cgroup">这里</a>以获得完整的示例说明。</p>
+<p>第二，有一个概念，<code>pause container</code>。这在本文中得到了很好的<a target="_blank" rel="noopener" href="https://www.ianlewis.org/en/almighty-pause-container">解释</a>. 由于每个Kubernetes pod中都会有一个<code>pause container</code>，因此值得花时间去了解它，这样以后我们就会知道为什么每个pod都会看到一个额外容器的指标（其内存使用值会非常低）。</p>
+<p>另一件有趣的事情是能够导航到内存控制器层次结构中的容器cgroup以检查统计信息。为此，您需要提取有关这些容器的详细信息。有几种方法可以解决这个问题。一个您应该使用CRI兼容的runtime，就是使用这里描述的crictl: [verify-pod-cgroup-limits](<a target="_blank" rel="noopener" href="https://kubernetes.io/docs/concepts/scheduling-eviction/pod-overhead/#verify-pod-cgroup-limits%EF%BC%89%E3%80%82%E5%8F%A6%E4%B8%80%E4%B8%AA%E6%96%B9%E6%B3%95%E2%80%94%E2%80%94%E5%A6%82%E6%9E%9C%E6%82%A8%E4%BD%BF%E7%94%A8containerd%E4%BD%9C%E4%B8%BA%E5%AE%B9%E5%99%A8%E8%BF%90%E8%A1%8C%E6%97%B6%EF%BC%88%E5%B0%B1%E5%83%8FAKS%E6%9A%82%E6%97%B6%E6%89%80%E5%81%9A%E7%9A%84%E9%82%A3%E6%A0%B7%EF%BC%89%E2%80%94%E2%80%94%E6%98%AF%E4%BD%BF%E7%94%A8_ctr%E2%80%93namespace">https://kubernetes.io/docs/concepts/scheduling-eviction/pod-overhead/#verify-pod-cgroup-limits）。另一个方法——如果您使用containerd作为容器运行时（就像AKS暂时所做的那样）——是使用_ctr–namespace</a> k8s列出容器。io容器列表（注意containerd本身具有名称空间，如本文所述<a target="_blank" rel="noopener" href="https://github.com/containerd/containerd/issues/1815#issuecomment-347389634">https://github.com/containerd/containerd/issues/1815#issuecomment-347389634</a>). 获取pod内容器路径的另一种方法是仅使用cAdvisor的输出，我们将在本文中进一步介绍。</p>
+<h3 id="cgroups-v2"><a href="#cgroups-v2" class="headerlink" title="cgroups v2"></a>cgroups v2</h3><p>如何检查Linux操作系统是否使用cgroups v2？在Kubernetes中启用cgroups v2的实际提案文本中看到的更简单的方式</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line"><span class="built_in">stat</span> -f --format <span class="string">&#x27;%T&#x27;</span> /sys/fs/cgroup</span><br></pre></td></tr></table></figure>
+
+<p>现在，本文的某些部分——特别是围绕cgroup伪文件系统的低级讨论，以及一些代码分析，假设在Kubernetes节点上使用cgroups v1。本节详细介绍了当内部进程超过限制时，OOM-killer如何作用于cgroups，这也是基于使用cgroups v1节点的假设。为什么这很重要？因为cgroups v2修复了v1的一些缺OOM-killer不在乎它是否只杀死cgroup中的一个进程，并使相应的容器处于损坏状态,因此当cgroup v2成为标准时，该文章的部分内容将不再适用。</p>
+<p>出于上述原因，除非另有说明, 我们将在整篇文章中假设使用cgroups v1</p>
+<h3 id="cgroup及OOM-killer"><a href="#cgroup及OOM-killer" class="headerlink" title="cgroup及OOM-killer"></a>cgroup及OOM-killer</h3><p>我们之前已经看到OOM-killer在看到操作系统内存不足时会如何介入并采取行动。随着OOM-killer的引入，OOM-killer将与cgroups一起工作，如在<a target="_blank" rel="noopener" href="https://lwn.net/Articles/761118/">Teaching the OOM killer about control groups</a>中所述的一样</p>
+<p>但是，如果OOM-killer是由于系统内存严重不足才触发的，那对于cgroups来说触发的起因是什么呢？对于cgroup，特别是在Kubernetes中设置swap被禁用的cgroup的情况下，<strong>当cgroup的内存使用量超过设置的limit限制时</strong>，OOM-killer就会起作用。</p>
+<p>OOM-killer是不是只要它的总内存使用量超过了定义的极限，哪怕是最小的数量，就会开始在cgroup内部造成破坏？不，我们从<a target="_blank" rel="noopener" href="https://www.kernel.org/doc/Documentation/cgroup-v1/memory.txt">memory</a>（第2.5节）中知道：“<strong>当cgroup超过其极限时，我们首先尝试从cgroup中回收内存，以便为cgroup所管理的新页面腾出空间。如果回收不成功，将调用OOM程序来选择并终止cgroup内最庞大的任务</strong>。最庞大的任务”实际上指的是消耗相应cgroup中最多内存的进程</p>
+<p>所以现在我们知道OOM-killer何时决定对一个cgroup采取行动，以及它的行动是什么。让我们来看看这个展开。</p>
+<h4 id="OOM场景-1：当容器超过其极限时，容器被OOM"><a href="#OOM场景-1：当容器超过其极限时，容器被OOM" class="headerlink" title="OOM场景#1：当容器超过其极限时，容器被OOM"></a>OOM场景#1：当容器超过其极限时，容器被OOM</h4><p><del>视频4–Kubernetes中调用的OOM-killer</del></p>
+<p>您可以看到一个Kubernetes pod启动，它运行一个内存泄漏工具,</p>
+<p>pod的清单为运行应用程序的容器指定了1 GiB的limit。该工具以100 MiB的块分配内存，直到OOM-killer介入，因为容器运行到1 GiB内存限制。左上方的窗口是泄漏工具分配时的原始输出，右侧的窗口跟踪pod的状态，而底部的窗口跟踪内核消息OOM-killer对于它分析的潜在受害者以及它决定最终杀死的过程都非常详尽。</p>
+<p>到现在为止，一直都还不错。事情很简单：消耗最多的内存，在我们的例子中，内存泄漏工具中运行了.NET, 在cgroup使用过多内存时被终止。</p>
+<h4 id="意外现象"><a href="#意外现象" class="headerlink" title="意外现象"></a>意外现象</h4><p>但是，让我们更进一步，考虑一个稍微不同的例子。启动一个容器，使用内存泄漏工具（下面的进程ID 15976）分配一定数量的内存（900MB）。一旦成功完成内存分配，将使用<code>kubectl exec</code>连接到容器并启动<code>bash</code>。在shell内部，启动了内存泄漏工具的一个新实例（下面的进程ID 14300），开始分配内存本身。</p>
+<p>您可以在下面看到结果。请记住，PID是在节点级别看到的，在节点级别捕获了此日志。因此，容器启动的进程没有报告的PID为1，而是机器上的实际PID。<strong>rss数据以页为单位，因此需要乘以4 KB才能获得字节大小</strong>。OOM-killer发出的几条不重要的日志被省略了：</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br></pre></td><td class="code"><pre><span class="line">Jan 16 21:33:51 aks-agentpool-20086390-vmss00003K kernel: [ 8334.895293] dotnet invoked oom-killer: gfp_mask=0xcc0(GFP_KERNEL), order=0, oom_score_adj=-997</span><br><span class="line">Jan 16 21:33:51 aks-agentpool-20086390-vmss00003K kernel: [ 8334.895296] CPU: 0 PID: 14300 Comm: dotnet Not tainted 5.4.0-1059-azure <span class="comment">#62~18.04.1-Ubuntu</span></span><br><span class="line">Jan 16 21:33:51 aks-agentpool-20086390-vmss00003K kernel: [ 8334.895297] Hardware name: Microsoft Corporation Virtual Machine/Virtual Machine, BIOS Hyper-V UEFI Release v4.1 10/27/2020</span><br><span class="line">Jan 16 21:33:51 aks-agentpool-20086390-vmss00003K kernel: [ 8334.895298] Call Trace:</span><br><span class="line">Jan 16 21:33:51 aks-agentpool-20086390-vmss00003K kernel: [ 8334.895306]  dump_stack+0x57/0x6d</span><br><span class="line">.....</span><br><span class="line">Jan 16 21:33:51 aks-agentpool-20086390-vmss00003K kernel: [ 8334.895351] memory: usage 1048576kB, <span class="built_in">limit</span> 1048576kB, failcnt 30</span><br><span class="line">Jan 16 21:33:51 aks-agentpool-20086390-vmss00003K kernel: [ 8334.895352] memory+swap: usage 0kB, <span class="built_in">limit</span> 9007199254740988kB, failcnt 0</span><br><span class="line">Jan 16 21:33:51 aks-agentpool-20086390-vmss00003K kernel: [ 8334.895353] kmem: usage 5164kB, <span class="built_in">limit</span> 9007199254740988kB, failcnt 0</span><br><span class="line">Jan 16 21:33:51 aks-agentpool-20086390-vmss00003K kernel: [ 8334.895353] Memory cgroup stats <span class="keyword">for</span> /kubepods/pod3b5e63f1-b571-407f-be00-461ed99e968f:</span><br><span class="line">Jan 16 21:33:51 aks-agentpool-20086390-vmss00003K kernel: [ 8334.895397] anon 1068539904</span><br><span class="line">Jan 16 21:33:51 aks-agentpool-20086390-vmss00003K kernel: [ 8334.895397] file 0</span><br><span class="line">.....</span><br><span class="line">Jan 16 21:33:51 aks-agentpool-20086390-vmss00003K kernel: [ 8334.895398] Tasks state (memory values <span class="keyword">in</span> pages):</span><br><span class="line">Jan 16 21:33:51 aks-agentpool-20086390-vmss00003K kernel: [ 8334.895398] [  pid  ]   uid  tgid total_vm      rss pgtables_bytes swapents oom_score_adj name</span><br><span class="line">Jan 16 21:33:51 aks-agentpool-20086390-vmss00003K kernel: [ 8334.895401] [  15885] 65535 15885      241        1    28672        0          -998 pause</span><br><span class="line">Jan 16 21:33:51 aks-agentpool-20086390-vmss00003K kernel: [ 8334.895403] [  15976]     0 15976 43026975   229846  2060288        0          -997 dotnet</span><br><span class="line">Jan 16 21:33:51 aks-agentpool-20086390-vmss00003K kernel: [ 8334.895404] [  16234]     0 16234      966      817    49152        0          -997 bash</span><br><span class="line">Jan 16 21:33:51 aks-agentpool-20086390-vmss00003K kernel: [ 8334.895406] [  14300]     0 14300 43012649    43356   581632        0          -997 dotnet</span><br><span class="line">Jan 16 21:33:51 aks-agentpool-20086390-vmss00003K kernel: [ 8334.895407] oom-kill:constraint=CONSTRAINT_MEMCG,nodemask=(null),cpuset=f038675297418b6357e95ea8ef45ee868cc97de6567a95dffa2a35d29db172bf,mems_allowed=0,oom_memcg=/kubepods/pod3b5e63f1-b571-407f-be00-461ed99e968f,task_memcg=/kubepods/pod3b5e63f1-b571-407f-be00-461ed99e968f/f038675297418b6357e95ea8ef45ee868cc97de6567a95dffa2a35d29db172bf,task=dotnet,pid=14300,uid=0</span><br><span class="line">Jan 16 21:33:51 aks-agentpool-20086390-vmss00003K kernel: [ 8334.895437] Memory cgroup out of memory: Killed process 14300 (dotnet) total-vm:172050596kB, anon-rss:148368kB, file-rss:25056kB, shmem-rss:0kB, UID:0 pgtables:568kB oom_score_adj:-997</span><br><span class="line">Jan 16 21:33:51 aks-agentpool-20086390-vmss00003K kernel: [ 8334.906653] oom_reaper: reaped process 14300 (dotnet), now anon-rss:0kB, file-rss:0kB, shmem-rss:0kB</span><br></pre></td></tr></table></figure>
+
+<p>注意，被终止的进程不是容器最初启动的进程（pid 15976），尽管它使用的内存是我们随后运行的进程消耗的内存的4倍。反而是后者被杀。在这一点上，你可能会正确地得出结论，这与分配过程有关，当整个pod的cgroup超过极限时，这会触发OOM-killer。这看起来很公平，当有另一个进程在积极分配内存并最终将内存使用量推到极限时，为什么要kill掉一个没有做任何事情的进程？此外，日志确实指出了哪个进程被OOM-killer终止了。</p>
+<p>让我们测试一下，看看当角色颠倒时会发生什么，而手动运行的泄漏工具（现在是进程id 31082）刚刚完成分配少量内存（总共60 MB，每4秒10 MB），而“主”容器进程（现在的进程id 30548）仍在分配内存（每3秒50 MB的块），直到耗尽。当整个团队超过1 GiB的限制时，谁会被kill？</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br></pre></td><td class="code"><pre><span class="line">Jan 17 21:51:19 aks-agentpool-20086390-vmss00003M kernel: [ 1856.076861] dotnet invoked oom-killer: gfp_mask=0x400dc0(GFP_KERNEL_ACCOUNT|__GFP_ZERO), order=0, oom_score_adj=-997</span><br><span class="line">Jan 17 21:51:19 aks-agentpool-20086390-vmss00003M kernel: [ 1856.076865] CPU: 1 PID: 30548 Comm: dotnet Not tainted 5.4.0-1059-azure <span class="comment">#62~18.04.1-Ubuntu</span></span><br><span class="line">Jan 17 21:51:19 aks-agentpool-20086390-vmss00003M kernel: [ 1856.076865] Hardware name: Microsoft Corporation Virtual Machine/Virtual Machine, BIOS Hyper-V UEFI Release v4.1 10/27/2020</span><br><span class="line">Jan 17 21:51:19 aks-agentpool-20086390-vmss00003M kernel: [ 1856.076866] Call Trace:</span><br><span class="line">Jan 17 21:51:19 aks-agentpool-20086390-vmss00003M kernel: [ 1856.076874]  dump_stack+0x57/0x6d</span><br><span class="line">....</span><br><span class="line">Jan 17 21:51:19 aks-agentpool-20086390-vmss00003M kernel: [ 1856.076928] memory: usage 1048576kB, <span class="built_in">limit</span> 1048576kB, failcnt 19</span><br><span class="line">Jan 17 21:51:19 aks-agentpool-20086390-vmss00003M kernel: [ 1856.076929] memory+swap: usage 0kB, <span class="built_in">limit</span> 9007199254740988kB, failcnt 0</span><br><span class="line">Jan 17 21:51:19 aks-agentpool-20086390-vmss00003M kernel: [ 1856.076930] kmem: usage 5020kB, <span class="built_in">limit</span> 9007199254740988kB, failcnt 0</span><br><span class="line">Jan 17 21:51:19 aks-agentpool-20086390-vmss00003M kernel: [ 1856.076930] Memory cgroup stats <span class="keyword">for</span> /kubepods/pod794f73d1-9b08-4fc1-b8af-fed0810cc5c2:</span><br><span class="line">Jan 17 21:51:19 aks-agentpool-20086390-vmss00003M kernel: [ 1856.076941] anon 1068421120</span><br><span class="line">Jan 17 21:51:19 aks-agentpool-20086390-vmss00003M kernel: [ 1856.076941] file 0</span><br><span class="line">....</span><br><span class="line">Jan 17 21:51:19 aks-agentpool-20086390-vmss00003M kernel: [ 1856.076941] Tasks state (memory values <span class="keyword">in</span> pages):</span><br><span class="line">Jan 17 21:51:19 aks-agentpool-20086390-vmss00003M kernel: [ 1856.076942] [  pid  ]   uid  tgid total_vm      rss pgtables_bytes swapents oom_score_adj name</span><br><span class="line">Jan 17 21:51:19 aks-agentpool-20086390-vmss00003M kernel: [ 1856.076944] [  30373] 65535 30373      241        1    24576        0          -998 pause</span><br><span class="line">Jan 17 21:51:19 aks-agentpool-20086390-vmss00003M kernel: [ 1856.076946] [  30548]     0 30548 43026962   233338  2101248        0          -997 dotnet</span><br><span class="line">Jan 17 21:51:19 aks-agentpool-20086390-vmss00003M kernel: [ 1856.076947] [  30617]     0 30617      966      799    45056        0          -997 bash</span><br><span class="line">Jan 17 21:51:19 aks-agentpool-20086390-vmss00003M kernel: [ 1856.076949] [  31082]     0 31082 43012630    39897   548864        0          -997 dotnet</span><br><span class="line">Jan 17 21:51:19 aks-agentpool-20086390-vmss00003M kernel: [ 1856.076951] oom-kill:constraint=CONSTRAINT_MEMCG,nodemask=(null),cpuset=35f19955ac068abba356c7fd9113b8e6fb1b54232564ac8d19316f80b4178fea,mems_allowed=0,oom_memcg=/kubepods/pod794f73d1-9b08-4fc1-b8af-fed0810cc5c2,task_memcg=/kubepods/pod794f73d1-9b08-4fc1-b8af-fed0810cc5c2/35f19955ac068abba356c7fd9113b8e6fb1b54232564ac8d19316f80b4178fea,task=dotnet,pid=31082,uid=0</span><br><span class="line">Jan 17 21:51:19 aks-agentpool-20086390-vmss00003M kernel: [ 1856.076993] Memory cgroup out of memory: Killed process 31082 (dotnet) total-vm:172050520kB, anon-rss:134148kB, file-rss:25440kB, shmem-rss:0kB, UID:0 pgtables:536kB oom_score_adj:-997</span><br><span class="line">Jan 17 21:51:19 aks-agentpool-20086390-vmss00003M kernel: [ 1856.089185] oom_reaper: reaped process 31082 (dotnet), now anon-rss:0kB, file-rss:0kB, shmem-rss:0kB</span><br></pre></td></tr></table></figure>
+
+<p>还有另一个令人惊讶的是：手动启动的进程分配了最少的资源，在较小的区块中且暂停时间最大的进程被kill掉了。更重要的是，首先触发OOM-killer的是在cgroup中消耗最多内存的进程。您可能会正确地说：“但是，等等，最初由容器（在我们最新的示例中是pid 30548）启动的进程有其独特的方式，内核可能会以某种方式保护它不被杀死，只要它不是其cgroup中的最后一个”。可能是这样，事实是我根本不知道为什么我们会得到这样的结果。我所知道的是，除了选择文档告诉的“最庞大的任务”之外，还有其他代码可能会影响最终选择出来到底 哪个进程被Kill掉，可参考<a target="_blank" rel="noopener" href="https://github.com/torvalds/linux/blob/v5.4/mm/oom_kill">oom_kill</a></p>
+<p>尽管最后两个例子有点让人困惑，但这可能有一个好处：<strong>一旦突破了cgroup限制，oom-killer一定会选择一个进程kill掉，但是被Kill掉的进程可能会出乎意料</strong></p>
+<p>查看内核日志，您可能发现当OOM-killer选择受害者时，<strong>内核日志中报告的任务（进程）引用了pod的cgroup。但事实是每个容器都创建了一个cgroup</strong>。如果您将<code>kubectl exec</code>进入容器中运行<code>bash</code>，则此新进程将成为容器的现有cgroup的成员。从该shell启动的任何新进程也将是同一cgroup的成员。</p>
+<p>那么，为什么我们要得到pod cgroup的统计数据，而不是容器cgroup？后者包含内存泄漏工具实例。如果您仔细查看任务状态后的消息，您可以看到触发OOM的cgroup，这就是pod。所以我们得到了pod cgroup的统计数据，因为它作为一个整体超过了限制（<a target="_blank" rel="noopener" href="https://www.ianlewis.org/en/almighty-pause-container">暂停容器</a>没有设置limit，内存泄漏容器的cgroup的limit与为pod本身创建的cgroup设置的limit相同）</p>
+<h3 id="Kubernetes和OOM-killer"><a href="#Kubernetes和OOM-killer" class="headerlink" title="Kubernetes和OOM-killer"></a>Kubernetes和OOM-killer</h3><p>继前几节之后，需要注意的是，OOM-killer决定终止cgroups中的进程虽然发在Kubernetes容器内部，<strong>但OOM-killer是一个Linux内核组件</strong>。而不是kuberntes触发的，kubernetes无法控制内核oom的行为</p>
+<p>考虑到OOM-killer的受害者被迅速终止，这有一个强有力的暗示：被杀进程没有时间进行任何清理或优雅的关闭。它永远没有机会做任何事情，因为内核永远不会给它再次运行的机会。这会让在Kubernetes中运行生产代码的人感到不安，因为您不希望任何服务的pods突然消失，特别是当它正在远程编写内容（例如，向数据库）时。你可以在这里找到这样的讨论<a target="_blank" rel="noopener" href="https://github.com/kubernetes/kubernetes/issues/40157#issuecomment-867548699">当OOM不是SIGKILL</a>.</p>
+<p>另一个重要的方面是<strong>OOM-killer不理解Kubernetes pod的概念</strong>。它甚至不知道什么是容器。<strong>容器是构建在cgroup和namespace之上的构造</strong>，因此oom-killer不<code>理解</code>容器，<strong>它只知道当一个cgroup超过其内存限制时，它必须杀死该cgroup中的至少一个任务（或进程）</strong>。这对于Kubernetes来说是一个问题，因为它在最底层处理容器。因此，让容器内的进程消失——尤其是任何不是主容器进程的进程——会让Kubernetes陷入困境：容器刚刚被条掉了进程，但还有可能pid 为1的进程还存在，但有可能它已经无法工作。这个确切的问题出现在这里的这个旧线程中<a target="_blank" rel="noopener" href="https://github.com/kubernetes/kubernetes/issues/50632">具有多个进程的容器在OOM时未终止</a>告诉容器中的子进程被终止，整个pod没有标记为OOM。正如Kubernetes的一位委员所说：<strong>只有当pid为1的程序为OOM-killer杀死时，Containers才会被标记为OOM killed</strong>，有些应用程序可以容忍非init进程的OOM kills，因此我们选择不跟踪非init进程OOM kill事件，这是预期的方式。</p>
+<p>我们在上一节的最后两个示例中看到了这个确切的场景，其中一个容器保持运行，尽管其中一个进程被OOM-killer杀死。</p>
+<p>因此，如果OOM-killer独自操作，并且可以杀死可能导致容器停止的进程，那么Kubernetes如何应对这种情况？如果pod突然消失，它就不能成功地管理pod及其容器。正如我们将在本文后面看到的<a target="_blank" rel="noopener" href="https://mihai-albert.com/2022/02/13/out-of-memory-oom-in-kubernetes-part-4-pod-evictions-oom-scenarios-and-flows-leading-to-them/#is-kubelet-killing-containers-due-to-oom">Is Kubelet killing containers due to OOM?</a></p>
+<p>Kubernete可以很方便地拿到OOM-killer事件是何时生成的，因此可以将自己的状态与每个节点内发生的情况进行协调。</p>
+<p>OOM-killer的名字让人认为，一旦它行动起来，它就会永远阻止受害者。但在处理Kubernetes时情况并非如此，因为默认情况下，如果容器终止（无论它是否成功退出），就会重新启动。在这种情况下，您将看到的结果是OOMKilled容器被无休止地重新启动（尽管有指数退避)</p>
+<p>在我们完成本节之前的最后一件事：正如我们所注意到的，一旦超过了cgroup的内存限制（当然，如果什么都不能回收），OOM-killer就相当无情了。这自然会让人怀疑，是否存在某种软限制，以避免容器突然终止，并提前通知内存正在被耗尽。即使cgroups支持<a target="_blank" rel="noopener" href="https://www.kernel.org/doc/Documentation/cgroup-v1/memory.txt">软限制</a>，Kubernetes目前还没有使用，注意，这里说的是cgroups的软限制,而不是kubelet驱逐机制中的软限制</p>
+<h3 id="OOM的运行时含义"><a href="#OOM的运行时含义" class="headerlink" title="OOM的运行时含义"></a>OOM的运行时含义</h3><p>在容器中运行的应用程序很有可能是使用runtime编写的，例如.NET或Java。但从内存分配的角度来看，这又有什么关系呢？</p>
+<p>有些语言没有运行时，比如C，它只有一个运行时库，但没有底层的“环境”运行时，你可以自由地将内存分配给你的核心内容。因此，正常情况下（通常在不使用限制最大内存的情况下，如cgroups），如果分配足够，只要操作系统允许这些分配，就可以使用所有RAM（包含swap）。</p>
+<p>还有其他语言，如Java或基于.NET平台（C#）——依赖于运行时，其中的方法不同，应用程序不自行运行并分配虚拟内存，而是由运行时来处理，此外还有其他一些事情，如将分配给一代模型的对象映射到一代模型，调用垃圾收集器等。运行时将充当应用程序和操作系统之间的中间人，因为它需要跟踪使用的对象，如果GC可以回收这些对象周围的内存，因为它们不再使用，等等。</p>
+<p>但现在我们不用关心<a target="_blank" rel="noopener" href="https://mihai-albert.com/2019/12/15/boxing-performance-in-c-analysis-and-benchmark/#too-much-of-a-surperise">运行时如何分配内存的复杂性</a>。事实上，运行时可以有适当的设置来限制应用程序可以分配的最大内存。因此，在调查应用程序无法分配内存的原因时，我们必须添加一个潜在的罪魁祸首：仅确保底层Kubernetes节点的操作系统拥有所请求的内存并且没有cgroup限制应用程序在其容器中的内存是不够的，但运行时还必须允许分配内存。。</p>
+<p>接下来的问题是，如果我们自己没有设置任何限制，为什么我们会关心运行时可以设置应用程序使用的最大内存限制这一事实？答案是，有时设置的默认值会阻止使用所有可用内存，我们将在下面看到。</p>
+<h3 id="NET"><a href="#NET" class="headerlink" title=".NET"></a>.NET</h3><p>作者注:</p>
+<p>这一节主要介绍.net程序在kubernetes中的表现，不是很重要，作者整节去掉</p>
+<h3 id="Kubernetes资源请求和限制"><a href="#Kubernetes资源请求和限制" class="headerlink" title="Kubernetes资源请求和限制"></a>Kubernetes资源请求和限制</h3><p>了解Kubernetes中的资源请求和限制意味着什么，这一点很重要，因为在文章的后面，像容器获取OOM killed和pod驱逐这样的事情将大量使用资源请求(request)，特别是限制(limit)。</p>
+<p><a target="_blank" rel="noopener" href="https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/">pod及container的资源管理</a>是Kubernetes的官方文章——尤其是前半部分——对于资源请求和限制的概念解释地非常清楚。核心思想如下：<strong>当您为Pod中的容器指定资源请求时，kube-schedule将使用此信息来决定将Pod放置在哪个节点上。当您为容器指定资源限制时，kubelet将强制执行这些限制，以便运行的容器不允许使用超过您设置的限制的资源</strong>在下面那篇<a target="_blank" rel="noopener" href="https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/#how-pods-with-resourc-limits-are-run">文章</a>,您还可以看到如何使用cgroups在后台实现这些限制。</p>
+<p>一些超越资源请求和限制概念的好文章：</p>
+<p><a target="_blank" rel="noopener" href="https://cloud.google.com/blog/products/containers-kubernetes/kubernetes-best-practices-resource-requests-and-limits">Kubernetes最佳实践：资源请求和限制</a>清晰简洁地介绍了请求和限制的概念<br><a target="_blank" rel="noopener" href="https://blog.freshtracks.io/a-deep-dive-into-kubernetes-metrics-part-3-container-resource-metrics-361c5ee46e66">深入了解Kubernetes度量-第3部分容器资源度量</a>：有一节专门介绍请求和限制，很好地描述了这些概念。我强烈建议阅读整个系列的文章，因为它非常详细地讨论了其他主题</p>
+<p>在这里，我们必须讨论pod的QoS。老实说，每次我遇到这个概念时，我只是挥挥手，想“不，我还不需要这个”；我以为我可以在不知道QoS意味着什么的情况下更快地学习OOM环境中涉及的组件是如何工作的，但最终我浪费的时间远远超过了学习这个概念所需的5分钟。它们之所以重要，有两个原因：</p>
+<blockquote>
+<ul>
+<li><p>1）当节点上的内存变得稀缺时，它们决定了pod被逐出的顺序；</p>
+</li>
+<li><p>2）它们决定了在Linux节点的memory root cgroup: <code>/sys/fs/cgroup/memory/</code>层次结构中，pod的cgroup及其容器将被放置在何处（如果kubelet开启了<code>--cgroups-per-qos＝true</code>标志，默认值开启），这反过来又可以方便地浏览到伪文件系统中的正确目录，并查看属于特定pod的cgroups的各种详细信息。</p>
+</li>
+</ul>
+</blockquote>
+<p>pod的QoS不是手动附加到pod的。这只是Kubernetes根据向该pod中的容器分配的请求和限制来决定的。本质上，Kubernetes通过一个算法来查看pod内容器上设置的请求和限制，最后为pod分配一个相应的QoS类</p>
+<blockquote>
+<ul>
+<li><p>Guaranteed_被分配给所有容器指定的资源值分别等于CPU和内存的限制值</p>
+</li>
+<li><p>Burstable_是指pod中至少有一个容器有CPU或内存请求，但不满足Guaranted_的“高”标准。</p>
+</li>
+<li><p>BestEffort_–是没有单个容器的pod的情况，它指定了至少一个CPU或内存限制或请求值。官方文章在这里<a target="_blank" rel="noopener" href="https://kubernetes.io/docs/tasks/configure-pod-container/quality-service-pod">为Pods配置服务质量</a>.</p>
+</li>
+</ul>
+</blockquote>
+<h3 id="问答"><a href="#问答" class="headerlink" title="问答"></a>问答</h3><h4 id="overcommit-2"><a href="#overcommit-2" class="headerlink" title="overcommit"></a>overcommit</h4><p><strong>Q</strong>：假设overcommit设置为禁用，除了vm之外，还有其他参数控制提交限制(commit limit)及<code>vm.overcommit_ratio</code>吗？<br><strong>A</strong>：是的，可以通过<code>vm.overcommit_kbytes</code>。注意，使用此选项将禁用<code>vm.overcommit_ ratio</code>，并在读取时使该值为0。查看<a target="_blank" rel="noopener" href="https://www.kernel.org/doc/Documentation/sysctl/vm.txt">文档</a>了解更多详情。</p>
+<p><strong>Q</strong>：Kubernetes是否在其Linux节点上使用overcommit？<br><strong>A</strong>：至少在AKS上是这样。截至目前（2021 11月），在AKS Linux节点上，overcommit策略被设置为盲目接受任何分配请求，而不检查提交限制(commit limit)–换句话说，总是过度提交,此处有<a target="_blank" rel="noopener" href="https://www.kernel.org/doc/Documentation/vm/overcommit-accounting">详细信息</a></p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">root@aks-agentpool-20086390-vmss00000E:/proc/sys/vm<span class="comment"># cat overcommit_memory</span></span><br><span class="line">1</span><br></pre></td></tr></table></figure>
+
+<p><strong>Q</strong>：你不是在之前的帖子中说过，你还没有找到在Linux中显示承诺内存大小的方法吗？<code>/proc/meminfo</code>中的Committed_AS如何？<br><strong>A</strong>：这给出了系统范围内的提交量，相当于Windows上Process Explorer的系统信息窗口<code>commit charge</code>部分。但仍然不确定如何在流程级别获取这些信息。</p>
+<p><strong>Q</strong>：如何使overcommit承诺的参数永久化？<br><strong>A</strong>：使用<code>systcl-p</code></p>
+<h4 id="OOM-killer-1"><a href="#OOM-killer-1" class="headerlink" title="OOM-killer"></a>OOM-killer</h4><p><strong>Q</strong>：在Linux下，我在哪里可以找到一个很好的解释来解释日志中的内容？我很难找到我想要的信息。<br><strong>A</strong>：从这个优秀的<a target="_blank" rel="noopener" href="https://askubuntu.com/questions/26237/difference-between-var-log-messages-var-log-syslog-and-var-log-kern-log">SO线程</a></p>
+<p><strong>Q</strong>：在上面的视频中，OOM-killer被调用，您是否必须在运行“dmesg”之前启动底层Ubuntu WSL上的rsyslog服务？<br><strong>A</strong>：不需要启动rsyslog服务，因为内核消息显示得很好。</p>
+<p><strong>Q</strong>：我并不真正关心OOM-killer的运行，但我只希望它不要kill我的进程。我该怎么做？<br><strong>A</strong>：您可能正在为流程设置<code>oom_score_adj</code>。看看这个<a target="_blank" rel="noopener" href="https://serverfault.com/questions/762017/how-to-get-the-linux-oom-killer-to-not-kill-my-process?rq=1">例子</a>了解更多信息。</p>
+<p><strong>Q</strong>：在[图1]中所示的过程必须至少使用一些RAM，对吗？<br><strong>A</strong>：当然，它本身及加载的各种模块及.NET运行时内部确实需要一些内存。</p>
+<h4 id="cgroup"><a href="#cgroup" class="headerlink" title="cgroup"></a>cgroup</h4><p><strong>Q</strong>：在哪里可以找到详细讨论cgroups的文章？<br><strong>A</strong>：除了帖子中已经提到的那些：</p>
+<ol>
+<li><p>一篇关于cgroups相关多个主题的好<a target="_blank" rel="noopener" href="https://engineering.linkedin.com/blog/2016/08/don_t-let-linux-control-groups-uncontrolled">文章</a></p>
+</li>
+<li><p>cgroup的“内存”子系统中存在的文件的详细<a target="_blank" rel="noopener" href="https://access.redhat.com/documentation/en-us/red_hat_enterprise_linux/6/html/resource_management_guide/sec-memory">列表</a></p>
+</li>
+</ol>
+<h4 id="cgroup及OOM-killer-1"><a href="#cgroup及OOM-killer-1" class="headerlink" title="cgroup及OOM-killer"></a>cgroup及OOM-killer</h4><p><strong>Q</strong>：我如何查看为pod里的容器组设置的限制？<br><strong>A</strong>：这里的文章[Pod overhead–Verify Pod cgroup limits](<a target="_blank" rel="noopener" href="https://kubernetes.io/docs/concepts/scheduling-eviction/pod-overhead/#verify-pod">https://kubernetes.io/docs/concepts/scheduling-eviction/pod-overhead/#verify-pod</a> cgroup-limits)提供了一种提取pod的内存cgroup路径的方法，并展示了如何检查pod的cgroup内存限制。</p>
+<h2 id="参考文章"><a href="#参考文章" class="headerlink" title="参考文章:"></a>参考文章:</h2><blockquote>
+<ul>
+<li><a target="_blank" rel="noopener" href="https://mihai-albert.com/2022/02/13/out-of-memory-oom-in-kubernetes-part-2-the-oom-killer-and-application-runtime-implications/">Out-of-memory (OOM) in Kubernetes &amp;#8211; Part 2: The OOM killer and application runtime implications &amp;#8211; Mihai-Albert.com</a></li>
+</ul>
+</blockquote>
+<h2 id="转载请注明出处https-izsk-me"><a href="#转载请注明出处https-izsk-me" class="headerlink" title="转载请注明出处https://izsk.me"></a>转载请注明出处<a target="_blank" rel="noopener" href="https://izsk.me/">https://izsk.me</a></h2>
+      
+    </div>
+
+    <div>
+      
+        
+<div id="wechat_subscriber" style="display: block; padding: 10px 0; margin: 20px auto; width: 100%; text-align: center">
+    <img id="wechat_subscriber_qcode" src="/images/websitecode250.png" alt=" wechat" style="width: 200px; max-width: 100%;"/>
+    <div>Scan Me To Read on Phone</div>
+</div>
+
+
+      
+    </div>
+
+    <div>
+      
+        
+  <div style="padding: 10px 0; margin: 20px auto; width: 90%; text-align: center;">
+    <div>I know you won't do this,but what if you did?</div>
+    <button id="rewardButton" disable="enable" onclick="var qr = document.getElementById('QR'); if (qr.style.display === 'none') {qr.style.display='block';} else {qr.style.display='none'}">
+      <span>赏</span>
+    </button>
+    <div id="QR" style="display: none;">
+      
+        <div id="wechat" style="display: inline-block">
+          <img id="wechat_qr" src="/images/wechatpayme.png" alt=" WeChat Pay"/>
+          <p>微信打赏</p>
+        </div>
+      
+      
+        <div id="alipay" style="display: inline-block">
+          <img id="alipay_qr" src="/images/alipayme.jpg" alt=" Alipay"/>
+          <p>支付宝打赏</p>
+        </div>
+      
+    </div>
+  </div>
+
+
+      
+    </div>
+
+
+    <footer class="post-footer">
+      
+        <div class="post-tags">
+          
+            <a href="/tags/Kubernetes/" rel="tag"># Kubernetes</a>
+          
+        </div>
+      
+
+      
+        <div class="post-nav">
+          <div class="post-nav-next post-nav-item">
+            
+              <a href="/2022/01/27/Kubernetes-pod-status-is-UnexpectedAdmissionError/" rel="next" title="pod的状态出现UnexpectedAdmissionError是什么鬼?">
+                <i class="fa fa-chevron-left"></i> pod的状态出现UnexpectedAdmissionError是什么鬼?
+              </a>
+            
+          </div>
+
+          <span class="post-nav-divider"></span>
+
+          <div class="post-nav-prev post-nav-item">
+            
+              <a href="/2022/03/25/Kubernetes-Flannel-Vxlan/" rel="prev" title="Flannel Vxlan封包原理剖析">
+                Flannel Vxlan封包原理剖析 <i class="fa fa-chevron-right"></i>
+              </a>
+            
+          </div>
+        </div>
+      
+
+      
+      
+    </footer>
+  </article>
+
+
+
+    <div class="post-spread">
+      
+    </div>
+  </div>
+
+
+          </div>
+          
+
+
+          
+  <div class="comments" id="comments">
+    
+  </div>
+
+
+        </div>
+        
+          
+  
+  <div class="sidebar-toggle">
+    <div class="sidebar-toggle-line-wrap">
+      <span class="sidebar-toggle-line sidebar-toggle-line-first"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-middle"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-last"></span>
+    </div>
+  </div>
+
+  <aside id="sidebar" class="sidebar">
+    <div class="sidebar-inner">
+
+      
+
+      
+        <ul class="sidebar-nav motion-element">
+          <li class="sidebar-nav-toc sidebar-nav-active" data-target="post-toc-wrap" >
+            文章目录
+          </li>
+          <li class="sidebar-nav-overview" data-target="site-overview">
+            站点概览
+          </li>
+        </ul>
+      
+
+      <section class="site-overview sidebar-panel">
+        <div class="site-author motion-element" itemprop="author" itemscope itemtype="http://schema.org/Person">
+          <img class="site-author-image" itemprop="image"
+               src="/images/avatar.gif"
+               alt="" />
+          <p class="site-author-name" itemprop="name"></p>
+          <p class="site-description motion-element" itemprop="description"></p>
+        </div>
+        <nav class="site-state motion-element">
+        
+          
+            <div class="site-state-item site-state-posts">
+              <a href="/archives">
+                <span class="site-state-item-count">195</span>
+                <span class="site-state-item-name">日志</span>
+              </a>
+            </div>
+          
+
+          
+            <div class="site-state-item site-state-categories">
+              <a href="/categories">
+                <span class="site-state-item-count">14</span>
+                <span class="site-state-item-name">分类</span>
+              </a>
+            </div>
+          
+
+          
+            <div class="site-state-item site-state-tags">
+              <a href="/tags">
+                <span class="site-state-item-count">14</span>
+                <span class="site-state-item-name">标签</span>
+              </a>
+            </div>
+          
+
+        </nav>
+
+        
+
+        <div class="links-of-author motion-element">
+          
+        </div>
+
+        
+        
+
+        
+        
+
+        
+
+
+      </section>
+
+      
+      <!--noindex-->
+        <section class="post-toc-wrap motion-element sidebar-panel sidebar-panel-active">
+          <div class="post-toc">
+
+            
+              
+            
+
+            
+              <div class="post-toc-content"><ol class="nav"><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%89%8D%E5%BA%8F"><span class="nav-number">1.</span> <span class="nav-text">前序</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E8%83%8C%E6%99%AF"><span class="nav-number">2.</span> <span class="nav-text">背景</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E7%BB%93%E8%AE%BA"><span class="nav-number">3.</span> <span class="nav-text">结论</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#overcommit"><span class="nav-number">3.1.</span> <span class="nav-text">overcommit</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#cgroups"><span class="nav-number">3.2.</span> <span class="nav-text">cgroups</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#kubernetes"><span class="nav-number">3.3.</span> <span class="nav-text">kubernetes</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E7%BF%BB%E8%AF%91%E5%85%A8%E6%96%87"><span class="nav-number">4.</span> <span class="nav-text">翻译全文</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#overcommit-1"><span class="nav-number">4.1.</span> <span class="nav-text">overcommit</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#OOM-killer"><span class="nav-number">4.2.</span> <span class="nav-text">OOM-killer</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#cgroups-1"><span class="nav-number">4.3.</span> <span class="nav-text">cgroups</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#cgroups%E5%8F%8AKubernetes"><span class="nav-number">4.4.</span> <span class="nav-text">cgroups及Kubernetes</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#cgroups-v2"><span class="nav-number">4.5.</span> <span class="nav-text">cgroups v2</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#cgroup%E5%8F%8AOOM-killer"><span class="nav-number">4.6.</span> <span class="nav-text">cgroup及OOM-killer</span></a><ol class="nav-child"><li class="nav-item nav-level-4"><a class="nav-link" href="#OOM%E5%9C%BA%E6%99%AF-1%EF%BC%9A%E5%BD%93%E5%AE%B9%E5%99%A8%E8%B6%85%E8%BF%87%E5%85%B6%E6%9E%81%E9%99%90%E6%97%B6%EF%BC%8C%E5%AE%B9%E5%99%A8%E8%A2%ABOOM"><span class="nav-number">4.6.1.</span> <span class="nav-text">OOM场景#1：当容器超过其极限时，容器被OOM</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#%E6%84%8F%E5%A4%96%E7%8E%B0%E8%B1%A1"><span class="nav-number">4.6.2.</span> <span class="nav-text">意外现象</span></a></li></ol></li><li class="nav-item nav-level-3"><a class="nav-link" href="#Kubernetes%E5%92%8COOM-killer"><span class="nav-number">4.7.</span> <span class="nav-text">Kubernetes和OOM-killer</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#OOM%E7%9A%84%E8%BF%90%E8%A1%8C%E6%97%B6%E5%90%AB%E4%B9%89"><span class="nav-number">4.8.</span> <span class="nav-text">OOM的运行时含义</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#NET"><span class="nav-number">4.9.</span> <span class="nav-text">.NET</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#Kubernetes%E8%B5%84%E6%BA%90%E8%AF%B7%E6%B1%82%E5%92%8C%E9%99%90%E5%88%B6"><span class="nav-number">4.10.</span> <span class="nav-text">Kubernetes资源请求和限制</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E9%97%AE%E7%AD%94"><span class="nav-number">4.11.</span> <span class="nav-text">问答</span></a><ol class="nav-child"><li class="nav-item nav-level-4"><a class="nav-link" href="#overcommit-2"><span class="nav-number">4.11.1.</span> <span class="nav-text">overcommit</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#OOM-killer-1"><span class="nav-number">4.11.2.</span> <span class="nav-text">OOM-killer</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#cgroup"><span class="nav-number">4.11.3.</span> <span class="nav-text">cgroup</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#cgroup%E5%8F%8AOOM-killer-1"><span class="nav-number">4.11.4.</span> <span class="nav-text">cgroup及OOM-killer</span></a></li></ol></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%8F%82%E8%80%83%E6%96%87%E7%AB%A0"><span class="nav-number">5.</span> <span class="nav-text">参考文章:</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E8%BD%AC%E8%BD%BD%E8%AF%B7%E6%B3%A8%E6%98%8E%E5%87%BA%E5%A4%84https-izsk-me"><span class="nav-number">6.</span> <span class="nav-text">转载请注明出处https:&#x2F;&#x2F;izsk.me</span></a></li></ol></div>
+            
+
+          </div>
+        </section>
+      <!--/noindex-->
+      
+
+    </div>
+  </aside>
+
+
+        
+      </div>
+    </main>
+
+    <footer id="footer" class="footer">
+      <div class="footer-inner">
+        <div class="copyright" >
+  
+  &copy; 
+  <span itemprop="copyrightYear">2023</span>
+  <span class="with-love">
+    <i class="fa fa-heart"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">Z.S.K.</span>
+</div>
+
+
+<div class="powered-by">
+  Supported by <a class="theme-link" target="_blank" rel="noopener" href="https://hexo.io">Hexo</a>
+</div>
+
+<div class="theme-info">
+  Theme -
+  <a class="theme-link" target="_blank" rel="noopener" href="https://github.com/iissnan/hexo-theme-next">
+    NexT.Mist
+  </a>
+</div>
+
+
+        
+
+        
+      </div>
+    </footer>
+
+    <div class="back-to-top">
+      <i class="fa fa-arrow-up"></i>
+    </div>
+  </div>
+
+  
+
+<script type="text/javascript">
+  if (Object.prototype.toString.call(window.Promise) !== '[object Function]') {
+    window.Promise = null;
+  }
+</script>
+
+
+
+
+
+
+
+
+
+  
+
+
+
+  
+  <script type="text/javascript" src="/lib/jquery/index.js?v=2.1.3"></script>
+
+  
+  <script type="text/javascript" src="/lib/fastclick/lib/fastclick.min.js?v=1.0.6"></script>
+
+  
+  <script type="text/javascript" src="/lib/jquery_lazyload/jquery.lazyload.js?v=1.9.7"></script>
+
+  
+  <script type="text/javascript" src="/lib/velocity/velocity.min.js?v=1.2.1"></script>
+
+  
+  <script type="text/javascript" src="/lib/velocity/velocity.ui.min.js?v=1.2.1"></script>
+
+  
+  <script type="text/javascript" src="/lib/fancybox/source/jquery.fancybox.pack.js?v=2.1.5"></script>
+
+
+  
+
+
+  <script type="text/javascript" src="/js/src/utils.js?v=5.1.0"></script>
+
+  <script type="text/javascript" src="/js/src/motion.js?v=5.1.0"></script>
+
+
+
+  
+  
+
+  
+  <script type="text/javascript" src="/js/src/scrollspy.js?v=5.1.0"></script>
+<script type="text/javascript" src="/js/src/post-details.js?v=5.1.0"></script>
+
+
+
+  
+
+
+  <script type="text/javascript" src="/js/src/bootstrap.js?v=5.1.0"></script>
+
+
+
+  
+
+
+
+  
+
+
+
+
+	
+
+
+
+
+
+  
+
+
+
+
+  
+  
+  <script type="text/javascript">
+    // Popup Window;
+    var isfetched = false;
+    // Search DB path;
+    var search_path = "search.xml";
+    if (search_path.length == 0) {
+      search_path = "search.xml";
+    }
+    var path = "/" + search_path;
+    // monitor main search box;
+
+    function proceedsearch() {
+      $("body").append('<div class="popoverlay">').css('overflow', 'hidden');
+      $('.popup').toggle();
+    }
+    // search function;
+    var searchFunc = function(path, search_id, content_id) {
+      'use strict';
+      $.ajax({
+        url: path,
+        dataType: "xml",
+        async: true,
+        success: function( xmlResponse ) {
+          // get the contents from search data
+          isfetched = true;
+          $('.popup').detach().appendTo('.header-inner');
+          var datas = $( "entry", xmlResponse ).map(function() {
+            return {
+              title: $( "title", this ).text(),
+              content: $("content",this).text(),
+              url: $( "url" , this).text()
+            };
+          }).get();
+          var $input = document.getElementById(search_id);
+          var $resultContent = document.getElementById(content_id);
+          $input.addEventListener('input', function(){
+            var matchcounts = 0;
+            var str='<ul class=\"search-result-list\">';
+            var keywords = this.value.trim().toLowerCase().split(/[\s\-]+/);
+            $resultContent.innerHTML = "";
+            if (this.value.trim().length > 1) {
+              // perform local searching
+              datas.forEach(function(data) {
+                var isMatch = false;
+                var content_index = [];
+                var data_title = data.title.trim().toLowerCase();
+                var data_content = data.content.trim().replace(/<[^>]+>/g,"").toLowerCase();
+                var data_url = decodeURIComponent(data.url);
+                var index_title = -1;
+                var index_content = -1;
+                var first_occur = -1;
+                // only match artiles with not empty titles and contents
+                if(data_title != '') {
+                  keywords.forEach(function(keyword, i) {
+                    index_title = data_title.indexOf(keyword);
+                    index_content = data_content.indexOf(keyword);
+                    if( index_title >= 0 || index_content >= 0 ){
+                      isMatch = true;
+                      if (i == 0) {
+                        first_occur = index_content;
+                      }
+                    }
+
+                  });
+                }
+                // show search results
+                if (isMatch) {
+                  matchcounts += 1;
+                  str += "<li><a href='"+ data_url +"' class='search-result-title'>"+ data_title +"</a>";
+                  var content = data.content.trim().replace(/<[^>]+>/g,"");
+                  if (first_occur >= 0) {
+                    // cut out 100 characters
+                    var start = first_occur - 20;
+                    var end = first_occur + 80;
+                    if(start < 0){
+                      start = 0;
+                    }
+                    if(start == 0){
+                      end = 50;
+                    }
+                    if(end > content.length){
+                      end = content.length;
+                    }
+                    var match_content = content.substring(start, end);
+                    // highlight all keywords
+                    keywords.forEach(function(keyword){
+                      var regS = new RegExp(keyword, "gi");
+                      match_content = match_content.replace(regS, "<b class=\"search-keyword\">"+keyword+"</b>");
+                    });
+
+                    str += "<p class=\"search-result\">" + match_content +"...</p>"
+                  }
+                  str += "</li>";
+                }
+              })};
+            str += "</ul>";
+            if (matchcounts == 0) { str = '<div id="no-result"><i class="fa fa-frown-o fa-5x" /></div>' }
+            if (keywords == "") { str = '<div id="no-result"><i class="fa fa-search fa-5x" /></div>' }
+            $resultContent.innerHTML = str;
+          });
+          proceedsearch();
+        }
+      });}
+
+    // handle and trigger popup window;
+    $('.popup-trigger').click(function(e) {
+      e.stopPropagation();
+      if (isfetched == false) {
+        searchFunc(path, 'local-search-input', 'local-search-result');
+      } else {
+        proceedsearch();
+      };
+    });
+
+    $('.popup-btn-close').click(function(e){
+      $('.popup').hide();
+      $(".popoverlay").remove();
+      $('body').css('overflow', '');
+    });
+    $('.popup').click(function(e){
+      e.stopPropagation();
+    });
+  </script>
+
+
+  
+
+  
+
+  
+
+  
+
+
+</body>
+</html>
