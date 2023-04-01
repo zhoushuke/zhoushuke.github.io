@@ -1,0 +1,884 @@
+<!doctype html>
+
+
+
+  
+
+
+<html class="theme-next mist use-motion" lang="zh-Hans">
+<head>
+  <meta charset="UTF-8"/>
+<meta http-equiv="X-UA-Compatible" content="IE=edge" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1"/>
+
+
+
+<meta http-equiv="Cache-Control" content="no-transform" />
+<meta http-equiv="Cache-Control" content="no-siteapp" />
+
+
+
+
+
+
+
+
+
+
+
+
+  
+  
+  <link href="/lib/fancybox/source/jquery.fancybox.css?v=2.1.5" rel="stylesheet" type="text/css" />
+
+
+
+
+  
+  
+  
+  
+
+  
+    
+    
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+    
+    
+    <link href="//fonts.googleapis.com/css?family=Lato:300,300italic,400,400italic,700,700italic&subset=latin,latin-ext" rel="stylesheet" type="text/css">
+  
+
+
+
+
+
+
+<link href="/lib/font-awesome/css/font-awesome.min.css?v=4.6.2" rel="stylesheet" type="text/css" />
+
+<link href="/css/main.css?v=5.1.0" rel="stylesheet" type="text/css" />
+
+
+  <meta name="keywords" content="Kubernetes," />
+
+
+
+
+
+
+
+
+  <link rel="shortcut icon" type="image/x-icon" href="/favicon.ico?v=5.1.0" />
+
+
+
+
+
+
+<meta name="description" content="PodPreset是一种K8sAPI资源，用于在创建 Pod 时注入其他运行时需要的信息，这些信息包括 secrets、volume mounts、environment variables等，我们可以使用标签选择器来指定某个或某些 Pod，来将 PodPreset 预设信息应用上去。使用 PodPreset 的好处就是我们可以将一些常用 Pod 预设信息配置为模板，这样就不需要显式为每个 Pod">
+<meta property="og:type" content="article">
+<meta property="og:title" content="Kubernetes学习(podpreset的平替)">
+<meta property="og:url" content="https://zhoushuke.github.io/2023/03/30/Kubernetes-podpreset/index.html">
+<meta property="og:site_name" content="Z.S.K.&#39;s Records">
+<meta property="og:description" content="PodPreset是一种K8sAPI资源，用于在创建 Pod 时注入其他运行时需要的信息，这些信息包括 secrets、volume mounts、environment variables等，我们可以使用标签选择器来指定某个或某些 Pod，来将 PodPreset 预设信息应用上去。使用 PodPreset 的好处就是我们可以将一些常用 Pod 预设信息配置为模板，这样就不需要显式为每个 Pod">
+<meta property="og:locale">
+<meta property="article:published_time" content="2023-03-30T05:30:53.000Z">
+<meta property="article:modified_time" content="2023-04-01T08:58:20.120Z">
+<meta property="article:author" content="Z.S.K.">
+<meta property="article:tag" content="Kubernetes">
+<meta name="twitter:card" content="summary">
+
+
+
+<script type="text/javascript" id="hexo.configurations">
+  var NexT = window.NexT || {};
+  var CONFIG = {
+    root: '',
+    scheme: 'Mist',
+    sidebar: {"position":"left","display":"post"},
+    fancybox: true,
+    motion: true,
+    duoshuo: {
+      userId: 'undefined',
+      author: '博主'
+    },
+    algolia: {
+      applicationID: '',
+      apiKey: '',
+      indexName: '',
+      hits: {"per_page":10},
+      labels: {"input_placeholder":"Search for Posts","hits_empty":"We didn't find any results for the search: ${query}","hits_stats":"${hits} results found in ${time} ms"}
+    }
+  };
+</script>
+
+
+
+  <link rel="canonical" href="https://zhoushuke.github.io/2023/03/30/Kubernetes-podpreset/"/>
+
+
+
+
+
+  <title> Kubernetes学习(podpreset的平替) | Z.S.K.'s Records </title>
+<meta name="generator" content="Hexo 6.2.0"></head>
+
+<body itemscope itemtype="http://schema.org/WebPage" lang="zh-Hans">
+
+  
+
+
+
+
+
+
+
+
+
+
+  
+  
+    
+  
+
+  <div class="container one-collumn sidebar-position-left page-post-detail ">
+    <div class="headband"></div>
+
+    <header id="header" class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-meta ">
+  
+
+  <div class="custom-logo-site-title">
+    <a href="/"  class="brand" rel="start">
+      <span class="logo-line-before"><i></i></span>
+      <span class="site-title">Z.S.K.'s Records</span>
+      <span class="logo-line-after"><i></i></span>
+    </a>
+  </div>
+    
+      <p class="site-subtitle"></p>
+    
+</div>
+
+<div class="site-nav-toggle">
+  <button>
+    <span class="btn-bar"></span>
+    <span class="btn-bar"></span>
+    <span class="btn-bar"></span>
+  </button>
+</div>
+
+<nav class="site-nav">
+  
+
+  
+    <ul id="menu" class="menu">
+      
+        
+        <li class="menu-item menu-item-home">
+          <a href="/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-home"></i> <br />
+            
+            首页
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-categories">
+          <a href="/categories" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-th"></i> <br />
+            
+            分类
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-about">
+          <a href="/about/ZSK-Profile.pdf" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-user"></i> <br />
+            
+            简历
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-archives">
+          <a href="/archives" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-archive"></i> <br />
+            
+            归档
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-tags">
+          <a href="/tags" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-tags"></i> <br />
+            
+            标签
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-commonweal">
+          <a href="/404.html" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-heartbeat"></i> <br />
+            
+            公益404
+          </a>
+        </li>
+      
+
+      
+        <li class="menu-item menu-item-search">
+          
+            <a href="javascript:;" class="popup-trigger">
+          
+            
+              <i class="menu-item-icon fa fa-search fa-fw"></i> <br />
+            
+            搜索
+          </a>
+        </li>
+      
+    </ul>
+  
+
+  
+    <div class="site-search">
+      
+  <div class="popup">
+ <span class="search-icon fa fa-search"></span>
+ <input type="text" id="local-search-input">
+ <div id="local-search-result"></div>
+ <span class="popup-btn-close">close</span>
+</div>
+
+
+    </div>
+  
+</nav>
+
+
+
+ </div>
+    </header>
+
+    <main id="main" class="main">
+      <div class="main-inner">
+        <div class="content-wrap">
+          <div id="content" class="content">
+            
+
+  <div id="posts" class="posts-expand">
+    
+
+  
+
+  
+  
+  
+
+  <article class="post post-type-normal " itemscope itemtype="http://schema.org/Article">
+  <link itemprop="mainEntityOfPage" href="https://zhoushuke.github.io/2023/03/30/Kubernetes-podpreset/">
+
+  <span style="display:none" itemprop="author" itemscope itemtype="http://schema.org/Person">
+    <meta itemprop="name" content="">
+    <meta itemprop="description" content="">
+    <meta itemprop="image" content="/images/avatar.gif">
+  </span>
+
+  <span style="display:none" itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+    <meta itemprop="name" content="Z.S.K.'s Records">
+    <span style="display:none" itemprop="logo" itemscope itemtype="http://schema.org/ImageObject">
+      <img style="display:none;" itemprop="url image" alt="Z.S.K.'s Records" src="">
+    </span>
+  </span>
+
+    
+      <header class="post-header">
+
+        
+        
+          <h1 class="post-title" itemprop="name headline">
+            
+            
+              
+                Kubernetes学习(podpreset的平替)
+              
+            
+          </h1>
+        
+
+        <div class="post-meta">
+          <span class="post-time">
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">发表于</span>
+              
+              <time title="Post created" itemprop="dateCreated datePublished" datetime="2023-03-30T13:30:53+08:00">
+                2023-03-30
+              </time>
+            
+
+            
+
+            
+          </span>
+
+          
+            <span class="post-category" >
+            
+              <span class="post-meta-divider">|</span>
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-folder-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">分类于</span>
+              
+              
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/Kubernetes/" itemprop="url" rel="index">
+                    <span itemprop="name">Kubernetes</span>
+                  </a>
+                </span>
+
+                
+                
+              
+            </span>
+          
+
+          
+            
+          
+
+          
+
+          
+          
+
+          
+
+          
+
+        </div>
+      </header>
+    
+
+
+    <div class="post-body" itemprop="articleBody">
+
+      
+      
+
+      
+        <p>PodPreset是一种K8sAPI资源，用于在创建 Pod 时注入其他运行时需要的信息，这些信息包括 secrets、volume mounts、environment variables等，我们可以使用标签选择器来指定某个或某些 Pod，来将 PodPreset 预设信息应用上去。使用 PodPreset 的好处就是我们可以将一些常用 Pod 预设信息配置为模板，这样就不需要显式为每个 Pod 提供所有信息，简化 Pod 初始化配置，还能起到配置统一的效果.</p>
+<span id="more"></span>
+
+<p>但是，这么好的功能在kubernetes v1.20的版本中居然给移移了，详情<a target="_blank" rel="noopener" href="https://github.com/kubernetes/kubernetes/pull/94090">issue</a>，从issue可以看出，大家对社区移除podpreset还是比较可惜的<br>不过，问题也不大，谁还没有一个平替不是, 官方支持的podpreset被移除，那么就用CRD给补回来，好在，早已有人写了一个可直接使用，这对于在集群中已经使用了podpreset功能，又想把k8s版本升级到v1.20之上的人是个福音.</p>
+<p>不多说，上<a target="_blank" rel="noopener" href="https://github.com/redhat-cop/podpreset-webhook">链接</a></p>
+<h3 id="deploy"><a href="#deploy" class="headerlink" title="deploy"></a>deploy</h3><p>部署也非常简单, 将代码从github拉取下来之后</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">make deploy IMG=quay.io/redhat-cop/podpreset-webhook:latest</span><br><span class="line"><span class="comment"># quay.io/redhat-cop/podpreset-webhook:latest是官方编译好的镜像</span></span><br></pre></td></tr></table></figure>
+<p>成功后会将相关的资源发布到集群中.</p>
+<h3 id="example"><a href="#example" class="headerlink" title="example"></a>example</h3><p>需要对某个namespace中的pod统一挂载多个hostpath对象</p>
+<figure class="highlight yaml"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br></pre></td><td class="code"><pre><span class="line"><span class="attr">apiVersion:</span> <span class="string">redhatcop.redhat.io/vlalphal</span> </span><br><span class="line"><span class="attr">kind:</span> <span class="string">PodPreset</span></span><br><span class="line"><span class="attr">metadata:</span></span><br><span class="line">  <span class="attr">name:</span> <span class="string">pp-hostpath-dira-dirb</span></span><br><span class="line">  <span class="attr">namespace:</span> <span class="string">test</span></span><br><span class="line"><span class="attr">spec:</span></span><br><span class="line">  <span class="string">volumeMounts</span></span><br><span class="line">    <span class="bullet">-</span> <span class="attr">mountPath:</span> <span class="string">/opt/lib/dira</span> </span><br><span class="line">      <span class="attr">name:</span> <span class="string">dira-volume</span></span><br><span class="line">      <span class="attr">readonly:</span> <span class="literal">true</span></span><br><span class="line">    <span class="bullet">-</span> <span class="attr">mountPath:</span> <span class="string">/data/dirb</span> </span><br><span class="line">      <span class="attr">name:</span> <span class="string">dirb-volume</span> </span><br><span class="line">  <span class="string">volumes</span></span><br><span class="line">    <span class="bullet">-</span> <span class="attr">name:</span> <span class="string">dira-volume</span></span><br><span class="line">      <span class="attr">hostPath:</span></span><br><span class="line">        <span class="attr">path:</span> <span class="string">/opt/lib/dira</span></span><br><span class="line">    <span class="bullet">-</span> <span class="attr">name:</span> <span class="string">dirb-volume</span></span><br><span class="line">      <span class="attr">hostPath:</span></span><br><span class="line">        <span class="attr">path:</span> <span class="string">/data/dirb</span></span><br></pre></td></tr></table></figure>
+<p>将这个yaml发布到集群中即可<br>这里要注意，该yaml是对test namespace中的所有pod都生效的，如果需要对该namespace某些pod生效，该如何操作呢?可以使用matchLabels，比如</p>
+<figure class="highlight yaml"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br></pre></td><td class="code"><pre><span class="line"><span class="attr">apiVersion:</span> <span class="string">redhatcop.redhat.io/vlalphal</span> </span><br><span class="line"><span class="attr">kind:</span> <span class="string">PodPreset</span></span><br><span class="line"><span class="attr">metadata:</span></span><br><span class="line">  <span class="attr">name:</span> <span class="string">pp-hostpath-dira-dirb</span></span><br><span class="line">  <span class="attr">namespace:</span> <span class="string">test</span></span><br><span class="line"><span class="attr">spec:</span></span><br><span class="line">  <span class="attr">selector:</span></span><br><span class="line">    <span class="attr">podpreset:</span> <span class="string">enable</span> </span><br><span class="line">  <span class="string">volumeMounts</span></span><br><span class="line">    <span class="bullet">-</span> <span class="attr">mountPath:</span> <span class="string">/opt/lib/dira</span> </span><br><span class="line">      <span class="attr">name:</span> <span class="string">dira-volume</span></span><br><span class="line">      <span class="attr">readonly:</span> <span class="literal">true</span></span><br><span class="line">    <span class="bullet">-</span> <span class="attr">mountPath:</span> <span class="string">/data/dirb</span> </span><br><span class="line">      <span class="attr">name:</span> <span class="string">dirb-volume</span> </span><br><span class="line">  <span class="string">volumes</span></span><br><span class="line">    <span class="bullet">-</span> <span class="attr">name:</span> <span class="string">dira-volume</span></span><br><span class="line">      <span class="attr">hostPath:</span></span><br><span class="line">        <span class="attr">path:</span> <span class="string">/opt/lib/dira</span></span><br><span class="line">    <span class="bullet">-</span> <span class="attr">name:</span> <span class="string">dirb-volume</span></span><br><span class="line">      <span class="attr">hostPath:</span></span><br><span class="line">        <span class="attr">path:</span> <span class="string">/data/dirb</span></span><br></pre></td></tr></table></figure>
+<p>这样的话，需要挂载hostpath的pod添加podpreset: enable label即可.</p>
+<h3 id="fix"><a href="#fix" class="headerlink" title="fix"></a>fix</h3><p>不过，对于使用label selector时，podpreset-webhook有个bug会导致label不生效，我这里fix了一下，修改了lable生效逻辑<br>主要代码调整在<code>filterPodpresets</code>逻辑中:</p>
+<figure class="highlight golang"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">// filterPodPresets returns list of PodPresets which match given Pod.</span></span><br><span class="line"><span class="function"><span class="keyword">func</span> <span class="title">filterPodPresets</span><span class="params">(logger logr.Logger, list redhatcopv1alpha1.PodPresetList, pod *corev1.Pod)</span></span> ([]*redhatcopv1alpha1.PodPreset, <span class="type">error</span>) &#123;</span><br><span class="line">  <span class="keyword">var</span> matchingPPs []*redhatcopv1alpha1.PodPreset</span><br><span class="line"></span><br><span class="line">  logger.Info(<span class="string">&quot;pod.GetName()=&quot;</span> + pod.GetName())</span><br><span class="line"></span><br><span class="line">  <span class="comment">// fixed this</span></span><br><span class="line">  <span class="keyword">for</span> i, pp := <span class="keyword">range</span> list.Items &#123;</span><br><span class="line"></span><br><span class="line">    selector, err := metav1.LabelSelectorAsSelector(&amp;pp.Spec.Selector)</span><br><span class="line">    <span class="keyword">if</span> err != <span class="literal">nil</span> &#123;</span><br><span class="line">      <span class="keyword">return</span> <span class="literal">nil</span>, fmt.Errorf(<span class="string">&quot;label selector conversion failed: %v for selector: %v&quot;</span>, pp.Spec.Selector, err)</span><br><span class="line">    &#125;</span><br><span class="line">    logger.Info(<span class="string">&quot;selector.String()=&quot;</span> + selector.String())</span><br><span class="line">    logger.Info(<span class="string">&quot;labels.Set(pod.Labels).String()=&quot;</span> + labels.Set(pod.Labels).String())</span><br><span class="line"></span><br><span class="line">    podnamerequiredvalue, found := selector.RequiresExactMatch(<span class="string">&quot;podnamerequired&quot;</span>)</span><br><span class="line">    logger.Info(<span class="string">&quot;checking if found RequiresExactMatch podnamerequired&quot;</span>)</span><br><span class="line"></span><br><span class="line">    <span class="keyword">if</span> found &#123;</span><br><span class="line">      logger.Info(<span class="string">&quot;podnamerequiredvalue=&quot;</span> + podnamerequiredvalue)</span><br><span class="line">      <span class="keyword">if</span> podnamerequiredvalue != pod.GetName() &#123;</span><br><span class="line">        logger.Info(<span class="string">&quot;podnamerequiredvalue not matching the pod name:&quot;</span> + pod.GetName() + <span class="string">&quot;!=&quot;</span> + podnamerequiredvalue + <span class="string">&quot;=====&gt; next loop&quot;</span>)</span><br><span class="line">        <span class="keyword">continue</span></span><br><span class="line">      &#125; <span class="keyword">else</span> &#123;</span><br><span class="line">        logger.Info(<span class="string">&quot;podnamerequiredvalue matching pod:&quot;</span> + pod.GetName() + <span class="string">&quot;==&quot;</span> + podnamerequiredvalue)</span><br><span class="line">        <span class="comment">// check if general matching</span></span><br><span class="line">        lbls := pod.Labels</span><br><span class="line">        lbls[<span class="string">&quot;podnamerequired&quot;</span>] = pod.GetName()</span><br><span class="line">        logger.Info(<span class="string">&quot;labels.Set(lbls).String()=&quot;</span> + labels.Set(lbls).String())</span><br><span class="line">        <span class="comment">// check if the pod labels match the selector</span></span><br><span class="line">        <span class="keyword">if</span> !selector.Matches(labels.Set(lbls)) &#123;</span><br><span class="line">          logger.Info(<span class="string">&quot;!selector.Matches(labels.Set(lbls)=====&gt; next loop&quot;</span>)</span><br><span class="line">          <span class="keyword">continue</span></span><br><span class="line">        &#125;</span><br><span class="line">      &#125;</span><br><span class="line">    &#125; <span class="keyword">else</span> &#123;</span><br><span class="line">      <span class="comment">// check if the pod labels match the selector (generic case, no requirements on pod name)</span></span><br><span class="line">      <span class="keyword">if</span> !selector.Matches(labels.Set(pod.Labels)) &#123;</span><br><span class="line">        logger.Info(<span class="string">&quot;!selector.Matches(labels.Set(lbls)=====&gt; next loop&quot;</span>)</span><br><span class="line">        <span class="keyword">continue</span></span><br><span class="line">      &#125;</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="comment">// fixed this</span></span><br><span class="line">    matchingPPs = <span class="built_in">append</span>(matchingPPs, &amp;list.Items[i])</span><br><span class="line">  &#125;</span><br><span class="line">  <span class="keyword">if</span> <span class="built_in">len</span>(matchingPPs) == <span class="number">0</span> &#123;</span><br><span class="line">    logger.Info(<span class="string">&quot;######### no final preset for pod=&quot;</span> + pod.GetName())</span><br><span class="line">  &#125; <span class="keyword">else</span> &#123;</span><br><span class="line">    <span class="keyword">for</span> _, ppr := <span class="keyword">range</span> matchingPPs &#123;</span><br><span class="line">      logger.Info(<span class="string">&quot;##############final preset for pod=&quot;</span> + pod.GetName() + <span class="string">&quot; is name=&quot;</span> + ppr.GetName())</span><br><span class="line">    &#125;</span><br><span class="line">  &#125;</span><br><span class="line">  <span class="keyword">return</span> matchingPPs, <span class="literal">nil</span></span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>代码修改后重启make deploy即可<br>最终的代码repo可见<a target="_blank" rel="noopener" href="https://github.com/zhoushuke/podpreset-webhook">podpreset-webhook</a></p>
+<p>完工.</p>
+<h3 id="参考文章"><a href="#参考文章" class="headerlink" title="参考文章:"></a><strong>参考文章:</strong></h3><blockquote>
+<ul>
+<li><a target="_blank" rel="noopener" href="https://github.com/redhat-cop/podpreset-webhook">https://github.com/redhat-cop/podpreset-webhook</a></li>
+<li><a target="_blank" rel="noopener" href="https://github.com/zhoushuke/podpreset-webhook">https://github.com/zhoushuke/podpreset-webhook</a></li>
+<li><a target="_blank" rel="noopener" href="http://pwittrock.github.io/docs/tasks/inject-data-application/podpreset">http://pwittrock.github.io/docs/tasks/inject-data-application/podpreset</a></li>
+<li><a target="_blank" rel="noopener" href="https://blog.csdn.net/aixiaoyang168/article/details/94998390">https://blog.csdn.net/aixiaoyang168/article/details/94998390</a></li>
+<li><a target="_blank" rel="noopener" href="https://github.com/kubernetes/kubernetes/pull/94090">https://github.com/kubernetes/kubernetes/pull/94090</a></li>
+</ul>
+</blockquote>
+<h3 id="转载请注明原作者-周淑科，出处https-izsk-me"><a href="#转载请注明原作者-周淑科，出处https-izsk-me" class="headerlink" title="转载请注明原作者: 周淑科，出处https://izsk.me"></a><strong>转载请注明原作者: 周淑科，出处<a target="_blank" rel="noopener" href="https://izsk.me/">https://izsk.me</a></strong></h3>
+      
+    </div>
+
+    <div>
+      
+        
+<div id="wechat_subscriber" style="display: block; padding: 10px 0; margin: 20px auto; width: 100%; text-align: center">
+    <img id="wechat_subscriber_qcode" src="/images/websitecode250.png" alt=" wechat" style="width: 200px; max-width: 100%;"/>
+    <div>Scan Me To Read on Phone</div>
+</div>
+
+
+      
+    </div>
+
+    <div>
+      
+        
+  <div style="padding: 10px 0; margin: 20px auto; width: 90%; text-align: center;">
+    <div>I know you won't do this,but what if you did?</div>
+    <button id="rewardButton" disable="enable" onclick="var qr = document.getElementById('QR'); if (qr.style.display === 'none') {qr.style.display='block';} else {qr.style.display='none'}">
+      <span>赏</span>
+    </button>
+    <div id="QR" style="display: none;">
+      
+        <div id="wechat" style="display: inline-block">
+          <img id="wechat_qr" src="/images/wechatpayme.png" alt=" WeChat Pay"/>
+          <p>微信打赏</p>
+        </div>
+      
+      
+        <div id="alipay" style="display: inline-block">
+          <img id="alipay_qr" src="/images/alipayme.jpg" alt=" Alipay"/>
+          <p>支付宝打赏</p>
+        </div>
+      
+    </div>
+  </div>
+
+
+      
+    </div>
+
+
+    <footer class="post-footer">
+      
+        <div class="post-tags">
+          
+            <a href="/tags/Kubernetes/" rel="tag"># Kubernetes</a>
+          
+        </div>
+      
+
+      
+        <div class="post-nav">
+          <div class="post-nav-next post-nav-item">
+            
+              <a href="/2023/03/20/Kubernetes-prombles/" rel="next" title="Kubernetes学习(Kubernetes踩坑记)">
+                <i class="fa fa-chevron-left"></i> Kubernetes学习(Kubernetes踩坑记)
+              </a>
+            
+          </div>
+
+          <span class="post-nav-divider"></span>
+
+          <div class="post-nav-prev post-nav-item">
+            
+          </div>
+        </div>
+      
+
+      
+      
+    </footer>
+  </article>
+
+
+
+    <div class="post-spread">
+      
+    </div>
+  </div>
+
+
+          </div>
+          
+
+
+          
+  <div class="comments" id="comments">
+    
+  </div>
+
+
+        </div>
+        
+          
+  
+  <div class="sidebar-toggle">
+    <div class="sidebar-toggle-line-wrap">
+      <span class="sidebar-toggle-line sidebar-toggle-line-first"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-middle"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-last"></span>
+    </div>
+  </div>
+
+  <aside id="sidebar" class="sidebar">
+    <div class="sidebar-inner">
+
+      
+
+      
+        <ul class="sidebar-nav motion-element">
+          <li class="sidebar-nav-toc sidebar-nav-active" data-target="post-toc-wrap" >
+            文章目录
+          </li>
+          <li class="sidebar-nav-overview" data-target="site-overview">
+            站点概览
+          </li>
+        </ul>
+      
+
+      <section class="site-overview sidebar-panel">
+        <div class="site-author motion-element" itemprop="author" itemscope itemtype="http://schema.org/Person">
+          <img class="site-author-image" itemprop="image"
+               src="/images/avatar.gif"
+               alt="" />
+          <p class="site-author-name" itemprop="name"></p>
+          <p class="site-description motion-element" itemprop="description"></p>
+        </div>
+        <nav class="site-state motion-element">
+        
+          
+            <div class="site-state-item site-state-posts">
+              <a href="/archives">
+                <span class="site-state-item-count">197</span>
+                <span class="site-state-item-name">日志</span>
+              </a>
+            </div>
+          
+
+          
+            <div class="site-state-item site-state-categories">
+              <a href="/categories">
+                <span class="site-state-item-count">14</span>
+                <span class="site-state-item-name">分类</span>
+              </a>
+            </div>
+          
+
+          
+            <div class="site-state-item site-state-tags">
+              <a href="/tags">
+                <span class="site-state-item-count">14</span>
+                <span class="site-state-item-name">标签</span>
+              </a>
+            </div>
+          
+
+        </nav>
+
+        
+
+        <div class="links-of-author motion-element">
+          
+        </div>
+
+        
+        
+
+        
+        
+
+        
+
+
+      </section>
+
+      
+      <!--noindex-->
+        <section class="post-toc-wrap motion-element sidebar-panel sidebar-panel-active">
+          <div class="post-toc">
+
+            
+              
+            
+
+            
+              <div class="post-toc-content"><ol class="nav"><li class="nav-item nav-level-3"><a class="nav-link" href="#deploy"><span class="nav-number">1.</span> <span class="nav-text">deploy</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#example"><span class="nav-number">2.</span> <span class="nav-text">example</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#fix"><span class="nav-number">3.</span> <span class="nav-text">fix</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E5%8F%82%E8%80%83%E6%96%87%E7%AB%A0"><span class="nav-number">4.</span> <span class="nav-text">参考文章:</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E8%BD%AC%E8%BD%BD%E8%AF%B7%E6%B3%A8%E6%98%8E%E5%8E%9F%E4%BD%9C%E8%80%85-%E5%91%A8%E6%B7%91%E7%A7%91%EF%BC%8C%E5%87%BA%E5%A4%84https-izsk-me"><span class="nav-number">5.</span> <span class="nav-text">转载请注明原作者: 周淑科，出处https:&#x2F;&#x2F;izsk.me</span></a></li></ol></div>
+            
+
+          </div>
+        </section>
+      <!--/noindex-->
+      
+
+    </div>
+  </aside>
+
+
+        
+      </div>
+    </main>
+
+    <footer id="footer" class="footer">
+      <div class="footer-inner">
+        <div class="copyright" >
+  
+  &copy; 
+  <span itemprop="copyrightYear">2023</span>
+  <span class="with-love">
+    <i class="fa fa-heart"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">Z.S.K.</span>
+</div>
+
+
+<div class="powered-by">
+  Supported by <a class="theme-link" target="_blank" rel="noopener" href="https://hexo.io">Hexo</a>
+</div>
+
+<div class="theme-info">
+  Theme -
+  <a class="theme-link" target="_blank" rel="noopener" href="https://github.com/iissnan/hexo-theme-next">
+    NexT.Mist
+  </a>
+</div>
+
+
+        
+
+        
+      </div>
+    </footer>
+
+    <div class="back-to-top">
+      <i class="fa fa-arrow-up"></i>
+    </div>
+  </div>
+
+  
+
+<script type="text/javascript">
+  if (Object.prototype.toString.call(window.Promise) !== '[object Function]') {
+    window.Promise = null;
+  }
+</script>
+
+
+
+
+
+
+
+
+
+  
+
+
+
+  
+  <script type="text/javascript" src="/lib/jquery/index.js?v=2.1.3"></script>
+
+  
+  <script type="text/javascript" src="/lib/fastclick/lib/fastclick.min.js?v=1.0.6"></script>
+
+  
+  <script type="text/javascript" src="/lib/jquery_lazyload/jquery.lazyload.js?v=1.9.7"></script>
+
+  
+  <script type="text/javascript" src="/lib/velocity/velocity.min.js?v=1.2.1"></script>
+
+  
+  <script type="text/javascript" src="/lib/velocity/velocity.ui.min.js?v=1.2.1"></script>
+
+  
+  <script type="text/javascript" src="/lib/fancybox/source/jquery.fancybox.pack.js?v=2.1.5"></script>
+
+
+  
+
+
+  <script type="text/javascript" src="/js/src/utils.js?v=5.1.0"></script>
+
+  <script type="text/javascript" src="/js/src/motion.js?v=5.1.0"></script>
+
+
+
+  
+  
+
+  
+  <script type="text/javascript" src="/js/src/scrollspy.js?v=5.1.0"></script>
+<script type="text/javascript" src="/js/src/post-details.js?v=5.1.0"></script>
+
+
+
+  
+
+
+  <script type="text/javascript" src="/js/src/bootstrap.js?v=5.1.0"></script>
+
+
+
+  
+
+
+
+  
+
+
+
+
+	
+
+
+
+
+
+  
+
+
+
+
+  
+  
+  <script type="text/javascript">
+    // Popup Window;
+    var isfetched = false;
+    // Search DB path;
+    var search_path = "search.xml";
+    if (search_path.length == 0) {
+      search_path = "search.xml";
+    }
+    var path = "/" + search_path;
+    // monitor main search box;
+
+    function proceedsearch() {
+      $("body").append('<div class="popoverlay">').css('overflow', 'hidden');
+      $('.popup').toggle();
+    }
+    // search function;
+    var searchFunc = function(path, search_id, content_id) {
+      'use strict';
+      $.ajax({
+        url: path,
+        dataType: "xml",
+        async: true,
+        success: function( xmlResponse ) {
+          // get the contents from search data
+          isfetched = true;
+          $('.popup').detach().appendTo('.header-inner');
+          var datas = $( "entry", xmlResponse ).map(function() {
+            return {
+              title: $( "title", this ).text(),
+              content: $("content",this).text(),
+              url: $( "url" , this).text()
+            };
+          }).get();
+          var $input = document.getElementById(search_id);
+          var $resultContent = document.getElementById(content_id);
+          $input.addEventListener('input', function(){
+            var matchcounts = 0;
+            var str='<ul class=\"search-result-list\">';
+            var keywords = this.value.trim().toLowerCase().split(/[\s\-]+/);
+            $resultContent.innerHTML = "";
+            if (this.value.trim().length > 1) {
+              // perform local searching
+              datas.forEach(function(data) {
+                var isMatch = false;
+                var content_index = [];
+                var data_title = data.title.trim().toLowerCase();
+                var data_content = data.content.trim().replace(/<[^>]+>/g,"").toLowerCase();
+                var data_url = decodeURIComponent(data.url);
+                var index_title = -1;
+                var index_content = -1;
+                var first_occur = -1;
+                // only match artiles with not empty titles and contents
+                if(data_title != '') {
+                  keywords.forEach(function(keyword, i) {
+                    index_title = data_title.indexOf(keyword);
+                    index_content = data_content.indexOf(keyword);
+                    if( index_title >= 0 || index_content >= 0 ){
+                      isMatch = true;
+                      if (i == 0) {
+                        first_occur = index_content;
+                      }
+                    }
+
+                  });
+                }
+                // show search results
+                if (isMatch) {
+                  matchcounts += 1;
+                  str += "<li><a href='"+ data_url +"' class='search-result-title'>"+ data_title +"</a>";
+                  var content = data.content.trim().replace(/<[^>]+>/g,"");
+                  if (first_occur >= 0) {
+                    // cut out 100 characters
+                    var start = first_occur - 20;
+                    var end = first_occur + 80;
+                    if(start < 0){
+                      start = 0;
+                    }
+                    if(start == 0){
+                      end = 50;
+                    }
+                    if(end > content.length){
+                      end = content.length;
+                    }
+                    var match_content = content.substring(start, end);
+                    // highlight all keywords
+                    keywords.forEach(function(keyword){
+                      var regS = new RegExp(keyword, "gi");
+                      match_content = match_content.replace(regS, "<b class=\"search-keyword\">"+keyword+"</b>");
+                    });
+
+                    str += "<p class=\"search-result\">" + match_content +"...</p>"
+                  }
+                  str += "</li>";
+                }
+              })};
+            str += "</ul>";
+            if (matchcounts == 0) { str = '<div id="no-result"><i class="fa fa-frown-o fa-5x" /></div>' }
+            if (keywords == "") { str = '<div id="no-result"><i class="fa fa-search fa-5x" /></div>' }
+            $resultContent.innerHTML = str;
+          });
+          proceedsearch();
+        }
+      });}
+
+    // handle and trigger popup window;
+    $('.popup-trigger').click(function(e) {
+      e.stopPropagation();
+      if (isfetched == false) {
+        searchFunc(path, 'local-search-input', 'local-search-result');
+      } else {
+        proceedsearch();
+      };
+    });
+
+    $('.popup-btn-close').click(function(e){
+      $('.popup').hide();
+      $(".popoverlay").remove();
+      $('body').css('overflow', '');
+    });
+    $('.popup').click(function(e){
+      e.stopPropagation();
+    });
+  </script>
+
+
+  
+
+  
+
+  
+
+  
+
+
+</body>
+</html>
