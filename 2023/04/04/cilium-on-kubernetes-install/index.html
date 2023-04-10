@@ -1,0 +1,898 @@
+<!doctype html>
+
+
+
+  
+
+
+<html class="theme-next mist use-motion" lang="zh-Hans">
+<head>
+  <meta charset="UTF-8"/>
+<meta http-equiv="X-UA-Compatible" content="IE=edge" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1"/>
+
+
+
+<meta http-equiv="Cache-Control" content="no-transform" />
+<meta http-equiv="Cache-Control" content="no-siteapp" />
+
+
+
+
+
+
+
+
+
+
+
+
+  
+  
+  <link href="/lib/fancybox/source/jquery.fancybox.css?v=2.1.5" rel="stylesheet" type="text/css" />
+
+
+
+
+  
+  
+  
+  
+
+  
+    
+    
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+    
+    
+    <link href="//fonts.googleapis.com/css?family=Lato:300,300italic,400,400italic,700,700italic&subset=latin,latin-ext" rel="stylesheet" type="text/css">
+  
+
+
+
+
+
+
+<link href="/lib/font-awesome/css/font-awesome.min.css?v=4.6.2" rel="stylesheet" type="text/css" />
+
+<link href="/css/main.css?v=5.1.0" rel="stylesheet" type="text/css" />
+
+
+  <meta name="keywords" content="CloudNavi," />
+
+
+
+
+
+
+
+
+  <link rel="shortcut icon" type="image/x-icon" href="/favicon.ico?v=5.1.0" />
+
+
+
+
+
+
+<meta name="description" content="在前东家的时候其实就有意将cilium强大的链路追踪能力集成到生产环境中,各种因素导致没有很大信心落地, 经过深入调研(也就把官网docs翻了四五遍)及测试, 终于有机会在生产kubernetes集群中(目前规模不算很大,10000+核心,持续增长)使用cilium做为cni,同时替换kube-proxy, 到现在已经有一段时间了，也算是有生产经验可以跟大家聊一聊这个工具，使用体验总结一句话: 轻">
+<meta property="og:type" content="article">
+<meta property="og:title" content="cilium在kubernetes中的生产实践二(cilium部署)">
+<meta property="og:url" content="https://zhoushuke.github.io/2023/04/04/cilium-on-kubernetes-install/index.html">
+<meta property="og:site_name" content="Z.S.K.&#39;s Records">
+<meta property="og:description" content="在前东家的时候其实就有意将cilium强大的链路追踪能力集成到生产环境中,各种因素导致没有很大信心落地, 经过深入调研(也就把官网docs翻了四五遍)及测试, 终于有机会在生产kubernetes集群中(目前规模不算很大,10000+核心,持续增长)使用cilium做为cni,同时替换kube-proxy, 到现在已经有一段时间了，也算是有生产经验可以跟大家聊一聊这个工具，使用体验总结一句话: 轻">
+<meta property="og:locale">
+<meta property="article:published_time" content="2023-04-04T03:30:53.000Z">
+<meta property="article:modified_time" content="2023-04-10T07:07:07.268Z">
+<meta property="article:author" content="Z.S.K.">
+<meta property="article:tag" content="CloudNavi">
+<meta name="twitter:card" content="summary">
+
+
+
+<script type="text/javascript" id="hexo.configurations">
+  var NexT = window.NexT || {};
+  var CONFIG = {
+    root: '',
+    scheme: 'Mist',
+    sidebar: {"position":"left","display":"post"},
+    fancybox: true,
+    motion: true,
+    duoshuo: {
+      userId: 'undefined',
+      author: '博主'
+    },
+    algolia: {
+      applicationID: '',
+      apiKey: '',
+      indexName: '',
+      hits: {"per_page":10},
+      labels: {"input_placeholder":"Search for Posts","hits_empty":"We didn't find any results for the search: ${query}","hits_stats":"${hits} results found in ${time} ms"}
+    }
+  };
+</script>
+
+
+
+  <link rel="canonical" href="https://zhoushuke.github.io/2023/04/04/cilium-on-kubernetes-install/"/>
+
+
+
+
+
+  <title> cilium在kubernetes中的生产实践二(cilium部署) | Z.S.K.'s Records </title>
+<meta name="generator" content="Hexo 6.2.0"></head>
+
+<body itemscope itemtype="http://schema.org/WebPage" lang="zh-Hans">
+
+  
+
+
+
+
+
+
+
+
+
+
+  
+  
+    
+  
+
+  <div class="container one-collumn sidebar-position-left page-post-detail ">
+    <div class="headband"></div>
+
+    <header id="header" class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-meta ">
+  
+
+  <div class="custom-logo-site-title">
+    <a href="/"  class="brand" rel="start">
+      <span class="logo-line-before"><i></i></span>
+      <span class="site-title">Z.S.K.'s Records</span>
+      <span class="logo-line-after"><i></i></span>
+    </a>
+  </div>
+    
+      <p class="site-subtitle"></p>
+    
+</div>
+
+<div class="site-nav-toggle">
+  <button>
+    <span class="btn-bar"></span>
+    <span class="btn-bar"></span>
+    <span class="btn-bar"></span>
+  </button>
+</div>
+
+<nav class="site-nav">
+  
+
+  
+    <ul id="menu" class="menu">
+      
+        
+        <li class="menu-item menu-item-home">
+          <a href="/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-home"></i> <br />
+            
+            首页
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-categories">
+          <a href="/categories" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-th"></i> <br />
+            
+            分类
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-about">
+          <a href="/about/ZSK-Profile.pdf" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-user"></i> <br />
+            
+            简历
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-archives">
+          <a href="/archives" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-archive"></i> <br />
+            
+            归档
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-tags">
+          <a href="/tags" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-tags"></i> <br />
+            
+            标签
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-commonweal">
+          <a href="/404.html" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-heartbeat"></i> <br />
+            
+            公益404
+          </a>
+        </li>
+      
+
+      
+        <li class="menu-item menu-item-search">
+          
+            <a href="javascript:;" class="popup-trigger">
+          
+            
+              <i class="menu-item-icon fa fa-search fa-fw"></i> <br />
+            
+            搜索
+          </a>
+        </li>
+      
+    </ul>
+  
+
+  
+    <div class="site-search">
+      
+  <div class="popup">
+ <span class="search-icon fa fa-search"></span>
+ <input type="text" id="local-search-input">
+ <div id="local-search-result"></div>
+ <span class="popup-btn-close">close</span>
+</div>
+
+
+    </div>
+  
+</nav>
+
+
+
+ </div>
+    </header>
+
+    <main id="main" class="main">
+      <div class="main-inner">
+        <div class="content-wrap">
+          <div id="content" class="content">
+            
+
+  <div id="posts" class="posts-expand">
+    
+
+  
+
+  
+  
+  
+
+  <article class="post post-type-normal " itemscope itemtype="http://schema.org/Article">
+  <link itemprop="mainEntityOfPage" href="https://zhoushuke.github.io/2023/04/04/cilium-on-kubernetes-install/">
+
+  <span style="display:none" itemprop="author" itemscope itemtype="http://schema.org/Person">
+    <meta itemprop="name" content="">
+    <meta itemprop="description" content="">
+    <meta itemprop="image" content="/images/avatar.gif">
+  </span>
+
+  <span style="display:none" itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+    <meta itemprop="name" content="Z.S.K.'s Records">
+    <span style="display:none" itemprop="logo" itemscope itemtype="http://schema.org/ImageObject">
+      <img style="display:none;" itemprop="url image" alt="Z.S.K.'s Records" src="">
+    </span>
+  </span>
+
+    
+      <header class="post-header">
+
+        
+        
+          <h1 class="post-title" itemprop="name headline">
+            
+            
+              
+                cilium在kubernetes中的生产实践二(cilium部署)
+              
+            
+          </h1>
+        
+
+        <div class="post-meta">
+          <span class="post-time">
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">发表于</span>
+              
+              <time title="Post created" itemprop="dateCreated datePublished" datetime="2023-04-04T11:30:53+08:00">
+                2023-04-04
+              </time>
+            
+
+            
+
+            
+          </span>
+
+          
+            <span class="post-category" >
+            
+              <span class="post-meta-divider">|</span>
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-folder-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">分类于</span>
+              
+              
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/CloudNavi/" itemprop="url" rel="index">
+                    <span itemprop="name">CloudNavi</span>
+                  </a>
+                </span>
+
+                
+                
+              
+            </span>
+          
+
+          
+            
+          
+
+          
+
+          
+          
+
+          
+
+          
+
+        </div>
+      </header>
+    
+
+
+    <div class="post-body" itemprop="articleBody">
+
+      
+      
+
+      
+        <p>在前东家的时候其实就有意将cilium强大的链路追踪能力集成到生产环境中,各种因素导致没有很大信心落地, 经过深入调研(也就把官网docs翻了四五遍)及测试, 终于有机会在生产kubernetes集群中(目前规模不算很大,10000+核心,持续增长)使用cilium做为cni,同时替换kube-proxy, 到现在已经有一段时间了，也算是有生产经验可以跟大家聊一聊这个工具，使用体验总结一句话: 轻松愉悦.<br>分享一下整个落地过程,同时也总结下方方面面, 工作之余尽量更新.<br>此篇为: cilium在kubernetes中的生产实践一(cilium介绍)</p>
+<span id="more"></span>
+
+<p>总体分为以下几块内容:<br>cilium在kubernetes中的生产实践一(cilium介绍)<br>cilium在kubernetes中的生产实践二(cilium部署)<br>cilium在kubernetes中的生产实践三(网络模型)<br>cilium在kubernetes中的生产实践四(常用命令)<br>cilium在kubernetes中的生产实践五(网络策略)<br>cilium在kubernetes中的生产实践六(排错指南)</p>
+<h3 id="内核要求"><a href="#内核要求" class="headerlink" title="内核要求"></a>内核要求</h3><p>由于eBPF是个较新的特性, 因此对内核版本有要求,建议最少4.18+以上的内核版本,cilium有些功能必须要5.0+之上的内核版本，生产环境下大多数都不会满足<br>相关参数如下:</p>
+<figure class="highlight yaml"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line"><span class="attr">os:</span> <span class="string">Rockey</span> <span class="string">Linux</span> <span class="string">release</span> <span class="number">8.7</span></span><br><span class="line"><span class="attr">kernel:</span> <span class="number">4.18</span><span class="number">.0</span><span class="number">-425.10</span><span class="number">.1</span><span class="string">.el8_7.x86_64</span></span><br><span class="line"><span class="attr">k8s:</span> <span class="string">v1.22.13</span></span><br><span class="line"><span class="attr">docker:</span> <span class="string">v20.10.18</span></span><br></pre></td></tr></table></figure>
+
+<h3 id="cilium安装"><a href="#cilium安装" class="headerlink" title="cilium安装"></a>cilium安装</h3><p>Cilium在kubernetes安装有2种运行模式，一种是完全替换kube-proxy, 如果底层 Linux 内核版本低，可以替换kube-proxy的部分功能，与原来的kube-proxy 共存。因此这里要注意kubeProxyReplacement参数,从官网上查看有如下几个选项:</p>
+<blockquote>
+<ul>
+<li>kubeProxyReplacement&#x3D;strict: 该选项期望使用无kube-proxy的Kubernetes设置，其中Cilium有望完全替代所有kube-proxy功能。 Cilium代理启动并运行后，将负责处理类型为ClusterIP，NodePort，ExternalIP和LoadBalancer的Kubernetes服务。如果不满足基本内核版本要求（请参阅不带kube-proxy注释的Kubernetes），则Cilium代理将在启动时退出并显示一条错误消息。</li>
+<li>kubeProxyReplacement&#x3D;probe: 此选项适用于混合设置，即kube-proxy在Kubernetes集群中运行，其中Cilium部分替换并优化了kube-proxy功能。一旦Cilium agent启动并运行，它就会在基础内核中探查所需BPF内核功能的可用性，如果不存在，则依靠kube-proxy补充其余的Kubernetes服务处理，从而禁用BPF中的部分功能。在这种情况下，Cilium代理将向其日志中发送一条信息消息。例如，如果内核不支持 Host-Reachable Services，则节点的主机名空间的ClusterIP转换是通过kube-proxy的iptables规则完成的。</li>
+<li>kubeProxyReplacement&#x3D;partial: 与探针类似，此选项用于混合设置，即kube-proxy在Kubernetes集群中运行，其中Cilium部分替换并优化了kube-proxy功能。与探查基础内核中可用的BPF功能并在缺少内核支持时自动禁用负责BPF kube-proxy替换的组件的探针相反，该部分选项要求用户手动指定应替换BPF kube-proxy的组件。与严格模式类似，如果不满足基本内核要求，则Cilium代理将在启动时通过错误消息进行援助。对于细粒度的配置，可以将global.hostServices.enabled，global.nodePort.enabled和global.externalIPs.enabled设置为true。默认情况下，所有三个选项均设置为false。</li>
+</ul>
+</blockquote>
+<p>由于是全新的集群，所以这里直接使用<strong>kubeProxyReplacement&#x3D;strict</strong>, 使用helm安装, cilium 版本 v1.12.0</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line"></span><br><span class="line">helm install cilium cilium/cilium --version 1.12.0 --namespace kube-system --<span class="built_in">set</span> kubeProxyReplacement=strict --<span class="built_in">set</span> k8sServiceHost=xxx.xxx.xxx.xxx --<span class="built_in">set</span> k8sservicePort=6443 --<span class="built_in">set</span> ipam.Operator.clusterPoolIPv4PodCIDRList=10.244.0.0/16 --<span class="built_in">set</span> enable-bpf-masquerade=<span class="literal">true</span> --<span class="built_in">set</span> ipam.Operator.ClusterPoolIPv4MaskSize=24 --<span class="built_in">set</span> devices=ens192 --<span class="built_in">set</span> hubble.Relay.Enabled=<span class="literal">true</span> --<span class="built_in">set</span> hubble.Ui.Enabled=<span class="literal">true</span> --<span class="built_in">set</span> prometheus.Enabled=<span class="literal">true</span> --<span class="built_in">set</span> operator.Prometheus.Enabled=<span class="literal">true</span> --<span class="built_in">set</span> hubble.Enabled=<span class="literal">true</span> --<span class="built_in">set</span> hubble.Metrics.Enabled=<span class="string">&quot;&#123;dns, drop, tcp, flow, port-distribution, icmp, http&#125;&quot;</span> --<span class="built_in">set</span> image.UseDigest=<span class="literal">false</span> --<span class="built_in">set</span> operator.image.useDigest=<span class="literal">false</span> --<span class="built_in">set</span> operator.Image.Repository=harbor.local.io/k8s/cilium/operator --<span class="built_in">set</span> image.Repository=harbor.local.io/k8s/cilium/cilium --<span class="built_in">set</span> hubble.Rela y.Image.UseDigest=<span class="literal">false</span> --<span class="built_in">set</span> hubble.Relay.Image.Repository=harbor.local.io/k8s/cilium/hubble-relay --<span class="built_in">set</span> hubble.ui.Backend.Image.Repository=harbor.local.io/k8s/cilium/hubble-ui-backend --<span class="built_in">set</span> hubble.Ui.Backend.Image.Tag=v0.9.0 --<span class="built_in">set</span> hubble.ui.Frontend.Image.Repository=harbor.local.io/k8s/cilium/hubble-ui --<span class="built_in">set</span> hubble.ui.Frontend.Image.Tag=v0.9.0</span><br></pre></td></tr></table></figure>
+<p>其中:</p>
+<ol>
+<li>kubeProxyReplacement: cilium在哪种方式下运行，上文已进行了解释, 这里选择kube-proxy-free模式</li>
+<li>k8sServiceHost: k8s集群的地址,如果是集群，则一般填写负载均衡地址</li>
+<li>k8sservicePort: k8s集群的端口,如果是集群，则一般填写负载均衡端口</li>
+<li>ipam.Operator.clusterPoolIPv4PodCIDRList: pod的CIDR</li>
+<li>enable-bpf-masquerade: 是否开启ip的masquerade, 下文解释</li>
+<li><strong>devices: 非常重要的参数,下文解释</strong></li>
+<li>hubble.xx: 跟hubble相关的参数,能开启的尽量开启hubble吧</li>
+</ol>
+<p>后续如果需要对配置项进行更新，则可使用以下命令复用之前的配置(<code>--reuse-values</code>)，只更新给的配置项即可, 比如将将<code>host routing 由 legacy 改成 bpf</code></p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">helm upgrade cilium --version 1.12.0 --namespace kube-system --reuse-values --<span class="built_in">set</span> --bpf.Masquerade=<span class="literal">true</span></span><br></pre></td></tr></table></figure>
+
+<p>因为cilium号称可以完全取代kube-proxy, 但也需要支持kube-proxy已存在的场景，所以cilium会自动根据情况进行设置，作者这里因为使用kubaadm部署k8s时，直接选择没部署kube-proxy，因此使用<code>kubeProxyReplacement=strict</code></p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">#集群初始化</span></span><br><span class="line">kubeadm init --upload-certs --config kubeadm-kubeproxy-free.conf --skip-phases=addon/kube-proxy --apiserver-advertise-address xxx.xxx.xxx.xxx</span><br></pre></td></tr></table></figure>
+
+<p><code>kubeadm-kubeproxy-free.conf</code>参考</p>
+<h1 id="概念"><a href="#概念" class="headerlink" title="概念"></a>概念</h1><p><a target="_blank" rel="noopener" href="https://blog.csdn.net/M2l0ZgSsVc7r69eFdTj/article/details/123243494">https://blog.csdn.net/M2l0ZgSsVc7r69eFdTj/article/details/123243494</a><br>Linux 提供了 5 个这样的 hook，分别是 pre-routing、input、forword、output、post-routing。处理数据包的能力主要包括修改、跟踪、打标签、过滤等。</p>
+<h3 id="参考文章"><a href="#参考文章" class="headerlink" title="参考文章:"></a><strong>参考文章:</strong></h3><blockquote>
+<ul>
+<li><a target="_blank" rel="noopener" href="https://github.com/cilium/charts">https://github.com/cilium/charts</a></li>
+<li><a target="_blank" rel="noopener" href="https://luckymrwang.github.io/2022/04/20/Cilium%E5%AE%89%E8%A3%85%E4%B8%8E%E5%AD%A6%E4%B9%A0/#:~:text=Cilium%20%E5%9C%A8k8s%E7%9A%84%E8%BF%90%E8%A1%8C%E6%96%B9%E5%BC%8F%20Cilium%20%E5%9C%A8kubernetes%E5%AE%89%E8%A3%85%20%E6%9C%892%E7%A7%8D%E8%BF%90%E8%A1%8C%E6%A8%A1%E5%BC%8F%EF%BC%8C%E4%B8%80%E7%A7%8D%E6%98%AF%E5%AE%8C%E5%85%A8%E6%9B%BF%E6%8D%A2kube-proxy%EF%BC%8C,%E5%A6%82%E6%9E%9C%E5%BA%95%E5%B1%82%20Linux%20%E5%86%85%E6%A0%B8%E7%89%88%E6%9C%AC%E4%BD%8E%EF%BC%8C%E5%8F%AF%E4%BB%A5%E6%9B%BF%E6%8D%A2kube-proxy%E7%9A%84%E9%83%A8%E5%88%86%E5%8A%9F%E8%83%BD%EF%BC%8C%E4%B8%8E%E5%8E%9F%E6%9D%A5%E7%9A%84%20kube-proxy%20%E5%85%B1%E5%AD%98%E3%80%82">https://luckymrwang.github.io/2022/04/20/Cilium%E5%AE%89%E8%A3%85%E4%B8%8E%E5%AD%A6%E4%B9%A0/#:~:text=Cilium%20%E5%9C%A8k8s%E7%9A%84%E8%BF%90%E8%A1%8C%E6%96%B9%E5%BC%8F%20Cilium%20%E5%9C%A8kubernetes%E5%AE%89%E8%A3%85%20%E6%9C%892%E7%A7%8D%E8%BF%90%E8%A1%8C%E6%A8%A1%E5%BC%8F%EF%BC%8C%E4%B8%80%E7%A7%8D%E6%98%AF%E5%AE%8C%E5%85%A8%E6%9B%BF%E6%8D%A2kube-proxy%EF%BC%8C,%E5%A6%82%E6%9E%9C%E5%BA%95%E5%B1%82%20Linux%20%E5%86%85%E6%A0%B8%E7%89%88%E6%9C%AC%E4%BD%8E%EF%BC%8C%E5%8F%AF%E4%BB%A5%E6%9B%BF%E6%8D%A2kube-proxy%E7%9A%84%E9%83%A8%E5%88%86%E5%8A%9F%E8%83%BD%EF%BC%8C%E4%B8%8E%E5%8E%9F%E6%9D%A5%E7%9A%84%20kube-proxy%20%E5%85%B1%E5%AD%98%E3%80%82</a></li>
+</ul>
+</blockquote>
+<h3 id="转载请注明原作者-周淑科-https-izsk-me"><a href="#转载请注明原作者-周淑科-https-izsk-me" class="headerlink" title="转载请注明原作者: 周淑科(https://izsk.me)"></a><strong>转载请注明原作者: 周淑科(<a target="_blank" rel="noopener" href="https://izsk.me/">https://izsk.me</a>)</strong></h3>
+      
+    </div>
+
+    <div>
+      
+        
+<div id="wechat_subscriber" style="display: block; padding: 10px 0; margin: 20px auto; width: 100%; text-align: center">
+    <img id="wechat_subscriber_qcode" src="/images/websitecode250.png" alt=" wechat" style="width: 200px; max-width: 100%;"/>
+    <div>Scan Me To Read on Phone</div>
+</div>
+
+
+      
+    </div>
+
+    <div>
+      
+        
+  <div style="padding: 10px 0; margin: 20px auto; width: 90%; text-align: center;">
+    <div>I know you won't do this,but what if you did?</div>
+    <button id="rewardButton" disable="enable" onclick="var qr = document.getElementById('QR'); if (qr.style.display === 'none') {qr.style.display='block';} else {qr.style.display='none'}">
+      <span>赏</span>
+    </button>
+    <div id="QR" style="display: none;">
+      
+        <div id="wechat" style="display: inline-block">
+          <img id="wechat_qr" src="/images/wechatpayme.png" alt=" WeChat Pay"/>
+          <p>微信打赏</p>
+        </div>
+      
+      
+        <div id="alipay" style="display: inline-block">
+          <img id="alipay_qr" src="/images/alipayme.jpg" alt=" Alipay"/>
+          <p>支付宝打赏</p>
+        </div>
+      
+    </div>
+  </div>
+
+
+      
+    </div>
+
+
+    <footer class="post-footer">
+      
+        <div class="post-tags">
+          
+            <a href="/tags/CloudNavi/" rel="tag"># CloudNavi</a>
+          
+        </div>
+      
+
+      
+        <div class="post-nav">
+          <div class="post-nav-next post-nav-item">
+            
+              <a href="/2023/04/01/cilium-on-kubernetes-introduction/" rel="next" title="cilium在kubernetes中的生产实践一(介绍)">
+                <i class="fa fa-chevron-left"></i> cilium在kubernetes中的生产实践一(介绍)
+              </a>
+            
+          </div>
+
+          <span class="post-nav-divider"></span>
+
+          <div class="post-nav-prev post-nav-item">
+            
+          </div>
+        </div>
+      
+
+      
+      
+    </footer>
+  </article>
+
+
+
+    <div class="post-spread">
+      
+    </div>
+  </div>
+
+
+          </div>
+          
+
+
+          
+  <div class="comments" id="comments">
+    
+  </div>
+
+
+        </div>
+        
+          
+  
+  <div class="sidebar-toggle">
+    <div class="sidebar-toggle-line-wrap">
+      <span class="sidebar-toggle-line sidebar-toggle-line-first"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-middle"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-last"></span>
+    </div>
+  </div>
+
+  <aside id="sidebar" class="sidebar">
+    <div class="sidebar-inner">
+
+      
+
+      
+        <ul class="sidebar-nav motion-element">
+          <li class="sidebar-nav-toc sidebar-nav-active" data-target="post-toc-wrap" >
+            文章目录
+          </li>
+          <li class="sidebar-nav-overview" data-target="site-overview">
+            站点概览
+          </li>
+        </ul>
+      
+
+      <section class="site-overview sidebar-panel">
+        <div class="site-author motion-element" itemprop="author" itemscope itemtype="http://schema.org/Person">
+          <img class="site-author-image" itemprop="image"
+               src="/images/avatar.gif"
+               alt="" />
+          <p class="site-author-name" itemprop="name"></p>
+          <p class="site-description motion-element" itemprop="description"></p>
+        </div>
+        <nav class="site-state motion-element">
+        
+          
+            <div class="site-state-item site-state-posts">
+              <a href="/archives">
+                <span class="site-state-item-count">199</span>
+                <span class="site-state-item-name">日志</span>
+              </a>
+            </div>
+          
+
+          
+            <div class="site-state-item site-state-categories">
+              <a href="/categories">
+                <span class="site-state-item-count">14</span>
+                <span class="site-state-item-name">分类</span>
+              </a>
+            </div>
+          
+
+          
+            <div class="site-state-item site-state-tags">
+              <a href="/tags">
+                <span class="site-state-item-count">14</span>
+                <span class="site-state-item-name">标签</span>
+              </a>
+            </div>
+          
+
+        </nav>
+
+        
+
+        <div class="links-of-author motion-element">
+          
+        </div>
+
+        
+        
+
+        
+        
+
+        
+
+
+      </section>
+
+      
+      <!--noindex-->
+        <section class="post-toc-wrap motion-element sidebar-panel sidebar-panel-active">
+          <div class="post-toc">
+
+            
+              
+            
+
+            
+              <div class="post-toc-content"><ol class="nav"><li class="nav-item nav-level-3"><a class="nav-link" href="#%E5%86%85%E6%A0%B8%E8%A6%81%E6%B1%82"><span class="nav-number">1.</span> <span class="nav-text">内核要求</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#cilium%E5%AE%89%E8%A3%85"><span class="nav-number">2.</span> <span class="nav-text">cilium安装</span></a></li></ol></li></ol></li><li class="nav-item nav-level-1"><a class="nav-link" href="#%E6%A6%82%E5%BF%B5"><span class="nav-number"></span> <span class="nav-text">概念</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#%E5%8F%82%E8%80%83%E6%96%87%E7%AB%A0"><span class="nav-number">1.</span> <span class="nav-text">参考文章:</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E8%BD%AC%E8%BD%BD%E8%AF%B7%E6%B3%A8%E6%98%8E%E5%8E%9F%E4%BD%9C%E8%80%85-%E5%91%A8%E6%B7%91%E7%A7%91-https-izsk-me"><span class="nav-number">2.</span> <span class="nav-text">转载请注明原作者: 周淑科(https:&#x2F;&#x2F;izsk.me)</span></a></li></ol></div>
+            
+
+          </div>
+        </section>
+      <!--/noindex-->
+      
+
+    </div>
+  </aside>
+
+
+        
+      </div>
+    </main>
+
+    <footer id="footer" class="footer">
+      <div class="footer-inner">
+        <div class="copyright" >
+  
+  &copy; 
+  <span itemprop="copyrightYear">2023</span>
+  <span class="with-love">
+    <i class="fa fa-heart"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">Z.S.K.</span>
+</div>
+
+
+<div class="powered-by">
+  Supported by <a class="theme-link" target="_blank" rel="noopener" href="https://hexo.io">Hexo</a>
+</div>
+
+<div class="theme-info">
+  Theme -
+  <a class="theme-link" target="_blank" rel="noopener" href="https://github.com/iissnan/hexo-theme-next">
+    NexT.Mist
+  </a>
+</div>
+
+
+        
+
+        
+      </div>
+    </footer>
+
+    <div class="back-to-top">
+      <i class="fa fa-arrow-up"></i>
+    </div>
+  </div>
+
+  
+
+<script type="text/javascript">
+  if (Object.prototype.toString.call(window.Promise) !== '[object Function]') {
+    window.Promise = null;
+  }
+</script>
+
+
+
+
+
+
+
+
+
+  
+
+
+
+  
+  <script type="text/javascript" src="/lib/jquery/index.js?v=2.1.3"></script>
+
+  
+  <script type="text/javascript" src="/lib/fastclick/lib/fastclick.min.js?v=1.0.6"></script>
+
+  
+  <script type="text/javascript" src="/lib/jquery_lazyload/jquery.lazyload.js?v=1.9.7"></script>
+
+  
+  <script type="text/javascript" src="/lib/velocity/velocity.min.js?v=1.2.1"></script>
+
+  
+  <script type="text/javascript" src="/lib/velocity/velocity.ui.min.js?v=1.2.1"></script>
+
+  
+  <script type="text/javascript" src="/lib/fancybox/source/jquery.fancybox.pack.js?v=2.1.5"></script>
+
+
+  
+
+
+  <script type="text/javascript" src="/js/src/utils.js?v=5.1.0"></script>
+
+  <script type="text/javascript" src="/js/src/motion.js?v=5.1.0"></script>
+
+
+
+  
+  
+
+  
+  <script type="text/javascript" src="/js/src/scrollspy.js?v=5.1.0"></script>
+<script type="text/javascript" src="/js/src/post-details.js?v=5.1.0"></script>
+
+
+
+  
+
+
+  <script type="text/javascript" src="/js/src/bootstrap.js?v=5.1.0"></script>
+
+
+
+  
+
+
+
+  
+
+
+
+
+	
+
+
+
+
+
+  
+
+
+
+
+  
+  
+  <script type="text/javascript">
+    // Popup Window;
+    var isfetched = false;
+    // Search DB path;
+    var search_path = "search.xml";
+    if (search_path.length == 0) {
+      search_path = "search.xml";
+    }
+    var path = "/" + search_path;
+    // monitor main search box;
+
+    function proceedsearch() {
+      $("body").append('<div class="popoverlay">').css('overflow', 'hidden');
+      $('.popup').toggle();
+    }
+    // search function;
+    var searchFunc = function(path, search_id, content_id) {
+      'use strict';
+      $.ajax({
+        url: path,
+        dataType: "xml",
+        async: true,
+        success: function( xmlResponse ) {
+          // get the contents from search data
+          isfetched = true;
+          $('.popup').detach().appendTo('.header-inner');
+          var datas = $( "entry", xmlResponse ).map(function() {
+            return {
+              title: $( "title", this ).text(),
+              content: $("content",this).text(),
+              url: $( "url" , this).text()
+            };
+          }).get();
+          var $input = document.getElementById(search_id);
+          var $resultContent = document.getElementById(content_id);
+          $input.addEventListener('input', function(){
+            var matchcounts = 0;
+            var str='<ul class=\"search-result-list\">';
+            var keywords = this.value.trim().toLowerCase().split(/[\s\-]+/);
+            $resultContent.innerHTML = "";
+            if (this.value.trim().length > 1) {
+              // perform local searching
+              datas.forEach(function(data) {
+                var isMatch = false;
+                var content_index = [];
+                var data_title = data.title.trim().toLowerCase();
+                var data_content = data.content.trim().replace(/<[^>]+>/g,"").toLowerCase();
+                var data_url = decodeURIComponent(data.url);
+                var index_title = -1;
+                var index_content = -1;
+                var first_occur = -1;
+                // only match artiles with not empty titles and contents
+                if(data_title != '') {
+                  keywords.forEach(function(keyword, i) {
+                    index_title = data_title.indexOf(keyword);
+                    index_content = data_content.indexOf(keyword);
+                    if( index_title >= 0 || index_content >= 0 ){
+                      isMatch = true;
+                      if (i == 0) {
+                        first_occur = index_content;
+                      }
+                    }
+
+                  });
+                }
+                // show search results
+                if (isMatch) {
+                  matchcounts += 1;
+                  str += "<li><a href='"+ data_url +"' class='search-result-title'>"+ data_title +"</a>";
+                  var content = data.content.trim().replace(/<[^>]+>/g,"");
+                  if (first_occur >= 0) {
+                    // cut out 100 characters
+                    var start = first_occur - 20;
+                    var end = first_occur + 80;
+                    if(start < 0){
+                      start = 0;
+                    }
+                    if(start == 0){
+                      end = 50;
+                    }
+                    if(end > content.length){
+                      end = content.length;
+                    }
+                    var match_content = content.substring(start, end);
+                    // highlight all keywords
+                    keywords.forEach(function(keyword){
+                      var regS = new RegExp(keyword, "gi");
+                      match_content = match_content.replace(regS, "<b class=\"search-keyword\">"+keyword+"</b>");
+                    });
+
+                    str += "<p class=\"search-result\">" + match_content +"...</p>"
+                  }
+                  str += "</li>";
+                }
+              })};
+            str += "</ul>";
+            if (matchcounts == 0) { str = '<div id="no-result"><i class="fa fa-frown-o fa-5x" /></div>' }
+            if (keywords == "") { str = '<div id="no-result"><i class="fa fa-search fa-5x" /></div>' }
+            $resultContent.innerHTML = str;
+          });
+          proceedsearch();
+        }
+      });}
+
+    // handle and trigger popup window;
+    $('.popup-trigger').click(function(e) {
+      e.stopPropagation();
+      if (isfetched == false) {
+        searchFunc(path, 'local-search-input', 'local-search-result');
+      } else {
+        proceedsearch();
+      };
+    });
+
+    $('.popup-btn-close').click(function(e){
+      $('.popup').hide();
+      $(".popoverlay").remove();
+      $('body').css('overflow', '');
+    });
+    $('.popup').click(function(e){
+      e.stopPropagation();
+    });
+  </script>
+
+
+  
+
+  
+
+  
+
+  
+
+
+</body>
+</html>
