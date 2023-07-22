@@ -1,0 +1,964 @@
+<!doctype html>
+
+
+
+  
+
+
+<html class="theme-next mist use-motion" lang="zh-Hans">
+<head>
+  <meta charset="UTF-8"/>
+<meta http-equiv="X-UA-Compatible" content="IE=edge" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1"/>
+
+
+
+<meta http-equiv="Cache-Control" content="no-transform" />
+<meta http-equiv="Cache-Control" content="no-siteapp" />
+
+
+
+
+
+
+
+
+
+
+
+
+  
+  
+  <link href="/lib/fancybox/source/jquery.fancybox.css?v=2.1.5" rel="stylesheet" type="text/css" />
+
+
+
+
+  
+  
+  
+  
+
+  
+    
+    
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+    
+    
+    <link href="//fonts.googleapis.com/css?family=Lato:300,300italic,400,400italic,700,700italic&subset=latin,latin-ext" rel="stylesheet" type="text/css">
+  
+
+
+
+
+
+
+<link href="/lib/font-awesome/css/font-awesome.min.css?v=4.6.2" rel="stylesheet" type="text/css" />
+
+<link href="/css/main.css?v=5.1.0" rel="stylesheet" type="text/css" />
+
+
+  <meta name="keywords" content="Kubernetes," />
+
+
+
+
+
+
+
+
+  <link rel="shortcut icon" type="image/x-icon" href="/favicon.ico?v=5.1.0" />
+
+
+
+
+
+
+<meta name="description" content="namespace在kubernetes中是一个很重要的基础构件，它构成了几乎所有 Kubernetes 控制平面安全和共享策略的骨干。命名空间有两个关键属性，使其成为策略执行的理想选择">
+<meta property="og:type" content="article">
+<meta property="og:title" content="Kubernetes学习(hnc实现namesapce分层模型)">
+<meta property="og:url" content="https://zhoushuke.github.io/2023/07/20/Kubernetes-hnc/index.html">
+<meta property="og:site_name" content="Z.S.K.&#39;s Records">
+<meta property="og:description" content="namespace在kubernetes中是一个很重要的基础构件，它构成了几乎所有 Kubernetes 控制平面安全和共享策略的骨干。命名空间有两个关键属性，使其成为策略执行的理想选择">
+<meta property="og:locale">
+<meta property="article:published_time" content="2023-07-20T09:30:53.000Z">
+<meta property="article:modified_time" content="2023-07-22T09:44:25.138Z">
+<meta property="article:author" content="Z.S.K.">
+<meta property="article:tag" content="Kubernetes">
+<meta name="twitter:card" content="summary">
+
+
+
+<script type="text/javascript" id="hexo.configurations">
+  var NexT = window.NexT || {};
+  var CONFIG = {
+    root: '',
+    scheme: 'Mist',
+    sidebar: {"position":"left","display":"post"},
+    fancybox: true,
+    motion: true,
+    duoshuo: {
+      userId: 'undefined',
+      author: '博主'
+    },
+    algolia: {
+      applicationID: '',
+      apiKey: '',
+      indexName: '',
+      hits: {"per_page":10},
+      labels: {"input_placeholder":"Search for Posts","hits_empty":"We didn't find any results for the search: ${query}","hits_stats":"${hits} results found in ${time} ms"}
+    }
+  };
+</script>
+
+
+
+  <link rel="canonical" href="https://zhoushuke.github.io/2023/07/20/Kubernetes-hnc/"/>
+
+
+
+
+
+  <title> Kubernetes学习(hnc实现namesapce分层模型) | Z.S.K.'s Records </title>
+<meta name="generator" content="Hexo 6.2.0"></head>
+
+<body itemscope itemtype="http://schema.org/WebPage" lang="zh-Hans">
+
+  
+
+
+
+
+
+
+
+
+
+
+  
+  
+    
+  
+
+  <div class="container one-collumn sidebar-position-left page-post-detail ">
+    <div class="headband"></div>
+
+    <header id="header" class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-meta ">
+  
+
+  <div class="custom-logo-site-title">
+    <a href="/"  class="brand" rel="start">
+      <span class="logo-line-before"><i></i></span>
+      <span class="site-title">Z.S.K.'s Records</span>
+      <span class="logo-line-after"><i></i></span>
+    </a>
+  </div>
+    
+      <p class="site-subtitle"></p>
+    
+</div>
+
+<div class="site-nav-toggle">
+  <button>
+    <span class="btn-bar"></span>
+    <span class="btn-bar"></span>
+    <span class="btn-bar"></span>
+  </button>
+</div>
+
+<nav class="site-nav">
+  
+
+  
+    <ul id="menu" class="menu">
+      
+        
+        <li class="menu-item menu-item-home">
+          <a href="/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-home"></i> <br />
+            
+            首页
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-categories">
+          <a href="/categories" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-th"></i> <br />
+            
+            分类
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-about">
+          <a href="/about/ZSK-Profile.pdf" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-user"></i> <br />
+            
+            简历
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-archives">
+          <a href="/archives" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-archive"></i> <br />
+            
+            归档
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-tags">
+          <a href="/tags" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-tags"></i> <br />
+            
+            标签
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-commonweal">
+          <a href="/404.html" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-heartbeat"></i> <br />
+            
+            公益404
+          </a>
+        </li>
+      
+
+      
+        <li class="menu-item menu-item-search">
+          
+            <a href="javascript:;" class="popup-trigger">
+          
+            
+              <i class="menu-item-icon fa fa-search fa-fw"></i> <br />
+            
+            搜索
+          </a>
+        </li>
+      
+    </ul>
+  
+
+  
+    <div class="site-search">
+      
+  <div class="popup">
+ <span class="search-icon fa fa-search"></span>
+ <input type="text" id="local-search-input">
+ <div id="local-search-result"></div>
+ <span class="popup-btn-close">close</span>
+</div>
+
+
+    </div>
+  
+</nav>
+
+
+
+ </div>
+    </header>
+
+    <main id="main" class="main">
+      <div class="main-inner">
+        <div class="content-wrap">
+          <div id="content" class="content">
+            
+
+  <div id="posts" class="posts-expand">
+    
+
+  
+
+  
+  
+  
+
+  <article class="post post-type-normal " itemscope itemtype="http://schema.org/Article">
+  <link itemprop="mainEntityOfPage" href="https://zhoushuke.github.io/2023/07/20/Kubernetes-hnc/">
+
+  <span style="display:none" itemprop="author" itemscope itemtype="http://schema.org/Person">
+    <meta itemprop="name" content="">
+    <meta itemprop="description" content="">
+    <meta itemprop="image" content="/images/avatar.gif">
+  </span>
+
+  <span style="display:none" itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+    <meta itemprop="name" content="Z.S.K.'s Records">
+    <span style="display:none" itemprop="logo" itemscope itemtype="http://schema.org/ImageObject">
+      <img style="display:none;" itemprop="url image" alt="Z.S.K.'s Records" src="">
+    </span>
+  </span>
+
+    
+      <header class="post-header">
+
+        
+        
+          <h1 class="post-title" itemprop="name headline">
+            
+            
+              
+                Kubernetes学习(hnc实现namesapce分层模型)
+              
+            
+          </h1>
+        
+
+        <div class="post-meta">
+          <span class="post-time">
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">发表于</span>
+              
+              <time title="Post created" itemprop="dateCreated datePublished" datetime="2023-07-20T17:30:53+08:00">
+                2023-07-20
+              </time>
+            
+
+            
+
+            
+          </span>
+
+          
+            <span class="post-category" >
+            
+              <span class="post-meta-divider">|</span>
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-folder-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">分类于</span>
+              
+              
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/Kubernetes/" itemprop="url" rel="index">
+                    <span itemprop="name">Kubernetes</span>
+                  </a>
+                </span>
+
+                
+                
+              
+            </span>
+          
+
+          
+            
+          
+
+          
+
+          
+          
+
+          
+
+          
+
+        </div>
+      </header>
+    
+
+
+    <div class="post-body" itemprop="articleBody">
+
+      
+      
+
+      
+        <p>namespace在kubernetes中是一个很重要的基础构件，它构成了几乎所有 Kubernetes 控制平面安全和共享策略的骨干。命名空间有两个关键属性，使其成为策略执行的理想选择</p>
+<span id="more"></span>
+
+<ul>
+<li>首先，命名空间可以用来<strong>代表所有权</strong>。大多数 Kubernetes 对象资源必须在某一个命名空间中，所以如果使用命名空间来代表所有权，那么命名空间中的所有对象都隶属于同一个所有者。</li>
+<li>其次，命名空间的<strong>创建和使用需要授权</strong>。只有超级管理员才能创建命名空间，其他用户需要明确的权限才能使用这些命名空间（包括创建、查看和修改命名空间中的资源对象）。可以设置恰当的安全策略，防止非特权用户创建某些资源对象。</li>
+</ul>
+<p>namespace是个硬限制，在很多场景下会有诸多问题, 因此层级命名空间(hierarchical namespaces)出现了，它是 Kubernetes<a target="_blank" rel="noopener" href="https://github.com/kubernetes-sigs/multi-tenancy">多租户工作组(Working Group for Multi-Tenancy)</a>而提出的新概念</p>
+<p>在最简单的形式下，层级命名空间就是一个常规的命名空间，它标识了一个单一的、可选的父命名空间；</p>
+<p><strong>更复杂的形式下，父命名空间还可以继承出子空间。这样就建立了跨命名空间的所有权概念，而不是局限于命名空间内。</strong></p>
+<p>这种层级命名空间的所有权可以在命名空间的基础上实现额外的两种功能：</p>
+<ul>
+<li><strong>策略继承</strong>: 如果一个命名空间是另一个命名空间的子空间，那么权限策略（例如<code>RBAC RoleBindings</code>）将会<strong>从父空间直接复制到子空间</strong></li>
+<li><strong>继承创建权限</strong>: 通常情况下，需要管理员权限才能创建命名空间。但层级命名空间提供了一个新方案：子命名空(subnamespaces),只需要使用父命名空间中的部分权限即可操作子命名空间。</li>
+</ul>
+<p>有了这两个功能后，集群管理员就可以为团队创建一个『根』命名空间，以及所有必要的权限策略，然后将创建子命名空间的权限赋予该团队的成员。这样团队内的成员就可以在不违反集群策略的情况下创建自己的子命名空间。</p>
+<h3 id="实践"><a href="#实践" class="headerlink" title="实践"></a>实践</h3><p>这里忽略安装流程，比较简单，可直接参考github的<a target="_blank" rel="noopener" href="https://github.com/kubernetes-sigs/hierarchical-namespaces/tree/master/docs/user-guide">user-guide</a></p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># hns可以以plugin的形式安装到Kubectl中，之后便可以直接使用kubectl hns</span></span><br><span class="line"></span><br><span class="line">kubectl create ns acme-org <span class="comment"># 创建root ns</span></span><br><span class="line">kubectl hns create team-c -n acme-org <span class="comment"># 使用hns 直接创建一个subns</span></span><br><span class="line"></span><br><span class="line"><span class="comment"># 也可以通过创建ns一样创建</span></span><br><span class="line">kubectl create ns acme-org</span><br><span class="line">kubectl create ns team-a</span><br><span class="line">kubectl hns <span class="built_in">set</span> team-a --parent acme-org <span class="comment"># 指定父子关系</span></span><br><span class="line"></span><br><span class="line"><span class="comment"># 使用hns tree查看关系树</span></span><br><span class="line">kubectl hns tree acme-org</span><br><span class="line"></span><br><span class="line">acme-org</span><br><span class="line">├── team-a</span><br><span class="line">│ └── service-1</span><br><span class="line">├── team-b</span><br><span class="line">└── [s] team-c</span><br></pre></td></tr></table></figure>
+
+<p>有[s]的表明是通过第一种方式创建subns, 这种叫subns</p>
+<p>没有[s]表明是先创建的ns，然后set –parent的方式创建, 这种叫fullns, </p>
+<p>单独拎出来说是因为这两种创建方式创建出来的sub ns会有一些区别:</p>
+<p>subns与fullns(直接通过k create ns创建的ns)的区别:</p>
+<blockquote>
+<ul>
+<li>subns的生命周期跟随rootns， 删除fullns的rootns，不会影响fullns， 而subns的rootns删除,subns也会被删除</li>
+<li>subns的parent的rootns不能修改，而fullns可以随时调整</li>
+</ul>
+</blockquote>
+<h3 id="配置文件"><a href="#配置文件" class="headerlink" title="配置文件"></a>配置文件</h3><p>在安装hnc时，存在两个配置文件</p>
+<ol>
+<li>hierarchyconfigurations: 为每个namespace的分层信息,记录某个ns是否存在subns及rootns是谁</li>
+<li>HNCConfiguration: 为hnc全局的配置文件，里面记录了需要传播的资源对象及资源个数等信息，<strong>只有集群管理员才有权限修改这个配置文件</strong></li>
+</ol>
+<h3 id="propagation-传播"><a href="#propagation-传播" class="headerlink" title="propagation(传播)"></a>propagation(传播)</h3><p>hnc中一个很重要的特性就是propagation, 当以root ns创建了多层的subns, 对于一些通用的属性需要从root ns传播到subns, 这样可以实现<strong>一处维护，随处传播的效果</strong></p>
+<p><strong>hnc支持所有资源类型，不仅包括kubernetes常用的类型，还包括CRD, 同时还可以控制传播的资源个数</strong></p>
+<p><strong>默认情况下， parent namespace下的所属的Role 和 RoleBinding 对象会传递给 child 命名空间对象</strong></p>
+<p>首先查看现在的配置中哪些开启了传播</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># 查看配置</span></span><br><span class="line">kubectl get hncconfiguration config -o yaml</span><br></pre></td></tr></table></figure>
+
+<p>有两种方式实现:</p>
+<blockquote>
+<ul>
+<li>a. 通过全局配置文件<br>如果是k8s自带资源(可省略–group)：<br><code>kubectl hns config set-resource secrets --mode Propagate</code><br>如果是crd资源：<br><code>kubectl hns config set-resource podpresets --group redhatcop.redhat.io --mode Propagate</code></li>
+</ul>
+</blockquote>
+<blockquote>
+<ul>
+<li>b. 通过annotaions(也需要hncconfiguration中设置该配置annotation方可生效)<br>在需要propagation的对象添加如下的annotaions, 不同的–mode,使用的annotaions效果不一样, 详见how-to.md:<br><code>kubectl annotate secret my-secret -n parent propagate.hnc.x-k8s.io/all=true</code></li>
+</ul>
+</blockquote>
+<p>所有被传播的对象的label都会被添加上以下内容:<br><code>app.kubernetes.io/managed-by: hnc.x-k8s.io</code><br><code>hnc.x-k8s.io/inherited-from: acme-org</code></p>
+<p>注意: 如果使用–mode Propagate, 在subns无法修改由rootns传播过来的对象,会提示<br><code>admission webhook &quot;objects.hnc.x-k8s.io&quot; denied the request: configmaps &quot;team-b/cm-test&quot; is forbidden: cannot modify object propagated from namespace &quot;acme-org&quot;</code></p>
+<p>格式:</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">kubectl-hns config set-resource RESOURCE [--group GROUP] [--force] --mode &lt;Propagate|Remove|Ignore|AllowPropagate&gt;</span><br></pre></td></tr></table></figure>
+
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># 举个例子</span></span><br><span class="line"><span class="comment"># 给所有的ns传播一个configmap，很简单，在HNCConfiguration中开启configmap的默认传播, 然后在parent ns中发布这个configmap，即可传播到subns</span></span><br><span class="line"></span><br><span class="line"><span class="comment"># 给所有的ns传播一个crd，同样，需要先在hnc的配置中打开该对象需要被传播的开关</span></span><br><span class="line"><span class="comment"># 这里以gvk为redhatcop.redhat.io/v1/podpresets这个crd对象为例</span></span><br><span class="line">kubectl hns config set-resource podpresets --group redhatcop.redhat.io --mode Propagate</span><br><span class="line"><span class="comment"># 然后在parent ns中发布这个crd对象即可</span></span><br></pre></td></tr></table></figure>
+
+<h4 id="传播策略"><a href="#传播策略" class="headerlink" title="传播策略"></a>传播策略</h4><p>对资源的传播，可指定 3 种模式(即在上述命令中的–mode参数):</p>
+<ol>
+<li><p><strong>Propagate</strong>(传播):将对象从祖先传播到后代,并删除过时的后代。</p>
+</li>
+<li><p><strong>AllowPropagate</strong>(允许传播): opt-in传播-当且仅当对象上至少有一个标签选择器时将对象从你对象传播到子对象并删除过时的后代。</p>
+</li>
+<li><p><strong>Remove</strong>(删除):删除所有现有的传播副本,但不会修改源对象。</p>
+</li>
+<li><p><strong>Ignore</strong>(忽略):停止修改该资源。不会传播新的或更改的对象,也不会删除过时的对象。这是<strong>默认</strong>模式</p>
+</li>
+</ol>
+<h3 id="HRQ"><a href="#HRQ" class="headerlink" title="HRQ"></a>HRQ</h3><p>HRQ(HierarchicalResourceQuota)是hnc中的一种CRD, 旨在解决resourcequota的传播问题, HRQ最终会转换成ns的resourcequota对象</p>
+<p><strong>rootns的HierarchicalResourceQuota虽然会传播到所有subns下生成相同的resourcequota，但HierarchicalResourceQuota指定的资源为所有subns下的资源总和</strong></p>
+<h3 id="Q-x2F-A"><a href="#Q-x2F-A" class="headerlink" title="Q&#x2F;A"></a>Q&#x2F;A</h3><ol>
+<li><p>Q: 创建一个rootns及HierarchicalResourceQuota， 再创建一个没有设置HierarchicalResourceQuota的subns, resourcequota如何传播??<br>A: subns与rootns下都会生成resourcequota且与HierarchicalResourceQuota相同，同时在这两个ns下的资源不会超过HierarchicalResourceQuota</p>
+</li>
+<li><p>Q: 创建一个rootns及HierarchicalResourceQuota, 再创建一个subns，正常情况下rootns会传播到subns,<br>此时在subns下再创建一个HierarchicalResourceQuota且规格大于rootns的HierarchicalResourceQuota, 会发生什么??<br>A: 测试发现不管这个在subns上创建一个HierarchicalResourceQuota是否与rootns同名，都可以创建成功,但是查看生成的resourcequota会发现此时的resourcequota还是以rootns下的HierarchicalResourceQuota为准，<br>如果此时在subns下发布一个job, 资源比rootns的hrq大，但比subns的hrq小，状态会pending, describe的原因是不能超时rootns的资源上限, 这里提示不能超过rootns的原因在于subns的quota比rootns的大，所以先超过了rootns</p>
+</li>
+<li><p>Q: 接Q2问题，如果此时在subns下创建的HierarchicalResourceQuota小于rootns的HierarchicalResourceQuota，情况又如何?？<br>A: 如果此时在subns下发布一个job，资源比subns的hrq大但比rootns的hrq小，状态会pending, describe的原因是不能超时subns的资源上限</p>
+<p>总结: 经过Q2及Q3可以得出结论: subns的HierarchicalResourceQuota可以比rootns的大,subns下的资源不能大于subns的HierarchicalResourceQuota或者rootns的HierarchicalResourceQuota, 如果出现pending，提示的原因是先超过了哪个ns的quota则提示哪个ns的quota超出，这样符合原生的resourcequota限制，即<strong>一个namespace可以同时存在多个对某一类资源(如CPU)的限制，会以小规格为准</strong></p>
+</li>
+<li><p>Q: 在rootns开启HierarchicalResourceQuota的propagation情况下，subns的HierarchicalResourceQuota是否可覆盖rootns的HierarchicalResourceQuota??<br>A: 开启–enable-hrq后，HierarchicalResourceQuota默认会propagation到所有subns<br>如果此时subns中没有hrq资源,则在subns中会直接生成一条同等规格的resoucequota对象, 同时这个rq会跟着rootns的hrq修改而修改<br>但如果此时subns有自己的hrq，则不会跟随rootns的修改而变化(见Q5)，<br>如果此时修改subns的hrq对象，是否会覆盖rootns的hrq对象?<br>会覆盖, 但是subns的resourcequota还是以subns及rootns两者的小值为准, 如果此时将rootns的HierarchicalResourceQuota删除后，subns的resourcequota的规格会变成它自己的HierarchicalResourceQuota所对应的规格</p>
+</li>
+<li><p>Q: 接Q4问题，如果只是resourcequota, 是否也会propagation??<br>A: 不会， 在subns下创建一个名为notebook-user-quota的resourcequota对象，然后在rootns中发布HierarchicalResourceQuota<br>在subns中会发现多了一个hrq.hnc.x-k8s.io的resourcequota，notebook-user-quota的resourcequota保存不变(一个namespace可以同时存在多个对某一类资源(如CPU)的限制，会以小规格为准)<br>经测试，无法在subns下直接创建名为hrq.hnc.x-k8s.io的resourcequota,则会直接删除</p>
+</li>
+<li><p>Q: propagation能否支持crd对象??<br>A: 支持，任何对象都可传播，可使用以下命令进行，详情可看关于propagation小节</p>
+</li>
+<li><p>Q: 由上可知<strong>最终生成的resourcequota会以较小值为依赖进行资源控制</strong>, 但如果想subns的resourcequota比rootns的大如何限制？<br>A: 通过rootns不propagation HierarchicalResourceQuota到subns， subns即可单独设置resourcequota<br>经测试发现，无法通过rootns的HierarchicalResourceQuota达到此目的, 但是可以通过原生的控制resourcequota propagation来实现<br>HierarchicalResourceQuota无法达到目的原因在于HierarchicalResourceQuota默认是传播的,因此没办法通过annotations进行控制哪些不传播哪些传播,比如要开启resourcequota的传播:</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># 先开启resourcequota实现传播</span></span><br><span class="line"><span class="comment"># kubectl hns config set-resource resourcequota --mode Propagate</span></span><br></pre></td></tr></table></figure>
+
+<p>然后在rootns中创建resourcequota, 可通过在annotations中排除不需要传播的ns.</p>
+<figure class="highlight yaml"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br></pre></td><td class="code"><pre><span class="line"><span class="attr">apiVersion:</span> <span class="string">v1</span> </span><br><span class="line"><span class="attr">kind:</span> <span class="string">ResourceQuota</span></span><br><span class="line"><span class="attr">metadata:</span></span><br><span class="line"> <span class="attr">name:</span> <span class="string">root-rq</span> </span><br><span class="line"> <span class="attr">namespace:</span> <span class="string">root-notebook</span></span><br><span class="line"> <span class="attr">annotations:</span></span><br><span class="line">   <span class="attr">propagate.hnc.x-k8s.io/treeSelect:</span> <span class="string">&#x27;!notebook-user-zsk&#x27;</span> <span class="comment"># 这里指定哪些ns不需要传播</span></span><br><span class="line"><span class="attr">spec:</span></span><br><span class="line"> <span class="attr">hard:</span></span><br><span class="line">   <span class="attr">requests.cpu:</span> <span class="string">&quot;5&quot;</span></span><br><span class="line">   <span class="attr">requests.memory:</span> <span class="string">&quot;5Gi&quot;</span></span><br><span class="line">   <span class="attr">limits.cpu:</span> <span class="string">&quot;5&quot;</span></span><br><span class="line">   <span class="attr">limits.memory:</span> <span class="string">&quot;5G&quot;</span></span><br></pre></td></tr></table></figure>
+
+<p>动态修改annotation,会动态生效<br>这样即可实现HQR控制所有subns的资源总量，一部分继承rootns的resourcequota,同时不需要继承的subns则可自定义resourcequota<br>另外，如果是某些subns的资源比rootns的hrq小的话，则可直接在subns中设置HierarchicalResourceQuota即可覆盖rootns中的quota(以较小值为准)</p>
+</li>
+</ol>
+<p>hnc中使用了mutating webhook的方式拦截了权限的请求，将权限限制在合适的subns中</p>
+<p>同时使用策略引擎达到资源可以向下传播，很大程度解决了kubernetes中namespace的诸多限制</p>
+<p>在一些其它的开源项目如capsule中看到hnc的思路，相信hnc会成为kubernetes关于资源、权限等维度的标准分层实现</p>
+<h3 id="参考文章"><a href="#参考文章" class="headerlink" title="参考文章:"></a><strong>参考文章:</strong></h3><h3 id="转载请注明原作者-周淑科-https-izsk-me"><a href="#转载请注明原作者-周淑科-https-izsk-me" class="headerlink" title="转载请注明原作者: 周淑科(https://izsk.me)"></a><strong>转载请注明原作者: 周淑科(<a target="_blank" rel="noopener" href="https://izsk.me/">https://izsk.me</a>)</strong></h3><blockquote>
+<ul>
+<li><a target="_blank" rel="noopener" href="https://github.com/kubernetes-sigs/hierarchical-namespaces">https://github.com/kubernetes-sigs/hierarchical-namespaces</a></li>
+<li><a target="_blank" rel="noopener" href="https://zhuanlan.zhihu.com/p/188457275">https://zhuanlan.zhihu.com/p/188457275</a></li>
+</ul>
+</blockquote>
+
+      
+    </div>
+
+    <div>
+      
+        
+<div id="wechat_subscriber" style="display: block; padding: 10px 0; margin: 20px auto; width: 100%; text-align: center">
+    <img id="wechat_subscriber_qcode" src="/images/websitecode250.png" alt=" wechat" style="width: 200px; max-width: 100%;"/>
+    <div>Scan Me To Read on Phone</div>
+</div>
+
+
+      
+    </div>
+
+    <div>
+      
+        
+  <div style="padding: 10px 0; margin: 20px auto; width: 90%; text-align: center;">
+    <div>I know you won't do this,but what if you did?</div>
+    <button id="rewardButton" disable="enable" onclick="var qr = document.getElementById('QR'); if (qr.style.display === 'none') {qr.style.display='block';} else {qr.style.display='none'}">
+      <span>赏</span>
+    </button>
+    <div id="QR" style="display: none;">
+      
+        <div id="wechat" style="display: inline-block">
+          <img id="wechat_qr" src="/images/wechatpayme.png" alt=" WeChat Pay"/>
+          <p>微信打赏</p>
+        </div>
+      
+      
+        <div id="alipay" style="display: inline-block">
+          <img id="alipay_qr" src="/images/alipayme.jpg" alt=" Alipay"/>
+          <p>支付宝打赏</p>
+        </div>
+      
+    </div>
+  </div>
+
+
+      
+    </div>
+
+
+    <footer class="post-footer">
+      
+        <div class="post-tags">
+          
+            <a href="/tags/Kubernetes/" rel="tag"># Kubernetes</a>
+          
+        </div>
+      
+
+      
+        <div class="post-nav">
+          <div class="post-nav-next post-nav-item">
+            
+              <a href="/2023/06/03/cilium-on-kubernetes-install/" rel="next" title="cilium在kubernetes中的生产实践二(cilium部署)">
+                <i class="fa fa-chevron-left"></i> cilium在kubernetes中的生产实践二(cilium部署)
+              </a>
+            
+          </div>
+
+          <span class="post-nav-divider"></span>
+
+          <div class="post-nav-prev post-nav-item">
+            
+              <a href="/2023/07/21/Kubernetes-capsule/" rel="prev" title="Kubernetes学习(capsule实现多租户模型)">
+                Kubernetes学习(capsule实现多租户模型) <i class="fa fa-chevron-right"></i>
+              </a>
+            
+          </div>
+        </div>
+      
+
+      
+      
+    </footer>
+  </article>
+
+
+
+    <div class="post-spread">
+      
+    </div>
+  </div>
+
+
+          </div>
+          
+
+
+          
+  <div class="comments" id="comments">
+    
+  </div>
+
+
+        </div>
+        
+          
+  
+  <div class="sidebar-toggle">
+    <div class="sidebar-toggle-line-wrap">
+      <span class="sidebar-toggle-line sidebar-toggle-line-first"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-middle"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-last"></span>
+    </div>
+  </div>
+
+  <aside id="sidebar" class="sidebar">
+    <div class="sidebar-inner">
+
+      
+
+      
+        <ul class="sidebar-nav motion-element">
+          <li class="sidebar-nav-toc sidebar-nav-active" data-target="post-toc-wrap" >
+            文章目录
+          </li>
+          <li class="sidebar-nav-overview" data-target="site-overview">
+            站点概览
+          </li>
+        </ul>
+      
+
+      <section class="site-overview sidebar-panel">
+        <div class="site-author motion-element" itemprop="author" itemscope itemtype="http://schema.org/Person">
+          <img class="site-author-image" itemprop="image"
+               src="/images/avatar.gif"
+               alt="" />
+          <p class="site-author-name" itemprop="name"></p>
+          <p class="site-description motion-element" itemprop="description"></p>
+        </div>
+        <nav class="site-state motion-element">
+        
+          
+            <div class="site-state-item site-state-posts">
+              <a href="/archives">
+                <span class="site-state-item-count">203</span>
+                <span class="site-state-item-name">日志</span>
+              </a>
+            </div>
+          
+
+          
+            <div class="site-state-item site-state-categories">
+              <a href="/categories">
+                <span class="site-state-item-count">14</span>
+                <span class="site-state-item-name">分类</span>
+              </a>
+            </div>
+          
+
+          
+            <div class="site-state-item site-state-tags">
+              <a href="/tags">
+                <span class="site-state-item-count">14</span>
+                <span class="site-state-item-name">标签</span>
+              </a>
+            </div>
+          
+
+        </nav>
+
+        
+
+        <div class="links-of-author motion-element">
+          
+        </div>
+
+        
+        
+
+        
+        
+
+        
+
+
+      </section>
+
+      
+      <!--noindex-->
+        <section class="post-toc-wrap motion-element sidebar-panel sidebar-panel-active">
+          <div class="post-toc">
+
+            
+              
+            
+
+            
+              <div class="post-toc-content"><ol class="nav"><li class="nav-item nav-level-3"><a class="nav-link" href="#%E5%AE%9E%E8%B7%B5"><span class="nav-number">1.</span> <span class="nav-text">实践</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E9%85%8D%E7%BD%AE%E6%96%87%E4%BB%B6"><span class="nav-number">2.</span> <span class="nav-text">配置文件</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#propagation-%E4%BC%A0%E6%92%AD"><span class="nav-number">3.</span> <span class="nav-text">propagation(传播)</span></a><ol class="nav-child"><li class="nav-item nav-level-4"><a class="nav-link" href="#%E4%BC%A0%E6%92%AD%E7%AD%96%E7%95%A5"><span class="nav-number">3.1.</span> <span class="nav-text">传播策略</span></a></li></ol></li><li class="nav-item nav-level-3"><a class="nav-link" href="#HRQ"><span class="nav-number">4.</span> <span class="nav-text">HRQ</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#Q-x2F-A"><span class="nav-number">5.</span> <span class="nav-text">Q&#x2F;A</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E5%8F%82%E8%80%83%E6%96%87%E7%AB%A0"><span class="nav-number">6.</span> <span class="nav-text">参考文章:</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E8%BD%AC%E8%BD%BD%E8%AF%B7%E6%B3%A8%E6%98%8E%E5%8E%9F%E4%BD%9C%E8%80%85-%E5%91%A8%E6%B7%91%E7%A7%91-https-izsk-me"><span class="nav-number">7.</span> <span class="nav-text">转载请注明原作者: 周淑科(https:&#x2F;&#x2F;izsk.me)</span></a></li></ol></div>
+            
+
+          </div>
+        </section>
+      <!--/noindex-->
+      
+
+    </div>
+  </aside>
+
+
+        
+      </div>
+    </main>
+
+    <footer id="footer" class="footer">
+      <div class="footer-inner">
+        <div class="copyright" >
+  
+  &copy; 
+  <span itemprop="copyrightYear">2023</span>
+  <span class="with-love">
+    <i class="fa fa-heart"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">Z.S.K.</span>
+</div>
+
+
+<div class="powered-by">
+  Supported by <a class="theme-link" target="_blank" rel="noopener" href="https://hexo.io">Hexo</a>
+</div>
+
+<div class="theme-info">
+  Theme -
+  <a class="theme-link" target="_blank" rel="noopener" href="https://github.com/iissnan/hexo-theme-next">
+    NexT.Mist
+  </a>
+</div>
+
+
+        
+
+        
+      </div>
+    </footer>
+
+    <div class="back-to-top">
+      <i class="fa fa-arrow-up"></i>
+    </div>
+  </div>
+
+  
+
+<script type="text/javascript">
+  if (Object.prototype.toString.call(window.Promise) !== '[object Function]') {
+    window.Promise = null;
+  }
+</script>
+
+
+
+
+
+
+
+
+
+  
+
+
+
+  
+  <script type="text/javascript" src="/lib/jquery/index.js?v=2.1.3"></script>
+
+  
+  <script type="text/javascript" src="/lib/fastclick/lib/fastclick.min.js?v=1.0.6"></script>
+
+  
+  <script type="text/javascript" src="/lib/jquery_lazyload/jquery.lazyload.js?v=1.9.7"></script>
+
+  
+  <script type="text/javascript" src="/lib/velocity/velocity.min.js?v=1.2.1"></script>
+
+  
+  <script type="text/javascript" src="/lib/velocity/velocity.ui.min.js?v=1.2.1"></script>
+
+  
+  <script type="text/javascript" src="/lib/fancybox/source/jquery.fancybox.pack.js?v=2.1.5"></script>
+
+
+  
+
+
+  <script type="text/javascript" src="/js/src/utils.js?v=5.1.0"></script>
+
+  <script type="text/javascript" src="/js/src/motion.js?v=5.1.0"></script>
+
+
+
+  
+  
+
+  
+  <script type="text/javascript" src="/js/src/scrollspy.js?v=5.1.0"></script>
+<script type="text/javascript" src="/js/src/post-details.js?v=5.1.0"></script>
+
+
+
+  
+
+
+  <script type="text/javascript" src="/js/src/bootstrap.js?v=5.1.0"></script>
+
+
+
+  
+
+
+
+  
+
+
+
+
+	
+
+
+
+
+
+  
+
+
+
+
+  
+  
+  <script type="text/javascript">
+    // Popup Window;
+    var isfetched = false;
+    // Search DB path;
+    var search_path = "search.xml";
+    if (search_path.length == 0) {
+      search_path = "search.xml";
+    }
+    var path = "/" + search_path;
+    // monitor main search box;
+
+    function proceedsearch() {
+      $("body").append('<div class="popoverlay">').css('overflow', 'hidden');
+      $('.popup').toggle();
+    }
+    // search function;
+    var searchFunc = function(path, search_id, content_id) {
+      'use strict';
+      $.ajax({
+        url: path,
+        dataType: "xml",
+        async: true,
+        success: function( xmlResponse ) {
+          // get the contents from search data
+          isfetched = true;
+          $('.popup').detach().appendTo('.header-inner');
+          var datas = $( "entry", xmlResponse ).map(function() {
+            return {
+              title: $( "title", this ).text(),
+              content: $("content",this).text(),
+              url: $( "url" , this).text()
+            };
+          }).get();
+          var $input = document.getElementById(search_id);
+          var $resultContent = document.getElementById(content_id);
+          $input.addEventListener('input', function(){
+            var matchcounts = 0;
+            var str='<ul class=\"search-result-list\">';
+            var keywords = this.value.trim().toLowerCase().split(/[\s\-]+/);
+            $resultContent.innerHTML = "";
+            if (this.value.trim().length > 1) {
+              // perform local searching
+              datas.forEach(function(data) {
+                var isMatch = false;
+                var content_index = [];
+                var data_title = data.title.trim().toLowerCase();
+                var data_content = data.content.trim().replace(/<[^>]+>/g,"").toLowerCase();
+                var data_url = decodeURIComponent(data.url);
+                var index_title = -1;
+                var index_content = -1;
+                var first_occur = -1;
+                // only match artiles with not empty titles and contents
+                if(data_title != '') {
+                  keywords.forEach(function(keyword, i) {
+                    index_title = data_title.indexOf(keyword);
+                    index_content = data_content.indexOf(keyword);
+                    if( index_title >= 0 || index_content >= 0 ){
+                      isMatch = true;
+                      if (i == 0) {
+                        first_occur = index_content;
+                      }
+                    }
+
+                  });
+                }
+                // show search results
+                if (isMatch) {
+                  matchcounts += 1;
+                  str += "<li><a href='"+ data_url +"' class='search-result-title'>"+ data_title +"</a>";
+                  var content = data.content.trim().replace(/<[^>]+>/g,"");
+                  if (first_occur >= 0) {
+                    // cut out 100 characters
+                    var start = first_occur - 20;
+                    var end = first_occur + 80;
+                    if(start < 0){
+                      start = 0;
+                    }
+                    if(start == 0){
+                      end = 50;
+                    }
+                    if(end > content.length){
+                      end = content.length;
+                    }
+                    var match_content = content.substring(start, end);
+                    // highlight all keywords
+                    keywords.forEach(function(keyword){
+                      var regS = new RegExp(keyword, "gi");
+                      match_content = match_content.replace(regS, "<b class=\"search-keyword\">"+keyword+"</b>");
+                    });
+
+                    str += "<p class=\"search-result\">" + match_content +"...</p>"
+                  }
+                  str += "</li>";
+                }
+              })};
+            str += "</ul>";
+            if (matchcounts == 0) { str = '<div id="no-result"><i class="fa fa-frown-o fa-5x" /></div>' }
+            if (keywords == "") { str = '<div id="no-result"><i class="fa fa-search fa-5x" /></div>' }
+            $resultContent.innerHTML = str;
+          });
+          proceedsearch();
+        }
+      });}
+
+    // handle and trigger popup window;
+    $('.popup-trigger').click(function(e) {
+      e.stopPropagation();
+      if (isfetched == false) {
+        searchFunc(path, 'local-search-input', 'local-search-result');
+      } else {
+        proceedsearch();
+      };
+    });
+
+    $('.popup-btn-close').click(function(e){
+      $('.popup').hide();
+      $(".popoverlay").remove();
+      $('body').css('overflow', '');
+    });
+    $('.popup').click(function(e){
+      e.stopPropagation();
+    });
+  </script>
+
+
+  
+
+  
+
+  
+
+  
+
+
+</body>
+</html>

@@ -1,0 +1,943 @@
+<!doctype html>
+
+
+
+  
+
+
+<html class="theme-next mist use-motion" lang="zh-Hans">
+<head>
+  <meta charset="UTF-8"/>
+<meta http-equiv="X-UA-Compatible" content="IE=edge" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1"/>
+
+
+
+<meta http-equiv="Cache-Control" content="no-transform" />
+<meta http-equiv="Cache-Control" content="no-siteapp" />
+
+
+
+
+
+
+
+
+
+
+
+
+  
+  
+  <link href="/lib/fancybox/source/jquery.fancybox.css?v=2.1.5" rel="stylesheet" type="text/css" />
+
+
+
+
+  
+  
+  
+  
+
+  
+    
+    
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+    
+    
+    <link href="//fonts.googleapis.com/css?family=Lato:300,300italic,400,400italic,700,700italic&subset=latin,latin-ext" rel="stylesheet" type="text/css">
+  
+
+
+
+
+
+
+<link href="/lib/font-awesome/css/font-awesome.min.css?v=4.6.2" rel="stylesheet" type="text/css" />
+
+<link href="/css/main.css?v=5.1.0" rel="stylesheet" type="text/css" />
+
+
+  <meta name="keywords" content="Kubernetes," />
+
+
+
+
+
+
+
+
+  <link rel="shortcut icon" type="image/x-icon" href="/favicon.ico?v=5.1.0" />
+
+
+
+
+
+
+<meta name="description" content="capsule做为kubernetes的多租户模型的另一实现, 与hnc有异曲同工之处,由于Capsule的声明性，以及所有的配置都可存储在Git中，因此Capsule原生具备GitOps特征">
+<meta property="og:type" content="article">
+<meta property="og:title" content="Kubernetes学习(capsule实现多租户模型)">
+<meta property="og:url" content="https://zhoushuke.github.io/2023/07/21/Kubernetes-capsule/index.html">
+<meta property="og:site_name" content="Z.S.K.&#39;s Records">
+<meta property="og:description" content="capsule做为kubernetes的多租户模型的另一实现, 与hnc有异曲同工之处,由于Capsule的声明性，以及所有的配置都可存储在Git中，因此Capsule原生具备GitOps特征">
+<meta property="og:locale">
+<meta property="og:image" content="https://capsule.clastix.io/assets/static/capsule-operator.d853076.ce76636fce3e3130134a6f768700f6f7.svg">
+<meta property="article:published_time" content="2023-07-21T09:30:53.000Z">
+<meta property="article:modified_time" content="2023-07-22T09:44:25.138Z">
+<meta property="article:author" content="Z.S.K.">
+<meta property="article:tag" content="Kubernetes">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:image" content="https://capsule.clastix.io/assets/static/capsule-operator.d853076.ce76636fce3e3130134a6f768700f6f7.svg">
+
+
+
+<script type="text/javascript" id="hexo.configurations">
+  var NexT = window.NexT || {};
+  var CONFIG = {
+    root: '',
+    scheme: 'Mist',
+    sidebar: {"position":"left","display":"post"},
+    fancybox: true,
+    motion: true,
+    duoshuo: {
+      userId: 'undefined',
+      author: '博主'
+    },
+    algolia: {
+      applicationID: '',
+      apiKey: '',
+      indexName: '',
+      hits: {"per_page":10},
+      labels: {"input_placeholder":"Search for Posts","hits_empty":"We didn't find any results for the search: ${query}","hits_stats":"${hits} results found in ${time} ms"}
+    }
+  };
+</script>
+
+
+
+  <link rel="canonical" href="https://zhoushuke.github.io/2023/07/21/Kubernetes-capsule/"/>
+
+
+
+
+
+  <title> Kubernetes学习(capsule实现多租户模型) | Z.S.K.'s Records </title>
+<meta name="generator" content="Hexo 6.2.0"></head>
+
+<body itemscope itemtype="http://schema.org/WebPage" lang="zh-Hans">
+
+  
+
+
+
+
+
+
+
+
+
+
+  
+  
+    
+  
+
+  <div class="container one-collumn sidebar-position-left page-post-detail ">
+    <div class="headband"></div>
+
+    <header id="header" class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-meta ">
+  
+
+  <div class="custom-logo-site-title">
+    <a href="/"  class="brand" rel="start">
+      <span class="logo-line-before"><i></i></span>
+      <span class="site-title">Z.S.K.'s Records</span>
+      <span class="logo-line-after"><i></i></span>
+    </a>
+  </div>
+    
+      <p class="site-subtitle"></p>
+    
+</div>
+
+<div class="site-nav-toggle">
+  <button>
+    <span class="btn-bar"></span>
+    <span class="btn-bar"></span>
+    <span class="btn-bar"></span>
+  </button>
+</div>
+
+<nav class="site-nav">
+  
+
+  
+    <ul id="menu" class="menu">
+      
+        
+        <li class="menu-item menu-item-home">
+          <a href="/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-home"></i> <br />
+            
+            首页
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-categories">
+          <a href="/categories" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-th"></i> <br />
+            
+            分类
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-about">
+          <a href="/about/ZSK-Profile.pdf" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-user"></i> <br />
+            
+            简历
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-archives">
+          <a href="/archives" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-archive"></i> <br />
+            
+            归档
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-tags">
+          <a href="/tags" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-tags"></i> <br />
+            
+            标签
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-commonweal">
+          <a href="/404.html" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-heartbeat"></i> <br />
+            
+            公益404
+          </a>
+        </li>
+      
+
+      
+        <li class="menu-item menu-item-search">
+          
+            <a href="javascript:;" class="popup-trigger">
+          
+            
+              <i class="menu-item-icon fa fa-search fa-fw"></i> <br />
+            
+            搜索
+          </a>
+        </li>
+      
+    </ul>
+  
+
+  
+    <div class="site-search">
+      
+  <div class="popup">
+ <span class="search-icon fa fa-search"></span>
+ <input type="text" id="local-search-input">
+ <div id="local-search-result"></div>
+ <span class="popup-btn-close">close</span>
+</div>
+
+
+    </div>
+  
+</nav>
+
+
+
+ </div>
+    </header>
+
+    <main id="main" class="main">
+      <div class="main-inner">
+        <div class="content-wrap">
+          <div id="content" class="content">
+            
+
+  <div id="posts" class="posts-expand">
+    
+
+  
+
+  
+  
+  
+
+  <article class="post post-type-normal " itemscope itemtype="http://schema.org/Article">
+  <link itemprop="mainEntityOfPage" href="https://zhoushuke.github.io/2023/07/21/Kubernetes-capsule/">
+
+  <span style="display:none" itemprop="author" itemscope itemtype="http://schema.org/Person">
+    <meta itemprop="name" content="">
+    <meta itemprop="description" content="">
+    <meta itemprop="image" content="/images/avatar.gif">
+  </span>
+
+  <span style="display:none" itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+    <meta itemprop="name" content="Z.S.K.'s Records">
+    <span style="display:none" itemprop="logo" itemscope itemtype="http://schema.org/ImageObject">
+      <img style="display:none;" itemprop="url image" alt="Z.S.K.'s Records" src="">
+    </span>
+  </span>
+
+    
+      <header class="post-header">
+
+        
+        
+          <h1 class="post-title" itemprop="name headline">
+            
+            
+              
+                Kubernetes学习(capsule实现多租户模型)
+              
+            
+          </h1>
+        
+
+        <div class="post-meta">
+          <span class="post-time">
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">发表于</span>
+              
+              <time title="Post created" itemprop="dateCreated datePublished" datetime="2023-07-21T17:30:53+08:00">
+                2023-07-21
+              </time>
+            
+
+            
+
+            
+          </span>
+
+          
+            <span class="post-category" >
+            
+              <span class="post-meta-divider">|</span>
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-folder-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">分类于</span>
+              
+              
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/Kubernetes/" itemprop="url" rel="index">
+                    <span itemprop="name">Kubernetes</span>
+                  </a>
+                </span>
+
+                
+                
+              
+            </span>
+          
+
+          
+            
+          
+
+          
+
+          
+          
+
+          
+
+          
+
+        </div>
+      </header>
+    
+
+
+    <div class="post-body" itemprop="articleBody">
+
+      
+      
+
+      
+        <p>capsule做为kubernetes的多租户模型的另一实现, 与hnc有异曲同工之处,由于Capsule的声明性，以及所有的配置都可存储在Git中，因此Capsule原生具备GitOps特征</p>
+<span id="more"></span>
+
+<h3 id="架构"><a href="#架构" class="headerlink" title="架构"></a>架构</h3><p>在单个集群中，Capsule Controller将多个命名空间聚合在一个名为Tenant的轻量级抽象中，基本上是一组Kubernetes命名空间。在每个租户中，用户可以自由地创建他们的名称空间并共享所有分配的资源。<br>另一方面，<strong>capsule 策略引擎保持不同租户彼此隔离。网络和安全策略、资源配额、限制范围、RBAC以及在租户级别定义的其他策略会自动由租户中的所有命名空间继承</strong>。然后，用户可以自由地自主地操作他们的租户，而不需要集群管理员的干预</p>
+<p><img src="https://capsule.clastix.io/assets/static/capsule-operator.d853076.ce76636fce3e3130134a6f768700f6f7.svg"></p>
+<h3 id="租户"><a href="#租户" class="headerlink" title="租户"></a>租户</h3><p>在Capsule中，租户是一种抽象，用于在集群管理员定义的一组边界内将多个命名空间分组到单个实体中。然后将租户分配给称为租户所有者的用户或用户组<br><strong>只有集群管理员才有权限操作Tenant对象</strong></p>
+<figure class="highlight yaml"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br></pre></td><td class="code"><pre><span class="line"><span class="attr">apiVersion:</span> <span class="string">capsule.clastix.io/v1beta2</span></span><br><span class="line"><span class="attr">kind:</span> <span class="string">Tenant</span></span><br><span class="line"><span class="attr">metadata:</span></span><br><span class="line">  <span class="attr">name:</span> <span class="string">oil</span></span><br><span class="line"><span class="attr">spec:</span></span><br><span class="line">  <span class="attr">owners:</span></span><br><span class="line">  <span class="bullet">-</span> <span class="attr">name:</span> <span class="string">alice</span></span><br><span class="line">    <span class="attr">kind:</span> <span class="string">User</span></span><br><span class="line">  <span class="bullet">-</span> <span class="attr">name:</span> <span class="string">system:serviceaccount:tenant-system:robot</span></span><br><span class="line">    <span class="attr">kind:</span> <span class="string">ServiceAccount</span></span><br></pre></td></tr></table></figure>
+
+<p>声明了一个oil的租户, 它的租户管理员是User为alice的人或者是sa, 具有相应权限的sa也可以是租户管理员<br>每个租户都有一个委派的用户或一组用户作为租户管理员。在capsule中这被称为租户所有者。其他用户可以在租户内部使用由租户所有者直接分配的不同级别的权限和授权进行操作。<br><strong>Capsule不关心集群中使用的身份验证策略，并且支持所有Kubernetes身份验证方法</strong>。使用Capsule的唯一要求是将租户用户分配到由<code>--capsule-user-group</code>选项定义的组(该参数很重要，可以传入多个值)，默认安装时这个参数的值为capsule.clastix.io。</p>
+<p>具体的身份验证策略详见下文</p>
+<p>一般在集群管理员创建完租户后, 会将相应的集群认证文件(常见的如kubeconfig文件，相当还可以是token等)发送给owners列表中的用户， 他们便可使用以下命令查看是否有创建namespace的权限</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># 具有创建ns的权限</span></span><br><span class="line">kubectl auth can-i create namespaces</span><br><span class="line">Warning: resource <span class="string">&#x27;namespaces&#x27;</span> is not namespace scoped</span><br><span class="line"><span class="built_in">yes</span></span><br><span class="line"></span><br><span class="line"><span class="comment"># 具有删除ns的权限,只能删除由它创建的ns</span></span><br><span class="line">kubectl auth can-i delete ns -n oil-production</span><br><span class="line"><span class="built_in">yes</span></span><br><span class="line"></span><br><span class="line"><span class="comment"># 但是没有get ns的权限</span></span><br><span class="line">kubectl auth can-i get namespaces</span><br><span class="line">no</span><br><span class="line"></span><br><span class="line"><span class="comment"># 没有get 其它集群级别资源的权限</span></span><br><span class="line">kubectl auth can-i get nodes</span><br><span class="line">no</span><br><span class="line">kubectl auth can-i get persistentvolumes</span><br><span class="line">no</span><br><span class="line"></span><br><span class="line"><span class="comment"># 也不能创建及get租户资源</span></span><br><span class="line">kubectl auth can-i get tenants</span><br><span class="line">no</span><br></pre></td></tr></table></figure>
+
+<p><strong>Owner的用户可以创建&#x2F;删除ns,但无法获取除ns之个的集群级别的资源权限, 相关的权限都限制在它创建的ns中</strong><br>默认情况下，租户所有者将通过RoleBinding API被授予两个ClusterRole资源：</p>
+<blockquote>
+<ul>
+<li>Kubernetes admin(<strong>可以理解为是限制在namespace中的admin而不是真的集群admin</strong>)，由它授权大多数命名空间范围内的资源</li>
+<li>由Capsule创建名为capsule-namespace-deleter的权限，允许删除创建的命名空间，所以Owner有删除ns的权限</li>
+</ul>
+</blockquote>
+<p><strong>要注意的一点是，由于Owner支持serviceaccount，需要确保不能使用groupsystem：serviceaccounts或groupsystem：serviceaccounts：{capsule-namespace}作为Capsule组，否则您将在Capsule控制器中出现短路，因为Capsule本身由serviceaccount控制</strong></p>
+<h3 id="属性"><a href="#属性" class="headerlink" title="属性"></a>属性</h3><h4 id="Tenant"><a href="#Tenant" class="headerlink" title="Tenant"></a>Tenant</h4><figure class="highlight yaml"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br></pre></td><td class="code"><pre><span class="line"><span class="attr">apiVersion:</span> <span class="string">capsule.clastix.io/v1beta2</span></span><br><span class="line"><span class="attr">kind:</span> <span class="string">Tenant</span></span><br><span class="line"><span class="attr">metadata:</span></span><br><span class="line">  <span class="attr">name:</span> <span class="string">oil</span></span><br><span class="line"><span class="attr">spec:</span></span><br><span class="line">  <span class="attr">owners:</span></span><br><span class="line">  <span class="bullet">-</span> <span class="attr">name:</span> <span class="string">alice</span></span><br><span class="line">    <span class="attr">kind:</span> <span class="string">User</span></span><br><span class="line">  <span class="attr">additionalRoleBindings:</span> <span class="comment"># 可以为相关的用户指定额外的权限，与rbac进行联动</span></span><br><span class="line">    <span class="bullet">-</span> <span class="attr">clusterRoleName:</span> <span class="string">&#x27;argoproj-provisioner&#x27;</span></span><br><span class="line">      <span class="attr">subjects:</span></span><br><span class="line">        <span class="bullet">-</span> <span class="attr">apiGroup:</span> <span class="string">rbac.authorization.k8s.io</span></span><br><span class="line">          <span class="attr">kind:</span> <span class="string">User</span></span><br><span class="line">          <span class="attr">name:</span> <span class="string">alice</span></span><br><span class="line">        <span class="bullet">-</span> <span class="attr">apiGroup:</span> <span class="string">rbac.authorization.k8s.io</span></span><br><span class="line">          <span class="attr">kind:</span> <span class="string">User</span></span><br><span class="line">          <span class="attr">name:</span> <span class="string">joe</span></span><br><span class="line">  <span class="attr">namespaceOptions:</span> <span class="comment"># 可以创建的最大namespace数量</span></span><br><span class="line">    <span class="attr">quota:</span> <span class="number">3</span></span><br><span class="line">    <span class="attr">additionalMetadata:</span>  <span class="comment"># 给ns添加annotation及label</span></span><br><span class="line">      <span class="attr">annotations:</span></span><br><span class="line">        <span class="attr">storagelocationtype:</span> <span class="string">s3</span></span><br><span class="line">      <span class="attr">labels:</span></span><br><span class="line">        <span class="attr">capsule.clastix.io/backup:</span> <span class="string">&quot;true&quot;</span></span><br><span class="line">  <span class="attr">resourceQuotas:</span> <span class="comment"># ns的resourcequota, 最终转换成ns的resourcequota对象, 也支持自定义的资源quota</span></span><br><span class="line">    <span class="attr">scope:</span> <span class="string">Tenant</span> <span class="comment"># 可以是tenant级别(该tenant下的所有的ns有效), 也可以是namespace级别(针对ns有限, ns可通过label selector选定)</span></span><br><span class="line">    <span class="attr">items:</span></span><br><span class="line">    <span class="bullet">-</span> <span class="attr">hard:</span></span><br><span class="line">        <span class="attr">limits.cpu:</span> <span class="string">&quot;8&quot;</span></span><br><span class="line">        <span class="attr">limits.memory:</span> <span class="string">16Gi</span></span><br><span class="line">        <span class="attr">requests.cpu:</span> <span class="string">&quot;8&quot;</span></span><br><span class="line">        <span class="attr">requests.memory:</span> <span class="string">16Gi</span></span><br><span class="line">        <span class="attr">pods:</span> <span class="string">&quot;10&quot;</span></span><br><span class="line">  <span class="attr">limitRanges:</span>  <span class="comment"># 容器的limitrange，最终转换成ns的limitrange对象</span></span><br><span class="line">    <span class="attr">items:</span></span><br><span class="line">    <span class="bullet">-</span> <span class="attr">limits:</span></span><br><span class="line">      <span class="bullet">-</span> <span class="attr">default:</span></span><br><span class="line">          <span class="attr">cpu:</span> <span class="string">500m</span></span><br><span class="line">          <span class="attr">memory:</span> <span class="string">512Mi</span></span><br><span class="line">        <span class="attr">defaultRequest:</span></span><br><span class="line">          <span class="attr">cpu:</span> <span class="string">100m</span></span><br><span class="line">          <span class="attr">memory:</span> <span class="string">10Mi</span></span><br><span class="line">        <span class="attr">type:</span> <span class="string">Container</span></span><br><span class="line">  <span class="attr">priorityClasses:</span> <span class="comment"># 限制该tenant下的所有pod的优先级</span></span><br><span class="line">    <span class="attr">allowed:</span></span><br><span class="line">    <span class="bullet">-</span> <span class="string">custom</span> <span class="comment"># 自定义的PriorityClass</span></span><br><span class="line">    <span class="attr">allowedRegex:</span> <span class="string">&quot;^tier-.*$&quot;</span></span><br><span class="line">    <span class="attr">matchLabels:</span></span><br><span class="line">      <span class="attr">env:</span> <span class="string">&quot;production&quot;</span></span><br><span class="line">  <span class="attr">nodeSelector:</span>  <span class="comment"># 给tenant下的所有pod指定调度策略，当然也包含亲和及非亲和属性</span></span><br><span class="line">    <span class="attr">pool:</span> <span class="string">oil</span></span><br><span class="line">    <span class="attr">kubernetes.io/os:</span> <span class="string">linux</span></span><br><span class="line">  <span class="comment"># ... 更多属性</span></span><br></pre></td></tr></table></figure>
+
+<p>tenant支持的属性非常多，这里不一一列出，可以看出，实现这些属性的机制是通过了策略引擎的方式</p>
+<h4 id="GlobalTenantResource"><a href="#GlobalTenantResource" class="headerlink" title="GlobalTenantResource"></a>GlobalTenantResource</h4><p>GlobalTenantResource被设计用于在选定的tenant对象中共享资源</p>
+<figure class="highlight yaml"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br></pre></td><td class="code"><pre><span class="line"><span class="attr">apiVersion:</span> <span class="string">capsule.clastix.io/v1beta2</span></span><br><span class="line"><span class="attr">kind:</span> <span class="string">GlobalTenantResource</span></span><br><span class="line"><span class="attr">metadata:</span></span><br><span class="line">  <span class="attr">name:</span> <span class="string">fossil-pull-secrets</span></span><br><span class="line"><span class="attr">spec:</span></span><br><span class="line">  <span class="attr">tenantSelector:</span>  <span class="comment"># 通过label选择tenant, 只有tenant对象上具有该label才能继承resources中指定的对象</span></span><br><span class="line">    <span class="attr">matchLabels:</span></span><br><span class="line">      <span class="attr">energy:</span> <span class="string">fossil</span></span><br><span class="line">  <span class="attr">resyncPeriod:</span> <span class="string">60s</span>  <span class="comment"># 资源是否已复制并同步的时间间隔</span></span><br><span class="line">  <span class="attr">resources:</span>  <span class="comment"># 指定需要共享的资源对象列表，同样，这里支持任一对象，包含CRD</span></span><br><span class="line">    <span class="bullet">-</span> <span class="attr">namespacedItems:</span></span><br><span class="line">        <span class="bullet">-</span> <span class="attr">apiVersion:</span> <span class="string">v1</span></span><br><span class="line">          <span class="attr">kind:</span> <span class="string">Secret</span></span><br><span class="line">          <span class="attr">namespace:</span> <span class="string">harbor-system</span> <span class="comment"># 在harbor-system中带有tenant: fossil label的secret都将被共享</span></span><br><span class="line">          <span class="attr">selector:</span></span><br><span class="line">            <span class="attr">matchLabels:</span></span><br><span class="line">              <span class="attr">tenant:</span> <span class="string">fossil</span></span><br></pre></td></tr></table></figure>
+
+<p>由于GlobalTenantResource是群集范围内的资源，因此只有群集管理员才能操作该对象, 如果想在某一tenant中的所有ns共享资源，又如何实现呢？</p>
+<h4 id="TenantResource"><a href="#TenantResource" class="headerlink" title="TenantResource"></a>TenantResource</h4><p>TenantResource则是用于实现上述目的，tenant的Owner用户可以直接操作该对象</p>
+<figure class="highlight yaml"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br></pre></td><td class="code"><pre><span class="line"><span class="attr">apiVersion:</span> <span class="string">capsule.clastix.io/v1beta2</span></span><br><span class="line"><span class="attr">kind:</span> <span class="string">TenantResource</span></span><br><span class="line"><span class="attr">metadata:</span></span><br><span class="line">  <span class="attr">name:</span> <span class="string">solar-db</span></span><br><span class="line">  <span class="attr">namespace:</span> <span class="string">solar-system</span></span><br><span class="line"><span class="attr">spec:</span></span><br><span class="line">  <span class="attr">resyncPeriod:</span> <span class="string">60s</span> <span class="comment"># 资源是否已复制并同步的时间间隔</span></span><br><span class="line">  <span class="attr">resources:</span></span><br><span class="line">    <span class="bullet">-</span> <span class="attr">namespaceSelector:</span> <span class="comment"># 选择namespace</span></span><br><span class="line">        <span class="attr">matchLabels:</span></span><br><span class="line">          <span class="attr">environment:</span> <span class="string">production</span></span><br><span class="line">      <span class="attr">rawItems:</span>  <span class="comment"># 选择资源对象列表</span></span><br><span class="line">        <span class="bullet">-</span> <span class="attr">apiVersion:</span> <span class="string">postgresql.cnpg.io/v1</span></span><br><span class="line">          <span class="attr">kind:</span> <span class="string">Cluster</span></span><br><span class="line">          <span class="attr">metadata:</span></span><br><span class="line">            <span class="attr">name:</span> <span class="string">postgresql</span></span><br><span class="line">          <span class="attr">spec:</span></span><br><span class="line">            <span class="attr">description:</span> <span class="string">PostgreSQL</span> <span class="string">cluster</span> <span class="string">for</span> <span class="string">the</span> <span class="string">Solar</span> <span class="string">project</span></span><br><span class="line">            <span class="attr">instances:</span> <span class="number">3</span></span><br><span class="line">            <span class="attr">postgresql:</span></span><br><span class="line">              <span class="attr">pg_hba:</span></span><br><span class="line">                <span class="bullet">-</span> <span class="string">hostssl</span> <span class="string">app</span> <span class="string">all</span> <span class="string">all</span> <span class="string">cert</span></span><br><span class="line">            <span class="attr">primaryUpdateStrategy:</span> <span class="string">unsupervised</span></span><br><span class="line">            <span class="attr">storage:</span></span><br><span class="line">              <span class="attr">size:</span> <span class="string">1Gi</span></span><br></pre></td></tr></table></figure>
+
+<p>有了这些属性，Tenant几乎可以实现任何的多租户需求<br>参考<a target="_blank" rel="noopener" href="https://capsule.clastix.io/docs/general/tutorial">官网</a></p>
+<h3 id="身份验证"><a href="#身份验证" class="headerlink" title="身份验证"></a>身份验证</h3><h4 id="X509"><a href="#X509" class="headerlink" title="X509"></a>X509</h4><p>官方给出的case是基于x509证书的方式实现的Owner身份认证，主要是hack&#x2F;create-user.sh脚本，这里讲一下流程<br>首先通过openssl创建证书: key及csr</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">openssl genrsa -out <span class="variable">$&#123;USER&#125;</span>-<span class="variable">$&#123;TENANT&#125;</span>.key 2048</span><br><span class="line">openssl req -new -key <span class="variable">$&#123;USER&#125;</span>-<span class="variable">$&#123;TENANT&#125;</span>.key -subj <span class="string">&quot;/CN=<span class="variable">$&#123;USER&#125;</span><span class="variable">$&#123;MERGED_GROUPS&#125;</span>&quot;</span> -out <span class="variable">$&#123;TMPDIR&#125;</span>/<span class="variable">$&#123;USER&#125;</span>-<span class="variable">$&#123;TENANT&#125;</span>.csr</span><br></pre></td></tr></table></figure>
+
+<p>重点关注-subj参数, CN表示common Name, USER是脚本传入的用户，即tenant的Owner中指定的用户, MERGED_GROUPS为默认的capsule.clastix.io,然后生成CertificateSigningRequest对象提交给集群，集群自动approve及签发相关证书并生成USER的kubeconfig文件.由于CN中已经传入了USER, 这个USER也属于capsule.clastix.io组， 正好与–capsule-user-group参数capsule.clastix.io(默认值)一致,因此在创建完成后, USER使用kubeconfig文件即可拥有Tenant Owner权限,整个流程跟正常搭建kubernetes证书的生成是一个道理。</p>
+<p>但是生产中不可能一个一个手工去创建用户证书, 前面说过，<strong>Capsule不关心集群中使用的身份验证策略，并且支持所有Kubernetes身份验证方法</strong><br>所以只要是支持了kubernetes的身份验证策略的系统或者是平台，都可以对接上capsule, 以下再以rancher为例进行说明</p>
+<h4 id="对接Rancher"><a href="#对接Rancher" class="headerlink" title="对接Rancher"></a>对接Rancher</h4><p>rancher做为一款常用的集群管理平台, 支持对接多种账号体系,如AD&#x2F;LDAP, 这里以LDAP为例(rancher如何配置AD不属于本篇内容，不再赘述),<br>这里简单说一下原理: <strong>当使用LDAP账号登陆rancher时，rancher会从LDAP中验证是否为合法用户，如果是则将该用户保存在自身的CRD对象中,同时生成该用户的唯一ID,同时这个用户会有一个用户组，也由rancher生成。<br>rancher在与kubernetes集群交互时，使用kubernetes提供的<a target="_blank" rel="noopener" href="https://kubernetes.io/docs/reference/access-authn-authz/authentication/#user-impersonation"><code>user impersontion</code></a>机制进行通信，将ldap中的用户信息(比如cn&#x3D;zsk)封装成自身的用户机制(id&#x3D;u-32ipck5o7k)去与kubernetes交互</strong></p>
+<p>上述机制很重要,所以这种情况下，在指定Tenant的Owener时 User应该是LDAP中的用户吗？答案是否定的，而应该要是rancher中的用户</p>
+<p>rancher中的User对象信息如下:</p>
+<figure class="highlight yaml"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br></pre></td><td class="code"><pre><span class="line"><span class="attr">apiVersion:</span> <span class="string">management.cattle.io/v3</span></span><br><span class="line"><span class="attr">description:</span> <span class="string">&quot;&quot;</span></span><br><span class="line"><span class="attr">displayName:</span> <span class="string">data</span></span><br><span class="line"><span class="attr">kind:</span> <span class="string">User</span></span><br><span class="line"><span class="attr">metadata:</span></span><br><span class="line">  <span class="attr">finalizers:</span></span><br><span class="line">  <span class="bullet">-</span> <span class="string">controller.cattle.io/mgmt-auth-users-controller</span></span><br><span class="line">    <span class="attr">cattle.io/creator:</span> <span class="string">norman</span></span><br><span class="line">  <span class="attr">name:</span> <span class="string">u-32ipck5o7k</span></span><br><span class="line"><span class="attr">principalIds:</span></span><br><span class="line"><span class="bullet">-</span> <span class="string">openldap_user://CN=zsk,OU=xxx,OU=xxx,DC=xxx,DC=xxx</span>  <span class="comment"># ldap相关的用户组</span></span><br><span class="line"><span class="bullet">-</span> <span class="string">local://u-32ipck5o7k</span>  <span class="comment"># 每一个ldap用户都会对应rancher的一个本地用户</span></span><br></pre></td></tr></table></figure>
+
+<p>所以capsule正确的设置userGroups的配置文件应该是, 与–capsule-user-group参数是等价的:</p>
+<figure class="highlight yaml"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br></pre></td><td class="code"><pre><span class="line"><span class="attr">apiVersion:</span> <span class="string">capsule.clastix.io/v1beta2</span></span><br><span class="line"><span class="attr">kind:</span> <span class="string">CapsuleConfiguration</span></span><br><span class="line"><span class="attr">metadata:</span></span><br><span class="line">  <span class="attr">name:</span> <span class="string">capsule-default</span></span><br><span class="line"><span class="attr">spec:</span></span><br><span class="line">  <span class="attr">enableTLSReconciler:</span> <span class="literal">true</span></span><br><span class="line">  <span class="attr">forceTenantPrefix:</span> <span class="literal">true</span></span><br><span class="line">  <span class="attr">protectedNamespaceRegex:</span> <span class="string">kube</span></span><br><span class="line">  <span class="attr">userGroups:</span></span><br><span class="line">  <span class="bullet">-</span> <span class="string">capsule.clastix.io</span>  <span class="comment"># 这里保留默认的用户组</span></span><br><span class="line">  <span class="bullet">-</span> <span class="string">openldap_group://CN=zsk,OU=yyy,DC=zzz,DC=com</span></span><br></pre></td></tr></table></figure>
+
+<p>openldap_group是rancher基于ldap机制时写入到kubernetes中用户对应的group信息,这个参数就是我们需要的. 在集群中查找某个用户的信息可使用以下方法:</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">kubectl get clusterrole </span><br><span class="line"><span class="comment"># 查看以cattle-impersonation-u-32ipck5o7k(为例) 开头的对象, 其中32ipck5o7k可以在rancher UI中的用户管理中看到)</span></span><br></pre></td></tr></table></figure>
+
+<p>要注意的是，<strong>查询用户信息需要在rancher自身的集群中查询，而不是在rancher托管的集群</strong></p>
+<p>相关issue:</p>
+<ol>
+<li><a target="_blank" rel="noopener" href="https://github.com/clastix/capsule/issues/761">how capsule integrate with rancher under openLDAP</a></li>
+</ol>
+<h3 id="GitOps"><a href="#GitOps" class="headerlink" title="GitOps"></a>GitOps</h3><p>capsule的所有属性都可以定义在git中, 那么与gitops的衔接可谓是非常便捷, 如flux, argoCD等gitops工具, 这一块不再赘述<br>可参考官网的详细步聚<a target="_blank" rel="noopener" href="https://capsule.clastix.io/docs/guides/flux2-capsule">flux2-capsule</a></p>
+<h3 id="capsule-proxy"><a href="#capsule-proxy" class="headerlink" title="capsule-proxy"></a>capsule-proxy</h3><p>这里也简单提一下capsule-proxy项目,从上面的实践可以看出，虽然capsule通过webhook机制可以将权限限定在特定的namespaces中,但还是会存在下列一类的问题</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line">$ kubectl get namespaces</span><br><span class="line">Error from server (Forbidden): namespaces is forbidden:</span><br><span class="line">User <span class="string">&quot;alice&quot;</span> cannot list resource <span class="string">&quot;namespaces&quot;</span> <span class="keyword">in</span> API group <span class="string">&quot;&quot;</span> at the cluster scope</span><br><span class="line"></span><br><span class="line"><span class="comment"># 但是在get时又会提示有权限</span></span><br><span class="line">$ kubectl auth can-i [get|list|watch|delete] ns oil-production</span><br><span class="line"><span class="built_in">yes</span></span><br></pre></td></tr></table></figure>
+
+<p>原因是RBAC操作仅在Cluster-Scope中可用，并且不授予没有适当权限的用户。<br>为了解决这类问题，capsule引入了自己的解决方案, 即capsule-proxy.capsule-proxy实现了一个简单的反向代理，它只拦截对API服务器的<a target="_blank" rel="noopener" href="https://capsule.clastix.io/docs/general/proxy">特定请求</a>,<br>然后capsule完成请求的转换、响应、返回数据,这样就可解决上述问题<br>相关的issue:</p>
+<ol>
+<li><a target="_blank" rel="noopener" href="https://github.com/clastix/capsule-proxy/issues/303">can list all pod in all namespace under a tenant?</a></li>
+<li><a target="_blank" rel="noopener" href="https://github.com/clastix/capsule/issues/756">Feature: additional pod metadata</a></li>
+</ol>
+<h3 id="问题"><a href="#问题" class="headerlink" title="问题"></a>问题</h3><ol>
+<li><p>当Tenant Owner用户使用命令创建ns时: <code>kubectl create ns zsk</code>, 提示以下错误:</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">Error from server (You <span class="keyword">do</span> not have any Tenant assigned: please, reach out to the system administrators): admission webhook <span class="string">&quot;owner.namespace.capsule.clastix.io&quot;</span> denied the request: You <span class="keyword">do</span> not have any Tenant assigned: please, reach out to the system administrators</span><br></pre></td></tr></table></figure>
+
+<p>原因: 出现这个报错的原因是在tenant中的owners.name设置成了ldap中的cn(zsk), 会与CapsuleConfiguration中的userGroups对应不上, 导致通过userinfo无法找到绑定的tenant.<br>解决: 修改为rancher中的用户组即可(openldap_group:&#x2F;&#x2F;CN&#x3D;zsk,OU&#x3D;yyy,DC&#x3D;zzz,DC&#x3D;com),参考对接Rancher一节</p>
+</li>
+<li><p>如何解决Tenant下ns的resourcequota自定义问题: </p>
+<p>解决: 由于需要为该租户下的每个ns设定resourcequota, tenant对象支持设置resourcequota会统一下发到所有ns, 但考虑到后续业务上会出现ns的resourcequota的大小不一, 因此resourcequota不能设置在tenant上，<br>可以通过tenantresource这个对象将resourcequota进行传播，同时使用namespaceselector来指定传播到ns范围,<br>tenant在创建ns时支持给ns添加label或者是annotation，因此可以与tenantresource中的namespaceselector对应起来，这样处理后就能实现tenant下的ns可以自定义resourcequota<br>不是必须: 这里最好有一个单独的ns(如ns-robot)专门用于传播对象，这样可以放心使用namespaceSelector选择ns而不用当心会重复选择到tenantresource所在的ns.如果没有namespaceSelector则默认是该租户下的所有ns<br><strong>当resourcequota期间变小后, 不会对现在ns里的pod产生影响，但会出现已经使用的quota超过了ns的resourcequota的现象</strong></p>
+<p>例:</p>
+<figure class="highlight yaml"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br></pre></td><td class="code"><pre><span class="line"><span class="attr">apiVersion:</span> <span class="string">capsule.clastix.io/v1beta2</span></span><br><span class="line"><span class="attr">kind:</span> <span class="string">TenantResource</span></span><br><span class="line"><span class="attr">metadata:</span></span><br><span class="line">  <span class="attr">name:</span> <span class="string">tnt-default-rq</span></span><br><span class="line">  <span class="attr">namespace:</span> <span class="string">notebook</span></span><br><span class="line"><span class="attr">spec:</span></span><br><span class="line">  <span class="attr">resyncPeriod:</span> <span class="string">120s</span></span><br><span class="line">  <span class="attr">resources:</span></span><br><span class="line">    <span class="bullet">-</span> <span class="attr">namespaceSelector:</span></span><br><span class="line">        <span class="attr">matchLabels:</span></span><br><span class="line">          <span class="attr">tenant-rq.k2.com/use-default:</span> <span class="string">enable</span> </span><br><span class="line">      <span class="attr">rawItems:</span></span><br><span class="line">        <span class="bullet">-</span> <span class="attr">apiVersion:</span> <span class="string">v1</span></span><br><span class="line">          <span class="attr">kind:</span> <span class="string">ResourceQuota</span></span><br><span class="line">          <span class="attr">metadata:</span></span><br><span class="line">            <span class="attr">name:</span> <span class="string">tnt-default-rq-notebook</span></span><br><span class="line">          <span class="attr">spec:</span></span><br><span class="line">            <span class="attr">hard:</span></span><br><span class="line">              <span class="attr">limits.cpu:</span> <span class="string">&quot;120&quot;</span></span><br><span class="line">              <span class="attr">limits.memory:</span> <span class="string">&quot;928Gi&quot;</span></span><br><span class="line">              <span class="attr">requests.cpu:</span> <span class="string">&quot;120&quot;</span></span><br><span class="line">              <span class="attr">requests.memory:</span> <span class="string">&quot;928Gi&quot;</span></span><br></pre></td></tr></table></figure></li>
+</ol>
+<h3 id="参考文章"><a href="#参考文章" class="headerlink" title="参考文章:"></a><strong>参考文章:</strong></h3><h3 id="转载请注明原作者-周淑科-https-izsk-me"><a href="#转载请注明原作者-周淑科-https-izsk-me" class="headerlink" title="转载请注明原作者: 周淑科(https://izsk.me)"></a><strong>转载请注明原作者: 周淑科(<a target="_blank" rel="noopener" href="https://izsk.me/">https://izsk.me</a>)</strong></h3><blockquote>
+<ul>
+<li><a target="_blank" rel="noopener" href="https://capsule.clastix.io/">https://capsule.clastix.io/</a></li>
+<li><a target="_blank" rel="noopener" href="https://capsule.clastix.io/docs/general/proxy">https://capsule.clastix.io/docs/general/proxy</a></li>
+<li><a target="_blank" rel="noopener" href="https://kubernetes.io/docs/reference/access-authn-authz/authentication/#user-impersonation">https://kubernetes.io/docs/reference/access-authn-authz/authentication/#user-impersonation</a></li>
+</ul>
+</blockquote>
+
+      
+    </div>
+
+    <div>
+      
+        
+<div id="wechat_subscriber" style="display: block; padding: 10px 0; margin: 20px auto; width: 100%; text-align: center">
+    <img id="wechat_subscriber_qcode" src="/images/websitecode250.png" alt=" wechat" style="width: 200px; max-width: 100%;"/>
+    <div>Scan Me To Read on Phone</div>
+</div>
+
+
+      
+    </div>
+
+    <div>
+      
+        
+  <div style="padding: 10px 0; margin: 20px auto; width: 90%; text-align: center;">
+    <div>I know you won't do this,but what if you did?</div>
+    <button id="rewardButton" disable="enable" onclick="var qr = document.getElementById('QR'); if (qr.style.display === 'none') {qr.style.display='block';} else {qr.style.display='none'}">
+      <span>赏</span>
+    </button>
+    <div id="QR" style="display: none;">
+      
+        <div id="wechat" style="display: inline-block">
+          <img id="wechat_qr" src="/images/wechatpayme.png" alt=" WeChat Pay"/>
+          <p>微信打赏</p>
+        </div>
+      
+      
+        <div id="alipay" style="display: inline-block">
+          <img id="alipay_qr" src="/images/alipayme.jpg" alt=" Alipay"/>
+          <p>支付宝打赏</p>
+        </div>
+      
+    </div>
+  </div>
+
+
+      
+    </div>
+
+
+    <footer class="post-footer">
+      
+        <div class="post-tags">
+          
+            <a href="/tags/Kubernetes/" rel="tag"># Kubernetes</a>
+          
+        </div>
+      
+
+      
+        <div class="post-nav">
+          <div class="post-nav-next post-nav-item">
+            
+              <a href="/2023/07/20/Kubernetes-hnc/" rel="next" title="Kubernetes学习(hnc实现namesapce分层模型)">
+                <i class="fa fa-chevron-left"></i> Kubernetes学习(hnc实现namesapce分层模型)
+              </a>
+            
+          </div>
+
+          <span class="post-nav-divider"></span>
+
+          <div class="post-nav-prev post-nav-item">
+            
+              <a href="/2023/07/22/Kubernetes-multi-tenancy/" rel="prev" title="Kubernetes学习(kubernetes中如何实现多租户模型)">
+                Kubernetes学习(kubernetes中如何实现多租户模型) <i class="fa fa-chevron-right"></i>
+              </a>
+            
+          </div>
+        </div>
+      
+
+      
+      
+    </footer>
+  </article>
+
+
+
+    <div class="post-spread">
+      
+    </div>
+  </div>
+
+
+          </div>
+          
+
+
+          
+  <div class="comments" id="comments">
+    
+  </div>
+
+
+        </div>
+        
+          
+  
+  <div class="sidebar-toggle">
+    <div class="sidebar-toggle-line-wrap">
+      <span class="sidebar-toggle-line sidebar-toggle-line-first"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-middle"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-last"></span>
+    </div>
+  </div>
+
+  <aside id="sidebar" class="sidebar">
+    <div class="sidebar-inner">
+
+      
+
+      
+        <ul class="sidebar-nav motion-element">
+          <li class="sidebar-nav-toc sidebar-nav-active" data-target="post-toc-wrap" >
+            文章目录
+          </li>
+          <li class="sidebar-nav-overview" data-target="site-overview">
+            站点概览
+          </li>
+        </ul>
+      
+
+      <section class="site-overview sidebar-panel">
+        <div class="site-author motion-element" itemprop="author" itemscope itemtype="http://schema.org/Person">
+          <img class="site-author-image" itemprop="image"
+               src="/images/avatar.gif"
+               alt="" />
+          <p class="site-author-name" itemprop="name"></p>
+          <p class="site-description motion-element" itemprop="description"></p>
+        </div>
+        <nav class="site-state motion-element">
+        
+          
+            <div class="site-state-item site-state-posts">
+              <a href="/archives">
+                <span class="site-state-item-count">203</span>
+                <span class="site-state-item-name">日志</span>
+              </a>
+            </div>
+          
+
+          
+            <div class="site-state-item site-state-categories">
+              <a href="/categories">
+                <span class="site-state-item-count">14</span>
+                <span class="site-state-item-name">分类</span>
+              </a>
+            </div>
+          
+
+          
+            <div class="site-state-item site-state-tags">
+              <a href="/tags">
+                <span class="site-state-item-count">14</span>
+                <span class="site-state-item-name">标签</span>
+              </a>
+            </div>
+          
+
+        </nav>
+
+        
+
+        <div class="links-of-author motion-element">
+          
+        </div>
+
+        
+        
+
+        
+        
+
+        
+
+
+      </section>
+
+      
+      <!--noindex-->
+        <section class="post-toc-wrap motion-element sidebar-panel sidebar-panel-active">
+          <div class="post-toc">
+
+            
+              
+            
+
+            
+              <div class="post-toc-content"><ol class="nav"><li class="nav-item nav-level-3"><a class="nav-link" href="#%E6%9E%B6%E6%9E%84"><span class="nav-number">1.</span> <span class="nav-text">架构</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E7%A7%9F%E6%88%B7"><span class="nav-number">2.</span> <span class="nav-text">租户</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E5%B1%9E%E6%80%A7"><span class="nav-number">3.</span> <span class="nav-text">属性</span></a><ol class="nav-child"><li class="nav-item nav-level-4"><a class="nav-link" href="#Tenant"><span class="nav-number">3.1.</span> <span class="nav-text">Tenant</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#GlobalTenantResource"><span class="nav-number">3.2.</span> <span class="nav-text">GlobalTenantResource</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#TenantResource"><span class="nav-number">3.3.</span> <span class="nav-text">TenantResource</span></a></li></ol></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E8%BA%AB%E4%BB%BD%E9%AA%8C%E8%AF%81"><span class="nav-number">4.</span> <span class="nav-text">身份验证</span></a><ol class="nav-child"><li class="nav-item nav-level-4"><a class="nav-link" href="#X509"><span class="nav-number">4.1.</span> <span class="nav-text">X509</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#%E5%AF%B9%E6%8E%A5Rancher"><span class="nav-number">4.2.</span> <span class="nav-text">对接Rancher</span></a></li></ol></li><li class="nav-item nav-level-3"><a class="nav-link" href="#GitOps"><span class="nav-number">5.</span> <span class="nav-text">GitOps</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#capsule-proxy"><span class="nav-number">6.</span> <span class="nav-text">capsule-proxy</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E9%97%AE%E9%A2%98"><span class="nav-number">7.</span> <span class="nav-text">问题</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E5%8F%82%E8%80%83%E6%96%87%E7%AB%A0"><span class="nav-number">8.</span> <span class="nav-text">参考文章:</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E8%BD%AC%E8%BD%BD%E8%AF%B7%E6%B3%A8%E6%98%8E%E5%8E%9F%E4%BD%9C%E8%80%85-%E5%91%A8%E6%B7%91%E7%A7%91-https-izsk-me"><span class="nav-number">9.</span> <span class="nav-text">转载请注明原作者: 周淑科(https:&#x2F;&#x2F;izsk.me)</span></a></li></ol></div>
+            
+
+          </div>
+        </section>
+      <!--/noindex-->
+      
+
+    </div>
+  </aside>
+
+
+        
+      </div>
+    </main>
+
+    <footer id="footer" class="footer">
+      <div class="footer-inner">
+        <div class="copyright" >
+  
+  &copy; 
+  <span itemprop="copyrightYear">2023</span>
+  <span class="with-love">
+    <i class="fa fa-heart"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">Z.S.K.</span>
+</div>
+
+
+<div class="powered-by">
+  Supported by <a class="theme-link" target="_blank" rel="noopener" href="https://hexo.io">Hexo</a>
+</div>
+
+<div class="theme-info">
+  Theme -
+  <a class="theme-link" target="_blank" rel="noopener" href="https://github.com/iissnan/hexo-theme-next">
+    NexT.Mist
+  </a>
+</div>
+
+
+        
+
+        
+      </div>
+    </footer>
+
+    <div class="back-to-top">
+      <i class="fa fa-arrow-up"></i>
+    </div>
+  </div>
+
+  
+
+<script type="text/javascript">
+  if (Object.prototype.toString.call(window.Promise) !== '[object Function]') {
+    window.Promise = null;
+  }
+</script>
+
+
+
+
+
+
+
+
+
+  
+
+
+
+  
+  <script type="text/javascript" src="/lib/jquery/index.js?v=2.1.3"></script>
+
+  
+  <script type="text/javascript" src="/lib/fastclick/lib/fastclick.min.js?v=1.0.6"></script>
+
+  
+  <script type="text/javascript" src="/lib/jquery_lazyload/jquery.lazyload.js?v=1.9.7"></script>
+
+  
+  <script type="text/javascript" src="/lib/velocity/velocity.min.js?v=1.2.1"></script>
+
+  
+  <script type="text/javascript" src="/lib/velocity/velocity.ui.min.js?v=1.2.1"></script>
+
+  
+  <script type="text/javascript" src="/lib/fancybox/source/jquery.fancybox.pack.js?v=2.1.5"></script>
+
+
+  
+
+
+  <script type="text/javascript" src="/js/src/utils.js?v=5.1.0"></script>
+
+  <script type="text/javascript" src="/js/src/motion.js?v=5.1.0"></script>
+
+
+
+  
+  
+
+  
+  <script type="text/javascript" src="/js/src/scrollspy.js?v=5.1.0"></script>
+<script type="text/javascript" src="/js/src/post-details.js?v=5.1.0"></script>
+
+
+
+  
+
+
+  <script type="text/javascript" src="/js/src/bootstrap.js?v=5.1.0"></script>
+
+
+
+  
+
+
+
+  
+
+
+
+
+	
+
+
+
+
+
+  
+
+
+
+
+  
+  
+  <script type="text/javascript">
+    // Popup Window;
+    var isfetched = false;
+    // Search DB path;
+    var search_path = "search.xml";
+    if (search_path.length == 0) {
+      search_path = "search.xml";
+    }
+    var path = "/" + search_path;
+    // monitor main search box;
+
+    function proceedsearch() {
+      $("body").append('<div class="popoverlay">').css('overflow', 'hidden');
+      $('.popup').toggle();
+    }
+    // search function;
+    var searchFunc = function(path, search_id, content_id) {
+      'use strict';
+      $.ajax({
+        url: path,
+        dataType: "xml",
+        async: true,
+        success: function( xmlResponse ) {
+          // get the contents from search data
+          isfetched = true;
+          $('.popup').detach().appendTo('.header-inner');
+          var datas = $( "entry", xmlResponse ).map(function() {
+            return {
+              title: $( "title", this ).text(),
+              content: $("content",this).text(),
+              url: $( "url" , this).text()
+            };
+          }).get();
+          var $input = document.getElementById(search_id);
+          var $resultContent = document.getElementById(content_id);
+          $input.addEventListener('input', function(){
+            var matchcounts = 0;
+            var str='<ul class=\"search-result-list\">';
+            var keywords = this.value.trim().toLowerCase().split(/[\s\-]+/);
+            $resultContent.innerHTML = "";
+            if (this.value.trim().length > 1) {
+              // perform local searching
+              datas.forEach(function(data) {
+                var isMatch = false;
+                var content_index = [];
+                var data_title = data.title.trim().toLowerCase();
+                var data_content = data.content.trim().replace(/<[^>]+>/g,"").toLowerCase();
+                var data_url = decodeURIComponent(data.url);
+                var index_title = -1;
+                var index_content = -1;
+                var first_occur = -1;
+                // only match artiles with not empty titles and contents
+                if(data_title != '') {
+                  keywords.forEach(function(keyword, i) {
+                    index_title = data_title.indexOf(keyword);
+                    index_content = data_content.indexOf(keyword);
+                    if( index_title >= 0 || index_content >= 0 ){
+                      isMatch = true;
+                      if (i == 0) {
+                        first_occur = index_content;
+                      }
+                    }
+
+                  });
+                }
+                // show search results
+                if (isMatch) {
+                  matchcounts += 1;
+                  str += "<li><a href='"+ data_url +"' class='search-result-title'>"+ data_title +"</a>";
+                  var content = data.content.trim().replace(/<[^>]+>/g,"");
+                  if (first_occur >= 0) {
+                    // cut out 100 characters
+                    var start = first_occur - 20;
+                    var end = first_occur + 80;
+                    if(start < 0){
+                      start = 0;
+                    }
+                    if(start == 0){
+                      end = 50;
+                    }
+                    if(end > content.length){
+                      end = content.length;
+                    }
+                    var match_content = content.substring(start, end);
+                    // highlight all keywords
+                    keywords.forEach(function(keyword){
+                      var regS = new RegExp(keyword, "gi");
+                      match_content = match_content.replace(regS, "<b class=\"search-keyword\">"+keyword+"</b>");
+                    });
+
+                    str += "<p class=\"search-result\">" + match_content +"...</p>"
+                  }
+                  str += "</li>";
+                }
+              })};
+            str += "</ul>";
+            if (matchcounts == 0) { str = '<div id="no-result"><i class="fa fa-frown-o fa-5x" /></div>' }
+            if (keywords == "") { str = '<div id="no-result"><i class="fa fa-search fa-5x" /></div>' }
+            $resultContent.innerHTML = str;
+          });
+          proceedsearch();
+        }
+      });}
+
+    // handle and trigger popup window;
+    $('.popup-trigger').click(function(e) {
+      e.stopPropagation();
+      if (isfetched == false) {
+        searchFunc(path, 'local-search-input', 'local-search-result');
+      } else {
+        proceedsearch();
+      };
+    });
+
+    $('.popup-btn-close').click(function(e){
+      $('.popup').hide();
+      $(".popoverlay").remove();
+      $('body').css('overflow', '');
+    });
+    $('.popup').click(function(e){
+      e.stopPropagation();
+    });
+  </script>
+
+
+  
+
+  
+
+  
+
+  
+
+
+</body>
+</html>

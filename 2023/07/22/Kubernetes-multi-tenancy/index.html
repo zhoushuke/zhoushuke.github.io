@@ -1,0 +1,971 @@
+<!doctype html>
+
+
+
+  
+
+
+<html class="theme-next mist use-motion" lang="zh-Hans">
+<head>
+  <meta charset="UTF-8"/>
+<meta http-equiv="X-UA-Compatible" content="IE=edge" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1"/>
+
+
+
+<meta http-equiv="Cache-Control" content="no-transform" />
+<meta http-equiv="Cache-Control" content="no-siteapp" />
+
+
+
+
+
+
+
+
+
+
+
+
+  
+  
+  <link href="/lib/fancybox/source/jquery.fancybox.css?v=2.1.5" rel="stylesheet" type="text/css" />
+
+
+
+
+  
+  
+  
+  
+
+  
+    
+    
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+    
+    
+    <link href="//fonts.googleapis.com/css?family=Lato:300,300italic,400,400italic,700,700italic&subset=latin,latin-ext" rel="stylesheet" type="text/css">
+  
+
+
+
+
+
+
+<link href="/lib/font-awesome/css/font-awesome.min.css?v=4.6.2" rel="stylesheet" type="text/css" />
+
+<link href="/css/main.css?v=5.1.0" rel="stylesheet" type="text/css" />
+
+
+  <meta name="keywords" content="Kubernetes," />
+
+
+
+
+
+
+
+
+  <link rel="shortcut icon" type="image/x-icon" href="/favicon.ico?v=5.1.0" />
+
+
+
+
+
+
+<meta name="description" content="某种程度上说，kubernetes是个共享的架构，旨在通过共享来降低成本,但实际中,多租户是个绕不开的话题， Kubernetes 没有终端用户或租户概念， 不过kubernetes也提供了几个特性来帮助管理不同的租户需求，社区也有一些开源实现, 作者通过实践来聊一聊kubernetes中如何实现多租户(Multi-Tenancy)模型">
+<meta property="og:type" content="article">
+<meta property="og:title" content="Kubernetes学习(kubernetes中如何实现多租户模型)">
+<meta property="og:url" content="https://zhoushuke.github.io/2023/07/22/Kubernetes-multi-tenancy/index.html">
+<meta property="og:site_name" content="Z.S.K.&#39;s Records">
+<meta property="og:description" content="某种程度上说，kubernetes是个共享的架构，旨在通过共享来降低成本,但实际中,多租户是个绕不开的话题， Kubernetes 没有终端用户或租户概念， 不过kubernetes也提供了几个特性来帮助管理不同的租户需求，社区也有一些开源实现, 作者通过实践来聊一聊kubernetes中如何实现多租户(Multi-Tenancy)模型">
+<meta property="og:locale">
+<meta property="article:published_time" content="2023-07-22T09:30:53.000Z">
+<meta property="article:modified_time" content="2023-07-22T09:44:25.138Z">
+<meta property="article:author" content="Z.S.K.">
+<meta property="article:tag" content="Kubernetes">
+<meta name="twitter:card" content="summary">
+
+
+
+<script type="text/javascript" id="hexo.configurations">
+  var NexT = window.NexT || {};
+  var CONFIG = {
+    root: '',
+    scheme: 'Mist',
+    sidebar: {"position":"left","display":"post"},
+    fancybox: true,
+    motion: true,
+    duoshuo: {
+      userId: 'undefined',
+      author: '博主'
+    },
+    algolia: {
+      applicationID: '',
+      apiKey: '',
+      indexName: '',
+      hits: {"per_page":10},
+      labels: {"input_placeholder":"Search for Posts","hits_empty":"We didn't find any results for the search: ${query}","hits_stats":"${hits} results found in ${time} ms"}
+    }
+  };
+</script>
+
+
+
+  <link rel="canonical" href="https://zhoushuke.github.io/2023/07/22/Kubernetes-multi-tenancy/"/>
+
+
+
+
+
+  <title> Kubernetes学习(kubernetes中如何实现多租户模型) | Z.S.K.'s Records </title>
+<meta name="generator" content="Hexo 6.2.0"></head>
+
+<body itemscope itemtype="http://schema.org/WebPage" lang="zh-Hans">
+
+  
+
+
+
+
+
+
+
+
+
+
+  
+  
+    
+  
+
+  <div class="container one-collumn sidebar-position-left page-post-detail ">
+    <div class="headband"></div>
+
+    <header id="header" class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-meta ">
+  
+
+  <div class="custom-logo-site-title">
+    <a href="/"  class="brand" rel="start">
+      <span class="logo-line-before"><i></i></span>
+      <span class="site-title">Z.S.K.'s Records</span>
+      <span class="logo-line-after"><i></i></span>
+    </a>
+  </div>
+    
+      <p class="site-subtitle"></p>
+    
+</div>
+
+<div class="site-nav-toggle">
+  <button>
+    <span class="btn-bar"></span>
+    <span class="btn-bar"></span>
+    <span class="btn-bar"></span>
+  </button>
+</div>
+
+<nav class="site-nav">
+  
+
+  
+    <ul id="menu" class="menu">
+      
+        
+        <li class="menu-item menu-item-home">
+          <a href="/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-home"></i> <br />
+            
+            首页
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-categories">
+          <a href="/categories" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-th"></i> <br />
+            
+            分类
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-about">
+          <a href="/about/ZSK-Profile.pdf" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-user"></i> <br />
+            
+            简历
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-archives">
+          <a href="/archives" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-archive"></i> <br />
+            
+            归档
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-tags">
+          <a href="/tags" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-tags"></i> <br />
+            
+            标签
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-commonweal">
+          <a href="/404.html" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-heartbeat"></i> <br />
+            
+            公益404
+          </a>
+        </li>
+      
+
+      
+        <li class="menu-item menu-item-search">
+          
+            <a href="javascript:;" class="popup-trigger">
+          
+            
+              <i class="menu-item-icon fa fa-search fa-fw"></i> <br />
+            
+            搜索
+          </a>
+        </li>
+      
+    </ul>
+  
+
+  
+    <div class="site-search">
+      
+  <div class="popup">
+ <span class="search-icon fa fa-search"></span>
+ <input type="text" id="local-search-input">
+ <div id="local-search-result"></div>
+ <span class="popup-btn-close">close</span>
+</div>
+
+
+    </div>
+  
+</nav>
+
+
+
+ </div>
+    </header>
+
+    <main id="main" class="main">
+      <div class="main-inner">
+        <div class="content-wrap">
+          <div id="content" class="content">
+            
+
+  <div id="posts" class="posts-expand">
+    
+
+  
+
+  
+  
+  
+
+  <article class="post post-type-normal " itemscope itemtype="http://schema.org/Article">
+  <link itemprop="mainEntityOfPage" href="https://zhoushuke.github.io/2023/07/22/Kubernetes-multi-tenancy/">
+
+  <span style="display:none" itemprop="author" itemscope itemtype="http://schema.org/Person">
+    <meta itemprop="name" content="">
+    <meta itemprop="description" content="">
+    <meta itemprop="image" content="/images/avatar.gif">
+  </span>
+
+  <span style="display:none" itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+    <meta itemprop="name" content="Z.S.K.'s Records">
+    <span style="display:none" itemprop="logo" itemscope itemtype="http://schema.org/ImageObject">
+      <img style="display:none;" itemprop="url image" alt="Z.S.K.'s Records" src="">
+    </span>
+  </span>
+
+    
+      <header class="post-header">
+
+        
+        
+          <h1 class="post-title" itemprop="name headline">
+            
+            
+              
+                Kubernetes学习(kubernetes中如何实现多租户模型)
+              
+            
+          </h1>
+        
+
+        <div class="post-meta">
+          <span class="post-time">
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">发表于</span>
+              
+              <time title="Post created" itemprop="dateCreated datePublished" datetime="2023-07-22T17:30:53+08:00">
+                2023-07-22
+              </time>
+            
+
+            
+
+            
+          </span>
+
+          
+            <span class="post-category" >
+            
+              <span class="post-meta-divider">|</span>
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-folder-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">分类于</span>
+              
+              
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/Kubernetes/" itemprop="url" rel="index">
+                    <span itemprop="name">Kubernetes</span>
+                  </a>
+                </span>
+
+                
+                
+              
+            </span>
+          
+
+          
+            
+          
+
+          
+
+          
+          
+
+          
+
+          
+
+        </div>
+      </header>
+    
+
+
+    <div class="post-body" itemprop="articleBody">
+
+      
+      
+
+      
+        <p>某种程度上说，kubernetes是个共享的架构，旨在通过共享来降低成本,但实际中,多租户是个绕不开的话题， Kubernetes 没有终端用户或租户概念， 不过kubernetes也提供了几个特性来帮助管理不同的租户需求，社区也有一些开源实现, 作者通过实践来聊一聊kubernetes中如何实现多租户(<strong>Multi-Tenancy</strong>)模型</p>
+<span id="more"></span>
+
+<h3 id="租户类型"><a href="#租户类型" class="headerlink" title="租户类型"></a>租户类型</h3><p>在<a target="_blank" rel="noopener" href="https://kubernetes.io/zh-cn/docs/concepts/security/multi-tenancy/">multi-tenantcy | Kubernetes</a>一文中提到，multi-tenantcy可以大体分为两种:  <strong>Multiple teams or Multiple customers</strong></p>
+<blockquote>
+<ul>
+<li><p>Multiple teams: 多团队租户，一般存在于组织架构中, 有明显的层级结构，这类租户有相应的操作kubernetes集群的权限，偏开发及运维团队</p>
+</li>
+<li><p>Multiple customers: 指的是saas平台上的用户, 一般是终端用户，终端用户不需要能够访问kubernetes集群，kuberentes对终端用户透明。</p>
+</li>
+</ul>
+</blockquote>
+<p>但是并不一定绝对:</p>
+<p>在讨论 Kubernetes 中的多租户时，“租户”没有单一的定义。 相反，租户的定义将根据讨论的是多团队还是多客户租户而有所不同。</p>
+<p>在多团队使用中，租户通常是一个团队， 每个团队通常部署少量工作负载，这些工作负载会随着服务的复杂性而发生规模伸缩。 然而，“团队”的定义本身可能是模糊的， 因为团队可能被组织成更高级别的部门或细分为更小的团队。</p>
+<p>相反，如果每个团队为每个新客户部署专用的工作负载，那么他们使用的是多客户租户模型。 在这种情况下，“租户”只是共享单个工作负载的一组用户。 这种租户可能大到整个公司，也可能小到该公司的一个团队。</p>
+<p>在许多情况下，同一组织可能在不同的上下文中使用“租户”的两种定义。 例如，一个平台团队可能向多个内部“客户”提供安全工具和数据库等共享服务， 而 SaaS 供应商也可能让多个团队共享一个开发集群。 最后，混合架构也是可能的， 例如，某 SaaS 提供商为每个客户的敏感数据提供独立的工作负载，同时提供多租户共享的服务。</p>
+<h3 id="待决问题"><a href="#待决问题" class="headerlink" title="待决问题"></a>待决问题</h3><p>总结一下多租户要解决的问题<strong>可能</strong>有:</p>
+<p>这里说的是<strong>可能</strong>，原因为:<strong>不以业务需求为导向的技术落地都是空谈</strong>, 所以技术方案不存在好坏之份，只有适不适合</p>
+<blockquote>
+<ul>
+<li><p>是否可操作集群级别资源，如 API、CRD、RBAC</p>
+</li>
+<li><p>配额管理是否在租户之间合理隔离</p>
+</li>
+</ul>
+</blockquote>
+<h3 id="生产需求"><a href="#生产需求" class="headerlink" title="生产需求"></a>生产需求</h3><p>这里以一个实际的综合需求展开说明:</p>
+<p>需求: 公司有一个kubernetes集群,一个saas平台跑在集群中,这个saas平台提供一些工具给算法研究员，比如可以申请notebook实例(是一种独占资源), 可以发布AI任务(可以是个人任务，也可以是生产任务)，但是算力总是有限的，不可能让一个研究员无限制地占用算力，因此，<strong>需要限制某个研究员最大的资源上限</strong>, 同时又要限制每种业务所使用的算力， notebook算是一种业务类型，AI任务也算是一种业务类型</p>
+<blockquote>
+<ul>
+<li>由于notebook是独占资源，研究员只要愿意可以启用无数个notebook实例，只要不超过设定的notebook这种业务类型的上限即可</li>
+<li>对于AI任务这个业务，研究员发起的AI任务都需要丢到一个共享资源池中(会有上限，整体采用先到先得策略), 需要限制每个研究员可以发布的AI任务资源上限, 也就是说，当达到给研究员设定的上限后，研究员再发起的任务需要排队，如果整个共享资源池到达上限后,所有研究员新提交的任务都进行排队.</li>
+<li>对于生产任务，资源需要尽可能倾斜</li>
+</ul>
+</blockquote>
+<p>第2条需求听上去不太合理,先不用去质疑需求是否合理，因为<strong>需求方都是爸爸</strong></p>
+<p>大多数的场景下，需求可能只到限制某个研究员最大的资源上限即可，因为给定了上限，研究员可以自己安排资源要如何分配</p>
+<p>对于kubernetes来说，saas平台本身是一种业务，会有它的开发&#x2F;运维人员，这种算是团队租户，而研究员，则是saas的用户，对Kubernetes来说就是终端用户</p>
+<p>这算是一个比较复杂的需求，kubernetes原生能否实现这个需求,我们一起来拆分需求</p>
+<h3 id="Namespace"><a href="#Namespace" class="headerlink" title="Namespace"></a>Namespace</h3><p>kuberentes中, namespace有个resourcequota, 可以限制多种资源的使用，是一种<strong>硬隔离</strong></p>
+<p>额外插一句, 这里提到多种资源，是说resourcequota并不只能够限制cpu, memory等计算资源，configmap, pvc等其实都可以限制，这里不展开,可参考<a target="_blank" rel="noopener" href="https://kubernetes.io/docs/concepts/policy/resource-quotas/">resourcequota</a></p>
+<p>回到上面的需求, 使用namespace能否实现上面的业务需求？？</p>
+<p>如果只从技术实现来讲，一定程度可以的，但是从运维友好角度来说，显然不行， <strong>OP同学会疯掉</strong></p>
+<p>对于一个研究员来说，他对应多种业务，每种业务都有上限，那么就可以给这个研究员创建N个namespace， 每个namespace对应一种业务，设置上限，这样可以控制某种业务的上限使用，研究员发布的任务会落到对应的namespace中</p>
+<p>但还有一个问题即共享资源池问题，研究员都在自己的namespace中,相当于将大的共享资源平摊到多个namespace中，这样的话有没有这个共享资源池影响也不大</p>
+<p>这是一种很粗糙的解决方案, 一方面如果研究员基数大、业务类型多，这是个NxN的结果，且如果这个配额是个动态可变的，那么在运维友好性方面将是灾难<br>显然，只有namespace还不够，有没有更好的解决方案呢？</p>
+<p>在<a target="_blank" rel="noopener" href="https://kubernetes.io/zh-cn/docs/concepts/security/multi-tenancy/">kuberntes</a>中,已经有多种多租户模型,硬、软隔离都有开源实现，大体就两种思路:</p>
+<ol>
+<li>控制面隔离</li>
+</ol>
+<blockquote>
+<ul>
+<li><p>多集群&#x2F;多APIServer: 借助多个集群进行硬隔离, 极端地说为每个租户都创建一个集群，这样肯定所有的需求都可以得到满足，但在多集群的上层，一定会再需要一个调度层，可以将用户请求下放到对应的集群中，对规模较小的场景下不合适，这属于控制面隔离</p>
+</li>
+<li><p>虚拟集群:  在一个集群中，一个租户以虚拟集群的形式存在，虚拟控制面的多租户模型通过为每个租户提供专用控制面组件来扩展基于命名空间的多租户， 从而完全控制集群范围的资源和附加服务，开源实现有vcluster</p>
+</li>
+</ul>
+</blockquote>
+<p>从这里可以看出Cluster 或 Control plane 的隔离方案引入了过多的额外开销，比如每个租户需要建立独立的控制面组件，这样就降低了资源利用率；同时大量租户集群的建立，也会带来运维方面的负担</p>
+<ol start="2">
+<li>ns&#x2F;quota分层</li>
+</ol>
+<blockquote>
+<ul>
+<li><p>上面提到既然namespace是一种单一的资源隔离手段，如果它具备分层能力的话就会非常有用， 比如将多个命名空间组织成层次结构，并在它们之间共享某些策略和资源。 它还可以帮助你管理命名空间标签、命名空间生命周期和委托管理,并在相关命名空间之间共享资源配额，开源实现有hnc&#x2F;capsule&#x2F;volcano等</p>
+</li>
+<li><p>对租户的请求进行协议转换，使得每个租户看到的都是独占的 Kubernetes 集群。对于后端集群来说，多个租户实际上是利用了 Namespace 的原生隔离性机制而共享了同一个集群的资源， 这种较轻量的开源实现有kubezoo</p>
+</li>
+</ul>
+</blockquote>
+<p>另外，组织结构在公司内部普遍存在，因此这种做法可以很容易让配额随着人员或者团队的变化而变化，接下来的解决方案也是基于这种方案实现，主要调研有hnc、capsule、volcano等开源实现</p>
+<p>以下开源方案能实现<strong>生产需求</strong>所述要求，主要的思路为:</p>
+<p><strong>依然通过namespace来限制某个业务的资源配额，同时引入一种CRD来对研究员的总配额来限制</strong></p>
+<p>或者反过来也行, 即: 通过CRD来限制某个业务的配额，再使用namespace来限制总配额</p>
+<p>不管是使用哪一种方案，有一个很重要的问题需要考虑，即: 当namespace或者CRD有很多时，对于一些共性的配置，如何传播到各个namespace或者CRD资源中去？因为对于某一类业务来说，对研究员的配额可能是统一的(当然也可能有例外)，所以如果能通过继承某个要能对象来直接生成N个子对象，那运维友好性将大大提高，当然这个问题可以有多种解法，策略引擎是个很好的方式，比如kyvero、OPA等，很多对资源的传播也都是基于策略引擎开发而来</p>
+<h3 id="hnc"><a href="#hnc" class="headerlink" title="hnc"></a>hnc</h3><p>hnc,<a target="_blank" rel="noopener" href="https://github.com/kubernetes-sigs/hierarchical-namespaces">Hierarchical Namespace Controller</a>, 是kubernetes-sig专门为解决namespace为单一对象而出的CRD, 为namespace赋于分层的能力</p>
+<p>目前的kubernetes中，ns需要集群集群员才有权限创建，且namespace为单层结构，使用hnc后，管理员可以赋于其它非管理员在一个root namespace下新建无数个sub namespace的权限</p>
+<p>同时，hnc支持在root ns中定义任一对象，可将这一对象propagation(传播)到所指定的sub ns中，这样在管理上是不是就非常简单</p>
+<p>所以解决上述诉求使用hnc可以这么做:</p>
+<p>集群管理员以业务为管理单元，创建root ns, 将sub ns下放到业务平台上，</p>
+<p>业务平台可以根据业务属性创建sub ns，比如以研究员为单位(或者以团队为单位)，限定resourcequota， 即</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line">root-ns-notebook <span class="comment"># define resourcequota for user in every subns</span></span><br><span class="line">  -- sub-ns-teamA-notebook <span class="comment"># define resourcequota for user in every subns</span></span><br><span class="line">      -- sub-ns-teamAnotebook-userA <span class="comment">#inherit resourcequota from tenant</span></span><br><span class="line">      -- ...</span><br></pre></td></tr></table></figure>
+
+<p>在root ns下定义了一个teamA的二级ns， 同时在这个二级ns上定义了resourcequota，不过这个quota会被你直接传播到这个二级ns下的所有sub ns做为resourcequota，即也代表所有的user的resourcequota</p>
+<p>当然，这个resourcequota的传播到哪些subns是可以通过annotation或者namesapce selector进行控制</p>
+<p>同理，对于共享资源池，也可采用这种分层的ns进行控制</p>
+<p>还有一个对象叫hrq(hierarchical resorucequota), 对resourcequota进行分层, 非常有用</p>
+<p>由于篇幅有限，hnc的具体结节将不在本篇展开，感兴趣的可以参考作者的实践: </p>
+<p><a target="_blank" rel="noopener" href="https://izsk.me/2023/07/20/Kubernetes-hnc/">Kubernetes学习(hnc实现namesapce分层模型)</a></p>
+<p>hnc可以很方便地解决创建namespace的权限问题，同时利用层级关系可以很容易切入到公司的组织结构，不过hnc还是偏底层了一些，没有一个以租户为单位的CRD对象，capsule由然而出.</p>
+<h3 id="capsule"><a href="#capsule" class="headerlink" title="capsule"></a>capsule</h3><p>capsule基本思路与hnc基本类似，它的代码里很多特性都是基于hnc直接实现的，它有一个<strong>CRD: Tetant</strong>, 直接就可创建一个租户对象, 这个对象可以具有多种属性: 配额, 资源传播, NodePool、RBAC配置等等</p>
+<p>所以解决上述诉求使用capsule可以这么做:</p>
+<p>集群管理员以业务为管理单元，以notebook业务为例, 创建一个名为root-notebook-tenant对象，同时定义这个Tenant的resourcequota属性, 将创建sub namespace的权限下放到业务平台上，业务平台可以根据业务，再以研究员为单位(或者以团队为单位)来创建sub ns,  比如 namespace-nootbook-userA 属于root-notebook-tenant, 因此也将继承它的所有属性，包含resourcequota等, 即</p>
+<figure class="highlight shell"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line">Root-nootbook-tenant #define resourcequota for user in every subns</span><br><span class="line">- namespace-nootbook-userA # inherit resourcequota from tenant</span><br><span class="line">- namespace-notebook-userB, # inherit resourcequota from tenant</span><br><span class="line">- ...</span><br></pre></td></tr></table></figure>
+
+<p>tenant上的resourcequota同样可以通过annotation或者namesapce selector进行控制</p>
+<p>capsule还有很多其它特性，由于篇幅有限，capsule的具体结节将不在本篇展开，感兴趣的可以参考作者的实践capsule</p>
+<p><a target="_blank" rel="noopener" href="https://izsk.me/2023/07/21/Kubernetes-capsule/">Kubernetes学习(capsule实现多租户模型)</a></p>
+<p>总结一下，hnc很好地解决了kubernetes namespace单一层级限制问题，而capsule又基于hnc实现更直接地实现了租户对象</p>
+<p>但<strong>hnc与capsule目前还不能很好地解决资源怎样分配可以更加合理问题</strong>，话说回来，这也不是它们要解决的问题，如volcano这类的调度系统，也有queue对象，都是在解决租户与资源之间关系.</p>
+<p>当然，一些成熟的Kubernetes集群管理工具都会有自己的CRD来对租户进行管理, 比如rancher会有project这类的对象, kubesphere里有workspace等等</p>
+<p>总之: <strong>条条大路通罗马, OP同学可以不用疯掉了</strong></p>
+<h3 id="参考文章"><a href="#参考文章" class="headerlink" title="参考文章:"></a><strong>参考文章:</strong></h3><h3 id="转载请注明原作者-周淑科-https-izsk-me"><a href="#转载请注明原作者-周淑科-https-izsk-me" class="headerlink" title="转载请注明原作者: 周淑科(https://izsk.me)"></a><strong>转载请注明原作者: 周淑科(<a target="_blank" rel="noopener" href="https://izsk.me/">https://izsk.me</a>)</strong></h3><blockquote>
+<ul>
+<li><a target="_blank" rel="noopener" href="https://izsk.me/2023/07/20/Kubernetes-hnc/">https://izsk.me/2023/07/20/Kubernetes-hnc/</a></li>
+<li><a target="_blank" rel="noopener" href="https://izsk.me/2023/07/21/Kubernetes-capsule/">https://izsk.me/2023/07/21/Kubernetes-capsule/</a></li>
+<li><a target="_blank" rel="noopener" href="https://kubernetes.io/zh-cn/docs/concepts/security/multi-tenancy/">https://kubernetes.io/zh-cn/docs/concepts/security/multi-tenancy/</a></li>
+<li><a target="_blank" rel="noopener" href="https://www.cnblogs.com/lianngkyle/p/15055552.html">https://www.cnblogs.com/lianngkyle/p/15055552.html</a></li>
+<li><a target="_blank" rel="noopener" href="https://www.kubernetes.org.cn/9127.html">https://www.kubernetes.org.cn/9127.html</a></li>
+<li><a target="_blank" rel="noopener" href="https://kubernetes.io/docs/concepts/policy/resource-quotas/">https://kubernetes.io/docs/concepts/policy/resource-quotas/</a></li>
+<li><a target="_blank" rel="noopener" href="https://github.com/kubernetes-sigs/hierarchical-namespaces">https://github.com/kubernetes-sigs/hierarchical-namespaces</a></li>
+</ul>
+</blockquote>
+
+      
+    </div>
+
+    <div>
+      
+        
+<div id="wechat_subscriber" style="display: block; padding: 10px 0; margin: 20px auto; width: 100%; text-align: center">
+    <img id="wechat_subscriber_qcode" src="/images/websitecode250.png" alt=" wechat" style="width: 200px; max-width: 100%;"/>
+    <div>Scan Me To Read on Phone</div>
+</div>
+
+
+      
+    </div>
+
+    <div>
+      
+        
+  <div style="padding: 10px 0; margin: 20px auto; width: 90%; text-align: center;">
+    <div>I know you won't do this,but what if you did?</div>
+    <button id="rewardButton" disable="enable" onclick="var qr = document.getElementById('QR'); if (qr.style.display === 'none') {qr.style.display='block';} else {qr.style.display='none'}">
+      <span>赏</span>
+    </button>
+    <div id="QR" style="display: none;">
+      
+        <div id="wechat" style="display: inline-block">
+          <img id="wechat_qr" src="/images/wechatpayme.png" alt=" WeChat Pay"/>
+          <p>微信打赏</p>
+        </div>
+      
+      
+        <div id="alipay" style="display: inline-block">
+          <img id="alipay_qr" src="/images/alipayme.jpg" alt=" Alipay"/>
+          <p>支付宝打赏</p>
+        </div>
+      
+    </div>
+  </div>
+
+
+      
+    </div>
+
+
+    <footer class="post-footer">
+      
+        <div class="post-tags">
+          
+            <a href="/tags/Kubernetes/" rel="tag"># Kubernetes</a>
+          
+        </div>
+      
+
+      
+        <div class="post-nav">
+          <div class="post-nav-next post-nav-item">
+            
+              <a href="/2023/07/21/Kubernetes-capsule/" rel="next" title="Kubernetes学习(capsule实现多租户模型)">
+                <i class="fa fa-chevron-left"></i> Kubernetes学习(capsule实现多租户模型)
+              </a>
+            
+          </div>
+
+          <span class="post-nav-divider"></span>
+
+          <div class="post-nav-prev post-nav-item">
+            
+          </div>
+        </div>
+      
+
+      
+      
+    </footer>
+  </article>
+
+
+
+    <div class="post-spread">
+      
+    </div>
+  </div>
+
+
+          </div>
+          
+
+
+          
+  <div class="comments" id="comments">
+    
+  </div>
+
+
+        </div>
+        
+          
+  
+  <div class="sidebar-toggle">
+    <div class="sidebar-toggle-line-wrap">
+      <span class="sidebar-toggle-line sidebar-toggle-line-first"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-middle"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-last"></span>
+    </div>
+  </div>
+
+  <aside id="sidebar" class="sidebar">
+    <div class="sidebar-inner">
+
+      
+
+      
+        <ul class="sidebar-nav motion-element">
+          <li class="sidebar-nav-toc sidebar-nav-active" data-target="post-toc-wrap" >
+            文章目录
+          </li>
+          <li class="sidebar-nav-overview" data-target="site-overview">
+            站点概览
+          </li>
+        </ul>
+      
+
+      <section class="site-overview sidebar-panel">
+        <div class="site-author motion-element" itemprop="author" itemscope itemtype="http://schema.org/Person">
+          <img class="site-author-image" itemprop="image"
+               src="/images/avatar.gif"
+               alt="" />
+          <p class="site-author-name" itemprop="name"></p>
+          <p class="site-description motion-element" itemprop="description"></p>
+        </div>
+        <nav class="site-state motion-element">
+        
+          
+            <div class="site-state-item site-state-posts">
+              <a href="/archives">
+                <span class="site-state-item-count">203</span>
+                <span class="site-state-item-name">日志</span>
+              </a>
+            </div>
+          
+
+          
+            <div class="site-state-item site-state-categories">
+              <a href="/categories">
+                <span class="site-state-item-count">14</span>
+                <span class="site-state-item-name">分类</span>
+              </a>
+            </div>
+          
+
+          
+            <div class="site-state-item site-state-tags">
+              <a href="/tags">
+                <span class="site-state-item-count">14</span>
+                <span class="site-state-item-name">标签</span>
+              </a>
+            </div>
+          
+
+        </nav>
+
+        
+
+        <div class="links-of-author motion-element">
+          
+        </div>
+
+        
+        
+
+        
+        
+
+        
+
+
+      </section>
+
+      
+      <!--noindex-->
+        <section class="post-toc-wrap motion-element sidebar-panel sidebar-panel-active">
+          <div class="post-toc">
+
+            
+              
+            
+
+            
+              <div class="post-toc-content"><ol class="nav"><li class="nav-item nav-level-3"><a class="nav-link" href="#%E7%A7%9F%E6%88%B7%E7%B1%BB%E5%9E%8B"><span class="nav-number">1.</span> <span class="nav-text">租户类型</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E5%BE%85%E5%86%B3%E9%97%AE%E9%A2%98"><span class="nav-number">2.</span> <span class="nav-text">待决问题</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E7%94%9F%E4%BA%A7%E9%9C%80%E6%B1%82"><span class="nav-number">3.</span> <span class="nav-text">生产需求</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#Namespace"><span class="nav-number">4.</span> <span class="nav-text">Namespace</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#hnc"><span class="nav-number">5.</span> <span class="nav-text">hnc</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#capsule"><span class="nav-number">6.</span> <span class="nav-text">capsule</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E5%8F%82%E8%80%83%E6%96%87%E7%AB%A0"><span class="nav-number">7.</span> <span class="nav-text">参考文章:</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E8%BD%AC%E8%BD%BD%E8%AF%B7%E6%B3%A8%E6%98%8E%E5%8E%9F%E4%BD%9C%E8%80%85-%E5%91%A8%E6%B7%91%E7%A7%91-https-izsk-me"><span class="nav-number">8.</span> <span class="nav-text">转载请注明原作者: 周淑科(https:&#x2F;&#x2F;izsk.me)</span></a></li></ol></div>
+            
+
+          </div>
+        </section>
+      <!--/noindex-->
+      
+
+    </div>
+  </aside>
+
+
+        
+      </div>
+    </main>
+
+    <footer id="footer" class="footer">
+      <div class="footer-inner">
+        <div class="copyright" >
+  
+  &copy; 
+  <span itemprop="copyrightYear">2023</span>
+  <span class="with-love">
+    <i class="fa fa-heart"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">Z.S.K.</span>
+</div>
+
+
+<div class="powered-by">
+  Supported by <a class="theme-link" target="_blank" rel="noopener" href="https://hexo.io">Hexo</a>
+</div>
+
+<div class="theme-info">
+  Theme -
+  <a class="theme-link" target="_blank" rel="noopener" href="https://github.com/iissnan/hexo-theme-next">
+    NexT.Mist
+  </a>
+</div>
+
+
+        
+
+        
+      </div>
+    </footer>
+
+    <div class="back-to-top">
+      <i class="fa fa-arrow-up"></i>
+    </div>
+  </div>
+
+  
+
+<script type="text/javascript">
+  if (Object.prototype.toString.call(window.Promise) !== '[object Function]') {
+    window.Promise = null;
+  }
+</script>
+
+
+
+
+
+
+
+
+
+  
+
+
+
+  
+  <script type="text/javascript" src="/lib/jquery/index.js?v=2.1.3"></script>
+
+  
+  <script type="text/javascript" src="/lib/fastclick/lib/fastclick.min.js?v=1.0.6"></script>
+
+  
+  <script type="text/javascript" src="/lib/jquery_lazyload/jquery.lazyload.js?v=1.9.7"></script>
+
+  
+  <script type="text/javascript" src="/lib/velocity/velocity.min.js?v=1.2.1"></script>
+
+  
+  <script type="text/javascript" src="/lib/velocity/velocity.ui.min.js?v=1.2.1"></script>
+
+  
+  <script type="text/javascript" src="/lib/fancybox/source/jquery.fancybox.pack.js?v=2.1.5"></script>
+
+
+  
+
+
+  <script type="text/javascript" src="/js/src/utils.js?v=5.1.0"></script>
+
+  <script type="text/javascript" src="/js/src/motion.js?v=5.1.0"></script>
+
+
+
+  
+  
+
+  
+  <script type="text/javascript" src="/js/src/scrollspy.js?v=5.1.0"></script>
+<script type="text/javascript" src="/js/src/post-details.js?v=5.1.0"></script>
+
+
+
+  
+
+
+  <script type="text/javascript" src="/js/src/bootstrap.js?v=5.1.0"></script>
+
+
+
+  
+
+
+
+  
+
+
+
+
+	
+
+
+
+
+
+  
+
+
+
+
+  
+  
+  <script type="text/javascript">
+    // Popup Window;
+    var isfetched = false;
+    // Search DB path;
+    var search_path = "search.xml";
+    if (search_path.length == 0) {
+      search_path = "search.xml";
+    }
+    var path = "/" + search_path;
+    // monitor main search box;
+
+    function proceedsearch() {
+      $("body").append('<div class="popoverlay">').css('overflow', 'hidden');
+      $('.popup').toggle();
+    }
+    // search function;
+    var searchFunc = function(path, search_id, content_id) {
+      'use strict';
+      $.ajax({
+        url: path,
+        dataType: "xml",
+        async: true,
+        success: function( xmlResponse ) {
+          // get the contents from search data
+          isfetched = true;
+          $('.popup').detach().appendTo('.header-inner');
+          var datas = $( "entry", xmlResponse ).map(function() {
+            return {
+              title: $( "title", this ).text(),
+              content: $("content",this).text(),
+              url: $( "url" , this).text()
+            };
+          }).get();
+          var $input = document.getElementById(search_id);
+          var $resultContent = document.getElementById(content_id);
+          $input.addEventListener('input', function(){
+            var matchcounts = 0;
+            var str='<ul class=\"search-result-list\">';
+            var keywords = this.value.trim().toLowerCase().split(/[\s\-]+/);
+            $resultContent.innerHTML = "";
+            if (this.value.trim().length > 1) {
+              // perform local searching
+              datas.forEach(function(data) {
+                var isMatch = false;
+                var content_index = [];
+                var data_title = data.title.trim().toLowerCase();
+                var data_content = data.content.trim().replace(/<[^>]+>/g,"").toLowerCase();
+                var data_url = decodeURIComponent(data.url);
+                var index_title = -1;
+                var index_content = -1;
+                var first_occur = -1;
+                // only match artiles with not empty titles and contents
+                if(data_title != '') {
+                  keywords.forEach(function(keyword, i) {
+                    index_title = data_title.indexOf(keyword);
+                    index_content = data_content.indexOf(keyword);
+                    if( index_title >= 0 || index_content >= 0 ){
+                      isMatch = true;
+                      if (i == 0) {
+                        first_occur = index_content;
+                      }
+                    }
+
+                  });
+                }
+                // show search results
+                if (isMatch) {
+                  matchcounts += 1;
+                  str += "<li><a href='"+ data_url +"' class='search-result-title'>"+ data_title +"</a>";
+                  var content = data.content.trim().replace(/<[^>]+>/g,"");
+                  if (first_occur >= 0) {
+                    // cut out 100 characters
+                    var start = first_occur - 20;
+                    var end = first_occur + 80;
+                    if(start < 0){
+                      start = 0;
+                    }
+                    if(start == 0){
+                      end = 50;
+                    }
+                    if(end > content.length){
+                      end = content.length;
+                    }
+                    var match_content = content.substring(start, end);
+                    // highlight all keywords
+                    keywords.forEach(function(keyword){
+                      var regS = new RegExp(keyword, "gi");
+                      match_content = match_content.replace(regS, "<b class=\"search-keyword\">"+keyword+"</b>");
+                    });
+
+                    str += "<p class=\"search-result\">" + match_content +"...</p>"
+                  }
+                  str += "</li>";
+                }
+              })};
+            str += "</ul>";
+            if (matchcounts == 0) { str = '<div id="no-result"><i class="fa fa-frown-o fa-5x" /></div>' }
+            if (keywords == "") { str = '<div id="no-result"><i class="fa fa-search fa-5x" /></div>' }
+            $resultContent.innerHTML = str;
+          });
+          proceedsearch();
+        }
+      });}
+
+    // handle and trigger popup window;
+    $('.popup-trigger').click(function(e) {
+      e.stopPropagation();
+      if (isfetched == false) {
+        searchFunc(path, 'local-search-input', 'local-search-result');
+      } else {
+        proceedsearch();
+      };
+    });
+
+    $('.popup-btn-close').click(function(e){
+      $('.popup').hide();
+      $(".popoverlay").remove();
+      $('body').css('overflow', '');
+    });
+    $('.popup').click(function(e){
+      e.stopPropagation();
+    });
+  </script>
+
+
+  
+
+  
+
+  
+
+  
+
+
+</body>
+</html>
