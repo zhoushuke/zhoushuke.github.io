@@ -1,0 +1,948 @@
+<!doctype html>
+
+
+
+  
+
+
+<html class="theme-next mist use-motion" lang="zh-Hans">
+<head>
+  <meta charset="UTF-8"/>
+<meta http-equiv="X-UA-Compatible" content="IE=edge" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1"/>
+
+
+
+<meta http-equiv="Cache-Control" content="no-transform" />
+<meta http-equiv="Cache-Control" content="no-siteapp" />
+
+
+
+
+
+
+
+
+
+
+
+
+  
+  
+  <link href="/lib/fancybox/source/jquery.fancybox.css?v=2.1.5" rel="stylesheet" type="text/css" />
+
+
+
+
+  
+  
+  
+  
+
+  
+    
+    
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+    
+    
+    <link href="//fonts.googleapis.com/css?family=Lato:300,300italic,400,400italic,700,700italic&subset=latin,latin-ext" rel="stylesheet" type="text/css">
+  
+
+
+
+
+
+
+<link href="/lib/font-awesome/css/font-awesome.min.css?v=4.6.2" rel="stylesheet" type="text/css" />
+
+<link href="/css/main.css?v=5.1.0" rel="stylesheet" type="text/css" />
+
+
+  <meta name="keywords" content="Kubernetes," />
+
+
+
+
+
+
+
+
+  <link rel="shortcut icon" type="image/x-icon" href="/favicon.ico?v=5.1.0" />
+
+
+
+
+
+
+<meta name="description" content="最近在生产Kubernetes集群容器中的进程频繁地出现coredump从而导致宿主机的根目录被打到100%, 在排查的过程中发现一些技术盲区, 记录一下">
+<meta property="og:type" content="article">
+<meta property="og:title" content="Kubernetes学习(什么, 宿主机根目录被容器coredump打爆了?)">
+<meta property="og:url" content="https://zhoushuke.github.io/2023/07/29/Kubernetes-OutofDisk-CoreDump/index.html">
+<meta property="og:site_name" content="Z.S.K.&#39;s Records">
+<meta property="og:description" content="最近在生产Kubernetes集群容器中的进程频繁地出现coredump从而导致宿主机的根目录被打到100%, 在排查的过程中发现一些技术盲区, 记录一下">
+<meta property="og:locale">
+<meta property="article:published_time" content="2023-07-29T03:30:53.000Z">
+<meta property="article:modified_time" content="2023-07-29T07:34:50.948Z">
+<meta property="article:author" content="Z.S.K.">
+<meta property="article:tag" content="Kubernetes">
+<meta name="twitter:card" content="summary">
+
+
+
+<script type="text/javascript" id="hexo.configurations">
+  var NexT = window.NexT || {};
+  var CONFIG = {
+    root: '',
+    scheme: 'Mist',
+    sidebar: {"position":"left","display":"post"},
+    fancybox: true,
+    motion: true,
+    duoshuo: {
+      userId: 'undefined',
+      author: '博主'
+    },
+    algolia: {
+      applicationID: '',
+      apiKey: '',
+      indexName: '',
+      hits: {"per_page":10},
+      labels: {"input_placeholder":"Search for Posts","hits_empty":"We didn't find any results for the search: ${query}","hits_stats":"${hits} results found in ${time} ms"}
+    }
+  };
+</script>
+
+
+
+  <link rel="canonical" href="https://zhoushuke.github.io/2023/07/29/Kubernetes-OutofDisk-CoreDump/"/>
+
+
+
+
+
+  <title> Kubernetes学习(什么, 宿主机根目录被容器coredump打爆了?) | Z.S.K.'s Records </title>
+<meta name="generator" content="Hexo 6.2.0"></head>
+
+<body itemscope itemtype="http://schema.org/WebPage" lang="zh-Hans">
+
+  
+
+
+
+
+
+
+
+
+
+
+  
+  
+    
+  
+
+  <div class="container one-collumn sidebar-position-left page-post-detail ">
+    <div class="headband"></div>
+
+    <header id="header" class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-meta ">
+  
+
+  <div class="custom-logo-site-title">
+    <a href="/"  class="brand" rel="start">
+      <span class="logo-line-before"><i></i></span>
+      <span class="site-title">Z.S.K.'s Records</span>
+      <span class="logo-line-after"><i></i></span>
+    </a>
+  </div>
+    
+      <p class="site-subtitle"></p>
+    
+</div>
+
+<div class="site-nav-toggle">
+  <button>
+    <span class="btn-bar"></span>
+    <span class="btn-bar"></span>
+    <span class="btn-bar"></span>
+  </button>
+</div>
+
+<nav class="site-nav">
+  
+
+  
+    <ul id="menu" class="menu">
+      
+        
+        <li class="menu-item menu-item-home">
+          <a href="/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-home"></i> <br />
+            
+            首页
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-categories">
+          <a href="/categories" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-th"></i> <br />
+            
+            分类
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-about">
+          <a href="/about/ZSK-Profile.pdf" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-user"></i> <br />
+            
+            简历
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-archives">
+          <a href="/archives" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-archive"></i> <br />
+            
+            归档
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-tags">
+          <a href="/tags" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-tags"></i> <br />
+            
+            标签
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-commonweal">
+          <a href="/404.html" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-heartbeat"></i> <br />
+            
+            公益404
+          </a>
+        </li>
+      
+
+      
+        <li class="menu-item menu-item-search">
+          
+            <a href="javascript:;" class="popup-trigger">
+          
+            
+              <i class="menu-item-icon fa fa-search fa-fw"></i> <br />
+            
+            搜索
+          </a>
+        </li>
+      
+    </ul>
+  
+
+  
+    <div class="site-search">
+      
+  <div class="popup">
+ <span class="search-icon fa fa-search"></span>
+ <input type="text" id="local-search-input">
+ <div id="local-search-result"></div>
+ <span class="popup-btn-close">close</span>
+</div>
+
+
+    </div>
+  
+</nav>
+
+
+
+ </div>
+    </header>
+
+    <main id="main" class="main">
+      <div class="main-inner">
+        <div class="content-wrap">
+          <div id="content" class="content">
+            
+
+  <div id="posts" class="posts-expand">
+    
+
+  
+
+  
+  
+  
+
+  <article class="post post-type-normal " itemscope itemtype="http://schema.org/Article">
+  <link itemprop="mainEntityOfPage" href="https://zhoushuke.github.io/2023/07/29/Kubernetes-OutofDisk-CoreDump/">
+
+  <span style="display:none" itemprop="author" itemscope itemtype="http://schema.org/Person">
+    <meta itemprop="name" content="">
+    <meta itemprop="description" content="">
+    <meta itemprop="image" content="/images/avatar.gif">
+  </span>
+
+  <span style="display:none" itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+    <meta itemprop="name" content="Z.S.K.'s Records">
+    <span style="display:none" itemprop="logo" itemscope itemtype="http://schema.org/ImageObject">
+      <img style="display:none;" itemprop="url image" alt="Z.S.K.'s Records" src="">
+    </span>
+  </span>
+
+    
+      <header class="post-header">
+
+        
+        
+          <h1 class="post-title" itemprop="name headline">
+            
+            
+              
+                Kubernetes学习(什么, 宿主机根目录被容器coredump打爆了?)
+              
+            
+          </h1>
+        
+
+        <div class="post-meta">
+          <span class="post-time">
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">发表于</span>
+              
+              <time title="Post created" itemprop="dateCreated datePublished" datetime="2023-07-29T11:30:53+08:00">
+                2023-07-29
+              </time>
+            
+
+            
+
+            
+          </span>
+
+          
+            <span class="post-category" >
+            
+              <span class="post-meta-divider">|</span>
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-folder-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">分类于</span>
+              
+              
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/Kubernetes/" itemprop="url" rel="index">
+                    <span itemprop="name">Kubernetes</span>
+                  </a>
+                </span>
+
+                
+                
+              
+            </span>
+          
+
+          
+            
+          
+
+          
+
+          
+          
+
+          
+
+          
+
+        </div>
+      </header>
+    
+
+
+    <div class="post-body" itemprop="articleBody">
+
+      
+      
+
+      
+        <p>最近在生产Kubernetes集群容器中的进程频繁地出现coredump从而导致宿主机的根目录被打到100%, 在排查的过程中发现一些技术盲区, 记录一下</p>
+<span id="more"></span>
+
+
+<h3 id="问题现象"><a href="#问题现象" class="headerlink" title="问题现象"></a>问题现象</h3><p>某晚突然收到磁盘告警, 提示某台机器的&#x2F;路径被占用100%(所有机器的根目录都是统一规格不算大),打开监控大图发现这台机器的根目录出现很有频率地打到100%降下后又100%的趋势.<br>由于计算集群将docker及kubelet的volume都配置到独立的disk上，因此除了根被打满的告警外，没有收到其它的报警, <strong>即不会引影响上面已有容器的正常运行</strong></p>
+<h3 id="问题排查"><a href="#问题排查" class="headerlink" title="问题排查"></a>问题排查</h3><p>由于计算节点只有集群管理员才能登录, 因此不存在是哪个开发同学直接在上面操作引起的，那么排查思路如下:</p>
+<h4 id="df-x2F-du"><a href="#df-x2F-du" class="headerlink" title="df&#x2F;du"></a>df&#x2F;du</h4><p>根被打满，第一反应得查一下是不是在根目录下生成了大文件，du没发现问题,<strong>监控数据不会骗人</strong>, 多次执行df之后发现确认会到100%, 但是du又没找到是哪个大文件, 那么就可能是时间上很短，du没有抓到</p>
+<h4 id="dmesg"><a href="#dmesg" class="headerlink" title="dmesg"></a>dmesg</h4><p>使用<code>Dmesg -T|less</code> 相关内核日志，发现有很多如下错误:</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">kernel: Pid 38693(python) over core_pipe_limit</span><br><span class="line">kernel: Skipping core dump</span><br><span class="line">kernel: systemd-coredump[11718]: Core file was truncated to 2147483648 bytes.</span><br></pre></td></tr></table></figure>
+
+<p>显然，这跟一个Pid 为38693的python进程有关, 同时出现了coredump,dmesg里多次出现，那肯定不正常</p>
+<h4 id="coredump"><a href="#coredump" class="headerlink" title="coredump"></a>coredump</h4><p>关于coredump在这里不展开描述，只提一下它的作用:</p>
+<p>当程序发生内存越界访问等行为时，会触发OS的保护机制，此时OS会产生一个信号(signal)发送给对应的进程。当进程从内核态到用户态切换时，该进程会处理这个信号。此类信号（比如SEGV）的默认处理行为生成一个coredump文件<br>由于coredump会占用大量磁盘资源，所以计算节点应该都默认关闭了coredump功能, 通过以下命令确认:</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line"><span class="built_in">ulimit</span> -c</span><br><span class="line"></span><br><span class="line"><span class="comment"># ulimit -c unlimited 不限制</span></span><br><span class="line"><span class="comment"># ulimit -c 1024      限制大小为1024</span></span><br><span class="line"><span class="comment"># ulimit -c 0         限制大小为0，即不输出core dump文件</span></span><br></pre></td></tr></table></figure>
+
+<p>返回的是0, 说明coredump确认是关闭的,那奇怪为何会出现coredump呢? <strong>内核日志同样不会骗人</strong>, 从日志本身入手,<br>从日志中可以看到是个python进程，有pid,那么就可以查到是属于哪个容器的了，由于宿主机上跑的容器很多，所以更快的方法是: 使用coredumpctl命令查看发生coredump的进程信息,返回如下:</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># coredumpctl info</span></span><br><span class="line">PID: 38693 (python)</span><br><span class="line">UID: xxxx (xxxx)</span><br><span class="line">GID: xxxx (xxxx)</span><br><span class="line">Signal: 11 (SEGV)</span><br><span class="line">Timestamp: Wed 2023-07-28 19:58:05 CST</span><br><span class="line">Command Line: python xxx</span><br><span class="line">Executable: python </span><br><span class="line">Control Group: /kubepods.slice/...</span><br><span class="line"><span class="comment"># 省略...</span></span><br></pre></td></tr></table></figure>
+
+<p>信息非常详细, 很容易拿到是哪个容器触发的coredump，<strong>由于都发生了coredump, 大概率这个python程序已经跑跪了</strong>，为了更快的地验证是不是这个容器导致宿主机根被打满，让相应的用户先将容器stop掉，发现宿主机的根目录果然降下来了且稳定在低水位。</p>
+<h3 id="问题延伸"><a href="#问题延伸" class="headerlink" title="问题延伸"></a>问题延伸</h3><p>虽然快速地”解决了问题”,但产生了几个疑问:</p>
+<ol>
+<li>为什么宿主机上禁用了coredump还是发生了？</li>
+<li>就算问题1成立，为什么占用的是宿主机上磁盘容量且是根目录?</li>
+</ol>
+<p>经过一篇追踪及搜索后, 领了几个技术盲区后能够解释上述问题</p>
+<h4 id="为什么宿主机上禁用了coredump还是发生了？"><a href="#为什么宿主机上禁用了coredump还是发生了？" class="headerlink" title="为什么宿主机上禁用了coredump还是发生了？"></a>为什么宿主机上禁用了coredump还是发生了？</h4><p>首先, 虽然宿主机上禁用了coredump, 并不代表容器中就不能coredump,相反在容器中也是可以设置内核参数的,</p>
+<p>所以, 给pod中的容器设置ulimit参数，可以通过以下方法:<br><strong>是在镜像中的初始化程序中调用setrlimit()系统调用来进行设置。子进程会继承父进程的ulimit参数</strong><br>这个很好排查，拿出现coredump问题的镜像，直接使用<code>docker run</code> 后发现<code>ulimit -c</code>返回的是<code>unlimited</code>,与宿主机不一样。</p>
+<p>所以可以回答问题1, 即<strong>容器中能够使用coredump的原因是由于在容器中设置了<code>ulimit -c</code>参数</strong></p>
+<p>根据问题1又衍生出了另一个问题: <strong>kubernetes中给容器设置某些内核参数，哪些是会与主机冲突？</strong></p>
+<p>从上面的验证来看，至少<code>ulimit -c</code>不会覆盖宿主机的，要不然不存在问题1</p>
+<p>其实，linux内核方面做了大量的工作，把一部分sysctl内核参数进行了namespace化(namespaced)。 也就是多个容器和主机可以各自独立设置某些内核参数。例如，可以通过<code>net.ipv4.ip_local_port_range</code>，在不同容器中设置不同的端口范围。<br>那如何判断一个参数是不是namespaced? </p>
+<p>方式很简单: 运行一个具有privileged权限的容器，然后在容器中修改该参数，看一下在host上能否看到容器在中所做的修改。如果看不到， 那就是namespaced， 否则不是。</p>
+<p>k8s还进一步把syctl参数分为safe和unsafe, safe的条件：</p>
+<blockquote>
+<ul>
+<li>must not have any influence on any other pod on the node</li>
+<li>must not allow to harm the node’s health</li>
+<li>must not allow to gain CPU or memory resources outside of the resource limits of a pod.</li>
+</ul>
+</blockquote>
+<p>非namespaced的参数肯定是unsafe。namespaced参数也只有一部分被认为是safe的。</p>
+<p><strong>由于sysctl是由kubelet设置的</strong>，从kubelet的源码<code>pkg/kubelet/sysctl/namespace.go</code>来看，目前已经namespace化的sysctl内核参数如下</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line">kernel.shm*,</span><br><span class="line">kernel.msg*,</span><br><span class="line">kernel.sem,</span><br><span class="line">fs.mqueue.*,</span><br><span class="line">net.*.</span><br></pre></td></tr></table></figure>
+
+<p>注意: vm并没有namespace化, 比如<code>vm.max_map_count</code> 在宿主机或者一个容器中设置它,其他所有容器都会受影响，都会看到最新的值。</p>
+<p>在<code>pkg/kubelet/sysctl/safe_sysctls.go</code>中维护了safe sysctl参数的名单。目前只有三个参数被认为是safe的:</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">kernel.shm_rmid_forced,</span><br><span class="line">net.ipv4.ip_local_port_range,</span><br><span class="line">net.ipv4.tcp_syncookies</span><br></pre></td></tr></table></figure>
+
+<h4 id="为什么占用的是宿主机上磁盘容量且是根目录"><a href="#为什么占用的是宿主机上磁盘容量且是根目录" class="headerlink" title="为什么占用的是宿主机上磁盘容量且是根目录?"></a>为什么占用的是宿主机上磁盘容量且是根目录?</h4><p>搞清了问题1, 那为什么是占用的是宿主机上的根目录容量呢, 接着查.<br>通过排查coredump发现, coredump可以有好几种方式, 在使用了systemd的系统上, 默认使用的是systemd-coredump,<br>关于systemd-coredump在这里不展开描述，只提一下它的作用:</p>
+<p>systemd-coredump可收集并显示内核核心转储，用于分析应用程序崩溃问题。当某个进程（或属于应用程序的所有进程）崩溃时，此工具默认会将核心转储记录到 systemd 日记（如有可能还包括回溯），并将核心转储储存在<code>/var/lib/systemd/coredump</code>(默认路径) 中的某个文件内.</p>
+<p>查看宿主机的<code>/var/lib/systemd/coredump</code>目录，果然发现有几个产生的core文件，且size很大.<br>systemd-coredump有如下几个重要配置文件,默认配置如下:</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br></pre></td><td class="code"><pre><span class="line"># /etc/systemd/coredump.conf</span><br><span class="line">[Coredump]</span><br><span class="line">#Storage=external</span><br><span class="line">#Compress=yes</span><br><span class="line">#ProcessSizeMax=2G</span><br><span class="line">#ExternalSizeMax=2G</span><br><span class="line">#JournalSizeMax=767M</span><br><span class="line">#MaxUse=</span><br><span class="line">#KeepFree=</span><br></pre></td></tr></table></figure>
+<p>Storage可以有如下值:</p>
+<blockquote>
+<ul>
+<li>none: 在日记中记录核心转储，但不储存。这样做有助于尽量减少敏感信息的收集与储存，例如，出于符合一般数据保护条例 (GDPR) 的目的。</li>
+<li>external: 将核心储存在&#x2F;var&#x2F;lib&#x2F;systemd&#x2F;coredump中</li>
+<li>journal: 将核心储存在 systemd 日记中</li>
+</ul>
+</blockquote>
+<p>这里使用的是默认值external, 因此core文件存储在了&#x2F;var&#x2F;lib&#x2F;systemd&#x2F;coredump</p>
+<p>另一个配置文件:</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line"># /usr/lib/sysctl.d/50-coredusmp.conf</span><br><span class="line">kernel.core_pattern=|/usr/lib/systemd/systemd-coredump %P %u %g %s %t %c %h %e</span><br><span class="line">kernel.core_pipe_limit=16</span><br></pre></td></tr></table></figure>
+<p>第一行表明使用了<code>|</code>(管道,内核2.6.19就已支持)的方式.<br>第二行表示可以并发运行coredump的上限是16个, dmesg中看到的<code>over core_pipe_limit</code>就是超过了这个参数直接给skip了.</p>
+<p>总结几个很重要的信息:</p>
+<ol>
+<li>使用管道的时候，内核会将 core 内容作为管道后程序的 stdin，然后通过新起一个内核线程来调用管道后的程序，此时，<strong>是以root用户来运行管道后的程序</strong></li>
+<li><strong>使用管道时，dump的path目录解析是在系统初始化namespace中发生的，也就是宿主机的global ns 中，所以默认会将文件生成在宿主机的path目录中</strong></li>
+<li><strong>同时由于kernel.core_pattern是一个未做隔离的变量，容器中和宿主机共享此值</strong></li>
+</ol>
+<p>所有配置结合起来就导致在容器中产生的coredump事件最后产生的core文件却生成了在宿主机上了<br>问题2的疑惑解决</p>
+<h3 id="问题解决"><a href="#问题解决" class="headerlink" title="问题解决"></a>问题解决</h3><p>那需要不需要将在容器中产生的coredump直接保存在容器里呢?<br>答案是不建议，因为本身开启coredump的原因就是为了debug问题，在出现coredump时一般容器也可能就挂了，如果这时候coredump文件还保存在容器中,那也没办法拿到,开启coredump的初衷就不存在。<br>由于业务方需要开启coredump来定位问题这个情况客观存在, 也不能说一棒子打死就直接不给开放了,优雅一点通过以下几种方式解决:</p>
+<h4 id="限制容器中ulimit参数"><a href="#限制容器中ulimit参数" class="headerlink" title="限制容器中ulimit参数"></a>限制容器中ulimit参数</h4><p>这次问题的本质是产生的coredump太大将宿主机根目录打满，那么可以在容器中限制一下ulimit的大小</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line"><span class="built_in">ulimit</span> -c <span class="comment"># 降低到128M</span></span><br></pre></td></tr></table></figure>
+
+<h4 id="调整宿主机上systemd-coredump配置"><a href="#调整宿主机上systemd-coredump配置" class="headerlink" title="调整宿主机上systemd-coredump配置"></a>调整宿主机上systemd-coredump配置</h4><p>同时, 调整systemd-coredump的配置，限制并发数(<code>/usr/lib/sysctl.d/50-coredusmp.conf中的kernel.core_pipe_limit</code>参数), 同时将存储core文件的路径从根目录下迁移到大盘上或者直接设置为none</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br></pre></td><td class="code"><pre><span class="line"># /etc/systemd/coredump.conf</span><br><span class="line">[Coredump]</span><br><span class="line">Storage=none # 或者是大盘路径</span><br><span class="line">#Compress=yes</span><br><span class="line">ProcessSizeMax=0</span><br><span class="line">#ExternalSizeMax=2G</span><br><span class="line">#JournalSizeMax=767M</span><br><span class="line">#MaxUse=</span><br><span class="line">#KeepFree=</span><br></pre></td></tr></table></figure>
+
+<p>注意: 内核转储文件所占用的磁盘资源受两种不同方式的约束： (1)占用磁盘空间的大小受 &#x2F;etc&#x2F;systemd&#x2F;coredump.conf 配置文件以及对应的配置片段的约束； (2)占用磁盘时间的长短受 systemd-tmpfiles 配置的约束(对应的配置文件默认位于 &#x2F;usr&#x2F;lib&#x2F;tmpfiles.d&#x2F;systemd.conf)。</p>
+<h3 id="问题总结"><a href="#问题总结" class="headerlink" title="问题总结"></a>问题总结</h3><p>这次出现的问题虽没有产生实质的影响,但还是发现不少可以提高稳定性的点, 这类问题不亲身遇到, 平时也没什么机会可以关注到,从点到线及面, <strong>出现问题不可怕, 解决能力很重要, 而且要快</strong></p>
+<h3 id="参考文章"><a href="#参考文章" class="headerlink" title="参考文章:"></a><strong>参考文章:</strong></h3><h3 id="转载请注明原作者-周淑科-https-izsk-me"><a href="#转载请注明原作者-周淑科-https-izsk-me" class="headerlink" title="转载请注明原作者: 周淑科(https://izsk.me)"></a><strong>转载请注明原作者: 周淑科(<a target="_blank" rel="noopener" href="https://izsk.me/">https://izsk.me</a>)</strong></h3><blockquote>
+<ul>
+<li><a target="_blank" rel="noopener" href="https://kubernetes.io/docs/tasks/administer-cluster/sysctl-cluster/">https://kubernetes.io/docs/tasks/administer-cluster/sysctl-cluster/</a></li>
+<li><a target="_blank" rel="noopener" href="https://www.jinbuguo.com/systemd/systemd-coredump.html">https://www.jinbuguo.com/systemd/systemd-coredump.html</a></li>
+<li><a target="_blank" rel="noopener" href="https://cloud.tencent.com/developer/article/1583736">https://cloud.tencent.com/developer/article/1583736</a></li>
+<li><a target="_blank" rel="noopener" href="https://zhuanlan.zhihu.com/p/29135840">https://zhuanlan.zhihu.com/p/29135840</a></li>
+<li><a target="_blank" rel="noopener" href="https://github.com/kubernetes/kubernetes/issues/98106">https://github.com/kubernetes/kubernetes/issues/98106</a></li>
+<li><a target="_blank" rel="noopener" href="https://github.com/kubernetes/kubernetes/issues/3595">https://github.com/kubernetes/kubernetes/issues/3595</a></li>
+<li><a target="_blank" rel="noopener" href="https://cloud.redhat.com/blog/a-guide-to-core-dump-handling-in-openshift">https://cloud.redhat.com/blog/a-guide-to-core-dump-handling-in-openshift</a></li>
+</ul>
+</blockquote>
+
+      
+    </div>
+
+    <div>
+      
+        
+<div id="wechat_subscriber" style="display: block; padding: 10px 0; margin: 20px auto; width: 100%; text-align: center">
+    <img id="wechat_subscriber_qcode" src="/images/websitecode250.png" alt=" wechat" style="width: 200px; max-width: 100%;"/>
+    <div>Scan Me To Read on Phone</div>
+</div>
+
+
+      
+    </div>
+
+    <div>
+      
+        
+  <div style="padding: 10px 0; margin: 20px auto; width: 90%; text-align: center;">
+    <div>I know you won't do this,but what if you did?</div>
+    <button id="rewardButton" disable="enable" onclick="var qr = document.getElementById('QR'); if (qr.style.display === 'none') {qr.style.display='block';} else {qr.style.display='none'}">
+      <span>赏</span>
+    </button>
+    <div id="QR" style="display: none;">
+      
+        <div id="wechat" style="display: inline-block">
+          <img id="wechat_qr" src="/images/wechatpayme.png" alt=" WeChat Pay"/>
+          <p>微信打赏</p>
+        </div>
+      
+      
+        <div id="alipay" style="display: inline-block">
+          <img id="alipay_qr" src="/images/alipayme.jpg" alt=" Alipay"/>
+          <p>支付宝打赏</p>
+        </div>
+      
+    </div>
+  </div>
+
+
+      
+    </div>
+
+
+    <footer class="post-footer">
+      
+        <div class="post-tags">
+          
+            <a href="/tags/Kubernetes/" rel="tag"># Kubernetes</a>
+          
+        </div>
+      
+
+      
+        <div class="post-nav">
+          <div class="post-nav-next post-nav-item">
+            
+              <a href="/2023/07/22/Kubernetes-multi-tenancy/" rel="next" title="Kubernetes学习(kubernetes中如何实现多租户模型)">
+                <i class="fa fa-chevron-left"></i> Kubernetes学习(kubernetes中如何实现多租户模型)
+              </a>
+            
+          </div>
+
+          <span class="post-nav-divider"></span>
+
+          <div class="post-nav-prev post-nav-item">
+            
+          </div>
+        </div>
+      
+
+      
+      
+    </footer>
+  </article>
+
+
+
+    <div class="post-spread">
+      
+    </div>
+  </div>
+
+
+          </div>
+          
+
+
+          
+  <div class="comments" id="comments">
+    
+  </div>
+
+
+        </div>
+        
+          
+  
+  <div class="sidebar-toggle">
+    <div class="sidebar-toggle-line-wrap">
+      <span class="sidebar-toggle-line sidebar-toggle-line-first"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-middle"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-last"></span>
+    </div>
+  </div>
+
+  <aside id="sidebar" class="sidebar">
+    <div class="sidebar-inner">
+
+      
+
+      
+        <ul class="sidebar-nav motion-element">
+          <li class="sidebar-nav-toc sidebar-nav-active" data-target="post-toc-wrap" >
+            文章目录
+          </li>
+          <li class="sidebar-nav-overview" data-target="site-overview">
+            站点概览
+          </li>
+        </ul>
+      
+
+      <section class="site-overview sidebar-panel">
+        <div class="site-author motion-element" itemprop="author" itemscope itemtype="http://schema.org/Person">
+          <img class="site-author-image" itemprop="image"
+               src="/images/avatar.gif"
+               alt="" />
+          <p class="site-author-name" itemprop="name"></p>
+          <p class="site-description motion-element" itemprop="description"></p>
+        </div>
+        <nav class="site-state motion-element">
+        
+          
+            <div class="site-state-item site-state-posts">
+              <a href="/archives">
+                <span class="site-state-item-count">204</span>
+                <span class="site-state-item-name">日志</span>
+              </a>
+            </div>
+          
+
+          
+            <div class="site-state-item site-state-categories">
+              <a href="/categories">
+                <span class="site-state-item-count">14</span>
+                <span class="site-state-item-name">分类</span>
+              </a>
+            </div>
+          
+
+          
+            <div class="site-state-item site-state-tags">
+              <a href="/tags">
+                <span class="site-state-item-count">14</span>
+                <span class="site-state-item-name">标签</span>
+              </a>
+            </div>
+          
+
+        </nav>
+
+        
+
+        <div class="links-of-author motion-element">
+          
+        </div>
+
+        
+        
+
+        
+        
+
+        
+
+
+      </section>
+
+      
+      <!--noindex-->
+        <section class="post-toc-wrap motion-element sidebar-panel sidebar-panel-active">
+          <div class="post-toc">
+
+            
+              
+            
+
+            
+              <div class="post-toc-content"><ol class="nav"><li class="nav-item nav-level-3"><a class="nav-link" href="#%E9%97%AE%E9%A2%98%E7%8E%B0%E8%B1%A1"><span class="nav-number">1.</span> <span class="nav-text">问题现象</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E9%97%AE%E9%A2%98%E6%8E%92%E6%9F%A5"><span class="nav-number">2.</span> <span class="nav-text">问题排查</span></a><ol class="nav-child"><li class="nav-item nav-level-4"><a class="nav-link" href="#df-x2F-du"><span class="nav-number">2.1.</span> <span class="nav-text">df&#x2F;du</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#dmesg"><span class="nav-number">2.2.</span> <span class="nav-text">dmesg</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#coredump"><span class="nav-number">2.3.</span> <span class="nav-text">coredump</span></a></li></ol></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E9%97%AE%E9%A2%98%E5%BB%B6%E4%BC%B8"><span class="nav-number">3.</span> <span class="nav-text">问题延伸</span></a><ol class="nav-child"><li class="nav-item nav-level-4"><a class="nav-link" href="#%E4%B8%BA%E4%BB%80%E4%B9%88%E5%AE%BF%E4%B8%BB%E6%9C%BA%E4%B8%8A%E7%A6%81%E7%94%A8%E4%BA%86coredump%E8%BF%98%E6%98%AF%E5%8F%91%E7%94%9F%E4%BA%86%EF%BC%9F"><span class="nav-number">3.1.</span> <span class="nav-text">为什么宿主机上禁用了coredump还是发生了？</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#%E4%B8%BA%E4%BB%80%E4%B9%88%E5%8D%A0%E7%94%A8%E7%9A%84%E6%98%AF%E5%AE%BF%E4%B8%BB%E6%9C%BA%E4%B8%8A%E7%A3%81%E7%9B%98%E5%AE%B9%E9%87%8F%E4%B8%94%E6%98%AF%E6%A0%B9%E7%9B%AE%E5%BD%95"><span class="nav-number">3.2.</span> <span class="nav-text">为什么占用的是宿主机上磁盘容量且是根目录?</span></a></li></ol></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E9%97%AE%E9%A2%98%E8%A7%A3%E5%86%B3"><span class="nav-number">4.</span> <span class="nav-text">问题解决</span></a><ol class="nav-child"><li class="nav-item nav-level-4"><a class="nav-link" href="#%E9%99%90%E5%88%B6%E5%AE%B9%E5%99%A8%E4%B8%ADulimit%E5%8F%82%E6%95%B0"><span class="nav-number">4.1.</span> <span class="nav-text">限制容器中ulimit参数</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#%E8%B0%83%E6%95%B4%E5%AE%BF%E4%B8%BB%E6%9C%BA%E4%B8%8Asystemd-coredump%E9%85%8D%E7%BD%AE"><span class="nav-number">4.2.</span> <span class="nav-text">调整宿主机上systemd-coredump配置</span></a></li></ol></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E9%97%AE%E9%A2%98%E6%80%BB%E7%BB%93"><span class="nav-number">5.</span> <span class="nav-text">问题总结</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E5%8F%82%E8%80%83%E6%96%87%E7%AB%A0"><span class="nav-number">6.</span> <span class="nav-text">参考文章:</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E8%BD%AC%E8%BD%BD%E8%AF%B7%E6%B3%A8%E6%98%8E%E5%8E%9F%E4%BD%9C%E8%80%85-%E5%91%A8%E6%B7%91%E7%A7%91-https-izsk-me"><span class="nav-number">7.</span> <span class="nav-text">转载请注明原作者: 周淑科(https:&#x2F;&#x2F;izsk.me)</span></a></li></ol></div>
+            
+
+          </div>
+        </section>
+      <!--/noindex-->
+      
+
+    </div>
+  </aside>
+
+
+        
+      </div>
+    </main>
+
+    <footer id="footer" class="footer">
+      <div class="footer-inner">
+        <div class="copyright" >
+  
+  &copy; 
+  <span itemprop="copyrightYear">2023</span>
+  <span class="with-love">
+    <i class="fa fa-heart"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">Z.S.K.</span>
+</div>
+
+
+<div class="powered-by">
+  Supported by <a class="theme-link" target="_blank" rel="noopener" href="https://hexo.io">Hexo</a>
+</div>
+
+<div class="theme-info">
+  Theme -
+  <a class="theme-link" target="_blank" rel="noopener" href="https://github.com/iissnan/hexo-theme-next">
+    NexT.Mist
+  </a>
+</div>
+
+
+        
+
+        
+      </div>
+    </footer>
+
+    <div class="back-to-top">
+      <i class="fa fa-arrow-up"></i>
+    </div>
+  </div>
+
+  
+
+<script type="text/javascript">
+  if (Object.prototype.toString.call(window.Promise) !== '[object Function]') {
+    window.Promise = null;
+  }
+</script>
+
+
+
+
+
+
+
+
+
+  
+
+
+
+  
+  <script type="text/javascript" src="/lib/jquery/index.js?v=2.1.3"></script>
+
+  
+  <script type="text/javascript" src="/lib/fastclick/lib/fastclick.min.js?v=1.0.6"></script>
+
+  
+  <script type="text/javascript" src="/lib/jquery_lazyload/jquery.lazyload.js?v=1.9.7"></script>
+
+  
+  <script type="text/javascript" src="/lib/velocity/velocity.min.js?v=1.2.1"></script>
+
+  
+  <script type="text/javascript" src="/lib/velocity/velocity.ui.min.js?v=1.2.1"></script>
+
+  
+  <script type="text/javascript" src="/lib/fancybox/source/jquery.fancybox.pack.js?v=2.1.5"></script>
+
+
+  
+
+
+  <script type="text/javascript" src="/js/src/utils.js?v=5.1.0"></script>
+
+  <script type="text/javascript" src="/js/src/motion.js?v=5.1.0"></script>
+
+
+
+  
+  
+
+  
+  <script type="text/javascript" src="/js/src/scrollspy.js?v=5.1.0"></script>
+<script type="text/javascript" src="/js/src/post-details.js?v=5.1.0"></script>
+
+
+
+  
+
+
+  <script type="text/javascript" src="/js/src/bootstrap.js?v=5.1.0"></script>
+
+
+
+  
+
+
+
+  
+
+
+
+
+	
+
+
+
+
+
+  
+
+
+
+
+  
+  
+  <script type="text/javascript">
+    // Popup Window;
+    var isfetched = false;
+    // Search DB path;
+    var search_path = "search.xml";
+    if (search_path.length == 0) {
+      search_path = "search.xml";
+    }
+    var path = "/" + search_path;
+    // monitor main search box;
+
+    function proceedsearch() {
+      $("body").append('<div class="popoverlay">').css('overflow', 'hidden');
+      $('.popup').toggle();
+    }
+    // search function;
+    var searchFunc = function(path, search_id, content_id) {
+      'use strict';
+      $.ajax({
+        url: path,
+        dataType: "xml",
+        async: true,
+        success: function( xmlResponse ) {
+          // get the contents from search data
+          isfetched = true;
+          $('.popup').detach().appendTo('.header-inner');
+          var datas = $( "entry", xmlResponse ).map(function() {
+            return {
+              title: $( "title", this ).text(),
+              content: $("content",this).text(),
+              url: $( "url" , this).text()
+            };
+          }).get();
+          var $input = document.getElementById(search_id);
+          var $resultContent = document.getElementById(content_id);
+          $input.addEventListener('input', function(){
+            var matchcounts = 0;
+            var str='<ul class=\"search-result-list\">';
+            var keywords = this.value.trim().toLowerCase().split(/[\s\-]+/);
+            $resultContent.innerHTML = "";
+            if (this.value.trim().length > 1) {
+              // perform local searching
+              datas.forEach(function(data) {
+                var isMatch = false;
+                var content_index = [];
+                var data_title = data.title.trim().toLowerCase();
+                var data_content = data.content.trim().replace(/<[^>]+>/g,"").toLowerCase();
+                var data_url = decodeURIComponent(data.url);
+                var index_title = -1;
+                var index_content = -1;
+                var first_occur = -1;
+                // only match artiles with not empty titles and contents
+                if(data_title != '') {
+                  keywords.forEach(function(keyword, i) {
+                    index_title = data_title.indexOf(keyword);
+                    index_content = data_content.indexOf(keyword);
+                    if( index_title >= 0 || index_content >= 0 ){
+                      isMatch = true;
+                      if (i == 0) {
+                        first_occur = index_content;
+                      }
+                    }
+
+                  });
+                }
+                // show search results
+                if (isMatch) {
+                  matchcounts += 1;
+                  str += "<li><a href='"+ data_url +"' class='search-result-title'>"+ data_title +"</a>";
+                  var content = data.content.trim().replace(/<[^>]+>/g,"");
+                  if (first_occur >= 0) {
+                    // cut out 100 characters
+                    var start = first_occur - 20;
+                    var end = first_occur + 80;
+                    if(start < 0){
+                      start = 0;
+                    }
+                    if(start == 0){
+                      end = 50;
+                    }
+                    if(end > content.length){
+                      end = content.length;
+                    }
+                    var match_content = content.substring(start, end);
+                    // highlight all keywords
+                    keywords.forEach(function(keyword){
+                      var regS = new RegExp(keyword, "gi");
+                      match_content = match_content.replace(regS, "<b class=\"search-keyword\">"+keyword+"</b>");
+                    });
+
+                    str += "<p class=\"search-result\">" + match_content +"...</p>"
+                  }
+                  str += "</li>";
+                }
+              })};
+            str += "</ul>";
+            if (matchcounts == 0) { str = '<div id="no-result"><i class="fa fa-frown-o fa-5x" /></div>' }
+            if (keywords == "") { str = '<div id="no-result"><i class="fa fa-search fa-5x" /></div>' }
+            $resultContent.innerHTML = str;
+          });
+          proceedsearch();
+        }
+      });}
+
+    // handle and trigger popup window;
+    $('.popup-trigger').click(function(e) {
+      e.stopPropagation();
+      if (isfetched == false) {
+        searchFunc(path, 'local-search-input', 'local-search-result');
+      } else {
+        proceedsearch();
+      };
+    });
+
+    $('.popup-btn-close').click(function(e){
+      $('.popup').hide();
+      $(".popoverlay").remove();
+      $('body').css('overflow', '');
+    });
+    $('.popup').click(function(e){
+      e.stopPropagation();
+    });
+  </script>
+
+
+  
+
+  
+
+  
+
+  
+
+
+</body>
+</html>
