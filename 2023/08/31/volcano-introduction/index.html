@@ -92,7 +92,7 @@
 <meta property="og:description" content="volcano做为CNCF目前唯一一款应对大规模资源批调度工具被大家熟知.作者负责的kubernetes集群每天都有大量的任务需要运行, GPU任务、短任务、长任务等等，同时还存在多租户场景、复杂的调度策略等, 依托volcano的高度可插拔能力, 同时结合业务场景进行相应的优化,极大提高了资源使用效率，结果导向明显在此也分享一下整个落地过程,也做为现阶段的一个工作总结, 工作之余尽量更新. 注:">
 <meta property="og:locale">
 <meta property="article:published_time" content="2023-08-31T03:30:53.000Z">
-<meta property="article:modified_time" content="2023-10-02T15:40:35.692Z">
+<meta property="article:modified_time" content="2023-10-02T15:49:00.777Z">
 <meta property="article:author" content="Z.S.K.">
 <meta property="article:tag" content="HPC">
 <meta name="twitter:card" content="summary">
@@ -397,7 +397,7 @@
 <span id="more"></span>
 
 <p>本系列总体分为以下几块内容:<br>volcano如何应对大规模任务系列之volcano开篇介绍<br>volcano如何应对大规模任务系列之volcano关键对象<br>volcano如何应对大规模任务系列之volcano插件系统<br>volcano如何应对大规模任务系列之volcano源码解析<br>volcano如何应对大规模任务系列之volcano优化之道<br>volcano如何应对大规模任务系列之volcano生产实践<br>volcano如何应对大规模任务系列之volcano总结建议</p>
-<h3 id="kube-batch"><a href="#kube-batch" class="headerlink" title="kube-batch"></a>kube-batch</h3><p>volcano是由另一款工具: kube-batch发展而来, kube-batch的创建者后来直接加入了华为创建了volcano项目 kube-batch的功能虽没有volcano那么复杂且已不再维护，但很多核心思想在volcano中沿用了下来，<br>建议大家可以看看它的源码,对volcano的入门还是很方便的。<br>感兴趣的可以看看作者之前对kube-batch的生产实践</p>
+<h3 id="kube-batch"><a href="#kube-batch" class="headerlink" title="kube-batch"></a>kube-batch</h3><p>volcano是由另一款工具: kube-batch发展而来, kube-batch的创建者后来直接加入了华为创建了volcano项目 kube-batch的功能虽没有volcano那么复杂且已不再维护，但很多核心思想在volcano中沿用了下来，<br>建议大家可以看看它的源码,对volcano的入门还是很方便的。<br>感兴趣的可以看看作者之前对<a target="_blank" rel="noopener" href="https://izsk.me/2021/03/15/Kubernetes-kubebatch-knows/">kube-batch的生产实践</a></p>
 <h3 id="Why"><a href="#Why" class="headerlink" title="Why"></a>Why</h3><p>为什么会有volcano这款工具?<br>当然新版本的kube-scheduler是可以运行extend-resource机制来对kube-scheduler的在限能力进行自定义扩展，<br>但是在有这个能力之前, kube-scheduler的功能其实很单一，<strong>本质上它是个串行调度</strong>,不能很好地处理如HPC场景下的资源浪费问题, 因此kube-batch项目诞生，最有名的则是它实现了gang scheduler, 在迭代了多个版本且有很多生产实践后volcano诞生，同时加入了更加丰富的插件以应对更加复杂的业务场景</p>
 <h3 id="When"><a href="#When" class="headerlink" title="When"></a>When</h3><p>什么时候可能会需要volcano这个工具?<br>虽然最新版volcano(v1.8.0)可以兼容kubernetes原生的所有类型对象，可以完全取代kube-scheduler调度器，但volcano毕竟还是更专注于批调度这个领域，因此，如果只是运行一些deployment、sts这类long-run的资源对象，引入volcano可能还是带来比较高的学习成本及加大系统的复杂性，并不会带来多大的收益<br>但如果kubernetes集群每天都面临需要调度大量的JOB, 对计算资源有比较高的使用率时, 还是有很大帮助, 可能有如下几个场景:</p>
 <ol>
@@ -409,6 +409,7 @@
 <h3 id="参考文章"><a href="#参考文章" class="headerlink" title="参考文章:"></a><strong>参考文章:</strong></h3><blockquote>
 <ul>
 <li><a target="_blank" rel="noopener" href="https://volcano.sh/">https://volcano.sh</a></li>
+<li><a target="_blank" rel="noopener" href="https://izsk.me/2021/03/15/Kubernetes-kubebatch-knows/">https://izsk.me/2021/03/15/Kubernetes-kubebatch-knows/</a></li>
 </ul>
 </blockquote>
 <h3 id="转载请注明原作者-周淑科-https-izsk-me"><a href="#转载请注明原作者-周淑科-https-izsk-me" class="headerlink" title="转载请注明原作者: 周淑科(https://izsk.me)"></a><strong>转载请注明原作者: 周淑科(<a target="_blank" rel="noopener" href="https://izsk.me/">https://izsk.me</a>)</strong></h3>
