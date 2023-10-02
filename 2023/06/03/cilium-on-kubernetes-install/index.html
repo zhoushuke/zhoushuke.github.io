@@ -84,16 +84,16 @@
 
 
 
-<meta name="description" content="在前东家的时候其实就有意将cilium强大的链路追踪能力集成到生产环境中,各种因素导致没有很大信心落地, 经过深入调研(也就把官网docs翻了四五遍)及测试, 终于有机会在生产kubernetes集群中(其中一个规模不算很大,12000+核心,持续增长)使用cilium做为cni,同时替换kube-proxy, 到现在已经有一段时间了，也算是有生产经验可以跟大家聊一聊这个工具，使用体验总结一句话:">
+<meta name="description" content="在前东家的时候其实就有意将cilium强大的链路追踪能力集成到生产环境中,各种因素导致没有很大信心落地, 经过深入调研(也就把官网docs翻了四五遍)及测试, 终于有机会在生产kubernetes集群中(其中一个集群规模不算很大,2w+核心,持续增长)使用cilium做为cni,同时替换kube-proxy, 到现在已经有一段时间了，也算是有生产经验可以跟大家聊一聊这个工具，使用体验总结一句话:">
 <meta property="og:type" content="article">
 <meta property="og:title" content="cilium在kubernetes中的生产实践二(cilium部署)">
 <meta property="og:url" content="https://zhoushuke.github.io/2023/06/03/cilium-on-kubernetes-install/index.html">
 <meta property="og:site_name" content="Z.S.K.&#39;s Records">
-<meta property="og:description" content="在前东家的时候其实就有意将cilium强大的链路追踪能力集成到生产环境中,各种因素导致没有很大信心落地, 经过深入调研(也就把官网docs翻了四五遍)及测试, 终于有机会在生产kubernetes集群中(其中一个规模不算很大,12000+核心,持续增长)使用cilium做为cni,同时替换kube-proxy, 到现在已经有一段时间了，也算是有生产经验可以跟大家聊一聊这个工具，使用体验总结一句话:">
+<meta property="og:description" content="在前东家的时候其实就有意将cilium强大的链路追踪能力集成到生产环境中,各种因素导致没有很大信心落地, 经过深入调研(也就把官网docs翻了四五遍)及测试, 终于有机会在生产kubernetes集群中(其中一个集群规模不算很大,2w+核心,持续增长)使用cilium做为cni,同时替换kube-proxy, 到现在已经有一段时间了，也算是有生产经验可以跟大家聊一聊这个工具，使用体验总结一句话:">
 <meta property="og:locale">
 <meta property="og:image" content="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20230603173157.png">
 <meta property="article:published_time" content="2023-06-03T03:30:53.000Z">
-<meta property="article:modified_time" content="2023-08-21T14:17:01.702Z">
+<meta property="article:modified_time" content="2023-10-02T13:54:36.842Z">
 <meta property="article:author" content="Z.S.K.">
 <meta property="article:tag" content="CloudNavi">
 <meta name="twitter:card" content="summary">
@@ -394,10 +394,10 @@
       
 
       
-        <p>在前东家的时候其实就有意将cilium强大的链路追踪能力集成到生产环境中,各种因素导致没有很大信心落地, 经过深入调研(也就把官网docs翻了四五遍)及测试, 终于有机会在生产kubernetes集群中(其中一个规模不算很大,12000+核心,持续增长)使用cilium做为cni,同时替换kube-proxy, 到现在已经有一段时间了，也算是有生产经验可以跟大家聊一聊这个工具，使用体验总结一句话: 轻松愉悦.<br>分享一下整个落地过程,同时也总结下方方面面, 工作之余尽量更新.<br>此篇为: cilium在kubernetes中的生产实践二(cilium部署)</p>
+        <p>在前东家的时候其实就有意将cilium强大的链路追踪能力集成到生产环境中,各种因素导致没有很大信心落地, 经过深入调研(也就把官网docs翻了四五遍)及测试, 终于有机会在生产kubernetes集群中(其中一个集群规模不算很大,2w+核心,持续增长)使用cilium做为cni,同时替换kube-proxy, 到现在已经有一段时间了，也算是有生产经验可以跟大家聊一聊这个工具，使用体验总结一句话: 轻松愉悦.<br>分享一下整个落地过程,同时也总结下方方面面, 工作之余尽量更新.<br>此篇为: cilium在kubernetes中的生产实践二(cilium部署)</p>
 <span id="more"></span>
 
-<p>总体分为以下几块内容:<br>cilium在kubernetes中的生产实践一(cilium介绍)<br>cilium在kubernetes中的生产实践二(cilium部署)<br>cilium在kubernetes中的生产实践三(cilium网络模型)<br>cilium在kubernetes中的生产实践四(cilium常用命令)<br>cilium在kubernetes中的生产实践五(cilium网络策略)<br>cilium在kubernetes中的生产实践六(cilium排错指南)<br>cilium在kubernetes中的生产实践七(cilium中的bpf hook)</p>
+<p>总体分为以下几块内容:<br>cilium在kubernetes中的生产实践一(cilium介绍)<br>cilium在kubernetes中的生产实践二(cilium部署)<br>cilium在kubernetes中的生产实践三(cilium网络模型之关键配置)<br>cilium在kubernetes中的生产实践四(cilium网络模型之生产实践)<br>cilium在kubernetes中的生产实践五(cilium网络策略)<br>cilium在kubernetes中的生产实践六(cilium排错指南)<br>cilium在kubernetes中的生产实践七(cilium中的bpf hook)</p>
 <h3 id="内核要求"><a href="#内核要求" class="headerlink" title="内核要求"></a>内核要求</h3><p>由于eBPF是个较新的特性, 因此对内核版本有要求,建议最少4.18+以上的内核版本,cilium有些功能必须要5.0+之上的内核版本，生产环境下大多数都不会满足</p>
 <p>相关参数如下:</p>
 <figure class="highlight yaml"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line"><span class="attr">os:</span> <span class="string">Rockey</span> <span class="string">Linux</span> <span class="string">release</span> <span class="number">8.7</span></span><br><span class="line"><span class="attr">kernel:</span> <span class="number">4.18</span><span class="number">.0</span><span class="number">-425.10</span><span class="number">.1</span><span class="string">.el8_7.x86_64</span></span><br><span class="line"><span class="attr">k8s:</span> <span class="string">v1.22.13</span></span><br><span class="line"><span class="attr">docker:</span> <span class="string">v20.10.18</span> </span><br></pre></td></tr></table></figure>
@@ -420,7 +420,7 @@
 </ul>
 </blockquote>
 <p>由于k8s集群是全新安装，所以这里直接使用<strong>kubeProxyReplacement&#x3D;strict</strong>, 使用helm安装, cilium 版本 v1.12.0</p>
-<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">helm install cilium cilium/cilium --version 1.12.0 --namespace kube-system --<span class="built_in">set</span> kubeProxyReplacement=strict --<span class="built_in">set</span> k8sServiceHost=xxx.xxx.xxx.xxx --<span class="built_in">set</span> k8sservicePort=6443 --<span class="built_in">set</span> ipam.Operator.clusterPoolIPv4PodCIDRList=10.244.0.0/16 --<span class="built_in">set</span> enable-bpf-masquerade=<span class="literal">true</span> --<span class="built_in">set</span> ipam.Operator.ClusterPoolIPv4MaskSize=24 --<span class="built_in">set</span> devices=ens192 --<span class="built_in">set</span> hubble.Relay.Enabled=<span class="literal">true</span> --<span class="built_in">set</span> hubble.Ui.Enabled=<span class="literal">true</span> --<span class="built_in">set</span> prometheus.Enabled=<span class="literal">true</span> --<span class="built_in">set</span> operator.Prometheus.Enabled=<span class="literal">true</span> --<span class="built_in">set</span> hubble.Enabled=<span class="literal">true</span> --<span class="built_in">set</span> hubble.Metrics.Enabled=<span class="string">&quot;&#123;dns, drop, tcp, flow, port-distribution, icmp, http&#125;&quot;</span> --<span class="built_in">set</span> image.UseDigest=<span class="literal">false</span> --<span class="built_in">set</span> operator.image.useDigest=<span class="literal">false</span> --<span class="built_in">set</span> operator.Image.Repository=harbor.local.io/k8s/cilium/operator --<span class="built_in">set</span> image.Repository=harbor.local.io/k8s/cilium/cilium --<span class="built_in">set</span> hubble.Rela y.Image.UseDigest=<span class="literal">false</span> --<span class="built_in">set</span> hubble.Relay.Image.Repository=harbor.local.io/k8s/cilium/hubble-relay --<span class="built_in">set</span> hubble.ui.Backend.Image.Repository=harbor.local.io/k8s/cilium/hubble-ui-backend --<span class="built_in">set</span> hubble.Ui.Backend.Image.Tag=v0.9.0 --<span class="built_in">set</span> hubble.ui.Frontend.Image.Repository=harbor.local.io/k8s/cilium/hubble-ui --<span class="built_in">set</span> hubble.ui.Frontend.Image.Tag=v0.9.0</span><br></pre></td></tr></table></figure>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">helm install cilium cilium/cilium --version 1.12.0 --namespace kube-system --<span class="built_in">set</span> kubeProxyReplacement=strict --<span class="built_in">set</span> k8sServiceHost=xxx.xxx.xxx.xxx --<span class="built_in">set</span> k8sservicePort=6443 --<span class="built_in">set</span> ipam.Operator.clusterPoolIPv4PodCIDRList=10.244.0.0/16 --<span class="built_in">set</span> enable-bpf-masquerade=<span class="literal">true</span> --<span class="built_in">set</span> ipam.Operator.ClusterPoolIPv4MaskSize=24 --<span class="built_in">set</span> devices=ens192 --<span class="built_in">set</span> hubble.Relay.Enabled=<span class="literal">true</span> --<span class="built_in">set</span> hubble.Ui.Enabled=<span class="literal">true</span> --<span class="built_in">set</span> prometheus.Enabled=<span class="literal">true</span> --<span class="built_in">set</span> operator.Prometheus.Enabled=<span class="literal">true</span> --<span class="built_in">set</span> hubble.Enabled=<span class="literal">true</span> --<span class="built_in">set</span> hubble.Metrics.Enabled=<span class="string">&quot;&#123;dns, drop, tcp, flow, port-distribution, icmp, http&#125;&quot;</span> --<span class="built_in">set</span> image.UseDigest=<span class="literal">false</span> --<span class="built_in">set</span> operator.image.useDigest=<span class="literal">false</span> --<span class="built_in">set</span> operator.Image.Repository=harbor.io/k8s/cilium/operator --<span class="built_in">set</span> image.Repository=harbor.io/k8s/cilium/cilium --<span class="built_in">set</span> hubble.Rela y.Image.UseDigest=<span class="literal">false</span> --<span class="built_in">set</span> hubble.Relay.Image.Repository=harbor.io/k8s/cilium/hubble-relay --<span class="built_in">set</span> hubble.ui.Backend.Image.Repository=harbor.io/k8s/cilium/hubble-ui-backend --<span class="built_in">set</span> hubble.Ui.Backend.Image.Tag=v0.9.0 --<span class="built_in">set</span> hubble.ui.Frontend.Image.Repository=harbor.io/k8s/cilium/hubble-ui --<span class="built_in">set</span> hubble.ui.Frontend.Image.Tag=v0.9.0</span><br></pre></td></tr></table></figure>
 
 <p>其中:</p>
 <ol>
@@ -609,7 +609,7 @@
           
             <div class="site-state-item site-state-posts">
               <a href="/archives">
-                <span class="site-state-item-count">204</span>
+                <span class="site-state-item-count">205</span>
                 <span class="site-state-item-name">日志</span>
               </a>
             </div>

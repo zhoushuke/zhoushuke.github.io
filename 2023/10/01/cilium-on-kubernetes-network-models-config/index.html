@@ -1,0 +1,959 @@
+<!doctype html>
+
+
+
+  
+
+
+<html class="theme-next mist use-motion" lang="zh-Hans">
+<head>
+  <meta charset="UTF-8"/>
+<meta http-equiv="X-UA-Compatible" content="IE=edge" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1"/>
+
+
+
+<meta http-equiv="Cache-Control" content="no-transform" />
+<meta http-equiv="Cache-Control" content="no-siteapp" />
+
+
+
+
+
+
+
+
+
+
+
+
+  
+  
+  <link href="/lib/fancybox/source/jquery.fancybox.css?v=2.1.5" rel="stylesheet" type="text/css" />
+
+
+
+
+  
+  
+  
+  
+
+  
+    
+    
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+    
+    
+    <link href="//fonts.googleapis.com/css?family=Lato:300,300italic,400,400italic,700,700italic&subset=latin,latin-ext" rel="stylesheet" type="text/css">
+  
+
+
+
+
+
+
+<link href="/lib/font-awesome/css/font-awesome.min.css?v=4.6.2" rel="stylesheet" type="text/css" />
+
+<link href="/css/main.css?v=5.1.0" rel="stylesheet" type="text/css" />
+
+
+  <meta name="keywords" content="CloudNavi," />
+
+
+
+
+
+
+
+
+  <link rel="shortcut icon" type="image/x-icon" href="/favicon.ico?v=5.1.0" />
+
+
+
+
+
+
+<meta name="description" content="在前东家的时候其实就有意将cilium强大的链路追踪能力集成到生产环境中,各种因素导致没有很大信心落地, 经过深入调研(也就把官网docs翻了四五遍)及测试, 终于有机会在生产kubernetes集群中(目前一个集群规模不算很大,2w+核心,持续增长)使用cilium做为cni,同时替换kube-proxy, 到现在已经有一段时间了，也算是有生产经验可以跟大家聊一聊这个工具，使用体验总结一句话:">
+<meta property="og:type" content="article">
+<meta property="og:title" content="cilium在kubernetes中的生产实践三(cilium网络模型之关键配置)">
+<meta property="og:url" content="https://zhoushuke.github.io/2023/10/01/cilium-on-kubernetes-network-models-config/index.html">
+<meta property="og:site_name" content="Z.S.K.&#39;s Records">
+<meta property="og:description" content="在前东家的时候其实就有意将cilium强大的链路追踪能力集成到生产环境中,各种因素导致没有很大信心落地, 经过深入调研(也就把官网docs翻了四五遍)及测试, 终于有机会在生产kubernetes集群中(目前一个集群规模不算很大,2w+核心,持续增长)使用cilium做为cni,同时替换kube-proxy, 到现在已经有一段时间了，也算是有生产经验可以跟大家聊一聊这个工具，使用体验总结一句话:">
+<meta property="og:locale">
+<meta property="og:image" content="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20230928163323.png">
+<meta property="article:published_time" content="2023-10-01T03:30:53.000Z">
+<meta property="article:modified_time" content="2023-10-02T13:54:36.844Z">
+<meta property="article:author" content="Z.S.K.">
+<meta property="article:tag" content="CloudNavi">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:image" content="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20230928163323.png">
+
+
+
+<script type="text/javascript" id="hexo.configurations">
+  var NexT = window.NexT || {};
+  var CONFIG = {
+    root: '',
+    scheme: 'Mist',
+    sidebar: {"position":"left","display":"post"},
+    fancybox: true,
+    motion: true,
+    duoshuo: {
+      userId: 'undefined',
+      author: '博主'
+    },
+    algolia: {
+      applicationID: '',
+      apiKey: '',
+      indexName: '',
+      hits: {"per_page":10},
+      labels: {"input_placeholder":"Search for Posts","hits_empty":"We didn't find any results for the search: ${query}","hits_stats":"${hits} results found in ${time} ms"}
+    }
+  };
+</script>
+
+
+
+  <link rel="canonical" href="https://zhoushuke.github.io/2023/10/01/cilium-on-kubernetes-network-models-config/"/>
+
+
+
+
+
+  <title> cilium在kubernetes中的生产实践三(cilium网络模型之关键配置) | Z.S.K.'s Records </title>
+<meta name="generator" content="Hexo 6.2.0"></head>
+
+<body itemscope itemtype="http://schema.org/WebPage" lang="zh-Hans">
+
+  
+
+
+
+
+
+
+
+
+
+
+  
+  
+    
+  
+
+  <div class="container one-collumn sidebar-position-left page-post-detail ">
+    <div class="headband"></div>
+
+    <header id="header" class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-meta ">
+  
+
+  <div class="custom-logo-site-title">
+    <a href="/"  class="brand" rel="start">
+      <span class="logo-line-before"><i></i></span>
+      <span class="site-title">Z.S.K.'s Records</span>
+      <span class="logo-line-after"><i></i></span>
+    </a>
+  </div>
+    
+      <p class="site-subtitle"></p>
+    
+</div>
+
+<div class="site-nav-toggle">
+  <button>
+    <span class="btn-bar"></span>
+    <span class="btn-bar"></span>
+    <span class="btn-bar"></span>
+  </button>
+</div>
+
+<nav class="site-nav">
+  
+
+  
+    <ul id="menu" class="menu">
+      
+        
+        <li class="menu-item menu-item-home">
+          <a href="/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-home"></i> <br />
+            
+            首页
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-categories">
+          <a href="/categories" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-th"></i> <br />
+            
+            分类
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-about">
+          <a href="/about/ZSK-Profile.pdf" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-user"></i> <br />
+            
+            简历
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-archives">
+          <a href="/archives" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-archive"></i> <br />
+            
+            归档
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-tags">
+          <a href="/tags" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-tags"></i> <br />
+            
+            标签
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-commonweal">
+          <a href="/404.html" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-heartbeat"></i> <br />
+            
+            公益404
+          </a>
+        </li>
+      
+
+      
+        <li class="menu-item menu-item-search">
+          
+            <a href="javascript:;" class="popup-trigger">
+          
+            
+              <i class="menu-item-icon fa fa-search fa-fw"></i> <br />
+            
+            搜索
+          </a>
+        </li>
+      
+    </ul>
+  
+
+  
+    <div class="site-search">
+      
+  <div class="popup">
+ <span class="search-icon fa fa-search"></span>
+ <input type="text" id="local-search-input">
+ <div id="local-search-result"></div>
+ <span class="popup-btn-close">close</span>
+</div>
+
+
+    </div>
+  
+</nav>
+
+
+
+ </div>
+    </header>
+
+    <main id="main" class="main">
+      <div class="main-inner">
+        <div class="content-wrap">
+          <div id="content" class="content">
+            
+
+  <div id="posts" class="posts-expand">
+    
+
+  
+
+  
+  
+  
+
+  <article class="post post-type-normal " itemscope itemtype="http://schema.org/Article">
+  <link itemprop="mainEntityOfPage" href="https://zhoushuke.github.io/2023/10/01/cilium-on-kubernetes-network-models-config/">
+
+  <span style="display:none" itemprop="author" itemscope itemtype="http://schema.org/Person">
+    <meta itemprop="name" content="">
+    <meta itemprop="description" content="">
+    <meta itemprop="image" content="/images/avatar.gif">
+  </span>
+
+  <span style="display:none" itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+    <meta itemprop="name" content="Z.S.K.'s Records">
+    <span style="display:none" itemprop="logo" itemscope itemtype="http://schema.org/ImageObject">
+      <img style="display:none;" itemprop="url image" alt="Z.S.K.'s Records" src="">
+    </span>
+  </span>
+
+    
+      <header class="post-header">
+
+        
+        
+          <h1 class="post-title" itemprop="name headline">
+            
+            
+              
+                cilium在kubernetes中的生产实践三(cilium网络模型之关键配置)
+              
+            
+          </h1>
+        
+
+        <div class="post-meta">
+          <span class="post-time">
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">发表于</span>
+              
+              <time title="Post created" itemprop="dateCreated datePublished" datetime="2023-10-01T11:30:53+08:00">
+                2023-10-01
+              </time>
+            
+
+            
+
+            
+          </span>
+
+          
+            <span class="post-category" >
+            
+              <span class="post-meta-divider">|</span>
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-folder-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">分类于</span>
+              
+              
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/CloudNavi/" itemprop="url" rel="index">
+                    <span itemprop="name">CloudNavi</span>
+                  </a>
+                </span>
+
+                
+                
+              
+            </span>
+          
+
+          
+            
+          
+
+          
+
+          
+          
+
+          
+
+          
+
+        </div>
+      </header>
+    
+
+
+    <div class="post-body" itemprop="articleBody">
+
+      
+      
+
+      
+        <p>在前东家的时候其实就有意将cilium强大的链路追踪能力集成到生产环境中,各种因素导致没有很大信心落地, 经过深入调研(也就把官网docs翻了四五遍)及测试, 终于有机会在生产kubernetes集群中(目前一个集群规模不算很大,2w+核心,持续增长)使用cilium做为cni,同时替换kube-proxy, 到现在已经有一段时间了，也算是有生产经验可以跟大家聊一聊这个工具，使用体验总结一句话: 轻松愉悦.<br>分享一下整个落地过程,同时也总结下方方面面, 工作之余尽量更新.<br>此篇为: cilium在kubernetes中的生产实践三(cilium网络模型之关键配置)</p>
+<span id="more"></span>
+
+<p>总体分为以下几块内容:<br>cilium在kubernetes中的生产实践一(cilium介绍)<br>cilium在kubernetes中的生产实践二(cilium部署)<br>cilium在kubernetes中的生产实践三(cilium网络模型之关键配置)<br>cilium在kubernetes中的生产实践四(cilium网络模型之生产实践)<br>cilium在kubernetes中的生产实践五(cilium网络策略)<br>cilium在kubernetes中的生产实践六(cilium排错指南)<br>cilium在kubernetes中的生产实践七(cilium中的bpf hook)</p>
+<p>本节，会详细介绍一下cilium的网络模型中的一些关键参数及相关参数的配置及这些参数的必要条件, 在一些场景下，这些参数的启停对网络性能有很大影响</p>
+<h3 id="Routing-路由"><a href="#Routing-路由" class="headerlink" title="Routing(路由)"></a>Routing(路由)</h3><p>开始先说一说路由, 各节点之前互通是kubernetes对CNI的通用要求， 但集群节点上的pod通信要通过什么样的方式路由到其它节点上呢? 在cilium中有多种选择:</p>
+<ol>
+<li>Encapsulation(封装)<br>这个相信对大家不陌生了, 最常见的vxlan就属于这种<br>在未提供任何配置的情况下，Cilium会自动以这种模式运行，因为这种模式<strong>对底层网络基础设施的要求最低</strong><br>在这种模式下，所有集群节点都会使用基于 UDP 的封装协议VXLAN或Geneve形成网状隧道。<strong>Cilium 节点之间的所有流量都经过封装.</strong><br>不过这种模式的缺点,由于要封装额外的协议头，提高了MTU开销,不过这个可以通过开启巨帧网络来降低影响.<br>由于增加了封装头，有效载荷可用的 MTU 要低于本地路由（VXLAN 每个网络数据包 50 字节）。这导致特定网络连接的最大吞吐率降低。</li>
+</ol>
+<p>注:<br>这里简单说一下Encapsulation vs Masquerading(下文会介绍)的区别:<br>Encapsulation翻译过来是封装&#x2F;包装,就是把AAA封装到BBB里, 它是<strong>一种叠加的过程</strong><br>而Masquerading翻译过来是伪装的, 它则是把AAA转变成BBB，是<strong>一种替换的过程</strong>, 最常见的如NAT,存在IP伪装</p>
+<ol start="2">
+<li>Native-Routing(原生路由)<br>Native-Routing网上的文档有不同的译法，被翻译成原生路由或者本地路由，作者觉得原生路由更贴合一些<br>在原生路由模式下，Cilium将把所有<strong>未寻址到</strong>另一个本地端点的数据包委托给Linux内核的路由子系统。这意味着数据包将被路由，就像本地进程发出数据包一样。因此，连接群集节点的网络必须能够路由PodCIDR。<br>再简单来说就是<strong>所有节点对所有pod的ip是可寻址的</strong><br>可寻址以通过两种方式实现：<blockquote>
+<ol>
+<li>节点本身不知道如何路由所有pod IP，但网络上有路由器知道如何到达所有其他pod。在这种情况下，Linux 节点被配置为包含指向此类路由器的默认路由。这种模式用于云提供商网络集成</li>
+<li>每个节点都知道所有其他节点的所有pod IP，并在Linux内核路由表中插入路由来表示这一点。<br>如果<strong>所有节点共享一个L2网络</strong>,则可以启用选项<code>auto-direct-node-routes: true</code>来解决这个问题。如果kubernetes节点并非在同一个L2网络上，则需要BGP daemon组件的辅助。</li>
+</ol>
+</blockquote>
+</li>
+</ol>
+<p><strong>配置原生路由时,Cilium会自动在Linux内核中启用IP转发</strong><br><strong>开启原生路由,表明cilium不能工作在任一隧道模式中</strong></p>
+<p>开启native-routing的方式如下:</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">--<span class="built_in">set</span> tunnel=disabled</span><br><span class="line">--<span class="built_in">set</span> routing-mode=native</span><br></pre></td></tr></table></figure>
+
+<p>注:<br>在cilium中还有一个词很常见: host-routing(主机路由,下文会介绍), 也是个很重要的性能优化点,这里只简单说一说host-routing vs native-routing区别:<br>native-routing说的是<strong>跨主机的pod间是如何导址访问的</strong><br>而host-routing则说的是<strong>网络数据是否会绕过iptables和上层主机堆栈，以实现比常规veth 设备操作更快的网络命名空间切换</strong><br>所以这两个完全是不同的二个概念, 很容易混淆</p>
+<ol start="3">
+<li>还有一些是在特定云厂商集群环境下才会用的路由方式，这里不过多介绍.</li>
+</ol>
+<p>所以总结来说，如果想要<strong>更佳的网络性能，选择native-routing是个不错的选择</strong><br>如果集群网络复杂, 可以使用<code>Encapsulation</code>，虽然有点性能损耗，好在任何网络都可满足条件, 只需要node间互通.</p>
+<h3 id="IPAM"><a href="#IPAM" class="headerlink" title="IPAM"></a>IPAM</h3><p>cilium做为CNI, 自然需要具备为集群node上的pod分配地址段的能力, 这部分直接使用cilium默认的选项即可<br>在部署时指定<code>ipam.Operator.clusterPoolIPv4PodCIDRList=10.244.0.0/16</code>及<code>ipam.Operator.ClusterPoolIPv4MaskSize=24</code>即可<br>最终, 每个node所具备的pod ip pool将会以CiliumNode这种CRD的形式存在,可通过以下命令查看</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">kubectl get cn  <span class="comment"># cn代表ciliumNode</span></span><br></pre></td></tr></table></figure>
+
+<h3 id="Masquerading-伪装"><a href="#Masquerading-伪装" class="headerlink" title="Masquerading(伪装)"></a>Masquerading(伪装)</h3><p>通常情况下, <strong>pod的ip在集群外是不可寻址的</strong>,所以从pod里访问集群外的资源, 在网络协议里需要把pod IP masquerading成node IP, 这样网络请求来回时才可对应上, 这是典型的<code>iptables mode</code>,会降低网络性能<br>而基于<code>eBPF mode</code>是一种更加高效的masquerading技术 </p>
+<p><img src="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20230928163323.png"></p>
+<p>eBPF-based masquerading时需要具备如下条件:</p>
+<blockquote>
+<ul>
+<li>Linux kernel 4.19+</li>
+<li>BPF NodePort特性(即在相应的网络接口上需要开启nodeport)</li>
+</ul>
+</blockquote>
+<p>在安装cilium时通过指定如下参数: <code>bpf.masquerade=true</code>开启<br>如果上述条件不满足，就算是开启了bpf.masquerade&#x3D;true,也无法使用, cilium会自动回退到iptables的方式</p>
+<p>可通过如下命令确认masquerading属处的mode</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">cilium status --verbose</span><br><span class="line"><span class="comment"># 如下字段</span></span><br><span class="line">Masquerading: BPF</span><br></pre></td></tr></table></figure>
+
+<h3 id="Host-Routing-主机路由"><a href="#Host-Routing-主机路由" class="headerlink" title="Host-Routing(主机路由)"></a>Host-Routing(主机路由)</h3><p>即使Cilium使用eBPF执行网络路由，默认情况下，网络数据包仍然会遍历节点的常规网络堆栈的某些部分。这就导致了所有数据包仍能通过所有iptables钩子而增加了开销。<br>在Cilium 1.9中引入了基于eBPF的主机路由，以<strong>完全绕过iptables和上层主机堆栈，并实现比常规veth设备操作更快的网络命名空间切换.</strong><br>host-routing 分为<code>Legacy mode及BPF mode</code>, </p>
+<p>BPF mode要求如下:</p>
+<blockquote>
+<ul>
+<li>Kernel &gt;&#x3D; 5.10</li>
+<li>Direct-routing configuration or tunneling</li>
+<li>eBPF-based kube-proxy replacement</li>
+<li>eBPF-based masquerading</li>
+</ul>
+</blockquote>
+<p>可通过如下命令确认masquerading属处的mode</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">cilium status --verbose</span><br><span class="line"><span class="comment"># 如下字段</span></span><br><span class="line">Host Routing: BPF</span><br></pre></td></tr></table></figure>
+
+<p>如果内核支持BPF.则会自动启用它.如果不满足BPF mode,则会自动回退到Legacy mode<br>不过从实践来看, Kernel&gt;&#x3D;5.10应该不是必须, 作者的集群 node kernel&#x3D;4.19时, 也可开启host-routing BPF</p>
+<h3 id="DSR-直接服务返回"><a href="#DSR-直接服务返回" class="headerlink" title="DSR(直接服务返回)"></a>DSR(直接服务返回)</h3><p><strong>默认情况下，Cilium的eBPF NodePort实现在SNAT模式下运行</strong>。也就是说，当节点外部流量到达节点LoadBalancer、NodePort或具有externalIP的服务后端位于远程节点时(即该服务的pod没有部署在请求到达的这台node上)，则节点通过执行SNAT将请求重定向到远程后端。这不需要任何额外的MTU更改。代价是来自后端的回复需要进行额外的跳回到该节点，以在将数据包直接返回到外部客户端之前在那里执行反向SNAT转换。<br>可以通过loadBalancer.mode Helm选项将此设置更改为dsr，以便让Cilium的eBPFNodePort实现在DSR模式下运行。<strong>在DSR模式下，后端直接回复外部客户端，而不需要额外的跳，这意味着后端使用服务IP&#x2F;端口作为源进行回复。</strong></p>
+<p>DSR的前置要求为:</p>
+<blockquote>
+<ul>
+<li>需要cilimi开启Native-Routing.</li>
+</ul>
+</blockquote>
+<p><strong>DSR模式的另一个优点是客户端的源IP被保留</strong>，因此策略可以在后端节点上与之匹配。在SNAT模式下，这是不可能的。给定一个特定的后端可以被多个服务使用，后端需要知道它们需要回复的服务IP&#x2F;端口。因此，Cilium在Cilium特定的IPv4选项或IPv6目的地选项扩展报头中编码此信息，代价是较低的MTU。对于TCP服务，Cilium只对SYN数据包的服务IP&#x2F;端口进行编码，而不对后续数据包进行编码。后者还允许在混合模式下操作Cilium，其中DSR用于TCP，SNAT用于UDP，以避免另外需要的MTU减少</p>
+<p>请注意，DSR模式在某些公共云提供商环境中可能无法使用，原因是底层网络结构可能会丢弃特定于Cilium的IP选项。如果后端位于处理给定NodePort请求的节点的远程节点上的服务的连接问题，首先检查NodePort请求是否实际到达包含后端的节点。如果不是这种情况，则建议切换回默认SNAT模式作为一种解决方法</p>
+<p>总结就是, <strong>DSR有利于提高服务响应时间</strong></p>
+<h3 id="socketLB"><a href="#socketLB" class="headerlink" title="socketLB"></a>socketLB</h3><p>socketLB也是一个很实用的功能，旨在将BPF程序attach到socket的系统调用hooks，使客户端直接和后端pod建连和通信, 但socketLB需要cgroup v2的支持, 相信大多数的生产环境还是在用cgroup v1, 因此这里将不进行socketlb的实践.</p>
+<h3 id="vxlan下的虚拟网口"><a href="#vxlan下的虚拟网口" class="headerlink" title="vxlan下的虚拟网口:"></a>vxlan下的虚拟网口:</h3><p>在默认部署方式下，使用vxlan的overlay组网情况，主机上的网络会发生了以下变化，在主机的 root 命名空间，新增了如下图所示的四个虚拟网络接口，</p>
+<blockquote>
+<ul>
+<li>cilium_vxlan: 主要是对数据包进行vxlan封装和解封装操作</li>
+<li>cilium_net和cilium_host: 是一对 veth-pair, 一端插在主机上，一端插在容器里</li>
+<li>cilium_host: 作为该节点所管理的Cluster IP子网的网关,容器中使用ip a看到的eth0的网卡的形式就eth0@xxx, xxx与宿主机上的一个lxcxxxx@ifxxx相对应，一般为正负1的关系<br>可以通过以下cilium命令查看相关的vxlan tunnel</li>
+</ul>
+</blockquote>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">cilium bpf tunnel list <span class="comment"># 查看各个节点的vxlan tunnel</span></span><br></pre></td></tr></table></figure>
+
+<h3 id="暴露服务"><a href="#暴露服务" class="headerlink" title="暴露服务"></a>暴露服务</h3><p>还有一个很常见的场景是，需要在集群外访问集群内的服务, 当然直接使用原生的nodeport是最直接的, 在cilium中还提供了一个很重要的选择: lbExternalClusterIP, 用于是否开启集群外对集群内资源的访问,<br>也很简单，只需要二步:</p>
+<ol>
+<li>集群外可访问得到集群内资源的ip(podIP或者是serviceIP)</li>
+<li>设置cilium的<code>bpf.lbExternalClusterIP=true</code></li>
+</ol>
+<p>但需要注意的是<strong>这种方式是开启所有服务可在集群外访问，相对于nodeport按需开启在安全方面会弱一些</strong></p>
+<h3 id="参考文章"><a href="#参考文章" class="headerlink" title="参考文章:"></a><strong>参考文章:</strong></h3><blockquote>
+<ul>
+<li><a target="_blank" rel="noopener" href="https://cilium.io/">https://cilium.io</a></li>
+<li><a target="_blank" rel="noopener" href="https://www.infoq.cn/article/p9vG2G9T49KpvHrckFwu">https://www.infoq.cn/article/p9vG2G9T49KpvHrckFwu</a></li>
+<li><a target="_blank" rel="noopener" href="https://www.cnblogs.com/charlieroro/p/13403672.html">https://www.cnblogs.com/charlieroro/p/13403672.html</a></li>
+<li><a target="_blank" rel="noopener" href="https://zhuanlan.zhihu.com/p/404278920">https://zhuanlan.zhihu.com/p/404278920</a></li>
+<li><a target="_blank" rel="noopener" href="http://arthurchiao.art/blog/understanding-ebpf-datapath-in-cilium-zh/">http://arthurchiao.art/blog/understanding-ebpf-datapath-in-cilium-zh/</a></li>
+<li><a target="_blank" rel="noopener" href="https://podsbook.com/posts/cilium/xdp/">https://podsbook.com/posts/cilium/xdp/</a></li>
+<li><a target="_blank" rel="noopener" href="https://mdnice.com/writing/4429d86bf8dc42d1a42f60ae7b873f6a">https://mdnice.com/writing/4429d86bf8dc42d1a42f60ae7b873f6a</a></li>
+<li><a target="_blank" rel="noopener" href="https://mp.weixin.qq.com/s/KSWrvOmKeX-74RU5d6NUlQ">https://mp.weixin.qq.com/s/KSWrvOmKeX-74RU5d6NUlQ</a></li>
+<li><a target="_blank" rel="noopener" href="http://www.sel.zju.edu.cn/blog/2022/12/01/cilium-kind-setup/">http://www.sel.zju.edu.cn/blog/2022/12/01/cilium-kind-setup/</a></li>
+<li><a target="_blank" rel="noopener" href="https://blog.51cto.com/liujingyu/5285535">https://blog.51cto.com/liujingyu/5285535</a></li>
+<li><a target="_blank" rel="noopener" href="https://zhuanlan.zhihu.com/p/594084783">https://zhuanlan.zhihu.com/p/594084783</a></li>
+</ul>
+</blockquote>
+<h3 id="转载请注明原作者-周淑科-https-izsk-me"><a href="#转载请注明原作者-周淑科-https-izsk-me" class="headerlink" title="转载请注明原作者: 周淑科(https://izsk.me)"></a><strong>转载请注明原作者: 周淑科(<a target="_blank" rel="noopener" href="https://izsk.me/">https://izsk.me</a>)</strong></h3>
+      
+    </div>
+
+    <div>
+      
+        
+<div id="wechat_subscriber" style="display: block; padding: 10px 0; margin: 20px auto; width: 100%; text-align: center">
+    <img id="wechat_subscriber_qcode" src="/images/websitecode250.png" alt=" wechat" style="width: 200px; max-width: 100%;"/>
+    <div>Scan Me To Read on Phone</div>
+</div>
+
+
+      
+    </div>
+
+    <div>
+      
+        
+  <div style="padding: 10px 0; margin: 20px auto; width: 90%; text-align: center;">
+    <div>I know you won't do this,but what if you did?</div>
+    <button id="rewardButton" disable="enable" onclick="var qr = document.getElementById('QR'); if (qr.style.display === 'none') {qr.style.display='block';} else {qr.style.display='none'}">
+      <span>赏</span>
+    </button>
+    <div id="QR" style="display: none;">
+      
+        <div id="wechat" style="display: inline-block">
+          <img id="wechat_qr" src="/images/wechatpayme.png" alt=" WeChat Pay"/>
+          <p>微信打赏</p>
+        </div>
+      
+      
+        <div id="alipay" style="display: inline-block">
+          <img id="alipay_qr" src="/images/alipayme.jpg" alt=" Alipay"/>
+          <p>支付宝打赏</p>
+        </div>
+      
+    </div>
+  </div>
+
+
+      
+    </div>
+
+
+    <footer class="post-footer">
+      
+        <div class="post-tags">
+          
+            <a href="/tags/CloudNavi/" rel="tag"># CloudNavi</a>
+          
+        </div>
+      
+
+      
+        <div class="post-nav">
+          <div class="post-nav-next post-nav-item">
+            
+              <a href="/2023/07/29/Kubernetes-OutofDisk-CoreDump/" rel="next" title="Kubernetes学习(什么, 宿主机根目录被容器coredump打爆了?)">
+                <i class="fa fa-chevron-left"></i> Kubernetes学习(什么, 宿主机根目录被容器coredump打爆了?)
+              </a>
+            
+          </div>
+
+          <span class="post-nav-divider"></span>
+
+          <div class="post-nav-prev post-nav-item">
+            
+          </div>
+        </div>
+      
+
+      
+      
+    </footer>
+  </article>
+
+
+
+    <div class="post-spread">
+      
+    </div>
+  </div>
+
+
+          </div>
+          
+
+
+          
+  <div class="comments" id="comments">
+    
+  </div>
+
+
+        </div>
+        
+          
+  
+  <div class="sidebar-toggle">
+    <div class="sidebar-toggle-line-wrap">
+      <span class="sidebar-toggle-line sidebar-toggle-line-first"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-middle"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-last"></span>
+    </div>
+  </div>
+
+  <aside id="sidebar" class="sidebar">
+    <div class="sidebar-inner">
+
+      
+
+      
+        <ul class="sidebar-nav motion-element">
+          <li class="sidebar-nav-toc sidebar-nav-active" data-target="post-toc-wrap" >
+            文章目录
+          </li>
+          <li class="sidebar-nav-overview" data-target="site-overview">
+            站点概览
+          </li>
+        </ul>
+      
+
+      <section class="site-overview sidebar-panel">
+        <div class="site-author motion-element" itemprop="author" itemscope itemtype="http://schema.org/Person">
+          <img class="site-author-image" itemprop="image"
+               src="/images/avatar.gif"
+               alt="" />
+          <p class="site-author-name" itemprop="name"></p>
+          <p class="site-description motion-element" itemprop="description"></p>
+        </div>
+        <nav class="site-state motion-element">
+        
+          
+            <div class="site-state-item site-state-posts">
+              <a href="/archives">
+                <span class="site-state-item-count">205</span>
+                <span class="site-state-item-name">日志</span>
+              </a>
+            </div>
+          
+
+          
+            <div class="site-state-item site-state-categories">
+              <a href="/categories">
+                <span class="site-state-item-count">14</span>
+                <span class="site-state-item-name">分类</span>
+              </a>
+            </div>
+          
+
+          
+            <div class="site-state-item site-state-tags">
+              <a href="/tags">
+                <span class="site-state-item-count">14</span>
+                <span class="site-state-item-name">标签</span>
+              </a>
+            </div>
+          
+
+        </nav>
+
+        
+
+        <div class="links-of-author motion-element">
+          
+        </div>
+
+        
+        
+
+        
+        
+
+        
+
+
+      </section>
+
+      
+      <!--noindex-->
+        <section class="post-toc-wrap motion-element sidebar-panel sidebar-panel-active">
+          <div class="post-toc">
+
+            
+              
+            
+
+            
+              <div class="post-toc-content"><ol class="nav"><li class="nav-item nav-level-3"><a class="nav-link" href="#Routing-%E8%B7%AF%E7%94%B1"><span class="nav-number">1.</span> <span class="nav-text">Routing(路由)</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#IPAM"><span class="nav-number">2.</span> <span class="nav-text">IPAM</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#Masquerading-%E4%BC%AA%E8%A3%85"><span class="nav-number">3.</span> <span class="nav-text">Masquerading(伪装)</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#Host-Routing-%E4%B8%BB%E6%9C%BA%E8%B7%AF%E7%94%B1"><span class="nav-number">4.</span> <span class="nav-text">Host-Routing(主机路由)</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#DSR-%E7%9B%B4%E6%8E%A5%E6%9C%8D%E5%8A%A1%E8%BF%94%E5%9B%9E"><span class="nav-number">5.</span> <span class="nav-text">DSR(直接服务返回)</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#socketLB"><span class="nav-number">6.</span> <span class="nav-text">socketLB</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#vxlan%E4%B8%8B%E7%9A%84%E8%99%9A%E6%8B%9F%E7%BD%91%E5%8F%A3"><span class="nav-number">7.</span> <span class="nav-text">vxlan下的虚拟网口:</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E6%9A%B4%E9%9C%B2%E6%9C%8D%E5%8A%A1"><span class="nav-number">8.</span> <span class="nav-text">暴露服务</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E5%8F%82%E8%80%83%E6%96%87%E7%AB%A0"><span class="nav-number">9.</span> <span class="nav-text">参考文章:</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E8%BD%AC%E8%BD%BD%E8%AF%B7%E6%B3%A8%E6%98%8E%E5%8E%9F%E4%BD%9C%E8%80%85-%E5%91%A8%E6%B7%91%E7%A7%91-https-izsk-me"><span class="nav-number">10.</span> <span class="nav-text">转载请注明原作者: 周淑科(https:&#x2F;&#x2F;izsk.me)</span></a></li></ol></div>
+            
+
+          </div>
+        </section>
+      <!--/noindex-->
+      
+
+    </div>
+  </aside>
+
+
+        
+      </div>
+    </main>
+
+    <footer id="footer" class="footer">
+      <div class="footer-inner">
+        <div class="copyright" >
+  
+  &copy; 
+  <span itemprop="copyrightYear">2023</span>
+  <span class="with-love">
+    <i class="fa fa-heart"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">Z.S.K.</span>
+</div>
+
+
+<div class="powered-by">
+  Supported by <a class="theme-link" target="_blank" rel="noopener" href="https://hexo.io">Hexo</a>
+</div>
+
+<div class="theme-info">
+  Theme -
+  <a class="theme-link" target="_blank" rel="noopener" href="https://github.com/iissnan/hexo-theme-next">
+    NexT.Mist
+  </a>
+</div>
+
+
+        
+
+        
+      </div>
+    </footer>
+
+    <div class="back-to-top">
+      <i class="fa fa-arrow-up"></i>
+    </div>
+  </div>
+
+  
+
+<script type="text/javascript">
+  if (Object.prototype.toString.call(window.Promise) !== '[object Function]') {
+    window.Promise = null;
+  }
+</script>
+
+
+
+
+
+
+
+
+
+  
+
+
+
+  
+  <script type="text/javascript" src="/lib/jquery/index.js?v=2.1.3"></script>
+
+  
+  <script type="text/javascript" src="/lib/fastclick/lib/fastclick.min.js?v=1.0.6"></script>
+
+  
+  <script type="text/javascript" src="/lib/jquery_lazyload/jquery.lazyload.js?v=1.9.7"></script>
+
+  
+  <script type="text/javascript" src="/lib/velocity/velocity.min.js?v=1.2.1"></script>
+
+  
+  <script type="text/javascript" src="/lib/velocity/velocity.ui.min.js?v=1.2.1"></script>
+
+  
+  <script type="text/javascript" src="/lib/fancybox/source/jquery.fancybox.pack.js?v=2.1.5"></script>
+
+
+  
+
+
+  <script type="text/javascript" src="/js/src/utils.js?v=5.1.0"></script>
+
+  <script type="text/javascript" src="/js/src/motion.js?v=5.1.0"></script>
+
+
+
+  
+  
+
+  
+  <script type="text/javascript" src="/js/src/scrollspy.js?v=5.1.0"></script>
+<script type="text/javascript" src="/js/src/post-details.js?v=5.1.0"></script>
+
+
+
+  
+
+
+  <script type="text/javascript" src="/js/src/bootstrap.js?v=5.1.0"></script>
+
+
+
+  
+
+
+
+  
+
+
+
+
+	
+
+
+
+
+
+  
+
+
+
+
+  
+  
+  <script type="text/javascript">
+    // Popup Window;
+    var isfetched = false;
+    // Search DB path;
+    var search_path = "search.xml";
+    if (search_path.length == 0) {
+      search_path = "search.xml";
+    }
+    var path = "/" + search_path;
+    // monitor main search box;
+
+    function proceedsearch() {
+      $("body").append('<div class="popoverlay">').css('overflow', 'hidden');
+      $('.popup').toggle();
+    }
+    // search function;
+    var searchFunc = function(path, search_id, content_id) {
+      'use strict';
+      $.ajax({
+        url: path,
+        dataType: "xml",
+        async: true,
+        success: function( xmlResponse ) {
+          // get the contents from search data
+          isfetched = true;
+          $('.popup').detach().appendTo('.header-inner');
+          var datas = $( "entry", xmlResponse ).map(function() {
+            return {
+              title: $( "title", this ).text(),
+              content: $("content",this).text(),
+              url: $( "url" , this).text()
+            };
+          }).get();
+          var $input = document.getElementById(search_id);
+          var $resultContent = document.getElementById(content_id);
+          $input.addEventListener('input', function(){
+            var matchcounts = 0;
+            var str='<ul class=\"search-result-list\">';
+            var keywords = this.value.trim().toLowerCase().split(/[\s\-]+/);
+            $resultContent.innerHTML = "";
+            if (this.value.trim().length > 1) {
+              // perform local searching
+              datas.forEach(function(data) {
+                var isMatch = false;
+                var content_index = [];
+                var data_title = data.title.trim().toLowerCase();
+                var data_content = data.content.trim().replace(/<[^>]+>/g,"").toLowerCase();
+                var data_url = decodeURIComponent(data.url);
+                var index_title = -1;
+                var index_content = -1;
+                var first_occur = -1;
+                // only match artiles with not empty titles and contents
+                if(data_title != '') {
+                  keywords.forEach(function(keyword, i) {
+                    index_title = data_title.indexOf(keyword);
+                    index_content = data_content.indexOf(keyword);
+                    if( index_title >= 0 || index_content >= 0 ){
+                      isMatch = true;
+                      if (i == 0) {
+                        first_occur = index_content;
+                      }
+                    }
+
+                  });
+                }
+                // show search results
+                if (isMatch) {
+                  matchcounts += 1;
+                  str += "<li><a href='"+ data_url +"' class='search-result-title'>"+ data_title +"</a>";
+                  var content = data.content.trim().replace(/<[^>]+>/g,"");
+                  if (first_occur >= 0) {
+                    // cut out 100 characters
+                    var start = first_occur - 20;
+                    var end = first_occur + 80;
+                    if(start < 0){
+                      start = 0;
+                    }
+                    if(start == 0){
+                      end = 50;
+                    }
+                    if(end > content.length){
+                      end = content.length;
+                    }
+                    var match_content = content.substring(start, end);
+                    // highlight all keywords
+                    keywords.forEach(function(keyword){
+                      var regS = new RegExp(keyword, "gi");
+                      match_content = match_content.replace(regS, "<b class=\"search-keyword\">"+keyword+"</b>");
+                    });
+
+                    str += "<p class=\"search-result\">" + match_content +"...</p>"
+                  }
+                  str += "</li>";
+                }
+              })};
+            str += "</ul>";
+            if (matchcounts == 0) { str = '<div id="no-result"><i class="fa fa-frown-o fa-5x" /></div>' }
+            if (keywords == "") { str = '<div id="no-result"><i class="fa fa-search fa-5x" /></div>' }
+            $resultContent.innerHTML = str;
+          });
+          proceedsearch();
+        }
+      });}
+
+    // handle and trigger popup window;
+    $('.popup-trigger').click(function(e) {
+      e.stopPropagation();
+      if (isfetched == false) {
+        searchFunc(path, 'local-search-input', 'local-search-result');
+      } else {
+        proceedsearch();
+      };
+    });
+
+    $('.popup-btn-close').click(function(e){
+      $('.popup').hide();
+      $(".popoverlay").remove();
+      $('body').css('overflow', '');
+    });
+    $('.popup').click(function(e){
+      e.stopPropagation();
+    });
+  </script>
+
+
+  
+
+  
+
+  
+
+  
+
+
+</body>
+</html>
