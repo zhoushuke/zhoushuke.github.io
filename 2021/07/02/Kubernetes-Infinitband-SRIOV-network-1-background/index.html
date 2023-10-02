@@ -68,7 +68,7 @@
 <link href="/css/main.css?v=5.1.0" rel="stylesheet" type="text/css" />
 
 
-  <meta name="keywords" content="ServiceMesh," />
+  <meta name="keywords" content="HPC," />
 
 
 
@@ -84,22 +84,22 @@
 
 
 
-<meta name="description" content="Istio做为ServiceMesh的事实标准, 越来越被广泛地使用, 特别是work on Kubernetes之后, 再加持Istio来做更加细度地诸如流量管理、访问控制、灰度发布等方面的事情，不要更爽.">
+<meta name="description" content="在HPC场景下，底层网络的性能直接影响最终的结果，HPC往往会伴随海量的数据交换，特别是在跨Node之间，10Gb的以太网网络传输肯定要比100Gb的IB网络传输慢，本人所负责的训练平台也是如此，在一次训练过程中，GPU存在海量数据交换，虽然是在GPU之间，但本质还是通过网络进行传输，但是以太网的传输在HPC场景下往往显得不那么高效，因此可以通过RDMA或者如果预算够的话，通过硬件IB实现数据交换">
 <meta property="og:type" content="article">
-<meta property="og:title" content="Istio学习(在Kubernetes集群中安装istio)">
-<meta property="og:url" content="https://zhoushuke.github.io/2020/01/03/Istio-Install-Upon-Kubernetes/index.html">
+<meta property="og:title" content="Kubernetes学习(k8s基于InfiniBand实现HPC高性能容器网络组网方案实践一)">
+<meta property="og:url" content="https://zhoushuke.github.io/2021/07/02/Kubernetes-Infinitband-SRIOV-network-1-background/index.html">
 <meta property="og:site_name" content="Z.S.K.&#39;s Records">
-<meta property="og:description" content="Istio做为ServiceMesh的事实标准, 越来越被广泛地使用, 特别是work on Kubernetes之后, 再加持Istio来做更加细度地诸如流量管理、访问控制、灰度发布等方面的事情，不要更爽.">
+<meta property="og:description" content="在HPC场景下，底层网络的性能直接影响最终的结果，HPC往往会伴随海量的数据交换，特别是在跨Node之间，10Gb的以太网网络传输肯定要比100Gb的IB网络传输慢，本人所负责的训练平台也是如此，在一次训练过程中，GPU存在海量数据交换，虽然是在GPU之间，但本质还是通过网络进行传输，但是以太网的传输在HPC场景下往往显得不那么高效，因此可以通过RDMA或者如果预算够的话，通过硬件IB实现数据交换">
 <meta property="og:locale">
-<meta property="og:image" content="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20200209151532.png">
-<meta property="og:image" content="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20200209151612.png">
-<meta property="og:image" content="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20200209151644.png">
-<meta property="article:published_time" content="2020-01-03T03:10:53.000Z">
-<meta property="article:modified_time" content="2023-04-11T07:58:45.740Z">
+<meta property="og:image" content="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20210704215748.png">
+<meta property="og:image" content="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20210704191648.png">
+<meta property="og:image" content="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20210704191622.png">
+<meta property="article:published_time" content="2021-07-02T08:10:53.000Z">
+<meta property="article:modified_time" content="2023-10-02T15:51:06.167Z">
 <meta property="article:author" content="Z.S.K.">
-<meta property="article:tag" content="ServiceMesh">
+<meta property="article:tag" content="HPC">
 <meta name="twitter:card" content="summary">
-<meta name="twitter:image" content="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20200209151532.png">
+<meta name="twitter:image" content="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20210704215748.png">
 
 
 
@@ -127,13 +127,13 @@
 
 
 
-  <link rel="canonical" href="https://zhoushuke.github.io/2020/01/03/Istio-Install-Upon-Kubernetes/"/>
+  <link rel="canonical" href="https://zhoushuke.github.io/2021/07/02/Kubernetes-Infinitband-SRIOV-network-1-background/"/>
 
 
 
 
 
-  <title> Istio学习(在Kubernetes集群中安装istio) | Z.S.K.'s Records </title>
+  <title> Kubernetes学习(k8s基于InfiniBand实现HPC高性能容器网络组网方案实践一) | Z.S.K.'s Records </title>
 <meta name="generator" content="Hexo 6.2.0"></head>
 
 <body itemscope itemtype="http://schema.org/WebPage" lang="zh-Hans">
@@ -299,7 +299,7 @@
   
 
   <article class="post post-type-normal " itemscope itemtype="http://schema.org/Article">
-  <link itemprop="mainEntityOfPage" href="https://zhoushuke.github.io/2020/01/03/Istio-Install-Upon-Kubernetes/">
+  <link itemprop="mainEntityOfPage" href="https://zhoushuke.github.io/2021/07/02/Kubernetes-Infinitband-SRIOV-network-1-background/">
 
   <span style="display:none" itemprop="author" itemscope itemtype="http://schema.org/Person">
     <meta itemprop="name" content="">
@@ -323,7 +323,7 @@
             
             
               
-                Istio学习(在Kubernetes集群中安装istio)
+                Kubernetes学习(k8s基于InfiniBand实现HPC高性能容器网络组网方案实践一)
               
             
           </h1>
@@ -338,8 +338,8 @@
               
                 <span class="post-meta-item-text">发表于</span>
               
-              <time title="Post created" itemprop="dateCreated datePublished" datetime="2020-01-03T11:10:53+08:00">
-                2020-01-03
+              <time title="Post created" itemprop="dateCreated datePublished" datetime="2021-07-02T16:10:53+08:00">
+                2021-07-02
               </time>
             
 
@@ -361,8 +361,8 @@
               
               
                 <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
-                  <a href="/categories/ServiceMesh/" itemprop="url" rel="index">
-                    <span itemprop="name">ServiceMesh</span>
+                  <a href="/categories/HPC/" itemprop="url" rel="index">
+                    <span itemprop="name">HPC</span>
                   </a>
                 </span>
 
@@ -396,259 +396,93 @@
       
 
       
-        <p>Istio做为ServiceMesh的事实标准, 越来越被广泛地使用, 特别是work on Kubernetes之后, 再加持Istio来做更加细度地诸如流量管理、访问控制、灰度发布等方面的事情，不要更爽. </p>
+        <p>在HPC场景下，底层网络的性能直接影响最终的结果，HPC往往会伴随海量的数据交换，特别是在跨Node之间，10Gb的以太网网络传输肯定要比100Gb的IB网络传输慢，本人所负责的训练平台也是如此，在一次训练过程中，GPU存在海量数据交换，虽然是在GPU之间，但本质还是通过网络进行传输，但是以太网的传输在HPC场景下往往显得不那么高效，因此可以通过RDMA或者如果预算够的话，通过硬件IB实现数据交换，能大大提高训练质量</p>
 <span id="more"></span>
 
 
 
-<h3 id="Download"><a href="#Download" class="headerlink" title="Download"></a>Download</h3><p>Istio的部署还是非常简单的, 先下载istioctl二进制文件进行安装, 参考<a target="_blank" rel="noopener" href="https://istio.io/docs/setup/getting-started/">这里</a></p>
-<figure class="highlight shell"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line">curl -L https://istio.io/downloadIstio | sh -</span><br><span class="line">cd istio-1.4.2</span><br><span class="line">export PATH=$PWD/bin:$PATH</span><br><span class="line"><span class="meta prompt_">#</span><span class="language-bash">如果没有loadBalance需要修改发下文件:</span></span><br><span class="line"><span class="meta prompt_">#</span><span class="language-bash">install/kubernetes/istio-demo.yaml中istio-ingressgateway的service从loadBalance修改成NodePort</span></span><br></pre></td></tr></table></figure>
-
-
-
-<h3 id="默认Profile安装"><a href="#默认Profile安装" class="headerlink" title="默认Profile安装"></a>默认Profile安装</h3><p>istio内置几种默认的Profile, 某种Profile下有默认的manifest文件, 定义了需要安装的组件, 在安装的时候可以指定Profile进行安装, 各Profile如下, 详细的信息可查看<a target="_blank" rel="noopener" href="https://istio.io/docs/setup/additional-setup/config-profiles/">这里</a></p>
+<p>本人所负责的训练平台是完全基于k8s的，现在要迁移至IB网络同时不影响现有业务进行，大大增加了实施难度，在经过一番调研之后，最终的方案为在原有的容器网络基础之上，再加一层IB网络层，即在k8s集群中同时存在2个网络，这在k8s是完全支持的，即在容器中除了eth0，由flannel cni分配， 还会有一个net1网络，由IB cni分配, eth0的网络用于集群之间的通信，而net1则用于训练时pod与pod节点进行通信，在实践之前先介绍几个比较重要的技术</p>
+<h3 id="Infinitband"><a href="#Infinitband" class="headerlink" title="Infinitband"></a>Infinitband</h3><p>infinitband做专门为高带宽，低时延，高可靠，不占用cpu资源的网络互联技术，大量被用于超算、AI等HPC场景下</p>
+<p><img src="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20210704215748.png"></p>
+<p>这里不对infintband展开细说，感兴趣的可以参考下列连接</p>
+<p><a target="_blank" rel="noopener" href="https://zhuanlan.zhihu.com/p/74238082">https://zhuanlan.zhihu.com/p/74238082</a></p>
+<p><a target="_blank" rel="noopener" href="https://zhuanlan.zhihu.com/p/163104439">https://zhuanlan.zhihu.com/p/163104439</a></p>
+<p><a target="_blank" rel="noopener" href="https://blog.csdn.net/swingwang/article/details/72935461">https://blog.csdn.net/swingwang/article/details/72935461</a></p>
+<h3 id="sr-iov"><a href="#sr-iov" class="headerlink" title="sr-iov"></a>sr-iov</h3><p>SR-IOV (Single Root Input&#x2F;Output Virtualization) 的主要作用是将一个物理设备模拟成多个虚拟设备,在虚拟化技术中使用非常频繁，</p>
+<p><strong>sr-iov需要硬件上的支持，好在目前大部分服务器都支持了该技术</strong>，这里也不过多介绍其中的细节，后续用到的两个比较重要的概念:</p>
+<p>SR-IOV引入了两种新的PCIe的Function：</p>
+<ol>
+<li>PFs：完整功能的PCIe Function包含了SR-IOV Extended Capability。这个Capability被用来配置和管理SR-IOV的功能。</li>
+<li>VFs：一部分轻量级的PCIe function，只包含必要的用于数据移动的最小可配置的资源。</li>
+</ol>
+<p>一个 具备SR-IOV能力的设备可以被配置成被枚举出多个Virtual Functions（数量可控制），而且每个Funciton 都有自己的完整有BAR的配置空间。每个VF 分配给虚拟或者容器</p>
+<p><a target="_blank" rel="noopener" href="https://zhuanlan.zhihu.com/p/347204232">https://zhuanlan.zhihu.com/p/347204232</a></p>
+<p><a target="_blank" rel="noopener" href="https://blog.csdn.net/wangdd_199326/article/details/90476728">https://blog.csdn.net/wangdd_199326/article/details/90476728</a></p>
+<h3 id="资源清单"><a href="#资源清单" class="headerlink" title="资源清单"></a>资源清单</h3><p>下列的资源清单为部分集群资源且机器ip不为真实ip</p>
 <table>
 <thead>
 <tr>
-<th></th>
-<th>default</th>
-<th>demo</th>
-<th>minimal</th>
-<th>sds</th>
-<th>remote</th>
+<th>机器</th>
+<th>角色</th>
+<th>以太网&#x2F;IB网卡</th>
+<th>内核&#x2F;发行版</th>
 </tr>
 </thead>
 <tbody><tr>
-<td>Core components</td>
-<td></td>
-<td></td>
-<td></td>
-<td></td>
-<td></td>
+<td>10.4.52.2</td>
+<td>k8s master&#x2F;v1.15.5</td>
+<td>Y&#x2F;N</td>
+<td>Linux-4.19 centos7.4</td>
 </tr>
 <tr>
-<td><code>istio-citadel</code></td>
-<td>X</td>
-<td>X</td>
-<td></td>
-<td>X</td>
-<td>X</td>
+<td>10.4.52.3</td>
+<td>k8s master&#x2F;v1.15.5</td>
+<td>Y&#x2F;N</td>
+<td>Linux-4.19 centos7.4</td>
 </tr>
 <tr>
-<td><code>istio-egressgateway</code></td>
-<td></td>
-<td>X</td>
-<td></td>
-<td></td>
-<td></td>
+<td>10.4.52.4</td>
+<td>k8s master&#x2F;v1.15.5</td>
+<td>Y&#x2F;N</td>
+<td>Linux-4.19 centos7.4</td>
 </tr>
 <tr>
-<td><code>istio-galley</code></td>
-<td>X</td>
-<td>X</td>
-<td></td>
-<td>X</td>
-<td></td>
+<td>10.4.52.5</td>
+<td>k8s node&#x2F;v1.15.5</td>
+<td>Y&#x2F;Y，一个ib网口</td>
+<td>Linux-4.19 centos7.4</td>
 </tr>
 <tr>
-<td><code>istio-ingressgateway</code></td>
-<td>X</td>
-<td>X</td>
-<td></td>
-<td>X</td>
-<td></td>
+<td>10.4.52.6</td>
+<td>k8s node&#x2F;v1.15.5</td>
+<td>Y&#x2F;Y，一个ib网口</td>
+<td>Linux-4.19 centos7.4</td>
 </tr>
 <tr>
-<td><code>istio-nodeagent</code></td>
-<td></td>
-<td></td>
-<td></td>
-<td>X</td>
-<td></td>
-</tr>
-<tr>
-<td><code>istio-pilot</code></td>
-<td>X</td>
-<td>X</td>
-<td>X</td>
-<td>X</td>
-<td></td>
-</tr>
-<tr>
-<td><code>istio-policy</code></td>
-<td>X</td>
-<td>X</td>
-<td></td>
-<td>X</td>
-<td></td>
-</tr>
-<tr>
-<td><code>istio-sidecar-injector</code></td>
-<td>X</td>
-<td>X</td>
-<td></td>
-<td>X</td>
-<td>X</td>
-</tr>
-<tr>
-<td><code>istio-telemetry</code></td>
-<td>X</td>
-<td>X</td>
-<td></td>
-<td>X</td>
-<td></td>
-</tr>
-<tr>
-<td>Addons</td>
-<td></td>
-<td></td>
-<td></td>
-<td></td>
-<td></td>
-</tr>
-<tr>
-<td><code>grafana</code></td>
-<td></td>
-<td>X</td>
-<td></td>
-<td></td>
-<td></td>
-</tr>
-<tr>
-<td><code>istio-tracing</code></td>
-<td></td>
-<td>X</td>
-<td></td>
-<td></td>
-<td></td>
-</tr>
-<tr>
-<td><code>kiali</code></td>
-<td></td>
-<td>X</td>
-<td></td>
-<td></td>
-<td></td>
-</tr>
-<tr>
-<td><code>prometheus</code></td>
-<td>X</td>
-<td>X</td>
-<td></td>
-<td>X</td>
-<td></td>
+<td>10.4.52.7</td>
+<td>k8s node&#x2F;v1.15.5</td>
+<td>Y&#x2F;Y，一个ib网口</td>
+<td>Linux-4.19 centos7.4</td>
 </tr>
 </tbody></table>
-<p>注: 显示X的为在该Profile模式下需要安装的组件.</p>
-<p>每种Profile说明如下:</p>
-<blockquote>
-<ul>
-<li><strong>default</strong>：根据<a target="_blank" rel="noopener" href="https://istio.io/docs/reference/config/istio.operator.v1alpha12.pb/"><code>IstioControlPlane</code>API</a>的默认设置启用组件 （建议用于生产部署）。您可以通过运行命令显示默认设置<code>istioctl profile dump</code></li>
-<li><strong>demo</strong>：旨在展示Istio功能且资源需求适中的配置。适合运行<a target="_blank" rel="noopener" href="https://istio.io/docs/examples/bookinfo/">Bookinfo</a>应用程序和相关任务。这是随<a target="_blank" rel="noopener" href="https://istio.io/docs/setup/getting-started/">快速入门</a>说明一起安装的配置，但是 如果您想探索更高级的任务，则可以稍后<a target="_blank" rel="noopener" href="https://istio.io/docs/setup/install/istioctl/#customizing-the-configuration">自定义配置</a>以启用其他功能此配置文件可实现高级别的跟踪和访问日志记录，因此不适合进行性能测试。</li>
-<li><strong>minimal</strong>：使用Istio的<a target="_blank" rel="noopener" href="https://istio.io/docs/tasks/traffic-management/">流量管理</a>功能所需的最少组件集。</li>
-<li><strong>sds</strong>：类似于<strong>默认</strong>配置文件，但也启用了Istio的<a target="_blank" rel="noopener" href="https://istio.io/docs/tasks/security/citadel-config/auth-sds">SDS（秘密发现服务）</a>。此配置文件具有默认情况下启用的其他身份验证功能（严格双向TLS）。</li>
-<li><strong>远程</strong>：用于配置的远程簇 <a target="_blank" rel="noopener" href="https://istio.io/docs/ops/deployment/deployment-models/#multiple-clusters">的多组啮合</a>与 <a target="_blank" rel="noopener" href="https://istio.io/docs/setup/install/multicluster/shared-vpn/">共享控制平面</a>配置。</li>
-</ul>
-</blockquote>
-<p>因为demo涉及到的组件最符合目前的需求, 使用以下命令生成manifest文件并按该manifest部署.</p>
-<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">istioctl manifest apply --<span class="built_in">set</span> profile=demo</span><br></pre></td></tr></table></figure>
-
-<p><img src="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20200209151532.png"></p>
-<p>在Kubernetes中查看生成的CRD的对象</p>
-<p><code>kubectl get CustomResourceDefinition</code></p>
-<p><img src="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20200209151612.png"></p>
-<p>生成的pod信息如下</p>
-<p><code>kubectl get pod -n istio-system</code></p>
-<p><img src="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20200209151644.png"></p>
-<p>以上pod的功能:</p>
-<blockquote>
-<ul>
-<li>grafana-*              &#x2F;&#x2F;监控数据可视化工具</li>
-<li>istio-citadel－*    &#x2F;&#x2F;证书管理</li>
-<li>istio-egressgateway-*  &#x2F;&#x2F;出口流量网关</li>
-<li>istio-galley－*     &#x2F;&#x2F;配置检查</li>
-<li>istio-ingressgateway-*  &#x2F;&#x2F;入口流量网关</li>
-<li>istio-pilot-*         &#x2F;&#x2F;Envoy 服务发现，外部化配置</li>
-<li>istio-policy-*      &#x2F;&#x2F;Mixer 混合器策略检查</li>
-<li>istio-sidecar-injector-*         &#x2F;&#x2F;边车注入</li>
-<li>istio-telemetry-*       &#x2F;&#x2F;Mixer混合器指标收集</li>
-<li>Istio-tracing-*          &#x2F;&#x2F; 全链路跟踪工具</li>
-<li>kiali-*                         &#x2F;&#x2F;Service Mesh可视化工具</li>
-<li>prometheus-*          &#x2F;&#x2F;监控报警</li>
-</ul>
-</blockquote>
-<h3 id="自定义安装"><a href="#自定义安装" class="headerlink" title="自定义安装"></a>自定义安装</h3><p>当默认的Profile无法满足业务需求的时候, 比如，目前系统中存在了<code>Prometheus</code>, 不想在istio再次安装，同时又需要<code>Tracing</code>跟<code>kiali</code>那上面的所有profile都无法满足, istio也提供了可自定义安装，使用<code>--set</code>开关</p>
-<p>比如可使用以下命令实现以下的需求</p>
-<p><code> istioctl manifest apply --set profile=demo --set telemetry.prometheus.enabled=false --set telemetry.prometheusOperator.enabled=false</code></p>
-<p>这样就从demo中把原本会安装的Prometheus修改为不安装</p>
-<p>组件的对应关系如下:</p>
-<table>
-<thead>
-<tr>
-<th>Feature</th>
-<th>Components</th>
-</tr>
-</thead>
-<tbody><tr>
-<td><code>base</code></td>
-<td><code>CRDs</code></td>
-</tr>
-<tr>
-<td><code>trafficManagement</code></td>
-<td><code>pilot</code></td>
-</tr>
-<tr>
-<td><code>policy</code></td>
-<td><code>policy</code></td>
-</tr>
-<tr>
-<td><code>telemetry</code></td>
-<td><code>telemetry</code></td>
-</tr>
-<tr>
-<td><code>security</code></td>
-<td><code>citadel</code>, <code>nodeAgent</code>, <code>certManager</code></td>
-</tr>
-<tr>
-<td><code>configManagement</code></td>
-<td><code>galley</code></td>
-</tr>
-<tr>
-<td><code>gateways</code></td>
-<td><code>ingressGateway</code>, <code>egressGateway</code></td>
-</tr>
-<tr>
-<td><code>autoInjection</code></td>
-<td><code>injector</code></td>
-</tr>
-<tr>
-<td><code>coreDNS</code></td>
-<td><code>coreDNS</code></td>
-</tr>
-<tr>
-<td><code>thirdParty</code></td>
-<td><code>cni</code></td>
-</tr>
-</tbody></table>
-<table>
-<thead>
-<tr>
-<th>Feature</th>
-<th>Components</th>
-</tr>
-</thead>
-<tbody><tr>
-<td><code>telemetry</code></td>
-<td><code>prometheus</code>, <code>prometheusOperator</code>, <code>grafana</code>, <code>kiali</code>, <code>tracing</code></td>
-</tr>
-</tbody></table>
-<p>至此, Istio已经在Kubernetes中安装完成.</p>
+<p>master做为控制面，用于集群间的管理角色</p>
+<p>node上做为数据面，以太网用于与控制面进行交互，同时IB网卡用于HPC业务</p>
+<h3 id="组网图"><a href="#组网图" class="headerlink" title="组网图"></a>组网图</h3><p><img src="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20210704191648.png"></p>
+<p>在集群物理机器上，实际存在3个网络:</p>
+<ol>
+<li>管理网(eth1), 用于机器的管控网，一般叫做ipmi或者带外、外带等,在服务器上有专门的网口标识</li>
+<li>业务网(eth0), 用于flannel的启动参数指定的网卡名，这个网络在pod中用于与k8s控制面进行交互</li>
+<li>IB网(eth100), 用于ib网卡,在这个网卡上会通过sriov虚拟出若干网卡用于pod中</li>
+</ol>
+<h3 id="架构图"><a href="#架构图" class="headerlink" title="架构图"></a>架构图</h3><p><img src="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20210704191622.png"></p>
+<h3 id="实现目的"><a href="#实现目的" class="headerlink" title="实现目的"></a>实现目的</h3><p>最终要实现的目标为: 通过sriov在IB网卡上实现高性能容器网络以加速分布式训练的GPU数据交换</p>
 <h3 id="参考文章"><a href="#参考文章" class="headerlink" title="参考文章:"></a><strong>参考文章:</strong></h3><blockquote>
 <ul>
-<li><a target="_blank" rel="noopener" href="https://istio.io/docs/setup/additional-setup/config-profiles/">https://istio.io/docs/setup/additional-setup/config-profiles/</a></li>
-<li><a target="_blank" rel="noopener" href="https://juejin.im/post/5e0062ae6fb9a0163a483ea5">https://juejin.im/post/5e0062ae6fb9a0163a483ea5</a></li>
-<li><a target="_blank" rel="noopener" href="https://istio.io/docs/setup/getting-started/">https://istio.io/docs/setup/getting-started/</a></li>
-<li><a target="_blank" rel="noopener" href="https://istio.io/docs/setup/install/istioctl/#customizing-the-configuration">https://istio.io/docs/setup/install/istioctl/#customizing-the-configuration</a></li>
+<li><a target="_blank" rel="noopener" href="https://zhuanlan.zhihu.com/p/347204232">https://zhuanlan.zhihu.com/p/347204232</a></li>
+<li><a target="_blank" rel="noopener" href="https://blog.csdn.net/wangdd_199326/article/details/90476728">https://blog.csdn.net/wangdd_199326/article/details/90476728</a></li>
+<li><a target="_blank" rel="noopener" href="https://zhuanlan.zhihu.com/p/74238082">https://zhuanlan.zhihu.com/p/74238082</a></li>
+<li><a target="_blank" rel="noopener" href="https://zhuanlan.zhihu.com/p/163104439">https://zhuanlan.zhihu.com/p/163104439</a></li>
+<li><a target="_blank" rel="noopener" href="https://blog.csdn.net/swingwang/article/details/72935461">https://blog.csdn.net/swingwang/article/details/72935461</a></li>
 </ul>
 </blockquote>
 <h3 id="转载请注明原作者-周淑科-https-izsk-me"><a href="#转载请注明原作者-周淑科-https-izsk-me" class="headerlink" title="转载请注明原作者: 周淑科(https://izsk.me)"></a><strong>转载请注明原作者: 周淑科(<a target="_blank" rel="noopener" href="https://izsk.me/">https://izsk.me</a>)</strong></h3>
@@ -700,7 +534,7 @@
       
         <div class="post-tags">
           
-            <a href="/tags/ServiceMesh/" rel="tag"># ServiceMesh</a>
+            <a href="/tags/HPC/" rel="tag"># HPC</a>
           
         </div>
       
@@ -709,8 +543,8 @@
         <div class="post-nav">
           <div class="post-nav-next post-nav-item">
             
-              <a href="/2019/12/31/2020-%E5%8A%AA%E5%8A%9B%E5%A5%8B%E6%96%97/" rel="next" title="2020-努力奋斗">
-                <i class="fa fa-chevron-left"></i> 2020-努力奋斗
+              <a href="/2021/05/15/Kong-grpc-proxy-multi/" rel="next" title="Kong学习(代理多grpc后端)">
+                <i class="fa fa-chevron-left"></i> Kong学习(代理多grpc后端)
               </a>
             
           </div>
@@ -719,8 +553,8 @@
 
           <div class="post-nav-prev post-nav-item">
             
-              <a href="/2020/01/05/prometheus-functions/" rel="prev" title="Prometheus学习(PromSQL常用函数)">
-                Prometheus学习(PromSQL常用函数) <i class="fa fa-chevron-right"></i>
+              <a href="/2021/07/02/Kubernetes-Infinitband-SRIOV-network-1-backgroud/" rel="prev" title="Kubernetes学习(k8s基于InfiniBand实现HPC高性能容器网络组网方案实践一)">
+                Kubernetes学习(k8s基于InfiniBand实现HPC高性能容器网络组网方案实践一) <i class="fa fa-chevron-right"></i>
               </a>
             
           </div>
@@ -844,7 +678,7 @@
             
 
             
-              <div class="post-toc-content"><ol class="nav"><li class="nav-item nav-level-3"><a class="nav-link" href="#Download"><span class="nav-number">1.</span> <span class="nav-text">Download</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E9%BB%98%E8%AE%A4Profile%E5%AE%89%E8%A3%85"><span class="nav-number">2.</span> <span class="nav-text">默认Profile安装</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E8%87%AA%E5%AE%9A%E4%B9%89%E5%AE%89%E8%A3%85"><span class="nav-number">3.</span> <span class="nav-text">自定义安装</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E5%8F%82%E8%80%83%E6%96%87%E7%AB%A0"><span class="nav-number">4.</span> <span class="nav-text">参考文章:</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E8%BD%AC%E8%BD%BD%E8%AF%B7%E6%B3%A8%E6%98%8E%E5%8E%9F%E4%BD%9C%E8%80%85-%E5%91%A8%E6%B7%91%E7%A7%91-https-izsk-me"><span class="nav-number">5.</span> <span class="nav-text">转载请注明原作者: 周淑科(https:&#x2F;&#x2F;izsk.me)</span></a></li></ol></div>
+              <div class="post-toc-content"><ol class="nav"><li class="nav-item nav-level-3"><a class="nav-link" href="#Infinitband"><span class="nav-number">1.</span> <span class="nav-text">Infinitband</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#sr-iov"><span class="nav-number">2.</span> <span class="nav-text">sr-iov</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E8%B5%84%E6%BA%90%E6%B8%85%E5%8D%95"><span class="nav-number">3.</span> <span class="nav-text">资源清单</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E7%BB%84%E7%BD%91%E5%9B%BE"><span class="nav-number">4.</span> <span class="nav-text">组网图</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E6%9E%B6%E6%9E%84%E5%9B%BE"><span class="nav-number">5.</span> <span class="nav-text">架构图</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E5%AE%9E%E7%8E%B0%E7%9B%AE%E7%9A%84"><span class="nav-number">6.</span> <span class="nav-text">实现目的</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E5%8F%82%E8%80%83%E6%96%87%E7%AB%A0"><span class="nav-number">7.</span> <span class="nav-text">参考文章:</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E8%BD%AC%E8%BD%BD%E8%AF%B7%E6%B3%A8%E6%98%8E%E5%8E%9F%E4%BD%9C%E8%80%85-%E5%91%A8%E6%B7%91%E7%A7%91-https-izsk-me"><span class="nav-number">8.</span> <span class="nav-text">转载请注明原作者: 周淑科(https:&#x2F;&#x2F;izsk.me)</span></a></li></ol></div>
             
 
           </div>
