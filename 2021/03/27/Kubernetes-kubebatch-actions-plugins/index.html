@@ -68,7 +68,7 @@
 <link href="/css/main.css?v=5.1.0" rel="stylesheet" type="text/css" />
 
 
-  <meta name="keywords" content="分布式架构," />
+  <meta name="keywords" content="HPC," />
 
 
 
@@ -84,20 +84,21 @@
 
 
 
-<meta name="description" content="Mpi: Message Passing Interface，消息传递接口 由于AI业务中使用到了MPI, 网上看MPI教程写的也是云里雾里，很难理解清楚，作者这里结合自身负责的业务来理解MPI的实现方式. 如果有理解存在有遗留或者错误的地方，请各位过客不吝赐教.">
+<meta name="description" content="接上篇，主要介绍了kube-batch中两个重要的对象，queue及podgroup，这次主要讲讲kube-batch的核心的几个模块">
 <meta property="og:type" content="article">
-<meta property="og:title" content="MPI框架学习一(架构组件)">
-<meta property="og:url" content="https://zhoushuke.github.io/2022/04/20/MPI-Structure/index.html">
+<meta property="og:title" content="Kube-batch学习(核心模块)">
+<meta property="og:url" content="https://zhoushuke.github.io/2021/03/27/Kubernetes-kubebatch-actions-plugins/index.html">
 <meta property="og:site_name" content="Z.S.K.&#39;s Records">
-<meta property="og:description" content="Mpi: Message Passing Interface，消息传递接口 由于AI业务中使用到了MPI, 网上看MPI教程写的也是云里雾里，很难理解清楚，作者这里结合自身负责的业务来理解MPI的实现方式. 如果有理解存在有遗留或者错误的地方，请各位过客不吝赐教.">
+<meta property="og:description" content="接上篇，主要介绍了kube-batch中两个重要的对象，queue及podgroup，这次主要讲讲kube-batch的核心的几个模块">
 <meta property="og:locale">
-<meta property="og:image" content="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20220420093355.png">
-<meta property="article:published_time" content="2022-04-20T11:30:53.000Z">
-<meta property="article:modified_time" content="2023-04-11T07:58:45.741Z">
+<meta property="og:image" content="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20210324234022.png">
+<meta property="og:image" content="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20210328221253.png">
+<meta property="article:published_time" content="2021-03-27T14:10:53.000Z">
+<meta property="article:modified_time" content="2023-10-07T10:01:51.663Z">
 <meta property="article:author" content="Z.S.K.">
-<meta property="article:tag" content="分布式架构">
+<meta property="article:tag" content="HPC">
 <meta name="twitter:card" content="summary">
-<meta name="twitter:image" content="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20220420093355.png">
+<meta name="twitter:image" content="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20210324234022.png">
 
 
 
@@ -125,13 +126,13 @@
 
 
 
-  <link rel="canonical" href="https://zhoushuke.github.io/2022/04/20/MPI-Structure/"/>
+  <link rel="canonical" href="https://zhoushuke.github.io/2021/03/27/Kubernetes-kubebatch-actions-plugins/"/>
 
 
 
 
 
-  <title> MPI框架学习一(架构组件) | Z.S.K.'s Records </title>
+  <title> Kube-batch学习(核心模块) | Z.S.K.'s Records </title>
 <meta name="generator" content="Hexo 6.2.0"></head>
 
 <body itemscope itemtype="http://schema.org/WebPage" lang="zh-Hans">
@@ -297,7 +298,7 @@
   
 
   <article class="post post-type-normal " itemscope itemtype="http://schema.org/Article">
-  <link itemprop="mainEntityOfPage" href="https://zhoushuke.github.io/2022/04/20/MPI-Structure/">
+  <link itemprop="mainEntityOfPage" href="https://zhoushuke.github.io/2021/03/27/Kubernetes-kubebatch-actions-plugins/">
 
   <span style="display:none" itemprop="author" itemscope itemtype="http://schema.org/Person">
     <meta itemprop="name" content="">
@@ -321,7 +322,7 @@
             
             
               
-                MPI框架学习一(架构组件)
+                Kube-batch学习(核心模块)
               
             
           </h1>
@@ -336,8 +337,8 @@
               
                 <span class="post-meta-item-text">发表于</span>
               
-              <time title="Post created" itemprop="dateCreated datePublished" datetime="2022-04-20T19:30:53+08:00">
-                2022-04-20
+              <time title="Post created" itemprop="dateCreated datePublished" datetime="2021-03-27T22:10:53+08:00">
+                2021-03-27
               </time>
             
 
@@ -359,8 +360,8 @@
               
               
                 <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
-                  <a href="/categories/%E5%88%86%E5%B8%83%E5%BC%8F%E6%9E%B6%E6%9E%84/" itemprop="url" rel="index">
-                    <span itemprop="name">分布式架构</span>
+                  <a href="/categories/HPC/" itemprop="url" rel="index">
+                    <span itemprop="name">HPC</span>
                   </a>
                 </span>
 
@@ -394,83 +395,113 @@
       
 
       
-        <p>Mpi: Message Passing Interface，消息传递接口</p>
-<p>由于AI业务中使用到了MPI, 网上看MPI教程写的也是云里雾里，很难理解清楚，作者这里结合自身负责的业务来理解MPI的实现方式.</p>
-<p>如果有理解存在有遗留或者错误的地方，请各位过客不吝赐教.</p>
+        <p>接上篇，主要介绍了kube-batch中两个重要的对象，queue及podgroup，这次主要讲讲kube-batch的核心的几个模块</p>
 <span id="more"></span>
 
 
 
-<p>在AI多机多卡训练通信过程中，各节点之间需要进行数据交换，集群中大量的数据交换是很耗费时间的，因此需要一种在跨节点的情况下能快速进行数据交流的通道，MPI就是一种很常用的通信框架,在<strong>HPC</strong>中使用也较广.</p>
-<p>MPI是一组用于多节点数据通信的标准，而非一种语言或者接口。MPI虽然很庞大 但是它的<strong>最终目的是服务于进程间通信这一目标的</strong>, 不同的实现，使用方法有所不同，如mpich or openmpi等。</p>
-<p>mpirun vs mpiexec</p>
-<p>mpirun与mpiexec在MPI中都可以叫做为launcher(启动器), 是比较通用的起名或者是别名的符号链接(symbolic link)，实现可能会所不同，比如OpenMPI ，它自己的进程启动器称为 <code>orterun</code> .为了兼容性，<code>orterun</code>也被符号链接(symbolic link)为 <code>mpirun</code>和 <code>mpiexec</code></p>
-<p>hydra vs mpd</p>
-<p>hydra与mpd同为进程管理器，mpd在mpich2-1.3+版本中被废弃，取而代之的是hydra，hydra是一种比较轻量的PM(相对于mpd)，利用ssh、rsh、pbs、slurm和sge等调度工具部署运行并行程序</p>
-<p>MPICH2是由Argonne国家实验室维护的开源MPI库，是高性能计算领域使用最为广泛的MPI库之一，作者所有的小组内也是以mpich2为公共组件，因此以下的case都以mpich2为例.</p>
-<p>MPI的编程方式，是“一处代码，多处执行”。编写过多线程的人应该能够理解，就是同样的代码，不同的进程执行不同的路径</p>
-<p>以下是<code>Hydra Process Management Framework</code>官方的架构图: </p>
-<p><img src="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20220420093355.png"></p>
-<p><a target="_blank" rel="noopener" href="https://wiki.mpich.org/mpich/index.php/Hydra_Process_Management_Framework">Hydra framework</a>由以下几个基本部分组成：</p>
-<ol>
-<li>User Interface，用户接口UI</li>
-<li>Resource Managerment Kernel，资源管理核心RMK</li>
-<li>Process manager，进程管理PM</li>
-<li>Bootstrap，启动服务的方式，如ssh，fork，pbs，slurm，sge</li>
-<li>Process Binding，进程监听，如plpa</li>
-<li>Commnication Subsystem，例如IB，MX</li>
-<li>Process Managerment proxy，进程管理代理</li>
-<li>I&#x2F;O demux engine ，IO复用引擎</li>
-</ol>
-<p>从这个图也很容易看出:</p>
-<p>JLE一般运行在称之为管理节点上(当然在计算节点也是ok的)，用于接收指令然后将任务下发</p>
-<p>计算节点则一般是跑具体任务的,而ManagermentTools则是在管理节点与计算节点间的桥梁</p>
-<p>下面详细来解释一下上面的组件, 机器翻译自[wiki][<a target="_blank" rel="noopener" href="https://wiki.mpich.org/mpich/index.php/Hydra_Process_Management_Framework]:wiki%E7%9A%84%E6%96%87%E5%AD%97%E6%97%B6%E9%97%B4%E6%9C%89%E7%82%B9%E6%97%A9%E4%BA%86%EF%BC%8C%E4%BD%86%E6%95%B4%E4%BD%93%E4%B8%8D%E5%8F%97%E5%BD%B1%E5%93%8D%EF%BC%8C%E6%9C%BA%E7%BF%BB%E5%87%BA%E6%9D%A5%E8%BF%98%E8%A1%8C">https://wiki.mpich.org/mpich/index.php/Hydra_Process_Management_Framework]:wiki的文字时间有点早了，但整体不受影响，机翻出来还行</a>.</p>
+<h3 id="默认配置"><a href="#默认配置" class="headerlink" title="默认配置"></a>默认配置</h3><p>以下是kube-batch默认的配置，如下:</p>
+<figure class="highlight yaml"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br></pre></td><td class="code"><pre><span class="line"><span class="attr">actions:</span> <span class="string">&quot;allocate, backfill&quot;</span></span><br><span class="line"><span class="attr">tiers:</span></span><br><span class="line"><span class="bullet">-</span> <span class="attr">plugins:</span></span><br><span class="line">  <span class="bullet">-</span> <span class="attr">name:</span> <span class="string">priority</span></span><br><span class="line">  <span class="bullet">-</span> <span class="attr">name:</span> <span class="string">gang</span></span><br><span class="line"><span class="bullet">-</span> <span class="attr">plugins:</span></span><br><span class="line">  <span class="bullet">-</span> <span class="attr">name:</span> <span class="string">drf</span></span><br><span class="line">  <span class="bullet">-</span> <span class="attr">name:</span> <span class="string">predicates</span></span><br><span class="line">  <span class="bullet">-</span> <span class="attr">name:</span> <span class="string">proportion</span></span><br><span class="line">  <span class="bullet">-</span> <span class="attr">name:</span> <span class="string">nodeorder</span></span><br></pre></td></tr></table></figure>
+
+<p>可以看到分为actions及tiers，其中actions指定了kube-batch在调度时需要执行的操作，同时，这些操作会关联一些plugins(简单来说就是一些算法)来实现相关功能，比如说，actions是allocate，allocate意为分配资源，但是在分配资源时有时也会有一些要求，比如优先级高的先分配，或者把某个任务当成一个整体进行分配(gang)等等，同时，不同的actions可能关联同一个plugins，比如对于资源回收时，也可能存在先回收优先级低的pod的资源，这就是actions及plugins之间的关系</p>
+<p>kube-batch支持多种的actions及plugins,这个则需要根据实际的情况按需选择</p>
+<p>列表如下:</p>
 <ul>
-<li><p><strong>User interface</strong><br>此层的主要职责是从用户那里收集有关应用程序的信息： 在何处启动进程；将进程映射到内核；读取 标准输入(stdin) 并将其转发到适当的进程 (es)； 从不同的程序中读取标准输出&#x2F;标准错误并合适地指导。</p>
-<p><strong>mpich2中的mpiexec.hydra就是个userinterface程序</strong></p>
+<li>actions<ul>
+<li>allocate</li>
+<li>backfill</li>
+<li>preempt</li>
+<li>reclaim</li>
+</ul>
 </li>
-<li><p><strong>Resource Mangerment Kernel(RMK)</strong><br>RMK 提供了可与资源管理器进行交互的插件功能，比如Torque，Moab或者Cobalt。例如, 如果应用程序在启动作业之前需要在系统上分配节点, RMK 将完成这部分。同样, RMK 还可以允许在单个系统预留用于多个作业的情况下解耦作业启动。</p>
-<p><strong>在当前的实现中, RMK 非常简单, 不提供任何这些功能</strong></p>
-</li>
-<li><p><strong>Process Manager(PM)</strong><br>进程管理器提供了必要的环境设置以及主要的进程管理功能，例如进程管理器pmiserv进程管理器提供了MPICH PMI（PMI）功能。但目前仅支持PMI1，但我们也计划添加 PMI-2（目前正在起草中)。其他进程管理器也可以通过其他接口支持。</p>
-</li>
-<li><p><strong>Process Managerment Proxy(PMP)</strong><br>进程管理代理基本上是一个帮助器代理, 它是在系统的每个节点上生成的, 以帮助进程管理器进行进程生成、进程清理、信号转发、I&#x2F;O转发以及任何进程管理器特定的功能。<br>它基本上可以执行进程管理器可以做的任何任务, 因此, 甚至可以创建进程管理代理的层次结构, 其中每个代理都充当其子树的进程管理器。</p>
-<p><strong>mpich2的hydra_pmi_proxy就是个PMP</strong></p>
-</li>
-<li><p><strong>Bootstrap</strong><br>引导服务器主要充当预配置的守护进程系统, 允许上一层服务在整个系统中启动进程,目前运行多种方式。<br>例如, ssh 引导服务器fork进程, 每一个都通过执行一个 ssh 到另外一台机器，启动一个进程。</p>
-</li>
-<li><p><del><strong>Processing Binding</strong></del><br><del>进程监听组件主要处理提取系统体系结构信息 (例如, 处理器的数量、可用的内核和 SMT 线程、它们的拓扑、共享缓存等), 以及将进程绑定到可移植的不同内核中用一种简便的方式。PLPA 是一个这样的体系结构, 已经在Hydra中使用, 但它只提供有限的信息。</del></p>
-</li>
-<li><p><strong>Communication Subsystem</strong><br>通信子系统是不同代理之间以可伸缩方式进行通信的一种方式。这仅与下面描述的预启动和预连接代理有关。<br>此组件提供可伸缩的通信机制, 而与系统的规模无关 (例如, 基于IB或MX)。</p>
-</li>
-<li><p><strong>I&#x2F;O Demux Engine</strong></p>
-<p>这基本上是一个便利组件，不同的组件可以“注册”它们的文件描述符，并且 demux 引擎可以等待这些描述符中的任何一个上的事件。这提供了一个集中的事件管理机制；所以我们不需要让不同的线程阻塞不同的事件。I&#x2F;O 解复用引擎使用同步回调机制。也就是说，对于每个文件描述符，调用进程都会提供一个函数指针，指向在描述符上发生事件时必须调用的函数。demux 引擎阻塞所有已注册文件描述符上的事件，并在有事件时调用适当的回调。该组件在实现中非常有用，但在架构本身中并不起关键作用</p>
+<li>plugins<ul>
+<li>conformance</li>
+<li>drf</li>
+<li>gang</li>
+<li>nodeorder</li>
+<li>predicates</li>
+<li>priority</li>
+<li>proportion</li>
+</ul>
 </li>
 </ul>
-<p>这里RMK、PB、I&#x2F;O Demux Engine都比较复杂，可以不用关心是什么.</p>
-<p>PM跟PMP从名字上来看也比较容易理解，PMP可以理解为是PM在每个计算节点上负责管理的代理人角色</p>
-<p>另外要重点说一下Bootstrap，确切来说是Bootstrap Server </p>
-<p>大多数场景下远程启动进程都是使用默认的ssh launcher,意思是mpiexec.hydra通过ssh的方式登录计算节点来启动mpi_proxy程序,但是在ssh的过程中是不能有输入密码操作的，因此需要事先配置好ssh免密</p>
-<p>比如最简单的程度</p>
-<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># user interface端</span></span><br><span class="line">mpiexec.hydra -n 4 -hosts <span class="string">&#x27;node1,node2&#x27;</span> <span class="string">&#x27;run-AI-training-long-time-jobs&#x27;</span></span><br><span class="line"></span><br><span class="line"><span class="comment"># 对应在计算节点上的proxy启动命令</span></span><br><span class="line">hydra_pmi_proxy --control-port prm-510815</span><br><span class="line">f0-1dec-481c-b5ef-0073528b860b-0j59fe-1919734637:11000 --rmk user --demux poll --pgid 0 --retries 10 --usize -2 --proxy-id 0</span><br></pre></td></tr></table></figure>
-
-<p>如果没有指定-launcher(有些实现可能是-bootstrap)，则使用默认值ssh</p>
-<p>新版本(好像是在2.1之后)的mpiexec.hydra支持<code>launcher manual</code>, 即mpi_proxy的启动可通过人工的方式，这在docker场景下比较有用，在用docker做为计算节点时可以不用配置ssh免密，在启动docker时通过entrypoint直接启动mpi_proxy,这个时候就需要指定launcher为manual了.</p>
-<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># user interface端</span></span><br><span class="line">mpiexec.hydra -launcher manual -n 4 -hosts <span class="string">&#x27;node1,node2&#x27;</span> <span class="string">&#x27;run-AI-training-long-time-jobs&#x27;</span></span><br><span class="line"></span><br><span class="line"><span class="comment"># 对应在计算节点上的proxy启动命令</span></span><br><span class="line">hydra_pmi_proxy --launcher manual --control-port prm-510815</span><br><span class="line">f0-1dec-481c-b5ef-0073528b860b-0j59fe-1919734637:11000 --rmk user --demux poll --pgid 0 --retries 10 --usize -2 --proxy-id 0</span><br></pre></td></tr></table></figure>
-
-<p>这样就需要两端自行启动相关进程了.</p>
-<p>关于mpi的架构这块，能理清楚那几个组件的作用就可以了.</p>
-<p>上面的命令行支持非常多的参数，本身也没有什么说明性，至于<code>对应在计算节点上的proxy启动命令</code>为什么是那样的、节点与节点间是如何通信的等问题。</p>
-<p>都值得再更.</p>
+<p>要注意的是，配置文件中actions及plugins的指定顺序非常重要，<strong>kube-batch不会考虑action及plugins列表之间的顺序是不是合理，它只会按照指定的顺序依次执行</strong>，因此，要根据实际情况谨慎、实操地对配置进行优化，最后才能达到合理效果</p>
+<p>tiers下的plugins是列表结构，对于actions来说，如果遇到了优先级更高的plugins，则不会再进行应用低优先级的plugins，比如上面的配置中，如果一个优先级高的跟一个优先级低的任务同时到来，则优先级高的获取到它需要的所有资源，而不会再考虑其它的plugins，如果两者优先级一样且都是以podgroup存在，则就会按drf plugins进行处理.</p>
+<p>这张图很形象地说明kube-batch的工作原因</p>
+<p><img src="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20210324234022.png"></p>
+<p>它通过 list-watch 监听 Pod, Queue, PodGroup 和 Node 等资源，在本地维护一份集群资源的全局缓存，依次通过如下的策略（reclaim, allocate, preemption，predict） 完成资源的调度</p>
+<p><img src="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20210328221253.png"></p>
+<h3 id="cache"><a href="#cache" class="headerlink" title="cache"></a>cache</h3><p>Cache模块封装了对API Server的节点、容器等对象的数据同步逻辑。Kubernetes的数据保存在分布式存储etcd中，所有对数据的查询和操作都通过调用API Server的接口，而非直接操作etcd。在调度时，需要集群中的节点和容器的使用资源和状态等信息。Cache模块通过调用Kubernetes的SDK，通过watch机制监听集群中的节点、容器的状态变化，将信息同步到自己的数据结构中。</p>
+<p>Cache模块还封装了对API server的接口的调用。比如Cache.Bind这个接口，会去调用API Server的Bind接口，将容器绑定到指定的节点上。在kube-batch中只有cache模块需要和API Server交互，其他模块只需要调用Cache模块的接口,一方面减少api-server的压力，另一方面加快kube-batch本身的调度性能</p>
+<h3 id="session"><a href="#session" class="headerlink" title="session"></a>session</h3><p>Session模块是将其他三个模块串联起来的一个模块。Kube-batch在每个调度周期开始时，都会新建一个Session对象，这个Session的初始化时，会做以下操作：</p>
+<ul>
+<li>调用Cache.Snapshot接口，将Cache中节点、任务和队列的信息拷贝一份副本，之后在这个调度周期中使用这份副本进行调度。因为Cache的数据会不断变化，为了保持同个调度周期中的数据一致性，在一开始就拷贝了一份副本。</li>
+<li>将配置中的各个Plugin初始化，然后调用plugin的OnSessionOpen接口。Plugin在OnSessionOpen中，会初始化自己需要的数据，并将一些回调函数注册到session中。Plugin可以向Session中注册的函数是：<ol>
+<li>jobOrderFns： 决定哪个训练任务优先被处理（调度、回收、抢占）</li>
+<li>queueOrderFns：决定哪个训练队列优先被处理</li>
+<li>taskOrderFns：决定任务中哪个容器优先被处理</li>
+<li>predicateFns： 判断某个节点是否满足容器的基本调度要求。比如容器中指定的节点的标签</li>
+<li>nodeOrderFns： 当多个节点满足容器的调度要求时，优先选择哪个节点</li>
+<li>preemptableFns： 决定某个容器是否可以被抢占</li>
+<li>reclaimableFns ：决定某个容器是否可以被回收</li>
+<li>overusedFns： 决定某个队列使用的资源是否超过限额，是的话不再调度对队列中的任务</li>
+<li>jobReadyFns：判断某个任务是否已经准备好，可以调用API Server的接口将任务的容器调度到节点</li>
+<li>jobPipelinedFns ： 判断某个任务是否处于Pipelined状态</li>
+<li>jobValidFns： 判断某个任务是否有效</li>
+</ol>
+</li>
+</ul>
+<p>注意Plugin不需要注册上面所有的函数，而是可以根据自己的需要，注册某几个函数。比如Predict plugin就只注册了predicateFns这个函数到Session中。</p>
+<p>初始化成功后，Kube-batch会依次调用不同的Action的Execute方法，并将Session对象作为参数传入。在Execute中，会调用Session的各种方法。这些方法，有些最终会调用到Cache的方法， 有些是调用Plugin注册的方法。</p>
+<h3 id="actions"><a href="#actions" class="headerlink" title="actions"></a>actions</h3><p>因为业务中只使用到了默认的action，因此就简单说下allocate跟backfill这两个，其它的如reclaim跟preempt可参考<a target="_blank" rel="noopener" href="http://dockone.io/article/9021">这里</a></p>
+<h4 id="allocate"><a href="#allocate" class="headerlink" title="allocate"></a>allocate</h4><p>allocate用于将有明确资源需求的pod（task）分配到某个节点，在k8s对象中，pod或者container有没有指定request及limit，对应不同的Qos，Qos表示为服务质量，在这里不展开说明，感兴趣的可参考<a target="_blank" rel="noopener" href="https://kubernetes.io/zh/docs/tasks/configure-pod-container/quality-service-pod/">这里</a>,对于明确指定了requests跟limit且相等的这类pod，对应的Qos为guaranteed，同等情况下会被优先保障资源。</p>
+<p>如果不额外配置，allocate在kube-batch是默认的选项</p>
+<p>那如果有pod没有指定资源怎么办呢？</p>
+<h4 id="backfill"><a href="#backfill" class="headerlink" title="backfill"></a>backfill</h4><p>这个时候就需要靠backfill(回填)这个action来处理了,这个模块主要实现当podgroup中有pod没有被绑定成功时，其它的绑定的pod的资源会释放,在podgroup中非常关键.</p>
+<h3 id="Plugins"><a href="#Plugins" class="headerlink" title="Plugins"></a>Plugins</h3><h4 id="gang"><a href="#gang" class="headerlink" title="gang"></a>gang</h4><p>gang翻译成中文是帮派的意思，电影中的帮派大多都是共进退的，因为gang插件实现的就是帮派调度，gang-scheduler是podgroup中的核心，实现All or Nothing的效果</p>
+<p>那么Kube-batch如何Gang-Scheduler，逻辑如下:</p>
+<blockquote>
+<ul>
+<li>增加一个PodGruop的CRD。调度以PodGroup为单位。同时对应还有一个PodGroupController进行PodGroup的管理</li>
+<li>整个调度过程采用延迟创建Pod的过程。只有当PodGroup中的所有Pod都有合适的Node绑定时，才开始创建</li>
+<li>c. 定义了一种新的Action-BackFill.当PodGroup还有Pod没绑定时，之前绑定Pod的资源会释放</li>
+</ul>
+</blockquote>
+<p>gang注册3个function，分别是：</p>
+<blockquote>
+<ul>
+<li><code>preemptableFn</code> 为避免gang的策略被preempt和reclaiｍ干扰，定义了preemptableFn,排除那些还未准备就绪的job，避免其被抢占。（虽然实际上这些job未真正调度到node上去，但是确实从逻辑上把资源分配给它了）</li>
+<li><code>jobOrderFn</code> 为让已经就绪的job尽快被调度到节点，定义了jobOrderFn ,让已经就绪的job拥有更高的优先级</li>
+<li><code>jobReadyFn</code> 用来判断一个job是否已经就绪。<code>jobReady</code>会调用所有注册了的 plugin的Ready判定函数，只有都判定为ready ,才返回true</li>
+</ul>
+</blockquote>
+<h4 id="DRF"><a href="#DRF" class="headerlink" title="DRF"></a>DRF</h4><p>实现了Dominant Resouce Fairenss算法，这个算法能够有效对多种资源（CPU、Memory、GPU）进行调度</p>
+<p>Drf目的是尽量避免集群内某一类资源使用比例偏高，而其他类型资源使用比例却很低的不良状态。在调度时，让具有最低资源占用比例的任务具有高优先级,主要关注<code>onSessionOpen</code>函数：</p>
+<blockquote>
+<ul>
+<li>统计集群中所有node可分配资源总量</li>
+<li>统计Job资源申请，计算资源占比（资源申请&#x2F;资源总量）</li>
+<li>注册Job排序函数，根据资源占比进行排序，主要资源占比越低job优先级越高</li>
+<li>注册事件处理函数，包括分配函数以及驱逐函数，函数实现比较简单，就是当task发生变化时，增加（分配）&#x2F;减少（驱逐）Job资源申请总量，并且更新资源占比。</li>
+</ul>
+</blockquote>
+<p>　drf注册2个function，分别是:</p>
+<blockquote>
+<ul>
+<li><code>jobOrderFn</code> 是job的排序函数，会让share值越小的job排在最前面，即拥有最高的优先级，这个是实现drf的关键。</li>
+<li><code>preemptableFn</code>返回可抢占的job列表，job的筛选规则是：如果待选job的share值大于将被调度的job的share值，则选中该待选job</li>
+</ul>
+</blockquote>
+<p>kub-batch的session跟cache机制是固定的，主要通过action跟plugins机制来实现多样化调度算法.</p>
+<p>虽然目前业务上运行的很ok，但根据本人的实践情况来看，不太建议生产使用，原因如下:</p>
+<p>本人因为历史原因，接入kube-batch是目前最好的选择，由于kube-batch项目基本已不再维护，其中的有些bug已经有人提issue，但并没有在kube-batch这个项目中fix，而是直接在volcano的fix列表中了，所以如果需要fix,还需要从volcano中cherry-pick过来，但是虽说volcano是基于kube-batch而来，但volcano的版本迭代非常快，真的很难判断cherry-pick过来之后会不会有其它问题，如果有问题再来看volcano，如没有特殊原因还不如直接从一开始就使用上volcano，多快好省.</p>
 <h3 id="参考文章"><a href="#参考文章" class="headerlink" title="参考文章:"></a><strong>参考文章:</strong></h3><blockquote>
 <ul>
-<li><a target="_blank" rel="noopener" href="https://zhuanlan.zhihu.com/p/69497154">https://zhuanlan.zhihu.com/p/69497154</a></li>
-<li><a target="_blank" rel="noopener" href="https://www.cxyzjd.com/article/wgbljl/24038539">https://www.cxyzjd.com/article/wgbljl/24038539</a></li>
-<li><a target="_blank" rel="noopener" href="https://blog.csdn.net/wgbljl/article/details/24038539">https://blog.csdn.net/wgbljl/article/details/24038539</a></li>
-<li><a target="_blank" rel="noopener" href="http://cali2.unilim.fr/intel-mpi/doc/Reference_Manual.pdf">http://cali2.unilim.fr/intel-mpi/doc/Reference_Manual.pdf</a></li>
-<li><a target="_blank" rel="noopener" href="https://wiki.mpich.org/mpich/index.php/Developer_Documentations">https://wiki.mpich.org/mpich/index.php/Developer_Documentations</a></li>
-<li><a target="_blank" rel="noopener" href="https://wiki.mpich.org/mpich/index.php/Hydra_Process_Management_Framework">https://wiki.mpich.org/mpich/index.php/Hydra_Process_Management_Framework</a></li>
+<li><a target="_blank" rel="noopener" href="https://github.com/kubernetes-sigs/kube-batch">https://github.com/kubernetes-sigs/kube-batch</a></li>
+<li><a target="_blank" rel="noopener" href="https://www.jianshu.com/p/042692685cf4">https://www.jianshu.com/p/042692685cf4</a></li>
+<li><a target="_blank" rel="noopener" href="http://dockone.io/article/9021">http://dockone.io/article/9021</a></li>
+<li><a target="_blank" rel="noopener" href="http://www.ririshihaori.com/posts/2020/1/kube-batch/">http://www.ririshihaori.com/posts/2020/1/kube-batch/</a></li>
+<li><a target="_blank" rel="noopener" href="https://kubernetes.io/zh/docs/tasks/configure-pod-container/quality-service-pod/">https://kubernetes.io/zh/docs/tasks/configure-pod-container/quality-service-pod/</a></li>
 </ul>
 </blockquote>
 <h3 id="转载请注明原作者-周淑科-https-izsk-me"><a href="#转载请注明原作者-周淑科-https-izsk-me" class="headerlink" title="转载请注明原作者: 周淑科(https://izsk.me)"></a><strong>转载请注明原作者: 周淑科(<a target="_blank" rel="noopener" href="https://izsk.me/">https://izsk.me</a>)</strong></h3>
@@ -522,7 +553,7 @@
       
         <div class="post-tags">
           
-            <a href="/tags/%E5%88%86%E5%B8%83%E5%BC%8F%E6%9E%B6%E6%9E%84/" rel="tag"># 分布式架构</a>
+            <a href="/tags/HPC/" rel="tag"># HPC</a>
           
         </div>
       
@@ -531,8 +562,8 @@
         <div class="post-nav">
           <div class="post-nav-next post-nav-item">
             
-              <a href="/2022/03/25/Kubernetes-Flannel-Vxlan/" rel="next" title="Flannel Vxlan封包原理剖析">
-                <i class="fa fa-chevron-left"></i> Flannel Vxlan封包原理剖析
+              <a href="/2021/03/27/Kubernetes-kubebatch-prombles/" rel="next" title="Kube-batch学习(kube-batch踩坑记)">
+                <i class="fa fa-chevron-left"></i> Kube-batch学习(kube-batch踩坑记)
               </a>
             
           </div>
@@ -541,8 +572,8 @@
 
           <div class="post-nav-prev post-nav-item">
             
-              <a href="/2022/05/15/Loki-Prombles/" rel="prev" title="Grafana学习(Loki踩坑记)">
-                Grafana学习(Loki踩坑记) <i class="fa fa-chevron-right"></i>
+              <a href="/2021/03/27/Kubernetes-kubebatch-action-plugins/" rel="prev" title="Kube-batch学习(核心模块)">
+                Kube-batch学习(核心模块) <i class="fa fa-chevron-right"></i>
               </a>
             
           </div>
@@ -666,7 +697,7 @@
             
 
             
-              <div class="post-toc-content"><ol class="nav"><li class="nav-item nav-level-3"><a class="nav-link" href="#%E5%8F%82%E8%80%83%E6%96%87%E7%AB%A0"><span class="nav-number">1.</span> <span class="nav-text">参考文章:</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E8%BD%AC%E8%BD%BD%E8%AF%B7%E6%B3%A8%E6%98%8E%E5%8E%9F%E4%BD%9C%E8%80%85-%E5%91%A8%E6%B7%91%E7%A7%91-https-izsk-me"><span class="nav-number">2.</span> <span class="nav-text">转载请注明原作者: 周淑科(https:&#x2F;&#x2F;izsk.me)</span></a></li></ol></div>
+              <div class="post-toc-content"><ol class="nav"><li class="nav-item nav-level-3"><a class="nav-link" href="#%E9%BB%98%E8%AE%A4%E9%85%8D%E7%BD%AE"><span class="nav-number">1.</span> <span class="nav-text">默认配置</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#cache"><span class="nav-number">2.</span> <span class="nav-text">cache</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#session"><span class="nav-number">3.</span> <span class="nav-text">session</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#actions"><span class="nav-number">4.</span> <span class="nav-text">actions</span></a><ol class="nav-child"><li class="nav-item nav-level-4"><a class="nav-link" href="#allocate"><span class="nav-number">4.1.</span> <span class="nav-text">allocate</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#backfill"><span class="nav-number">4.2.</span> <span class="nav-text">backfill</span></a></li></ol></li><li class="nav-item nav-level-3"><a class="nav-link" href="#Plugins"><span class="nav-number">5.</span> <span class="nav-text">Plugins</span></a><ol class="nav-child"><li class="nav-item nav-level-4"><a class="nav-link" href="#gang"><span class="nav-number">5.1.</span> <span class="nav-text">gang</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#DRF"><span class="nav-number">5.2.</span> <span class="nav-text">DRF</span></a></li></ol></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E5%8F%82%E8%80%83%E6%96%87%E7%AB%A0"><span class="nav-number">6.</span> <span class="nav-text">参考文章:</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E8%BD%AC%E8%BD%BD%E8%AF%B7%E6%B3%A8%E6%98%8E%E5%8E%9F%E4%BD%9C%E8%80%85-%E5%91%A8%E6%B7%91%E7%A7%91-https-izsk-me"><span class="nav-number">7.</span> <span class="nav-text">转载请注明原作者: 周淑科(https:&#x2F;&#x2F;izsk.me)</span></a></li></ol></div>
             
 
           </div>
