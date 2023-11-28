@@ -1,0 +1,1021 @@
+<!doctype html>
+
+
+
+  
+
+
+<html class="theme-next mist use-motion" lang="zh-Hans">
+<head>
+  <meta charset="UTF-8"/>
+<meta http-equiv="X-UA-Compatible" content="IE=edge" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1"/>
+
+
+
+<meta http-equiv="Cache-Control" content="no-transform" />
+<meta http-equiv="Cache-Control" content="no-siteapp" />
+
+
+
+
+
+
+
+
+
+
+
+
+  
+  
+  <link href="/lib/fancybox/source/jquery.fancybox.css?v=2.1.5" rel="stylesheet" type="text/css" />
+
+
+
+
+  
+  
+  
+  
+
+  
+    
+    
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+    
+    
+    <link href="//fonts.googleapis.com/css?family=Lato:300,300italic,400,400italic,700,700italic&subset=latin,latin-ext" rel="stylesheet" type="text/css">
+  
+
+
+
+
+
+
+<link href="/lib/font-awesome/css/font-awesome.min.css?v=4.6.2" rel="stylesheet" type="text/css" />
+
+<link href="/css/main.css?v=5.1.0" rel="stylesheet" type="text/css" />
+
+
+  <meta name="keywords" content="HPC," />
+
+
+
+
+
+
+
+
+  <link rel="shortcut icon" type="image/x-icon" href="/favicon.ico?v=5.1.0" />
+
+
+
+
+
+
+<meta name="description" content="volcano做为CNCF目前唯一一款应对大规模资源批调度工具被大家熟知.作者负责的kubernetes集群每天都有大量的任务需要运行, GPU任务、短任务、长任务等等，同时还存在多租户场景、复杂的调度策略等, 依托volcano的高度可插拔能力, 同时结合业务场景进行相应的优化,极大提高了资源使用效率，结果导向明显在此也分享一下整个落地过程,也做为现阶段的一个工作总结, 工作之余尽量更新. 注:">
+<meta property="og:type" content="article">
+<meta property="og:title" content="volcano如何应对大规模任务系列之volcano关键对象">
+<meta property="og:url" content="https://zhoushuke.github.io/2023/11/12/volcano-key-resources/index.html">
+<meta property="og:site_name" content="Z.S.K.&#39;s Records">
+<meta property="og:description" content="volcano做为CNCF目前唯一一款应对大规模资源批调度工具被大家熟知.作者负责的kubernetes集群每天都有大量的任务需要运行, GPU任务、短任务、长任务等等，同时还存在多租户场景、复杂的调度策略等, 依托volcano的高度可插拔能力, 同时结合业务场景进行相应的优化,极大提高了资源使用效率，结果导向明显在此也分享一下整个落地过程,也做为现阶段的一个工作总结, 工作之余尽量更新. 注:">
+<meta property="og:locale">
+<meta property="og:image" content="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20231007170014.png">
+<meta property="og:image" content="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20231007170305.png">
+<meta property="og:image" content="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20231007170553.png">
+<meta property="article:published_time" content="2023-11-12T14:30:53.000Z">
+<meta property="article:modified_time" content="2023-11-28T12:19:57.449Z">
+<meta property="article:author" content="Z.S.K.">
+<meta property="article:tag" content="HPC">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:image" content="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20231007170014.png">
+
+
+
+<script type="text/javascript" id="hexo.configurations">
+  var NexT = window.NexT || {};
+  var CONFIG = {
+    root: '',
+    scheme: 'Mist',
+    sidebar: {"position":"left","display":"post"},
+    fancybox: true,
+    motion: true,
+    duoshuo: {
+      userId: 'undefined',
+      author: '博主'
+    },
+    algolia: {
+      applicationID: '',
+      apiKey: '',
+      indexName: '',
+      hits: {"per_page":10},
+      labels: {"input_placeholder":"Search for Posts","hits_empty":"We didn't find any results for the search: ${query}","hits_stats":"${hits} results found in ${time} ms"}
+    }
+  };
+</script>
+
+
+
+  <link rel="canonical" href="https://zhoushuke.github.io/2023/11/12/volcano-key-resources/"/>
+
+
+
+
+
+  <title> volcano如何应对大规模任务系列之volcano关键对象 | Z.S.K.'s Records </title>
+<meta name="generator" content="Hexo 6.2.0"></head>
+
+<body itemscope itemtype="http://schema.org/WebPage" lang="zh-Hans">
+
+  
+
+
+
+
+
+
+
+
+
+
+  
+  
+    
+  
+
+  <div class="container one-collumn sidebar-position-left page-post-detail ">
+    <div class="headband"></div>
+
+    <header id="header" class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-meta ">
+  
+
+  <div class="custom-logo-site-title">
+    <a href="/"  class="brand" rel="start">
+      <span class="logo-line-before"><i></i></span>
+      <span class="site-title">Z.S.K.'s Records</span>
+      <span class="logo-line-after"><i></i></span>
+    </a>
+  </div>
+    
+      <p class="site-subtitle"></p>
+    
+</div>
+
+<div class="site-nav-toggle">
+  <button>
+    <span class="btn-bar"></span>
+    <span class="btn-bar"></span>
+    <span class="btn-bar"></span>
+  </button>
+</div>
+
+<nav class="site-nav">
+  
+
+  
+    <ul id="menu" class="menu">
+      
+        
+        <li class="menu-item menu-item-home">
+          <a href="/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-home"></i> <br />
+            
+            首页
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-categories">
+          <a href="/categories" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-th"></i> <br />
+            
+            分类
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-about">
+          <a href="/about/ZSK-Profile.pdf" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-user"></i> <br />
+            
+            简历
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-archives">
+          <a href="/archives" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-archive"></i> <br />
+            
+            归档
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-tags">
+          <a href="/tags" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-tags"></i> <br />
+            
+            标签
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-commonweal">
+          <a href="/404.html" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-heartbeat"></i> <br />
+            
+            公益404
+          </a>
+        </li>
+      
+
+      
+        <li class="menu-item menu-item-search">
+          
+            <a href="javascript:;" class="popup-trigger">
+          
+            
+              <i class="menu-item-icon fa fa-search fa-fw"></i> <br />
+            
+            搜索
+          </a>
+        </li>
+      
+    </ul>
+  
+
+  
+    <div class="site-search">
+      
+  <div class="popup">
+ <span class="search-icon fa fa-search"></span>
+ <input type="text" id="local-search-input">
+ <div id="local-search-result"></div>
+ <span class="popup-btn-close">close</span>
+</div>
+
+
+    </div>
+  
+</nav>
+
+
+
+ </div>
+    </header>
+
+    <main id="main" class="main">
+      <div class="main-inner">
+        <div class="content-wrap">
+          <div id="content" class="content">
+            
+
+  <div id="posts" class="posts-expand">
+    
+
+  
+
+  
+  
+  
+
+  <article class="post post-type-normal " itemscope itemtype="http://schema.org/Article">
+  <link itemprop="mainEntityOfPage" href="https://zhoushuke.github.io/2023/11/12/volcano-key-resources/">
+
+  <span style="display:none" itemprop="author" itemscope itemtype="http://schema.org/Person">
+    <meta itemprop="name" content="">
+    <meta itemprop="description" content="">
+    <meta itemprop="image" content="/images/avatar.gif">
+  </span>
+
+  <span style="display:none" itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+    <meta itemprop="name" content="Z.S.K.'s Records">
+    <span style="display:none" itemprop="logo" itemscope itemtype="http://schema.org/ImageObject">
+      <img style="display:none;" itemprop="url image" alt="Z.S.K.'s Records" src="">
+    </span>
+  </span>
+
+    
+      <header class="post-header">
+
+        
+        
+          <h1 class="post-title" itemprop="name headline">
+            
+            
+              
+                volcano如何应对大规模任务系列之volcano关键对象
+              
+            
+          </h1>
+        
+
+        <div class="post-meta">
+          <span class="post-time">
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">发表于</span>
+              
+              <time title="Post created" itemprop="dateCreated datePublished" datetime="2023-11-12T22:30:53+08:00">
+                2023-11-12
+              </time>
+            
+
+            
+
+            
+          </span>
+
+          
+            <span class="post-category" >
+            
+              <span class="post-meta-divider">|</span>
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-folder-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">分类于</span>
+              
+              
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/HPC/" itemprop="url" rel="index">
+                    <span itemprop="name">HPC</span>
+                  </a>
+                </span>
+
+                
+                
+              
+            </span>
+          
+
+          
+            
+          
+
+          
+
+          
+          
+
+          
+
+          
+
+        </div>
+      </header>
+    
+
+
+    <div class="post-body" itemprop="articleBody">
+
+      
+      
+
+      
+        <p>volcano做为CNCF目前唯一一款应对大规模资源批调度工具被大家熟知.<br>作者负责的kubernetes集群每天都有大量的任务需要运行, GPU任务、短任务、长任务等等，同时还存在多租户场景、复杂的调度策略等, 依托volcano的高度<strong>可插拔</strong>能力, 同时结合业务场景进行相应的优化,极大提高了资源使用效率，<strong>结果导向明显</strong><br>在此也分享一下整个落地过程,也做为现阶段的一个工作总结, 工作之余尽量更新.</p>
+<p>注: 业务各有不同, 作者的选型及观点可能并不适用其它人<br>此篇为: volcano如何应对大规模任务系列之volcano关键对象</p>
+<span id="more"></span>
+
+<p>本系列总体分为以下几块内容:<br>volcano如何应对大规模任务系列之volcano开篇介绍<br>volcano如何应对大规模任务系列之volcano关键对象<br>volcano如何应对大规模任务系列之volcano插件系统<br>volcano如何应对大规模任务系列之volcano源码解析<br>volcano如何应对大规模任务系列之volcano优化之道<br>volcano如何应对大规模任务系列之volcano生产实践<br>volcano如何应对大规模任务系列之volcano总结建议</p>
+<p><strong>本系列的所用volcano版本基于v1.7.0</strong></p>
+<h3 id="架构图"><a href="#架构图" class="headerlink" title="架构图"></a>架构图</h3><p><img src="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20231007170014.png"></p>
+<p>Volcano由scheduler、controllermanager、admission这三个核心组件及一个命令行工具vcctl组成:</p>
+<ol>
+<li><p>Scheduler: Volcano scheduler通过一系列的action和plugin调度Job，并为它找到一个最适合的节点。与Kubernetes default-scheduler相比，Volcano与众不同的 地方是它支持针对Job的多种调度算法。</p>
+</li>
+<li><p>Controllermanager: Volcano controllermanager管理CRD资源的生命周期。它主要由Queue ControllerManager、 PodGroupControllerManager、 VCJob ControllerManager构成。</p>
+</li>
+<li><p>Admission: Volcano admission负责对CRD API资源进行校验。</p>
+</li>
+<li><p>Vcctl: Volcano vcctl是Volcano的命令行客户端工具。</p>
+</li>
+</ol>
+<h3 id="session"><a href="#session" class="headerlink" title="session"></a>session</h3><p>Session模块其实也是调度周期，默认是1s, 可配置,它的作用是承上启下。volcano在每个调度周期开始时，都会新建一个Session对象，这个Session的初始化时，会做以下操作：</p>
+<ul>
+<li>调用Cache.Snapshot接口，将Cache中节点、任务和队列的信息拷贝一份副本，之后在这个调度周期中使用这份副本进行调度。因为Cache的数据会不断变化，为了保持同个调度周期中的数据一致性，在一开始就拷贝了一份副本。</li>
+<li>将配置中的各个Plugin初始化，然后调用plugin的OnSessionOpen接口。Plugin在OnSessionOpen中，会初始化自己需要的数据，并将一些回调函数注册到session中。Plugin可以向Session中注册的函数是,常用的如下：<ol>
+<li>jobOrderFns： 决定哪个任务优先被处理</li>
+<li>queueOrderFns：决定哪个队列优先被处理</li>
+<li>taskOrderFns：决定任务中哪个容器优先被处理</li>
+<li>predicateFns： 判断某个节点是否满足容器的基本调度要求。比如容器中指定的节点的标签</li>
+<li>nodeOrderFns： 当多个节点满足容器的调度要求时，优先选择哪个节点</li>
+<li>preemptableFns： 决定某个容器是否可以被抢占</li>
+<li>reclaimableFns ：决定某个容器是否可以被回收</li>
+<li>overusedFns： 决定某个队列使用的资源是否超过限额，是的话不再调度队列中的任务</li>
+<li>jobReadyFns：判断某个任务是否已经准备好，可以调用API Server的接口将任务的容器调度到节点</li>
+<li>jobPipelinedFns ： 判断某个任务是否处于Pipelined状态，后下详解</li>
+<li>jobValidFns： 判断某个任务是否有效</li>
+</ol>
+</li>
+</ul>
+<p>关于plugin与各个funcion的引用关系，关注volcano如何应对大规模任务系列之volcano插件系统一节</p>
+<p>注意Plugin不需要注册上面所有的函数，而是可以根据自己的需要，注册某几个函数。比如Predict plugin就只注册了predicateFns这个函数到Session中。</p>
+<p>初始化成功后，volcano会依次调用不同的Action的Execute方法，并将Session对象作为参数传入。在Execute中，会调用Session的各种方法。这些方法，有些最终会调用到Cache的方法， 有些是调用Plugin注册的方法。</p>
+<h3 id="cache"><a href="#cache" class="headerlink" title="cache"></a>cache</h3><p>schedulercache模块封装了对API Server的节点、容器等对象的数据同步逻辑。Kubernetes的数据保存在分布式存储etcd中，所有对数据的查询和操作都通过调用API Server的接口，而非直接操作etcd。在调度时，需要集群中的节点和容器的使用资源和状态等信息。Cache模块通过调用Kubernetes的SDK，通过watch机制监听集群中的节点、容器的状态变化，将信息同步到自己的数据结构中。<br>SchedulerCache会持有很多informer， 初始化的informer注册各个eventHandler，然后pod&#x2F;podgroup等变动会被同步在Jobs, Nodes, Queues, PriorityClasses等几个map中。<strong>podgroup加入jobInfo，pod 加入taskInfo</strong></p>
+<h3 id="action"><a href="#action" class="headerlink" title="action"></a>action</h3><p>有几个比较重要的action, 下面一一介绍</p>
+<h4 id="enqueue"><a href="#enqueue" class="headerlink" title="enqueue"></a>enqueue</h4><p>Enqueue action筛选符合要求的作业进入待调度队列。当一个Job下的最小资源申请量不能得到满足时，即使为Job下的Pod执行调度动作，Pod也会因为gang约束没有达到而无法进行调度；只有当job的最小资源量得到满足，状态由”Pending”刷新为”Inqueue”才可以进行。一般来说Enqueue action是调度器配置必不可少的action(v1.7+版本后可disable)</p>
+<p><strong>在volcano中, 只有通过了enqueue后的任务(即由pending状态变成inqueue状态)才有资格进行真正资源的allocate</strong>, 因此,对enqueue action的逻辑需要理解, 源码解析一章中也会有这方面的分析</p>
+<p>Enqueue action是调度流程中的准备阶段</p>
+<h4 id="allocate"><a href="#allocate" class="headerlink" title="allocate"></a>allocate</h4><p>Allocate action是调度流程中的正常分配步骤，用于处理在待调度Pod列表中<strong>具有资源申请量的Pod调度</strong>，是调度过程必不可少的action。这个过程包括作业的predicate(预选)和prioritize(优选)。使用predicateFn预选，过滤掉不能分配作业的node；使用NodeOrderFn打分来找到最适合的分配节点。</p>
+<p>Allocate action遵循commit机制，当一个Pod的调度请求得到满足后，最终并不一定会为该Pod执行绑定动作，这一步骤还取决于Pod所在Job的gang约束是否得到满足。只有Pod所在Job的gang约束得到满足，Pod才可以被调度，否则，Pod不能够被调度</p>
+<h4 id="reclaim"><a href="#reclaim" class="headerlink" title="reclaim"></a>reclaim</h4><p>volcano支持弹性的资源使用，当queue中的资源没有被使用时，可暂被其它queue占用，reclaim action则是用于回收那些超格使用了queue上限的额外资源</p>
+<h4 id="preempt"><a href="#preempt" class="headerlink" title="preempt"></a>preempt</h4><p>Preempt action是调度流程中的抢占步骤，用于处理高优先级调度问题。<strong>Preempt用于同一个Queue中job之间的抢占，或同一Job下Task之间的抢占</strong></p>
+<h4 id="backfill"><a href="#backfill" class="headerlink" title="backfill"></a>backfill</h4><p>Backfill action是调度流程中的回填步骤，处理待调度Pod列表中<strong>没有指明资源申请量的Pod调度</strong>，在对单个Pod执行调度动作的时候，遍历所有的节点，只要节点满足了Pod的调度请求，就将Pod调度到这个节点上。</p>
+<h3 id="plugins"><a href="#plugins" class="headerlink" title="plugins"></a>plugins</h3><p>volcano中包含了很多的plugin, 主要作用是<strong>在action下实现特定的业务逻辑</strong>, 现有的大部分plugin作者都在生产环境应用过，因此有一些生产经验可谈，关注volcano如何应对大规模任务系列之volcano插件系统一节,不过，还是先把所有的plugin简单介绍一下</p>
+<h4 id="gang"><a href="#gang" class="headerlink" title="gang"></a>gang</h4><p>Gang调度策略是volcano-scheduler的核心调度算法之一，它满足了调度过程中的<strong>“All or nothing”</strong>的调度需求，避免Pod的任意调度导致集群资源的浪费。具体算法是，观察Job下的Pod已调度数量是否满足了最小运行数量，当Job的最小运行数量得到满足时，为Job下的所有Pod执行调度动作，否则，不执行。</p>
+<p><strong>kube-scheduler本质上是个串行的调度器，而gang则可实现并行的效果</strong></p>
+<h4 id="Binpack"><a href="#Binpack" class="headerlink" title="Binpack"></a>Binpack</h4><p>binpack调度算法的目标是<strong>尽量把已有的节点填满（尽量不往空白节点分配）</strong>。具体实现上，binpack调度算法是给可以投递的节点打分，分数越高表示节点的资源利用率越高。binpack算法能够尽可能填满节点，将应用负载靠拢在部分节点</p>
+<p>Binpack算法以插件的形式，注入到volcano-scheduler调度过程中，将应用在Pod优选节点的阶段。Volcano-scheduler在计算binpack算法时，会考虑Pod请求的各种资源，并根据各种资源所配置的权重做平均。每种资源在节点分值计算过程中的权重并不一样，这取决于管理员为每种资源配置的权重值。同时不同的插件在计算节点分数时，也需要分配不同的权重，scheduler也为binpack插件设置了分数权重。</p>
+<p><strong>工作节点上的应用拥塞程度跟binpack的设定的参数有很大关系</strong></p>
+<h4 id="Priority"><a href="#Priority" class="headerlink" title="Priority"></a>Priority</h4><p>Priority plugin提供了job、task排序的实现，以及计算牺牲作业的函数preemptableFn，job的排序根据priorityClassName，task的排序依次根据priorityClassName、createTime、id。</p>
+<h4 id="DRF"><a href="#DRF" class="headerlink" title="DRF"></a>DRF</h4><p>DRF调度算法的全称是Dominant Resource Fairness，是基于容器组Domaint Resource的调度算法。volcano-scheduler观察每个Job请求的主导资源，并将其作为对集群资源使用的一种度量，根据Job的主导资源，计算Job的share值，在调度的过程中，具有较低share值的Job将具有更高的调度优先级。这样能够满足更多的作业，不会因为一个胖业务，饿死大批小业务。DRF调度算法能够确保在多种类型资源共存的环境下,尽可能满足分配的公平原则。</p>
+<h4 id="Proportion"><a href="#Proportion" class="headerlink" title="Proportion"></a>Proportion</h4><p>Proportion调度算法是使用queue的概念，用来控制集群总资源的分配比例。每一个queue分配到的集群资源比例是一定的</p>
+<p><strong>proportion在queue中很重要，弹性的资源分配就是由proportion实现</strong></p>
+<h4 id="Predicates"><a href="#Predicates" class="headerlink" title="Predicates"></a>Predicates</h4><p>Predicate plugin通过pod、nodeInfo作为参数，调用predicateGPU，根据计算结果对作业进行评估预选</p>
+<h4 id="Task-topology"><a href="#Task-topology" class="headerlink" title="Task-topology"></a>Task-topology</h4><p>Task-topology算法是一种根据Job内task之间亲和性和反亲和性配置计算task优先级和Node优先级的算法。通过在Job内配置task之间的亲和性和反亲和性策略，并使用task-topology算法，可优先将具有亲和性配置的task调度到同一个节点上，将具有反亲和性配置的Pod调度到不同的节点上</p>
+<h4 id="Nodeorder"><a href="#Nodeorder" class="headerlink" title="Nodeorder"></a>Nodeorder</h4><p>Nodeorder plugin是一种调度优选策略：通过模拟分配从各个维度为node打分，找到最适合当前作业的node。打分参数由用户来配置。参数包含了Affinity、reqResource，、LeastReqResource、MostReqResource、balanceReqResouce</p>
+<p><strong>跟binpack一样, nodeorder的不现参数，对节点的调度结果有很在的不同</strong></p>
+<h4 id="SLA"><a href="#SLA" class="headerlink" title="SLA"></a>SLA</h4><p>SLA的全称是Service Level agreement。用户向volcano提交job的时候，可能会给job增加特殊的约束，例如最长等待时间(JobWaitingTime)。这些约束条件可以视为用户与volcano之间的服务协议。SLA plugin可以为单个作业&#x2F;整个集群接收或者发送SLA参数</p>
+<h4 id="Tdm"><a href="#Tdm" class="headerlink" title="Tdm"></a>Tdm</h4><p>Tdm的全称是Time Division Multiplexing。在一些场景中，一些节点既属于Kubernetes集群也属于Yarn集群。Tdm plugin 需要管理员为这些节点标记为<code>revocable node</code>。Tdm plugin会在该类节点可被撤销的时间段内尝试把<code>preemptable task</code>调度给<code>revocable node</code>，并在该时间段之外清除<code>revocable node</code>上的<code>preemptable task</code>。<strong>Tdm plugin提高了volcano在调度过程中节点资源的分时复用能力</strong></p>
+<h4 id="Numa-aware"><a href="#Numa-aware" class="headerlink" title="Numa-aware"></a>Numa-aware</h4><p>当节点运行多个cpu密集的pod。基于pod是否可以迁移cpu已经调度周期cpu资源状况，工作负载可以迁移到不同的cpu核心下。许多工作负载对cpu资源迁移并不敏感。然而，有一些cpu的缓存亲和度以及调度延迟显著影响性能的工作负载，kubelet允许可选的cpu编排策略(cpu management)来确定节点上cpu资源的绑定分配</p>
+<h3 id="CRD"><a href="#CRD" class="headerlink" title="CRD"></a>CRD</h3><p>volcano中有3个很重要的cr资源，queue、podgroup、 vcjob</p>
+<h4 id="queue"><a href="#queue" class="headerlink" title="queue"></a>queue</h4><p>queue就是队列, <strong>在多租户场景下是个很重要的对象</strong></p>
+<p>上一个最简单地例子:</p>
+<figure class="highlight yaml"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br></pre></td><td class="code"><pre><span class="line"><span class="attr">apiVersion:</span> <span class="string">scheduling.volcano.sh/v1beta1</span></span><br><span class="line"><span class="attr">kind:</span> <span class="string">Queue</span></span><br><span class="line"><span class="attr">metadata:</span></span><br><span class="line">  <span class="attr">name:</span> <span class="string">default</span></span><br><span class="line"><span class="attr">spec:</span></span><br><span class="line">  <span class="attr">reclaimable:</span> <span class="literal">true</span></span><br><span class="line">  <span class="attr">weight:</span> <span class="number">1</span></span><br><span class="line">  <span class="attr">capability:</span></span><br><span class="line">    <span class="attr">cpu:</span> <span class="string">&quot;4&quot;</span></span><br><span class="line">    <span class="attr">memory:</span> <span class="string">&quot;4096Mi&quot;</span></span><br></pre></td></tr></table></figure>
+
+<ol>
+<li>reclaimable: 表示该queue在资源使用量超过该queue所应得的资源份额时，是否允许其他queue回收该queue使用超额的资源,默认值为true</li>
+<li>weight: 为 (weight&#x2F;total-weight) * total-resource(集群中所有资源的总和), weight是一个软约束</li>
+<li>capability(可选): 表示该queue内所有podgroup使用资源量之和的上限，它是一个硬约束</li>
+</ol>
+<p>注意: queue capability需要与proportion插件一起使用，要不然不生效，即<strong>queue下的所有资源不可以超过capability总量</strong></p>
+<p>那queue的weight计算逻辑是怎样的呢？<br>根据queue的weight为queue分配集群资源的逻辑大致如下。</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># 每个queue deserved 初始为0</span></span><br><span class="line"><span class="keyword">for</span>&#123;</span><br><span class="line">    <span class="keyword">for</span> 每个queue &#123;</span><br><span class="line">        deserved = deserved + wrr</span><br><span class="line">        1. 如果 deserved 大于 capability，则取  deserved/capability/request 较小值，不管资源够不够用，meet了，不再继续分配资源了</span><br><span class="line">        2. 如果 deserved 小于 capability 大于 request，也是meet 了 退出循环</span><br><span class="line">        3. 如果 deserved 小于 request ，那就先给其它queue 分配资源，若还有剩余remaining 再来一轮</span><br><span class="line">    &#125;</span><br><span class="line">    更新remaining</span><br><span class="line">    如果上一次remaining 和这一次 没有变化或者没有remaining了，说明queue 都分配好了或没有资源了，退出分配过程</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>具体的计算方法将在volcano如何应对大规模任务系列之volcano源码解析一节中展开</p>
+<h4 id="podgroup"><a href="#podgroup" class="headerlink" title="podgroup"></a>podgroup</h4><p>podgroup是一组强关联pod的集合, 例子如下:</p>
+<figure class="highlight yaml"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br></pre></td><td class="code"><pre><span class="line"><span class="attr">apiVersion:</span> <span class="string">scheduling.volcano.sh/v1beta1</span></span><br><span class="line"><span class="attr">kind:</span> <span class="string">PodGroup</span></span><br><span class="line"><span class="attr">metadata:</span></span><br><span class="line">  <span class="attr">name:</span> <span class="string">test</span></span><br><span class="line">  <span class="attr">namespace:</span> <span class="string">default</span></span><br><span class="line">  <span class="attr">ownerReferences:</span></span><br><span class="line">  <span class="bullet">-</span> <span class="attr">apiVersion:</span> <span class="string">batch.volcano.sh/v1alpha1</span></span><br><span class="line">    <span class="attr">blockOwnerDeletion:</span> <span class="literal">true</span></span><br><span class="line">    <span class="attr">controller:</span> <span class="literal">true</span></span><br><span class="line">    <span class="attr">kind:</span> <span class="string">Job</span></span><br><span class="line">    <span class="attr">name:</span> <span class="string">test</span></span><br><span class="line">    <span class="attr">uid:</span> <span class="string">028ecfe8-0ff9-477d-836c-ac5676491a38</span></span><br><span class="line"><span class="attr">spec:</span></span><br><span class="line">  <span class="attr">minMember:</span> <span class="number">1</span></span><br><span class="line">  <span class="attr">minResources:</span></span><br><span class="line">    <span class="attr">cpu:</span> <span class="string">&quot;3&quot;</span></span><br><span class="line">    <span class="attr">memory:</span> <span class="string">&quot;2048Mi&quot;</span></span><br><span class="line">  <span class="attr">priorityClassName:</span> <span class="string">high-prority</span></span><br><span class="line">  <span class="attr">queue:</span> <span class="string">default</span></span><br></pre></td></tr></table></figure>
+<p>关键字段</p>
+<ul>
+<li>minMember</li>
+</ul>
+<p>minMember表示该podgroup下<strong>最少</strong>需要运行的pod或任务数量。如果集群资源不满足miniMember数量任务的运行需求，调度器将不会调度任何一个该podgroup 内的任务。</p>
+<ul>
+<li>queue</li>
+</ul>
+<p>queue表示该podgroup所属的queue。queue必须提前已创建且状态为open。</p>
+<ul>
+<li>priorityClassName</li>
+</ul>
+<p>priorityClassName表示该podgroup的优先级，用于调度器为该queue中所有podgroup进行调度时进行排序。<strong>system-node-critical</strong>和<strong>system-cluster-critical</strong> 是2个预留的值，表示最高优先级。不特别指定时，默认使用default优先级或zero优先级。</p>
+<ul>
+<li>minResources</li>
+</ul>
+<p>minResources表示运行该podgroup所需要的最少资源。当集群可分配资源不满足minResources时，调度器将不会调度任何一个该podgroup内的任务。</p>
+<h4 id="vcjob"><a href="#vcjob" class="headerlink" title="vcjob"></a>vcjob</h4><p>Volcano Job，简称vcjob，是Volcano自定义的Job资源类型。区别于Kubernetes Job，vcjob提供了更多高级功能，如可指定调度器、支持最小运行pod数、 支持task、支持生命周期管理、支持指定队列、支持优先级调度等。Volcano Job更加适用于机器学习、大数据、科学计算等高性能计算场景。</p>
+<figure class="highlight shell"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br></pre></td><td class="code"><pre><span class="line">apiVersion: batch.volcano.sh/v1alpha1</span><br><span class="line">kind: Job</span><br><span class="line">metadata:</span><br><span class="line">  name: test-job</span><br><span class="line">spec:</span><br><span class="line">  minAvailable: 3</span><br><span class="line">  schedulerName: volcano</span><br><span class="line">  priorityClassName: high-priority</span><br><span class="line">  policies:</span><br><span class="line">    - event: PodEvicted</span><br><span class="line">      action: RestartJob</span><br><span class="line">  plugins:</span><br><span class="line">    ssh: []</span><br><span class="line">    env: []</span><br><span class="line">    svc: []</span><br><span class="line">  maxRetry: 5</span><br><span class="line">  queue: default</span><br><span class="line">  volumes:</span><br><span class="line">    - mountPath: &quot;/myinput&quot;</span><br><span class="line">    - mountPath: &quot;/myoutput&quot;</span><br><span class="line">      volumeClaimName: &quot;testvolumeclaimname&quot;</span><br><span class="line">      volumeClaim:</span><br><span class="line">        accessModes: [ &quot;ReadWriteOnce&quot; ]</span><br><span class="line">        storageClassName: &quot;my-storage-class&quot;</span><br><span class="line">        resources:</span><br><span class="line">          requests:</span><br><span class="line">            storage: 1Gi</span><br><span class="line">  tasks:</span><br><span class="line">    - replicas: 6</span><br><span class="line">      name: &quot;default-nginx&quot;</span><br><span class="line">      template:</span><br><span class="line">        metadata:</span><br><span class="line">          name: web</span><br><span class="line">        spec:</span><br><span class="line">          containers:</span><br><span class="line">            - image: nginx</span><br><span class="line">              imagePullPolicy: IfNotPresent</span><br><span class="line">              name: nginx</span><br><span class="line">              resources:</span><br><span class="line">                requests:</span><br><span class="line">                  cpu: &quot;1&quot;</span><br><span class="line">          restartPolicy: OnFailure</span><br></pre></td></tr></table></figure>
+
+<p> 关键字段</p>
+<ul>
+<li>schedulerName</li>
+</ul>
+<p>schedulerName表示该job的pod所使用的调度器，默认值为volcano，也可指定为default-scheduler。它也是tasks.template.spec.schedulerName的默认值。</p>
+<ul>
+<li>minAvailable</li>
+</ul>
+<p>minAvailable表示运行该job所要运行的<strong>最少</strong>pod数量。只有当job中处于running状态的pod数量不小于minAvailable时，才认为该job运行正常。</p>
+<ul>
+<li>volumes</li>
+</ul>
+<p>volumes表示该job的挂卷配置。volumes配置遵从kubernetes volumes配置要求。</p>
+<ul>
+<li>tasks.replicas</li>
+</ul>
+<p>tasks.replicas表示某个task pod的副本数。</p>
+<ul>
+<li>tasks.template</li>
+</ul>
+<p>tasks.template表示某个task pod的具体配置定义。</p>
+<ul>
+<li>tasks.policies</li>
+</ul>
+<p>tasks.policies表示某个task的生命周期策略。</p>
+<ul>
+<li>policies</li>
+</ul>
+<p>policies表示job中所有task的默认生命周期策略，在tasks.policies不配置时使用该策略。</p>
+<ul>
+<li>plugins</li>
+</ul>
+<p>plugins表示该job在调度过程中使用的插件。</p>
+<ul>
+<li>queue</li>
+</ul>
+<p>queue表示该job所属的队列。</p>
+<ul>
+<li>priorityClassName</li>
+</ul>
+<p>priorityClassName表示该job优先级，在抢占调度和优先级排序中生效。</p>
+<ul>
+<li>maxRetry</li>
+</ul>
+<p>maxRetry表示当该job可以进行的最大重启次数</p>
+<h3 id="工作流"><a href="#工作流" class="headerlink" title="工作流"></a>工作流</h3><p><img src="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20231007170305.png"></p>
+<h3 id="状态转换"><a href="#状态转换" class="headerlink" title="状态转换"></a>状态转换</h3><p>这里列一下podgroup对象的状态转换, 只有理解了这个状态转换后才能对生产上出现的意料之外的问题进行快速排查,在后文中也会多次出现这个转换过程</p>
+<p><img src="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20231007170553.png"></p>
+<p>本节大体介绍了volcano中比较重要的一些名词概念，volcano支持的东西比较多，所以不同的配置可能会产生截然不同的效果，接下来会结合生产情况来说明这些action&#x2F;plugin是如何协调工作的以及在哪些场景下怎么配置效果最佳</p>
+<h3 id="参考文章"><a href="#参考文章" class="headerlink" title="参考文章:"></a><strong>参考文章:</strong></h3><blockquote>
+<ul>
+<li><a target="_blank" rel="noopener" href="https://volcano.sh/">https://volcano.sh</a></li>
+<li><a target="_blank" rel="noopener" href="https://qiankunli.github.io/2021/09/30/volcano.html">https://qiankunli.github.io/2021/09/30/volcano.html</a></li>
+<li><a target="_blank" rel="noopener" href="https://zhuanlan.zhihu.com/p/349695188">https://zhuanlan.zhihu.com/p/349695188</a></li>
+<li><a target="_blank" rel="noopener" href="http://yost.top/2020/08/04/volcano-code-review">http://yost.top/2020/08/04/volcano-code-review</a></li>
+</ul>
+</blockquote>
+<h3 id="转载请注明原作者-周淑科-https-izsk-me"><a href="#转载请注明原作者-周淑科-https-izsk-me" class="headerlink" title="转载请注明原作者: 周淑科(https://izsk.me)"></a><strong>转载请注明原作者: 周淑科(<a target="_blank" rel="noopener" href="https://izsk.me/">https://izsk.me</a>)</strong></h3>
+      
+    </div>
+
+    <div>
+      
+        
+<div id="wechat_subscriber" style="display: block; padding: 10px 0; margin: 20px auto; width: 100%; text-align: center">
+    <img id="wechat_subscriber_qcode" src="/images/websitecode250.png" alt=" wechat" style="width: 200px; max-width: 100%;"/>
+    <div>Scan Me To Read on Phone</div>
+</div>
+
+
+      
+    </div>
+
+    <div>
+      
+        
+  <div style="padding: 10px 0; margin: 20px auto; width: 90%; text-align: center;">
+    <div>I know you won't do this,but what if you did?</div>
+    <button id="rewardButton" disable="enable" onclick="var qr = document.getElementById('QR'); if (qr.style.display === 'none') {qr.style.display='block';} else {qr.style.display='none'}">
+      <span>赏</span>
+    </button>
+    <div id="QR" style="display: none;">
+      
+        <div id="wechat" style="display: inline-block">
+          <img id="wechat_qr" src="/images/wechatpayme.png" alt=" WeChat Pay"/>
+          <p>微信打赏</p>
+        </div>
+      
+      
+        <div id="alipay" style="display: inline-block">
+          <img id="alipay_qr" src="/images/alipayme.jpg" alt=" Alipay"/>
+          <p>支付宝打赏</p>
+        </div>
+      
+    </div>
+  </div>
+
+
+      
+    </div>
+
+
+    <footer class="post-footer">
+      
+        <div class="post-tags">
+          
+            <a href="/tags/HPC/" rel="tag"># HPC</a>
+          
+        </div>
+      
+
+      
+        <div class="post-nav">
+          <div class="post-nav-next post-nav-item">
+            
+              <a href="/2023/09/26/cilium-on-kubernetes-network-models-config/" rel="next" title="cilium在kubernetes中的生产实践三(cilium网络模型之关键配置)">
+                <i class="fa fa-chevron-left"></i> cilium在kubernetes中的生产实践三(cilium网络模型之关键配置)
+              </a>
+            
+          </div>
+
+          <span class="post-nav-divider"></span>
+
+          <div class="post-nav-prev post-nav-item">
+            
+          </div>
+        </div>
+      
+
+      
+      
+    </footer>
+  </article>
+
+
+
+    <div class="post-spread">
+      
+    </div>
+  </div>
+
+
+          </div>
+          
+
+
+          
+  <div class="comments" id="comments">
+    
+  </div>
+
+
+        </div>
+        
+          
+  
+  <div class="sidebar-toggle">
+    <div class="sidebar-toggle-line-wrap">
+      <span class="sidebar-toggle-line sidebar-toggle-line-first"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-middle"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-last"></span>
+    </div>
+  </div>
+
+  <aside id="sidebar" class="sidebar">
+    <div class="sidebar-inner">
+
+      
+
+      
+        <ul class="sidebar-nav motion-element">
+          <li class="sidebar-nav-toc sidebar-nav-active" data-target="post-toc-wrap" >
+            文章目录
+          </li>
+          <li class="sidebar-nav-overview" data-target="site-overview">
+            站点概览
+          </li>
+        </ul>
+      
+
+      <section class="site-overview sidebar-panel">
+        <div class="site-author motion-element" itemprop="author" itemscope itemtype="http://schema.org/Person">
+          <img class="site-author-image" itemprop="image"
+               src="/images/avatar.gif"
+               alt="" />
+          <p class="site-author-name" itemprop="name"></p>
+          <p class="site-description motion-element" itemprop="description"></p>
+        </div>
+        <nav class="site-state motion-element">
+        
+          
+            <div class="site-state-item site-state-posts">
+              <a href="/archives">
+                <span class="site-state-item-count">209</span>
+                <span class="site-state-item-name">日志</span>
+              </a>
+            </div>
+          
+
+          
+            <div class="site-state-item site-state-categories">
+              <a href="/categories">
+                <span class="site-state-item-count">15</span>
+                <span class="site-state-item-name">分类</span>
+              </a>
+            </div>
+          
+
+          
+            <div class="site-state-item site-state-tags">
+              <a href="/tags">
+                <span class="site-state-item-count">15</span>
+                <span class="site-state-item-name">标签</span>
+              </a>
+            </div>
+          
+
+        </nav>
+
+        
+
+        <div class="links-of-author motion-element">
+          
+        </div>
+
+        
+        
+
+        
+        
+
+        
+
+
+      </section>
+
+      
+      <!--noindex-->
+        <section class="post-toc-wrap motion-element sidebar-panel sidebar-panel-active">
+          <div class="post-toc">
+
+            
+              
+            
+
+            
+              <div class="post-toc-content"><ol class="nav"><li class="nav-item nav-level-3"><a class="nav-link" href="#%E6%9E%B6%E6%9E%84%E5%9B%BE"><span class="nav-number">1.</span> <span class="nav-text">架构图</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#session"><span class="nav-number">2.</span> <span class="nav-text">session</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#cache"><span class="nav-number">3.</span> <span class="nav-text">cache</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#action"><span class="nav-number">4.</span> <span class="nav-text">action</span></a><ol class="nav-child"><li class="nav-item nav-level-4"><a class="nav-link" href="#enqueue"><span class="nav-number">4.1.</span> <span class="nav-text">enqueue</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#allocate"><span class="nav-number">4.2.</span> <span class="nav-text">allocate</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#reclaim"><span class="nav-number">4.3.</span> <span class="nav-text">reclaim</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#preempt"><span class="nav-number">4.4.</span> <span class="nav-text">preempt</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#backfill"><span class="nav-number">4.5.</span> <span class="nav-text">backfill</span></a></li></ol></li><li class="nav-item nav-level-3"><a class="nav-link" href="#plugins"><span class="nav-number">5.</span> <span class="nav-text">plugins</span></a><ol class="nav-child"><li class="nav-item nav-level-4"><a class="nav-link" href="#gang"><span class="nav-number">5.1.</span> <span class="nav-text">gang</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#Binpack"><span class="nav-number">5.2.</span> <span class="nav-text">Binpack</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#Priority"><span class="nav-number">5.3.</span> <span class="nav-text">Priority</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#DRF"><span class="nav-number">5.4.</span> <span class="nav-text">DRF</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#Proportion"><span class="nav-number">5.5.</span> <span class="nav-text">Proportion</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#Predicates"><span class="nav-number">5.6.</span> <span class="nav-text">Predicates</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#Task-topology"><span class="nav-number">5.7.</span> <span class="nav-text">Task-topology</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#Nodeorder"><span class="nav-number">5.8.</span> <span class="nav-text">Nodeorder</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#SLA"><span class="nav-number">5.9.</span> <span class="nav-text">SLA</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#Tdm"><span class="nav-number">5.10.</span> <span class="nav-text">Tdm</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#Numa-aware"><span class="nav-number">5.11.</span> <span class="nav-text">Numa-aware</span></a></li></ol></li><li class="nav-item nav-level-3"><a class="nav-link" href="#CRD"><span class="nav-number">6.</span> <span class="nav-text">CRD</span></a><ol class="nav-child"><li class="nav-item nav-level-4"><a class="nav-link" href="#queue"><span class="nav-number">6.1.</span> <span class="nav-text">queue</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#podgroup"><span class="nav-number">6.2.</span> <span class="nav-text">podgroup</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#vcjob"><span class="nav-number">6.3.</span> <span class="nav-text">vcjob</span></a></li></ol></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E5%B7%A5%E4%BD%9C%E6%B5%81"><span class="nav-number">7.</span> <span class="nav-text">工作流</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E7%8A%B6%E6%80%81%E8%BD%AC%E6%8D%A2"><span class="nav-number">8.</span> <span class="nav-text">状态转换</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E5%8F%82%E8%80%83%E6%96%87%E7%AB%A0"><span class="nav-number">9.</span> <span class="nav-text">参考文章:</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E8%BD%AC%E8%BD%BD%E8%AF%B7%E6%B3%A8%E6%98%8E%E5%8E%9F%E4%BD%9C%E8%80%85-%E5%91%A8%E6%B7%91%E7%A7%91-https-izsk-me"><span class="nav-number">10.</span> <span class="nav-text">转载请注明原作者: 周淑科(https:&#x2F;&#x2F;izsk.me)</span></a></li></ol></div>
+            
+
+          </div>
+        </section>
+      <!--/noindex-->
+      
+
+    </div>
+  </aside>
+
+
+        
+      </div>
+    </main>
+
+    <footer id="footer" class="footer">
+      <div class="footer-inner">
+        <div class="copyright" >
+  
+  &copy; 
+  <span itemprop="copyrightYear">2023</span>
+  <span class="with-love">
+    <i class="fa fa-heart"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">Z.S.K.</span>
+</div>
+
+
+<div class="powered-by">
+  Supported by <a class="theme-link" target="_blank" rel="noopener" href="https://hexo.io">Hexo</a>
+</div>
+
+<div class="theme-info">
+  Theme -
+  <a class="theme-link" target="_blank" rel="noopener" href="https://github.com/iissnan/hexo-theme-next">
+    NexT.Mist
+  </a>
+</div>
+
+
+        
+
+        
+      </div>
+    </footer>
+
+    <div class="back-to-top">
+      <i class="fa fa-arrow-up"></i>
+    </div>
+  </div>
+
+  
+
+<script type="text/javascript">
+  if (Object.prototype.toString.call(window.Promise) !== '[object Function]') {
+    window.Promise = null;
+  }
+</script>
+
+
+
+
+
+
+
+
+
+  
+
+
+
+  
+  <script type="text/javascript" src="/lib/jquery/index.js?v=2.1.3"></script>
+
+  
+  <script type="text/javascript" src="/lib/fastclick/lib/fastclick.min.js?v=1.0.6"></script>
+
+  
+  <script type="text/javascript" src="/lib/jquery_lazyload/jquery.lazyload.js?v=1.9.7"></script>
+
+  
+  <script type="text/javascript" src="/lib/velocity/velocity.min.js?v=1.2.1"></script>
+
+  
+  <script type="text/javascript" src="/lib/velocity/velocity.ui.min.js?v=1.2.1"></script>
+
+  
+  <script type="text/javascript" src="/lib/fancybox/source/jquery.fancybox.pack.js?v=2.1.5"></script>
+
+
+  
+
+
+  <script type="text/javascript" src="/js/src/utils.js?v=5.1.0"></script>
+
+  <script type="text/javascript" src="/js/src/motion.js?v=5.1.0"></script>
+
+
+
+  
+  
+
+  
+  <script type="text/javascript" src="/js/src/scrollspy.js?v=5.1.0"></script>
+<script type="text/javascript" src="/js/src/post-details.js?v=5.1.0"></script>
+
+
+
+  
+
+
+  <script type="text/javascript" src="/js/src/bootstrap.js?v=5.1.0"></script>
+
+
+
+  
+
+
+
+  
+
+
+
+
+	
+
+
+
+
+
+  
+
+
+
+
+  
+  
+  <script type="text/javascript">
+    // Popup Window;
+    var isfetched = false;
+    // Search DB path;
+    var search_path = "search.xml";
+    if (search_path.length == 0) {
+      search_path = "search.xml";
+    }
+    var path = "/" + search_path;
+    // monitor main search box;
+
+    function proceedsearch() {
+      $("body").append('<div class="popoverlay">').css('overflow', 'hidden');
+      $('.popup').toggle();
+    }
+    // search function;
+    var searchFunc = function(path, search_id, content_id) {
+      'use strict';
+      $.ajax({
+        url: path,
+        dataType: "xml",
+        async: true,
+        success: function( xmlResponse ) {
+          // get the contents from search data
+          isfetched = true;
+          $('.popup').detach().appendTo('.header-inner');
+          var datas = $( "entry", xmlResponse ).map(function() {
+            return {
+              title: $( "title", this ).text(),
+              content: $("content",this).text(),
+              url: $( "url" , this).text()
+            };
+          }).get();
+          var $input = document.getElementById(search_id);
+          var $resultContent = document.getElementById(content_id);
+          $input.addEventListener('input', function(){
+            var matchcounts = 0;
+            var str='<ul class=\"search-result-list\">';
+            var keywords = this.value.trim().toLowerCase().split(/[\s\-]+/);
+            $resultContent.innerHTML = "";
+            if (this.value.trim().length > 1) {
+              // perform local searching
+              datas.forEach(function(data) {
+                var isMatch = false;
+                var content_index = [];
+                var data_title = data.title.trim().toLowerCase();
+                var data_content = data.content.trim().replace(/<[^>]+>/g,"").toLowerCase();
+                var data_url = decodeURIComponent(data.url);
+                var index_title = -1;
+                var index_content = -1;
+                var first_occur = -1;
+                // only match artiles with not empty titles and contents
+                if(data_title != '') {
+                  keywords.forEach(function(keyword, i) {
+                    index_title = data_title.indexOf(keyword);
+                    index_content = data_content.indexOf(keyword);
+                    if( index_title >= 0 || index_content >= 0 ){
+                      isMatch = true;
+                      if (i == 0) {
+                        first_occur = index_content;
+                      }
+                    }
+
+                  });
+                }
+                // show search results
+                if (isMatch) {
+                  matchcounts += 1;
+                  str += "<li><a href='"+ data_url +"' class='search-result-title'>"+ data_title +"</a>";
+                  var content = data.content.trim().replace(/<[^>]+>/g,"");
+                  if (first_occur >= 0) {
+                    // cut out 100 characters
+                    var start = first_occur - 20;
+                    var end = first_occur + 80;
+                    if(start < 0){
+                      start = 0;
+                    }
+                    if(start == 0){
+                      end = 50;
+                    }
+                    if(end > content.length){
+                      end = content.length;
+                    }
+                    var match_content = content.substring(start, end);
+                    // highlight all keywords
+                    keywords.forEach(function(keyword){
+                      var regS = new RegExp(keyword, "gi");
+                      match_content = match_content.replace(regS, "<b class=\"search-keyword\">"+keyword+"</b>");
+                    });
+
+                    str += "<p class=\"search-result\">" + match_content +"...</p>"
+                  }
+                  str += "</li>";
+                }
+              })};
+            str += "</ul>";
+            if (matchcounts == 0) { str = '<div id="no-result"><i class="fa fa-frown-o fa-5x" /></div>' }
+            if (keywords == "") { str = '<div id="no-result"><i class="fa fa-search fa-5x" /></div>' }
+            $resultContent.innerHTML = str;
+          });
+          proceedsearch();
+        }
+      });}
+
+    // handle and trigger popup window;
+    $('.popup-trigger').click(function(e) {
+      e.stopPropagation();
+      if (isfetched == false) {
+        searchFunc(path, 'local-search-input', 'local-search-result');
+      } else {
+        proceedsearch();
+      };
+    });
+
+    $('.popup-btn-close').click(function(e){
+      $('.popup').hide();
+      $(".popoverlay").remove();
+      $('body').css('overflow', '');
+    });
+    $('.popup').click(function(e){
+      e.stopPropagation();
+    });
+  </script>
+
+
+  
+
+  
+
+  
+
+  
+
+
+</body>
+</html>
