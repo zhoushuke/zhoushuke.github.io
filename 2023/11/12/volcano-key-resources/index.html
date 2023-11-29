@@ -95,7 +95,7 @@
 <meta property="og:image" content="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20231007170305.png">
 <meta property="og:image" content="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20231007170553.png">
 <meta property="article:published_time" content="2023-11-12T14:30:53.000Z">
-<meta property="article:modified_time" content="2023-11-28T12:19:57.449Z">
+<meta property="article:modified_time" content="2023-11-29T11:17:56.956Z">
 <meta property="article:author" content="Z.S.K.">
 <meta property="article:tag" content="HPC">
 <meta name="twitter:card" content="summary">
@@ -400,7 +400,7 @@
 <p>注: 业务各有不同, 作者的选型及观点可能并不适用其它人<br>此篇为: volcano如何应对大规模任务系列之volcano关键对象</p>
 <span id="more"></span>
 
-<p>本系列总体分为以下几块内容:<br>volcano如何应对大规模任务系列之volcano开篇介绍<br>volcano如何应对大规模任务系列之volcano关键对象<br>volcano如何应对大规模任务系列之volcano插件系统<br>volcano如何应对大规模任务系列之volcano源码解析<br>volcano如何应对大规模任务系列之volcano优化之道<br>volcano如何应对大规模任务系列之volcano生产实践<br>volcano如何应对大规模任务系列之volcano总结建议</p>
+<p>本系列总体分为以下几块内容:<br><a target="_blank" rel="noopener" href="https://izsk.me/2023/08/31/volcano-introduction/">volcano如何应对大规模任务系列之volcano开篇介绍</a><br>volcano如何应对大规模任务系列之volcano关键对象<br>volcano如何应对大规模任务系列之volcano插件系统<br>volcano如何应对大规模任务系列之volcano源码解析<br>volcano如何应对大规模任务系列之volcano优化之道<br>volcano如何应对大规模任务系列之volcano生产实践<br>volcano如何应对大规模任务系列之volcano总结建议</p>
 <p><strong>本系列的所用volcano版本基于v1.7.0</strong></p>
 <h3 id="架构图"><a href="#架构图" class="headerlink" title="架构图"></a>架构图</h3><p><img src="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20231007170014.png"></p>
 <p>Volcano由scheduler、controllermanager、admission这三个核心组件及一个命令行工具vcctl组成:</p>
@@ -446,8 +446,7 @@
 <h4 id="preempt"><a href="#preempt" class="headerlink" title="preempt"></a>preempt</h4><p>Preempt action是调度流程中的抢占步骤，用于处理高优先级调度问题。<strong>Preempt用于同一个Queue中job之间的抢占，或同一Job下Task之间的抢占</strong></p>
 <h4 id="backfill"><a href="#backfill" class="headerlink" title="backfill"></a>backfill</h4><p>Backfill action是调度流程中的回填步骤，处理待调度Pod列表中<strong>没有指明资源申请量的Pod调度</strong>，在对单个Pod执行调度动作的时候，遍历所有的节点，只要节点满足了Pod的调度请求，就将Pod调度到这个节点上。</p>
 <h3 id="plugins"><a href="#plugins" class="headerlink" title="plugins"></a>plugins</h3><p>volcano中包含了很多的plugin, 主要作用是<strong>在action下实现特定的业务逻辑</strong>, 现有的大部分plugin作者都在生产环境应用过，因此有一些生产经验可谈，关注volcano如何应对大规模任务系列之volcano插件系统一节,不过，还是先把所有的plugin简单介绍一下</p>
-<h4 id="gang"><a href="#gang" class="headerlink" title="gang"></a>gang</h4><p>Gang调度策略是volcano-scheduler的核心调度算法之一，它满足了调度过程中的<strong>“All or nothing”</strong>的调度需求，避免Pod的任意调度导致集群资源的浪费。具体算法是，观察Job下的Pod已调度数量是否满足了最小运行数量，当Job的最小运行数量得到满足时，为Job下的所有Pod执行调度动作，否则，不执行。</p>
-<p><strong>kube-scheduler本质上是个串行的调度器，而gang则可实现并行的效果</strong></p>
+<h4 id="gang"><a href="#gang" class="headerlink" title="gang"></a>gang</h4><p>Gang调度策略是volcano-scheduler的核心调度算法之一，它满足了调度过程中的<strong>“All or nothing”</strong>的调度需求，避免Pod的任意调度导致集群资源的浪费。具体算法是，观察Job下的Pod已调度数量是否满足了最小运行数量，当Job的最小运行数量得到满足时，为Job下的所有Pod执行调度动作，否则，不执行。<br><strong>kube-scheduler本质上是个串行的调度器，而gang则可实现并行的效果</strong></p>
 <h4 id="Binpack"><a href="#Binpack" class="headerlink" title="Binpack"></a>Binpack</h4><p>binpack调度算法的目标是<strong>尽量把已有的节点填满（尽量不往空白节点分配）</strong>。具体实现上，binpack调度算法是给可以投递的节点打分，分数越高表示节点的资源利用率越高。binpack算法能够尽可能填满节点，将应用负载靠拢在部分节点</p>
 <p>Binpack算法以插件的形式，注入到volcano-scheduler调度过程中，将应用在Pod优选节点的阶段。Volcano-scheduler在计算binpack算法时，会考虑Pod请求的各种资源，并根据各种资源所配置的权重做平均。每种资源在节点分值计算过程中的权重并不一样，这取决于管理员为每种资源配置的权重值。同时不同的插件在计算节点分数时，也需要分配不同的权重，scheduler也为binpack插件设置了分数权重。</p>
 <p><strong>工作节点上的应用拥塞程度跟binpack的设定的参数有很大关系</strong></p>
@@ -458,7 +457,7 @@
 <h4 id="Predicates"><a href="#Predicates" class="headerlink" title="Predicates"></a>Predicates</h4><p>Predicate plugin通过pod、nodeInfo作为参数，调用predicateGPU，根据计算结果对作业进行评估预选</p>
 <h4 id="Task-topology"><a href="#Task-topology" class="headerlink" title="Task-topology"></a>Task-topology</h4><p>Task-topology算法是一种根据Job内task之间亲和性和反亲和性配置计算task优先级和Node优先级的算法。通过在Job内配置task之间的亲和性和反亲和性策略，并使用task-topology算法，可优先将具有亲和性配置的task调度到同一个节点上，将具有反亲和性配置的Pod调度到不同的节点上</p>
 <h4 id="Nodeorder"><a href="#Nodeorder" class="headerlink" title="Nodeorder"></a>Nodeorder</h4><p>Nodeorder plugin是一种调度优选策略：通过模拟分配从各个维度为node打分，找到最适合当前作业的node。打分参数由用户来配置。参数包含了Affinity、reqResource，、LeastReqResource、MostReqResource、balanceReqResouce</p>
-<p><strong>跟binpack一样, nodeorder的不现参数，对节点的调度结果有很在的不同</strong></p>
+<p><strong>跟binpack一样, nodeorder的不同参数，对节点的调度结果有很大的不同</strong></p>
 <h4 id="SLA"><a href="#SLA" class="headerlink" title="SLA"></a>SLA</h4><p>SLA的全称是Service Level agreement。用户向volcano提交job的时候，可能会给job增加特殊的约束，例如最长等待时间(JobWaitingTime)。这些约束条件可以视为用户与volcano之间的服务协议。SLA plugin可以为单个作业&#x2F;整个集群接收或者发送SLA参数</p>
 <h4 id="Tdm"><a href="#Tdm" class="headerlink" title="Tdm"></a>Tdm</h4><p>Tdm的全称是Time Division Multiplexing。在一些场景中，一些节点既属于Kubernetes集群也属于Yarn集群。Tdm plugin 需要管理员为这些节点标记为<code>revocable node</code>。Tdm plugin会在该类节点可被撤销的时间段内尝试把<code>preemptable task</code>调度给<code>revocable node</code>，并在该时间段之外清除<code>revocable node</code>上的<code>preemptable task</code>。<strong>Tdm plugin提高了volcano在调度过程中节点资源的分时复用能力</strong></p>
 <h4 id="Numa-aware"><a href="#Numa-aware" class="headerlink" title="Numa-aware"></a>Numa-aware</h4><p>当节点运行多个cpu密集的pod。基于pod是否可以迁移cpu已经调度周期cpu资源状况，工作负载可以迁移到不同的cpu核心下。许多工作负载对cpu资源迁移并不敏感。然而，有一些cpu的缓存亲和度以及调度延迟显著影响性能的工作负载，kubelet允许可选的cpu编排策略(cpu management)来确定节点上cpu资源的绑定分配</p>
@@ -551,6 +550,7 @@
 <h3 id="参考文章"><a href="#参考文章" class="headerlink" title="参考文章:"></a><strong>参考文章:</strong></h3><blockquote>
 <ul>
 <li><a target="_blank" rel="noopener" href="https://volcano.sh/">https://volcano.sh</a></li>
+<li><a target="_blank" rel="noopener" href="https://izsk.me/2023/08/31/volcano-introduction/">https://izsk.me/2023/08/31/volcano-introduction/</a></li>
 <li><a target="_blank" rel="noopener" href="https://qiankunli.github.io/2021/09/30/volcano.html">https://qiankunli.github.io/2021/09/30/volcano.html</a></li>
 <li><a target="_blank" rel="noopener" href="https://zhuanlan.zhihu.com/p/349695188">https://zhuanlan.zhihu.com/p/349695188</a></li>
 <li><a target="_blank" rel="noopener" href="http://yost.top/2020/08/04/volcano-code-review">http://yost.top/2020/08/04/volcano-code-review</a></li>
