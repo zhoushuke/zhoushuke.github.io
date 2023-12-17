@@ -1,0 +1,984 @@
+<!doctype html>
+
+
+
+  
+
+
+<html class="theme-next mist use-motion" lang="zh-Hans">
+<head>
+  <meta charset="UTF-8"/>
+<meta http-equiv="X-UA-Compatible" content="IE=edge" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1"/>
+
+
+
+<meta http-equiv="Cache-Control" content="no-transform" />
+<meta http-equiv="Cache-Control" content="no-siteapp" />
+
+
+
+
+
+
+
+
+
+
+
+
+  
+  
+  <link href="/lib/fancybox/source/jquery.fancybox.css?v=2.1.5" rel="stylesheet" type="text/css" />
+
+
+
+
+  
+  
+  
+  
+
+  
+    
+    
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+    
+    
+    <link href="//fonts.googleapis.com/css?family=Lato:300,300italic,400,400italic,700,700italic&subset=latin,latin-ext" rel="stylesheet" type="text/css">
+  
+
+
+
+
+
+
+<link href="/lib/font-awesome/css/font-awesome.min.css?v=4.6.2" rel="stylesheet" type="text/css" />
+
+<link href="/css/main.css?v=5.1.0" rel="stylesheet" type="text/css" />
+
+
+  <meta name="keywords" content="Kubernetes," />
+
+
+
+
+
+
+
+
+  <link rel="shortcut icon" type="image/x-icon" href="/favicon.ico?v=5.1.0" />
+
+
+
+
+
+
+<meta name="description" content="书接上一篇Kubernetes之List参数使用不当引发的ETCD网络风暴说最近排查了一个因业务层使用List接口时因参数使用不当引起的etcd压力极速增长的问题, 该篇将按图索骥来看看ListOption在源码是如何处理的">
+<meta property="og:type" content="article">
+<meta property="og:title" content="Kubernetes之ListOption参数源码分析">
+<meta property="og:url" content="https://zhoushuke.github.io/2023/12/16/Kubernetes-listOption-2/index.html">
+<meta property="og:site_name" content="Z.S.K.&#39;s Records">
+<meta property="og:description" content="书接上一篇Kubernetes之List参数使用不当引发的ETCD网络风暴说最近排查了一个因业务层使用List接口时因参数使用不当引起的etcd压力极速增长的问题, 该篇将按图索骥来看看ListOption在源码是如何处理的">
+<meta property="og:locale">
+<meta property="og:image" content="https://arthurchiao.art/assets/img/k8s-reliability-list-data/apiserver-processing-list-request.png">
+<meta property="article:published_time" content="2023-12-16T03:30:53.000Z">
+<meta property="article:modified_time" content="2023-12-17T05:02:09.329Z">
+<meta property="article:author" content="Z.S.K.">
+<meta property="article:tag" content="Kubernetes">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:image" content="https://arthurchiao.art/assets/img/k8s-reliability-list-data/apiserver-processing-list-request.png">
+
+
+
+<script type="text/javascript" id="hexo.configurations">
+  var NexT = window.NexT || {};
+  var CONFIG = {
+    root: '',
+    scheme: 'Mist',
+    sidebar: {"position":"left","display":"post"},
+    fancybox: true,
+    motion: true,
+    duoshuo: {
+      userId: 'undefined',
+      author: '博主'
+    },
+    algolia: {
+      applicationID: '',
+      apiKey: '',
+      indexName: '',
+      hits: {"per_page":10},
+      labels: {"input_placeholder":"Search for Posts","hits_empty":"We didn't find any results for the search: ${query}","hits_stats":"${hits} results found in ${time} ms"}
+    }
+  };
+</script>
+
+
+
+  <link rel="canonical" href="https://zhoushuke.github.io/2023/12/16/Kubernetes-listOption-2/"/>
+
+
+
+
+
+  <title> Kubernetes之ListOption参数源码分析 | Z.S.K.'s Records </title>
+<meta name="generator" content="Hexo 6.2.0"></head>
+
+<body itemscope itemtype="http://schema.org/WebPage" lang="zh-Hans">
+
+  
+
+
+
+
+
+
+
+
+
+
+  
+  
+    
+  
+
+  <div class="container one-collumn sidebar-position-left page-post-detail ">
+    <div class="headband"></div>
+
+    <header id="header" class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-meta ">
+  
+
+  <div class="custom-logo-site-title">
+    <a href="/"  class="brand" rel="start">
+      <span class="logo-line-before"><i></i></span>
+      <span class="site-title">Z.S.K.'s Records</span>
+      <span class="logo-line-after"><i></i></span>
+    </a>
+  </div>
+    
+      <p class="site-subtitle"></p>
+    
+</div>
+
+<div class="site-nav-toggle">
+  <button>
+    <span class="btn-bar"></span>
+    <span class="btn-bar"></span>
+    <span class="btn-bar"></span>
+  </button>
+</div>
+
+<nav class="site-nav">
+  
+
+  
+    <ul id="menu" class="menu">
+      
+        
+        <li class="menu-item menu-item-home">
+          <a href="/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-home"></i> <br />
+            
+            首页
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-categories">
+          <a href="/categories" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-th"></i> <br />
+            
+            分类
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-about">
+          <a href="/about/ZSK-Profile.pdf" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-user"></i> <br />
+            
+            简历
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-archives">
+          <a href="/archives" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-archive"></i> <br />
+            
+            归档
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-tags">
+          <a href="/tags" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-tags"></i> <br />
+            
+            标签
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-commonweal">
+          <a href="/404.html" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-heartbeat"></i> <br />
+            
+            公益404
+          </a>
+        </li>
+      
+
+      
+        <li class="menu-item menu-item-search">
+          
+            <a href="javascript:;" class="popup-trigger">
+          
+            
+              <i class="menu-item-icon fa fa-search fa-fw"></i> <br />
+            
+            搜索
+          </a>
+        </li>
+      
+    </ul>
+  
+
+  
+    <div class="site-search">
+      
+  <div class="popup">
+ <span class="search-icon fa fa-search"></span>
+ <input type="text" id="local-search-input">
+ <div id="local-search-result"></div>
+ <span class="popup-btn-close">close</span>
+</div>
+
+
+    </div>
+  
+</nav>
+
+
+
+ </div>
+    </header>
+
+    <main id="main" class="main">
+      <div class="main-inner">
+        <div class="content-wrap">
+          <div id="content" class="content">
+            
+
+  <div id="posts" class="posts-expand">
+    
+
+  
+
+  
+  
+  
+
+  <article class="post post-type-normal " itemscope itemtype="http://schema.org/Article">
+  <link itemprop="mainEntityOfPage" href="https://zhoushuke.github.io/2023/12/16/Kubernetes-listOption-2/">
+
+  <span style="display:none" itemprop="author" itemscope itemtype="http://schema.org/Person">
+    <meta itemprop="name" content="">
+    <meta itemprop="description" content="">
+    <meta itemprop="image" content="/images/avatar.gif">
+  </span>
+
+  <span style="display:none" itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+    <meta itemprop="name" content="Z.S.K.'s Records">
+    <span style="display:none" itemprop="logo" itemscope itemtype="http://schema.org/ImageObject">
+      <img style="display:none;" itemprop="url image" alt="Z.S.K.'s Records" src="">
+    </span>
+  </span>
+
+    
+      <header class="post-header">
+
+        
+        
+          <h1 class="post-title" itemprop="name headline">
+            
+            
+              
+                Kubernetes之ListOption参数源码分析
+              
+            
+          </h1>
+        
+
+        <div class="post-meta">
+          <span class="post-time">
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">发表于</span>
+              
+              <time title="Post created" itemprop="dateCreated datePublished" datetime="2023-12-16T11:30:53+08:00">
+                2023-12-16
+              </time>
+            
+
+            
+
+            
+          </span>
+
+          
+            <span class="post-category" >
+            
+              <span class="post-meta-divider">|</span>
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-folder-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">分类于</span>
+              
+              
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/Kubernetes/" itemprop="url" rel="index">
+                    <span itemprop="name">Kubernetes</span>
+                  </a>
+                </span>
+
+                
+                
+              
+            </span>
+          
+
+          
+            
+          
+
+          
+
+          
+          
+
+          
+
+          
+
+        </div>
+      </header>
+    
+
+
+    <div class="post-body" itemprop="articleBody">
+
+      
+      
+
+      
+        <p>书接上一篇<a target="_blank" rel="noopener" href="https://izsk.me/2023/12/14/Kubernetes-listOption-1/">Kubernetes之List参数使用不当引发的ETCD网络风暴</a>说最近排查了一个因业务层使用List接口时因参数使用不当引起的etcd压力极速增长的问题, 该篇将按图索骥来看看ListOption在源码是如何处理的</p>
+<span id="more"></span>
+
+
+<h3 id="处理逻辑"><a href="#处理逻辑" class="headerlink" title="处理逻辑"></a>处理逻辑</h3><p><code>kube-apiserver</code> <code>LIST</code> 请求处理逻辑可以看到下图<a target="_blank" rel="noopener" href="https://arthurchiao.art/blog/k8s-reliability-list-data-zh/">原图地址</a>：</p>
+<p><img src="https://arthurchiao.art/assets/img/k8s-reliability-list-data/apiserver-processing-list-request.png"></p>
+<p>以上可以看到，系统路径中存在<strong>两级 List&#x2F;ListWatch</strong>（<strong>但数据是同一份</strong>）：</p>
+<ol>
+<li>apiserver List&#x2F;ListWatch etcd</li>
+<li>其它对象如controller&#x2F;operator List&#x2F;ListWatch apiserver</li>
+</ol>
+<p>因此，从最简形式上来说，<strong>apiserver 就是挡在 etcd 前面的一个代理</strong>（proxy），</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line">  +--------+              +---------------+                 +------------+</span><br><span class="line">  | Client | -----------&gt; | Proxy (cache) | --------------&gt; | Data store |</span><br><span class="line">  +--------+              +---------------+                 +------------+</span><br><span class="line"></span><br><span class="line">infra services               apiserver                         etcd</span><br></pre></td></tr></table></figure>
+
+<p>对于List请求可归类为两种：</p>
+<ol>
+<li>apiserver直接从自己的缓存中读数据</li>
+<li>apiserver跳过缓存，直接从etcd读数据</li>
+</ol>
+<p>还是以使用client-go中listJob为例, 常见写法:</p>
+<figure class="highlight go"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">// ListJobs lists all jobs details.</span></span><br><span class="line"><span class="function"><span class="keyword">func</span> <span class="title">ListJobs</span><span class="params">()</span></span> <span class="type">error</span> &#123;</span><br><span class="line">    config, err := util.BuildConfig(listJobFlags.Master, listJobFlags.Kubeconfig)</span><br><span class="line">    <span class="keyword">if</span> err != <span class="literal">nil</span> &#123;</span><br><span class="line">        <span class="keyword">return</span> err</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="keyword">if</span> listJobFlags.allNamespace &#123;</span><br><span class="line">        listJobFlags.Namespace = <span class="string">&quot;&quot;</span></span><br><span class="line">    &#125;</span><br><span class="line">    jobClient := versioned.NewForConfigOrDie(config)</span><br><span class="line">    jobs, err := jobClient.BatchV1alpha1().Jobs(listJobFlags.Namespace).List(context.TODO(), metav1.ListOptions&#123;&#125;)</span><br><span class="line">    <span class="keyword">if</span> err != <span class="literal">nil</span> &#123;</span><br><span class="line">        <span class="keyword">return</span> err</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    <span class="keyword">if</span> <span class="built_in">len</span>(jobs.Items) == <span class="number">0</span> &#123;</span><br><span class="line">        fmt.Printf(<span class="string">&quot;No resources found\n&quot;</span>)</span><br><span class="line">        <span class="keyword">return</span> <span class="literal">nil</span></span><br><span class="line">    &#125;</span><br><span class="line">    PrintJobs(jobs, os.Stdout)</span><br><span class="line"></span><br><span class="line">    <span class="keyword">return</span> <span class="literal">nil</span></span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>来看看ListOptions的struct, 这里因篇幅有限，所以将注释去除了</p>
+<p> <strong>kubernetes based on v1.22</strong></p>
+<h3 id="ListOptions"><a href="#ListOptions" class="headerlink" title="ListOptions"></a>ListOptions</h3><figure class="highlight go"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">// pkg/apis/meta/v1/types.go</span></span><br><span class="line"><span class="keyword">type</span> ListOptions <span class="keyword">struct</span> &#123;</span><br><span class="line">    TypeMeta <span class="string">`json:&quot;,inline&quot;`</span></span><br><span class="line"></span><br><span class="line">    LabelSelector <span class="type">string</span> <span class="string">`json:&quot;labelSelector,omitempty&quot; protobuf:&quot;bytes,1,opt,name=labelSelector&quot;`</span></span><br><span class="line"></span><br><span class="line">    FieldSelector <span class="type">string</span> <span class="string">`json:&quot;fieldSelector,omitempty&quot; protobuf:&quot;bytes,2,opt,name=fieldSelector&quot;`</span></span><br><span class="line"></span><br><span class="line">    Watch <span class="type">bool</span> <span class="string">`json:&quot;watch,omitempty&quot; protobuf:&quot;varint,3,opt,name=watch&quot;`</span></span><br><span class="line"></span><br><span class="line">    AllowWatchBookmarks <span class="type">bool</span> <span class="string">`json:&quot;allowWatchBookmarks,omitempty&quot; protobuf:&quot;varint,9,opt,name=allowWatchBookmarks&quot;`</span></span><br><span class="line"></span><br><span class="line"></span><br><span class="line">    ResourceVersion <span class="type">string</span> <span class="string">`json:&quot;resourceVersion,omitempty&quot; protobuf:&quot;bytes,4,opt,name=resourceVersion&quot;`</span></span><br><span class="line"></span><br><span class="line">    ResourceVersionMatch ResourceVersionMatch <span class="string">`json:&quot;resourceVersionMatch,omitempty&quot; protobuf:&quot;bytes,10,opt,name=resourceVersionMatch,casttype=ResourceVersionMatch&quot;`</span></span><br><span class="line"></span><br><span class="line">    TimeoutSeconds *<span class="type">int64</span> <span class="string">`json:&quot;timeoutSeconds,omitempty&quot; protobuf:&quot;varint,5,opt,name=timeoutSeconds&quot;`</span></span><br><span class="line"></span><br><span class="line">    Limit <span class="type">int64</span> <span class="string">`json:&quot;limit,omitempty&quot; protobuf:&quot;varint,7,opt,name=limit&quot;`</span></span><br><span class="line"></span><br><span class="line">    Continue <span class="type">string</span> <span class="string">`json:&quot;continue,omitempty&quot; protobuf:&quot;bytes,8,opt,name=continue&quot;`</span></span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<ol>
+<li>LabelSelector&#x2F;FieldSelector: 标签选择器与字段选择器, 上文提到, <strong>etcd只是KV存储，并不理解label&#x2F;field这些信息，因此在etcd层面无法处理这些过滤条件</strong>。 所以如果是没走apiserver的缓存直接到达etcd的实际的过程是：apiserver 从 etcd 拉全量数据，然后在内存做过滤，再返回给客户端</li>
+<li>Watch及AllowWatchBookmarks: AllowWatchBookmarks也是个很有用的功能，但并不是本文的重点，并不展开说明</li>
+<li>ResourceVersion&#x2F;ResourceVersionMatch: 资源版本</li>
+<li>Limit: 分页功能, 最常见的例子是kubectl命令行工具,会自动将请求加上limit&#x3D;500这个查询参数, 可以使用kubectl –v&#x3D;8看到</li>
+<li>Continue: 是个token,是否期望从server端返回最多的结果</li>
+</ol>
+<p>这里主要会聚焦ResourceVersion</p>
+<p>从上面可以看出ResousrceVersion的默认类型为string,所以默认值为空，来看看apiserver <code>List()</code> 操作源码分析</p>
+<h3 id="List-调用链"><a href="#List-调用链" class="headerlink" title="List()调用链"></a><code>List()调用链</code></h3><figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br></pre></td><td class="code"><pre><span class="line">store.List</span><br><span class="line">|-store.ListPredicate</span><br><span class="line">   |-<span class="keyword">if</span> opt == nil</span><br><span class="line">   |   opt = ListOptions&#123;ResourceVersion: <span class="string">&quot;&quot;</span>&#125;</span><br><span class="line">   |-Init SelectionPredicate.Limit/Continue fileld</span><br><span class="line">   |-list := e.NewListFunc()                               // objects will be stored <span class="keyword">in</span> this list</span><br><span class="line">   |-storageOpts := storage.ListOptions&#123;opt.ResourceVersion, opt.ResourceVersionMatch, Predicate: p&#125;</span><br><span class="line">   |</span><br><span class="line">   |-<span class="keyword">if</span> MatchesSingle ok                                   // 1. when <span class="string">&quot;metadata.name&quot;</span> is specified,  get single obj</span><br><span class="line">   |   // Get single obj from cache or etcd</span><br><span class="line">   |</span><br><span class="line">   |-<span class="built_in">return</span> e.Storage.List(KeyRootFunc(ctx), storageOpts)  // 2. get all objs and perform filtering</span><br><span class="line">      |-cacher.List()</span><br><span class="line">         | // <span class="keyword">case</span> 1: list all from etcd and filter <span class="keyword">in</span> apiserver</span><br><span class="line">         |-<span class="keyword">if</span> shouldDelegateList(opts)                     // <span class="literal">true</span> <span class="keyword">if</span> resourceVersion == <span class="string">&quot;&quot;</span></span><br><span class="line">         |    <span class="built_in">return</span> c.storage.List                        // list from etcd</span><br><span class="line">         |             |- fromRV *int64 = nil</span><br><span class="line">         |             |- <span class="keyword">if</span> len(storageOpts.ResourceVersion) &gt; 0</span><br><span class="line">         |             |     rv = ParseResourceVersion</span><br><span class="line">         |             |     fromRV = &amp;rv</span><br><span class="line">         |             |</span><br><span class="line">         |             |- <span class="keyword">for</span> hasMore &#123;</span><br><span class="line">         |             |    objs := etcdclient.KV.Get()</span><br><span class="line">         |             |    filter(objs)                   // filter by labels or filelds</span><br><span class="line">         |             | &#125;</span><br><span class="line">         |</span><br><span class="line">         | // <span class="keyword">case</span> 2: list &amp; filter from apiserver <span class="built_in">local</span> cache (memory)</span><br><span class="line">         |-<span class="keyword">if</span> cache.notready()</span><br><span class="line">         |   <span class="built_in">return</span> c.storage.List                         // get from etcd</span><br><span class="line">         |</span><br><span class="line">         | // <span class="keyword">case</span> 3: list &amp; filter from apiserver <span class="built_in">local</span> cache (memory)</span><br><span class="line">         |-obj := watchCache.WaitUntilFreshAndGet</span><br><span class="line">         |-<span class="keyword">for</span> elem <span class="keyword">in</span> obj.(*storeElement)</span><br><span class="line">         |   listVal.Set()                                 // append results to listOjb</span><br><span class="line">         |-<span class="built_in">return</span>  // results stored <span class="keyword">in</span> listObj</span><br></pre></td></tr></table></figure>
+
+<h3 id="store"><a href="#store" class="headerlink" title="store"></a>store</h3><h4 id="List"><a href="#List" class="headerlink" title="List()"></a><code>List()</code></h4><figure class="highlight go"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">// staging/src/k8s.io/apiserver/pkg/registry/generic/registry/store.go</span></span><br><span class="line"></span><br><span class="line"><span class="comment">// List returns a list of items matching labels and field according to the</span></span><br><span class="line"><span class="comment">// store&#x27;s PredicateFunc.</span></span><br><span class="line"><span class="function"><span class="keyword">func</span> <span class="params">(e *Store)</span></span> List(ctx context.Context, options *metainternalversion.ListOptions) (runtime.Object, <span class="type">error</span>) &#123;</span><br><span class="line">    label := labels.Everything()</span><br><span class="line">    <span class="keyword">if</span> options != <span class="literal">nil</span> &amp;&amp; options.LabelSelector != <span class="literal">nil</span> &#123;</span><br><span class="line">        label = options.LabelSelector</span><br><span class="line">    &#125;</span><br><span class="line">    field := fields.Everything()</span><br><span class="line">    <span class="keyword">if</span> options != <span class="literal">nil</span> &amp;&amp; options.FieldSelector != <span class="literal">nil</span> &#123;</span><br><span class="line">        field = options.FieldSelector</span><br><span class="line">    &#125;</span><br><span class="line">    out, err := e.ListPredicate(ctx, e.PredicateFunc(label, field), options)</span><br><span class="line">    <span class="keyword">if</span> err != <span class="literal">nil</span> &#123;</span><br><span class="line">        <span class="keyword">return</span> <span class="literal">nil</span>, err</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="keyword">if</span> e.Decorator != <span class="literal">nil</span> &#123;</span><br><span class="line">        e.Decorator(out)</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="keyword">return</span> out, <span class="literal">nil</span></span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<h4 id="ListPredicate"><a href="#ListPredicate" class="headerlink" title="ListPredicate()"></a><code>ListPredicate()</code></h4><figure class="highlight go"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">// staging/src/k8s.io/apiserver/pkg/registry/generic/registry/store.go</span></span><br><span class="line"></span><br><span class="line"><span class="comment">// ListPredicate returns a list of all the items matching the given</span></span><br><span class="line"><span class="comment">// SelectionPredicate.</span></span><br><span class="line"><span class="function"><span class="keyword">func</span> <span class="params">(e *Store)</span></span> ListPredicate(ctx context.Context, p storage.SelectionPredicate, options *metainternalversion.ListOptions) (runtime.Object, <span class="type">error</span>) &#123;</span><br><span class="line">    <span class="keyword">if</span> options == <span class="literal">nil</span> &#123;</span><br><span class="line">        <span class="comment">// By default we should serve the request from etcd.</span></span><br><span class="line">        options = &amp;metainternalversion.ListOptions&#123;ResourceVersion: <span class="string">&quot;&quot;</span>&#125;</span><br><span class="line">    &#125;</span><br><span class="line">    p.Limit = options.Limit</span><br><span class="line">    p.Continue = options.Continue</span><br><span class="line">    list := e.NewListFunc()</span><br><span class="line">    qualifiedResource := e.qualifiedResourceFromContext(ctx)</span><br><span class="line">    storageOpts := storage.ListOptions&#123;ResourceVersion: options.ResourceVersion, ResourceVersionMatch: options.ResourceVersionMatch, Predicate: p&#125;</span><br><span class="line">    <span class="keyword">if</span> name, ok := p.MatchesSingle(); ok &#123;</span><br><span class="line">        <span class="keyword">if</span> key, err := e.KeyFunc(ctx, name); err == <span class="literal">nil</span> &#123;</span><br><span class="line">            err := e.Storage.GetToList(ctx, key, storageOpts, list)</span><br><span class="line">            <span class="keyword">return</span> list, storeerr.InterpretListError(err, qualifiedResource)</span><br><span class="line">        &#125;</span><br><span class="line">        <span class="comment">// if we cannot extract a key based on the current context, the optimization is skipped</span></span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    err := e.Storage.List(ctx, e.KeyRootFunc(ctx), storageOpts, list)</span><br><span class="line">    <span class="keyword">return</span> list, storeerr.InterpretListError(err, qualifiedResource)</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p><code>ListPredicate()</code>中:</p>
+<ol>
+<li><p>如果客户端没传 **<code>ListOption</code>**，则初始化一个默认值，其中的 <code>ResourceVersion</code> 设置为空字符串;</p>
+</li>
+<li><p>用 listoptions 中的字段分别<strong>初始化过滤器</strong>（SelectionPredicate）的 limit&#x2F;continue 字段；</p>
+</li>
+<li><p>初始化返回结果，<code>list := e.NewListFunc()</code>；</p>
+</li>
+<li><p>将 API 侧的 ListOption 转成底层存储的 ListOption;</p>
+</li>
+<li><p>p.MatchesSingle()判断请求中是否指定了metadata.name,如果指定了，说明是查询单个对象，因为 <code>Name</code> 是唯一的，接下来转入查询单个 object 的逻辑；</p>
+</li>
+<li><p>如果p.MatchesSingle()不成立，则需要<strong>获取全量数据</strong>，然后在 apiserver 内存中根据 SelectionPredicate 中的过滤条件进行过滤，将最终结果返回给客户端；</p>
+</li>
+</ol>
+<p>最终<code>e.Storage.GetToList()/e.Storage.List()</code>会执行到cacher。这两个funciont很相似</p>
+<p>不管是获取单个 object，还是获取全量数据，都经历类似的过程：</p>
+<ol>
+<li>优先从 apiserver 本地缓存获取（决定因素包括 ResourceVersion 等），</li>
+<li>不得已才到 etcd 去获取；</li>
+</ol>
+<h3 id="apiserver-cache"><a href="#apiserver-cache" class="headerlink" title="apiserver cache"></a>apiserver cache</h3><h4 id="List-1"><a href="#List-1" class="headerlink" title="List()"></a><code>List()</code></h4><figure class="highlight go"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br><span class="line">58</span><br><span class="line">59</span><br><span class="line">60</span><br><span class="line">61</span><br><span class="line">62</span><br><span class="line">63</span><br><span class="line">64</span><br><span class="line">65</span><br><span class="line">66</span><br><span class="line">67</span><br><span class="line">68</span><br><span class="line">69</span><br><span class="line">70</span><br><span class="line">71</span><br><span class="line">72</span><br><span class="line">73</span><br><span class="line">74</span><br><span class="line">75</span><br><span class="line">76</span><br><span class="line">77</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">// staging/src/k8s.io/apiserver/pkg/storage/cacher/cacher.go</span></span><br><span class="line"></span><br><span class="line"><span class="comment">// List implements storage.Interface.</span></span><br><span class="line"><span class="function"><span class="keyword">func</span> <span class="params">(c *Cacher)</span></span> List(ctx context.Context, key <span class="type">string</span>, opts storage.ListOptions, listObj runtime.Object) <span class="type">error</span> &#123;</span><br><span class="line">    resourceVersion := opts.ResourceVersion</span><br><span class="line">    pred := opts.Predicate</span><br><span class="line">    <span class="comment">// 是否必须从 etcd 读</span></span><br><span class="line">    <span class="keyword">if</span> shouldDelegateList(opts) &#123;</span><br><span class="line">        <span class="keyword">return</span> c.storage.List(ctx, key, opts, listObj)</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    <span class="comment">// If resourceVersion is specified, serve it from cache.</span></span><br><span class="line">    <span class="comment">// It&#x27;s guaranteed that the returned value is at least that</span></span><br><span class="line">    <span class="comment">// fresh as the given resourceVersion.</span></span><br><span class="line">    listRV, err := c.versioner.ParseResourceVersion(resourceVersion)</span><br><span class="line">    <span class="keyword">if</span> err != <span class="literal">nil</span> &#123;</span><br><span class="line">        <span class="keyword">return</span> err</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="comment">// 如果缓存还没有建立好，只能从 etcd 读</span></span><br><span class="line">    <span class="keyword">if</span> listRV == <span class="number">0</span> &amp;&amp; !c.ready.check() &#123;</span><br><span class="line">        <span class="comment">// If Cacher is not yet initialized and we don&#x27;t require any specific</span></span><br><span class="line">        <span class="comment">// minimal resource version, simply forward the request to storage.</span></span><br><span class="line">        <span class="keyword">return</span> c.storage.List(ctx, key, opts, listObj)</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    trace := utiltrace.New(<span class="string">&quot;cacher list&quot;</span>, utiltrace.Field&#123;<span class="string">&quot;type&quot;</span>, c.objectType.String()&#125;)</span><br><span class="line">    <span class="keyword">defer</span> trace.LogIfLong(<span class="number">500</span> * time.Millisecond)</span><br><span class="line"></span><br><span class="line">    c.ready.wait()</span><br><span class="line">    trace.Step(<span class="string">&quot;Ready&quot;</span>)</span><br><span class="line"></span><br><span class="line">    <span class="comment">// 情况三：apiserver 缓存正常，从缓存读：保证返回的 objects 版本不低于 `listRV`</span></span><br><span class="line">    <span class="comment">// List elements with at least &#x27;listRV&#x27; from cache.</span></span><br><span class="line">    listPtr, err := meta.GetItemsPtr(listObj)</span><br><span class="line">    <span class="keyword">if</span> err != <span class="literal">nil</span> &#123;</span><br><span class="line">        <span class="keyword">return</span> err</span><br><span class="line">    &#125;</span><br><span class="line">    listVal, err := conversion.EnforcePtr(listPtr)</span><br><span class="line">    <span class="keyword">if</span> err != <span class="literal">nil</span> &#123;</span><br><span class="line">        <span class="keyword">return</span> err</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="keyword">if</span> listVal.Kind() != reflect.Slice &#123;</span><br><span class="line">        <span class="keyword">return</span> fmt.Errorf(<span class="string">&quot;need a pointer to slice, got %v&quot;</span>, listVal.Kind())</span><br><span class="line">    &#125;</span><br><span class="line">    filter := filterWithAttrsFunction(key, pred)</span><br><span class="line"></span><br><span class="line">    objs, readResourceVersion, err := c.watchCache.WaitUntilFreshAndList(listRV, pred.MatcherIndex(), trace)</span><br><span class="line">    <span class="keyword">if</span> err != <span class="literal">nil</span> &#123;</span><br><span class="line">        <span class="keyword">return</span> err</span><br><span class="line">    &#125;</span><br><span class="line">    trace.Step(<span class="string">&quot;Listed items from cache&quot;</span>, utiltrace.Field&#123;<span class="string">&quot;count&quot;</span>, <span class="built_in">len</span>(objs)&#125;)</span><br><span class="line">    <span class="keyword">if</span> <span class="built_in">len</span>(objs) &gt; listVal.Cap() &amp;&amp; pred.Label.Empty() &amp;&amp; pred.Field.Empty() &#123;</span><br><span class="line">        <span class="comment">// Resize the slice appropriately, since we already know that none</span></span><br><span class="line">        <span class="comment">// of the elements will be filtered out.</span></span><br><span class="line">        listVal.Set(reflect.MakeSlice(reflect.SliceOf(c.objectType.Elem()), <span class="number">0</span>, <span class="built_in">len</span>(objs)))</span><br><span class="line">        trace.Step(<span class="string">&quot;Resized result&quot;</span>)</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="keyword">for</span> _, obj := <span class="keyword">range</span> objs &#123;</span><br><span class="line">        elem, ok := obj.(*storeElement)</span><br><span class="line">        <span class="keyword">if</span> !ok &#123;</span><br><span class="line">            <span class="keyword">return</span> fmt.Errorf(<span class="string">&quot;non *storeElement returned from storage: %v&quot;</span>, obj)</span><br><span class="line">        &#125;</span><br><span class="line">        <span class="comment">// 真正的过滤</span></span><br><span class="line">        <span class="keyword">if</span> filter(elem.Key, elem.Labels, elem.Fields) &#123;</span><br><span class="line">            listVal.Set(reflect.Append(listVal, reflect.ValueOf(elem.Object).Elem()))</span><br><span class="line">        &#125;</span><br><span class="line">    &#125;</span><br><span class="line">    trace.Step(<span class="string">&quot;Filtered items&quot;</span>, utiltrace.Field&#123;<span class="string">&quot;count&quot;</span>, listVal.Len()&#125;)</span><br><span class="line"></span><br><span class="line">    <span class="comment">// 更新最后一次读到的 ResourceVersion</span></span><br><span class="line">    <span class="keyword">if</span> c.versioner != <span class="literal">nil</span> &#123;</span><br><span class="line">        <span class="keyword">if</span> err := c.versioner.UpdateList(listObj, readResourceVersion, <span class="string">&quot;&quot;</span>, <span class="literal">nil</span>); err != <span class="literal">nil</span> &#123;</span><br><span class="line">            <span class="keyword">return</span> err</span><br><span class="line">        &#125;</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="keyword">return</span> <span class="literal">nil</span></span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<h4 id="shouldDelegateList"><a href="#shouldDelegateList" class="headerlink" title="shouldDelegateList()"></a><code>shouldDelegateList()</code></h4><p>判断是否必须从 etcd 读数据</p>
+<figure class="highlight go"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">// staging/src/k8s.io/apiserver/pkg/storage/cacher/cacher.go</span></span><br><span class="line"></span><br><span class="line"><span class="function"><span class="keyword">func</span> <span class="title">shouldDelegateList</span><span class="params">(opts storage.ListOptions)</span></span> <span class="type">bool</span> &#123;</span><br><span class="line">    resourceVersion := opts.ResourceVersion</span><br><span class="line">    pred := opts.Predicate</span><br><span class="line">    pagingEnabled := utilfeature.DefaultFeatureGate.Enabled(features.APIListChunking)</span><br><span class="line">    hasContinuation := pagingEnabled &amp;&amp; <span class="built_in">len</span>(pred.Continue) &gt; <span class="number">0</span></span><br><span class="line">    hasLimit := pagingEnabled &amp;&amp; pred.Limit &gt; <span class="number">0</span> &amp;&amp; resourceVersion != <span class="string">&quot;0&quot;</span></span><br><span class="line"></span><br><span class="line">    <span class="comment">// If resourceVersion is not specified, serve it from underlying</span></span><br><span class="line">    <span class="comment">// storage (for backward compatibility). If a continuation is</span></span><br><span class="line">    <span class="comment">// requested, serve it from the underlying storage as well.</span></span><br><span class="line">    <span class="comment">// Limits are only sent to storage when resourceVersion is non-zero</span></span><br><span class="line">    <span class="comment">// since the watch cache isn&#x27;t able to perform continuations, and</span></span><br><span class="line">    <span class="comment">// limits are ignored when resource version is zero</span></span><br><span class="line">    <span class="keyword">return</span> resourceVersion == <span class="string">&quot;&quot;</span> || hasContinuation || hasLimit || opts.ResourceVersionMatch == metav1.ResourceVersionMatchExact</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>这里非常重要：</p>
+<ol>
+<li><p>客户端未设置 ListOption{} 中的 <code>ResourceVersion</code> 字段，对应到这里的 <code>resourceVersion == &quot;&quot;</code></p>
+</li>
+<li><p>客户端设置了 <code>limit=500&amp;resourceVersion=0</code> 不会导致下次 <code>hasContinuation==true</code>，因为<strong>resourceVersion&#x3D;0 将导致 limit 被忽略</strong>（<code>hasLimit</code> 那一行代码），也就是说， 虽然指定了 limit&#x3D;500，但<strong>这个请求会返回全量数据</strong>。</p>
+</li>
+<li><p>ResourceVersionMatch的作用是用来告诉 apiserver，该如何解读 ResourceVersion。官方的详细说明<a target="_blank" rel="noopener" href="https://kubernetes.io/docs/reference/using-api/api-concepts/#the-resourceversion-parameter">表格</a> ，有兴趣可以看看。</p>
+</li>
+</ol>
+<p>接下来再返回到 cacher 的 <code>GetList()</code> 逻辑，来看下具体有哪几种处理情况。</p>
+<p>ListOption要求从 etcd 读数据</p>
+<p>有两种情况:</p>
+<ol>
+<li>当客户端要求必须从etcd读取数据时，适用于数据一致性要求极其高的场景</li>
+<li>当apiserver缓存还没有创建好时，比如apiserver重启到ready这阶段</li>
+</ol>
+<p>apiserver 会直接从 etcd 读取所有 objects 并过滤，然后返回给客户端， 适用于数据一致性要求极其高的场景。 当然，也容易误入这种场景造成 etcd 压力过大</p>
+<p>这里将会从cache的<code>GetList()</code>转到etcd的<code>List()</code></p>
+<h4 id="etcd-List"><a href="#etcd-List" class="headerlink" title="etcd List()"></a><code>etcd List()</code></h4><figure class="highlight go"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br><span class="line">58</span><br><span class="line">59</span><br><span class="line">60</span><br><span class="line">61</span><br><span class="line">62</span><br><span class="line">63</span><br><span class="line">64</span><br><span class="line">65</span><br><span class="line">66</span><br><span class="line">67</span><br><span class="line">68</span><br><span class="line">69</span><br><span class="line">70</span><br><span class="line">71</span><br><span class="line">72</span><br><span class="line">73</span><br><span class="line">74</span><br><span class="line">75</span><br><span class="line">76</span><br><span class="line">77</span><br><span class="line">78</span><br><span class="line">79</span><br><span class="line">80</span><br><span class="line">81</span><br><span class="line">82</span><br><span class="line">83</span><br><span class="line">84</span><br><span class="line">85</span><br><span class="line">86</span><br><span class="line">87</span><br><span class="line">88</span><br><span class="line">89</span><br><span class="line">90</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">//staging/src/k8s.io/apiserver/pkg/storage/etcd3/store.go</span></span><br><span class="line"></span><br><span class="line"><span class="comment">// List implements storage.Interface.List.</span></span><br><span class="line"><span class="function"><span class="keyword">func</span> <span class="params">(s *store)</span></span> List(ctx context.Context, key <span class="type">string</span>, opts storage.ListOptions, listObj runtime.Object) <span class="type">error</span> &#123;</span><br><span class="line">    resourceVersion := opts.ResourceVersion</span><br><span class="line">    match := opts.ResourceVersionMatch</span><br><span class="line">    pred := opts.Predicate</span><br><span class="line"></span><br><span class="line">    <span class="comment">// ...</span></span><br><span class="line"></span><br><span class="line">    <span class="comment">// set the appropriate clientv3 options to filter the returned data set</span></span><br><span class="line">    <span class="keyword">var</span> paging <span class="type">bool</span></span><br><span class="line">    options := <span class="built_in">make</span>([]clientv3.OpOption, <span class="number">0</span>, <span class="number">4</span>)</span><br><span class="line">    <span class="keyword">if</span> s.pagingEnabled &amp;&amp; pred.Limit &gt; <span class="number">0</span> &#123;</span><br><span class="line">        paging = <span class="literal">true</span></span><br><span class="line">        options = <span class="built_in">append</span>(options, clientv3.WithLimit(pred.Limit))</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    newItemFunc := getNewItemFunc(listObj, v)</span><br><span class="line"></span><br><span class="line">    <span class="keyword">var</span> fromRV *<span class="type">uint64</span></span><br><span class="line">    <span class="comment">// 如果 RV 非空</span></span><br><span class="line">    <span class="keyword">if</span> <span class="built_in">len</span>(resourceVersion) &gt; <span class="number">0</span> &#123;</span><br><span class="line">        parsedRV, err := s.versioner.ParseResourceVersion(resourceVersion)</span><br><span class="line">        <span class="keyword">if</span> err != <span class="literal">nil</span> &#123;</span><br><span class="line">            <span class="keyword">return</span> apierrors.NewBadRequest(fmt.Sprintf(<span class="string">&quot;invalid resource version: %v&quot;</span>, err))</span><br><span class="line">        &#125;</span><br><span class="line">        fromRV = &amp;parsedRV</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    <span class="keyword">var</span> returnedRV, continueRV, withRev <span class="type">int64</span></span><br><span class="line">    <span class="keyword">var</span> continueKey <span class="type">string</span></span><br><span class="line"></span><br><span class="line">    <span class="comment">// ResourceVersion, ResourceVersionMatch 等处理逻辑</span></span><br><span class="line">    <span class="keyword">switch</span> &#123;</span><br><span class="line">    <span class="comment">// ...</span></span><br><span class="line">    &#125;</span><br><span class="line">    <span class="keyword">if</span> withRev != <span class="number">0</span> &#123;</span><br><span class="line">        options = <span class="built_in">append</span>(options, clientv3.WithRev(withRev))</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    <span class="comment">// loop until we have filled the requested limit from etcd or there are no more results</span></span><br><span class="line">    <span class="keyword">var</span> lastKey []<span class="type">byte</span></span><br><span class="line">    <span class="keyword">var</span> hasMore <span class="type">bool</span></span><br><span class="line">    <span class="keyword">var</span> getResp *clientv3.GetResponse</span><br><span class="line">    <span class="keyword">for</span> &#123;</span><br><span class="line">        getResp = s.client.KV.Get(ctx, key, options...) <span class="comment">// 从 etcd 拉数据</span></span><br><span class="line">        numFetched += <span class="built_in">len</span>(getResp.Kvs)</span><br><span class="line">        hasMore = getResp.More</span><br><span class="line">        <span class="comment">// ...</span></span><br><span class="line"></span><br><span class="line">        <span class="comment">// take items from the response until the bucket is full, filtering as we go</span></span><br><span class="line">        <span class="keyword">for</span> _, kv := <span class="keyword">range</span> getResp.Kvs &#123;</span><br><span class="line">            <span class="keyword">if</span> paging &amp;&amp; <span class="type">int64</span>(v.Len()) &gt;= pred.Limit &#123;</span><br><span class="line">                hasMore = <span class="literal">true</span></span><br><span class="line">                <span class="keyword">break</span></span><br><span class="line">            &#125;</span><br><span class="line">            lastKey = kv.Key</span><br><span class="line"></span><br><span class="line">            data, _, err := s.transformer.TransformFromStorage(kv.Value, authenticatedDataString(kv.Key))</span><br><span class="line">            <span class="comment">// ...</span></span><br><span class="line">        &#125;</span><br><span class="line"></span><br><span class="line">        <span class="comment">// ...</span></span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    <span class="comment">// instruct the client to begin querying from immediately after the last key we returned</span></span><br><span class="line">    <span class="comment">// we never return a key that the client wouldn&#x27;t be allowed to see</span></span><br><span class="line">    <span class="keyword">if</span> hasMore &#123;</span><br><span class="line">        <span class="comment">// we want to start immediately after the last key</span></span><br><span class="line">        next, err := encodeContinue(<span class="type">string</span>(lastKey)+<span class="string">&quot;\x00&quot;</span>, keyPrefix, returnedRV)</span><br><span class="line">        <span class="keyword">if</span> err != <span class="literal">nil</span> &#123;</span><br><span class="line">            <span class="keyword">return</span> err</span><br><span class="line">        &#125;</span><br><span class="line">        <span class="keyword">var</span> remainingItemCount *<span class="type">int64</span></span><br><span class="line">        <span class="comment">// getResp.Count counts in objects that do not match the pred.</span></span><br><span class="line">        <span class="comment">// Instead of returning inaccurate count for non-empty selectors, we return nil.</span></span><br><span class="line">        <span class="comment">// Only set remainingItemCount if the predicate is empty.</span></span><br><span class="line">        <span class="keyword">if</span> utilfeature.DefaultFeatureGate.Enabled(features.RemainingItemCount) &#123;</span><br><span class="line">            <span class="keyword">if</span> pred.Empty() &#123;</span><br><span class="line">                c := <span class="type">int64</span>(getResp.Count - pred.Limit)</span><br><span class="line">                remainingItemCount = &amp;c</span><br><span class="line">            &#125;</span><br><span class="line">        &#125;</span><br><span class="line">        <span class="keyword">return</span> s.versioner.UpdateList(listObj, <span class="type">uint64</span>(returnedRV), next, remainingItemCount)</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    <span class="comment">// no continuation</span></span><br><span class="line">    <span class="keyword">return</span> s.versioner.UpdateList(listObj, <span class="type">uint64</span>(returnedRV), <span class="string">&quot;&quot;</span>, <span class="literal">nil</span>)</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<ul>
+<li><strong><code>client.KV.Get()</code></strong> 就进入 etcd client 库了</li>
+<li><strong><code>appendListItem()</code></strong> 会<strong>对拿到的数据进行过滤</strong>，这就是我们第一节提到的 apiserver 内存过滤操作。</li>
+</ul>
+<h4 id="apiserver使用本地缓存"><a href="#apiserver使用本地缓存" class="headerlink" title="apiserver使用本地缓存"></a>apiserver使用本地缓存</h4><figure class="highlight go"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">// staging/src/k8s.io/apiserver/pkg/storage/cacher/cacher.go</span></span><br><span class="line"></span><br><span class="line"><span class="comment">// GetList implements storage.Interface</span></span><br><span class="line"><span class="function"><span class="keyword">func</span> <span class="params">(c *Cacher)</span></span> List(ctx , key <span class="type">string</span>, opts storage.ListOptions, listObj runtime.Object) <span class="type">error</span></span><br><span class="line">    &#123;</span><br><span class="line">    <span class="comment">// 情况一：ListOption 要求必须从 etcd 读</span></span><br><span class="line">    <span class="comment">// ...</span></span><br><span class="line">    <span class="comment">// 情况二：apiserver 缓存未建好，只能从 etcd 读,跟情况一一</span></span><br><span class="line">    <span class="comment">// ...</span></span><br><span class="line">    <span class="comment">// 情况三：apiserver 缓存正常，从缓存读：保证返回的 objects 版本不低于 `listRV`</span></span><br><span class="line">    listPtr := meta.GetItemsPtr(listObj) <span class="comment">// List elements with at least &#x27;listRV&#x27; from cache.</span></span><br><span class="line">    listVal := conversion.EnforcePtr(listPtr)</span><br><span class="line">    filter  := filterWithAttrsFunction(key, pred) <span class="comment">// 最终的过滤器</span></span><br><span class="line"></span><br><span class="line">    objs, readResourceVersion, indexUsed := c.listItems(listRV, key, pred, ...) <span class="comment">// 根据 index 预筛，性能优化</span></span><br><span class="line">    <span class="keyword">for</span> _, obj := <span class="keyword">range</span> objs &#123;</span><br><span class="line">        elem := obj.(*storeElement)</span><br><span class="line">        <span class="keyword">if</span> filter(elem.Key, elem.Labels, elem.Fields)                           <span class="comment">// 真正的过滤</span></span><br><span class="line">            listVal.Set(reflect.Append(listVal, reflect.ValueOf(elem))</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    <span class="keyword">if</span> c.versioner != <span class="literal">nil</span></span><br><span class="line">        c.versioner.UpdateList(listObj, readResourceVersion, <span class="string">&quot;&quot;</span>, <span class="literal">nil</span>)</span><br><span class="line">    <span class="keyword">return</span> <span class="literal">nil</span></span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<h3 id="总结建议"><a href="#总结建议" class="headerlink" title="总结建议"></a>总结建议</h3><ol>
+<li>List请求默认设置 <code>ResourceVersion=0</code>以防etcd拉全量数据再过滤，导致，很慢或者扛不住</li>
+<li>不要滥用List接口，如果能使用watch就使用watch</li>
+<li>优先通过 label&#x2F;field selector 在服务端做过滤<br>如果需要缓存某些资源并监听变动，那需要使用 ListWatch 机制，将数据拉到本地，业务逻辑根据需要自己从 local cache 过滤。 这是 client-go 的 ListWatch&#x2F;informer 机制。</li>
+<li>优先使用 namespaced API,<br>etcd 中 namespace 是前缀的一部分，因此能指定 namespace 过滤资源，速度比不是前缀的 selector 快很多,如果要 LIST 的资源在单个或少数几个 namespace，考虑使用 namespaced API：</li>
+</ol>
+<ul>
+<li>Namespaced API: <code>/api/v1/namespaces/&lt;ns&gt;/pods?query=xxx</code></li>
+<li>Un-namespaced API: <code>/api/v1/pods?query=xxx</code></li>
+</ul>
+<ol start="5">
+<li>细化etcd&#x2F;apiserver等核心监控,比如作者之前不怎么关注的网络方面的metrics</li>
+<li>经过上述的方法还是扛不住的话那可以把event等不是很重要的但很具有冲击对象的数据进行etcd分离</li>
+<li>遇到性能问题是最容易出现多方的扯皮, 作者觉得最好的说服方式就是: <strong>直接用数据说话，数据不会骗人</strong></li>
+</ol>
+<h3 id="其它"><a href="#其它" class="headerlink" title="其它"></a>其它</h3><p>本篇主要追了一下ResourceVersion是怎么处理的，但还有很多细节是没有展开的，比如</p>
+<ol>
+<li>ListOption中的其它参数都起到什么作用</li>
+<li>Reflector中ListandWatch关于ResourceVersion又是怎样的</li>
+<li>relist如何使用</li>
+</ol>
+<p>但实在是不想篇幅太长，所以给自己留个作业，下回再探讨</p>
+<h3 id="参考文章"><a href="#参考文章" class="headerlink" title="参考文章:"></a><strong>参考文章:</strong></h3><blockquote>
+<ul>
+<li><a target="_blank" rel="noopener" href="https://izsk.me/2023/12/14/Kubernetes-listOption-1/">Kubernetes之List参数使用不当引发的ETCD网络风暴</a></li>
+<li><a target="_blank" rel="noopener" href="https://kubernetes.io/docs/reference/using-api/api-concepts/">Kubernetes API Concepts</a></li>
+<li><a target="_blank" rel="noopener" href="https://arthurchiao.art/blog/raft-paper-zh/">(译) [论文] Raft 共识算法（及 etcd&#x2F;raft 源码解析）（USENIX, 2014）</a></li>
+<li><a target="_blank" rel="noopener" href="https://arthurchiao.art/blog/k8s-reliability-list-data-zh/">K8s 集群稳定性：LIST 请求源码分析、性能评估与大规模基础服务部署调优</a></li>
+<li><a target="_blank" rel="noopener" href="https://www.cnblogs.com/lianngkyle/p/16272494.html">k8s client-go源码分析 informer源码分析(3)-Reflector源码分析 - 良凯尔 - 博客园</a></li>
+<li><a target="_blank" rel="noopener" href="https://www.cnblogs.com/lianngkyle/p/16272494.html">https://www.cnblogs.com/lianngkyle/p/16272494.html</a></li>
+</ul>
+</blockquote>
+<h3 id="转载请注明原作者-周淑科-https-izsk-me"><a href="#转载请注明原作者-周淑科-https-izsk-me" class="headerlink" title="转载请注明原作者: 周淑科(https://izsk.me)"></a><strong>转载请注明原作者: 周淑科(<a target="_blank" rel="noopener" href="https://izsk.me/">https://izsk.me</a>)</strong></h3>
+      
+    </div>
+
+    <div>
+      
+        
+<div id="wechat_subscriber" style="display: block; padding: 10px 0; margin: 20px auto; width: 100%; text-align: center">
+    <img id="wechat_subscriber_qcode" src="/images/websitecode250.png" alt=" wechat" style="width: 200px; max-width: 100%;"/>
+    <div>Scan Me To Read on Phone</div>
+</div>
+
+
+      
+    </div>
+
+    <div>
+      
+        
+  <div style="padding: 10px 0; margin: 20px auto; width: 90%; text-align: center;">
+    <div>I know you won't do this,but what if you did?</div>
+    <button id="rewardButton" disable="enable" onclick="var qr = document.getElementById('QR'); if (qr.style.display === 'none') {qr.style.display='block';} else {qr.style.display='none'}">
+      <span>赏</span>
+    </button>
+    <div id="QR" style="display: none;">
+      
+        <div id="wechat" style="display: inline-block">
+          <img id="wechat_qr" src="/images/wechatpayme.png" alt=" WeChat Pay"/>
+          <p>微信打赏</p>
+        </div>
+      
+      
+        <div id="alipay" style="display: inline-block">
+          <img id="alipay_qr" src="/images/alipayme.jpg" alt=" Alipay"/>
+          <p>支付宝打赏</p>
+        </div>
+      
+    </div>
+  </div>
+
+
+      
+    </div>
+
+
+    <footer class="post-footer">
+      
+        <div class="post-tags">
+          
+            <a href="/tags/Kubernetes/" rel="tag"># Kubernetes</a>
+          
+        </div>
+      
+
+      
+        <div class="post-nav">
+          <div class="post-nav-next post-nav-item">
+            
+              <a href="/2023/12/14/Kubernetes-listOption-1/" rel="next" title="Kubernetes之ListOptions使用不当引发的ETCD网络风暴">
+                <i class="fa fa-chevron-left"></i> Kubernetes之ListOptions使用不当引发的ETCD网络风暴
+              </a>
+            
+          </div>
+
+          <span class="post-nav-divider"></span>
+
+          <div class="post-nav-prev post-nav-item">
+            
+          </div>
+        </div>
+      
+
+      
+      
+    </footer>
+  </article>
+
+
+
+    <div class="post-spread">
+      
+    </div>
+  </div>
+
+
+          </div>
+          
+
+
+          
+  <div class="comments" id="comments">
+    
+  </div>
+
+
+        </div>
+        
+          
+  
+  <div class="sidebar-toggle">
+    <div class="sidebar-toggle-line-wrap">
+      <span class="sidebar-toggle-line sidebar-toggle-line-first"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-middle"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-last"></span>
+    </div>
+  </div>
+
+  <aside id="sidebar" class="sidebar">
+    <div class="sidebar-inner">
+
+      
+
+      
+        <ul class="sidebar-nav motion-element">
+          <li class="sidebar-nav-toc sidebar-nav-active" data-target="post-toc-wrap" >
+            文章目录
+          </li>
+          <li class="sidebar-nav-overview" data-target="site-overview">
+            站点概览
+          </li>
+        </ul>
+      
+
+      <section class="site-overview sidebar-panel">
+        <div class="site-author motion-element" itemprop="author" itemscope itemtype="http://schema.org/Person">
+          <img class="site-author-image" itemprop="image"
+               src="/images/avatar.gif"
+               alt="" />
+          <p class="site-author-name" itemprop="name"></p>
+          <p class="site-description motion-element" itemprop="description"></p>
+        </div>
+        <nav class="site-state motion-element">
+        
+          
+            <div class="site-state-item site-state-posts">
+              <a href="/archives">
+                <span class="site-state-item-count">211</span>
+                <span class="site-state-item-name">日志</span>
+              </a>
+            </div>
+          
+
+          
+            <div class="site-state-item site-state-categories">
+              <a href="/categories">
+                <span class="site-state-item-count">15</span>
+                <span class="site-state-item-name">分类</span>
+              </a>
+            </div>
+          
+
+          
+            <div class="site-state-item site-state-tags">
+              <a href="/tags">
+                <span class="site-state-item-count">15</span>
+                <span class="site-state-item-name">标签</span>
+              </a>
+            </div>
+          
+
+        </nav>
+
+        
+
+        <div class="links-of-author motion-element">
+          
+        </div>
+
+        
+        
+
+        
+        
+
+        
+
+
+      </section>
+
+      
+      <!--noindex-->
+        <section class="post-toc-wrap motion-element sidebar-panel sidebar-panel-active">
+          <div class="post-toc">
+
+            
+              
+            
+
+            
+              <div class="post-toc-content"><ol class="nav"><li class="nav-item nav-level-3"><a class="nav-link" href="#%E5%A4%84%E7%90%86%E9%80%BB%E8%BE%91"><span class="nav-number">1.</span> <span class="nav-text">处理逻辑</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#ListOptions"><span class="nav-number">2.</span> <span class="nav-text">ListOptions</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#List-%E8%B0%83%E7%94%A8%E9%93%BE"><span class="nav-number">3.</span> <span class="nav-text">List()调用链</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#store"><span class="nav-number">4.</span> <span class="nav-text">store</span></a><ol class="nav-child"><li class="nav-item nav-level-4"><a class="nav-link" href="#List"><span class="nav-number">4.1.</span> <span class="nav-text">List()</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#ListPredicate"><span class="nav-number">4.2.</span> <span class="nav-text">ListPredicate()</span></a></li></ol></li><li class="nav-item nav-level-3"><a class="nav-link" href="#apiserver-cache"><span class="nav-number">5.</span> <span class="nav-text">apiserver cache</span></a><ol class="nav-child"><li class="nav-item nav-level-4"><a class="nav-link" href="#List-1"><span class="nav-number">5.1.</span> <span class="nav-text">List()</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#shouldDelegateList"><span class="nav-number">5.2.</span> <span class="nav-text">shouldDelegateList()</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#etcd-List"><span class="nav-number">5.3.</span> <span class="nav-text">etcd List()</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#apiserver%E4%BD%BF%E7%94%A8%E6%9C%AC%E5%9C%B0%E7%BC%93%E5%AD%98"><span class="nav-number">5.4.</span> <span class="nav-text">apiserver使用本地缓存</span></a></li></ol></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E6%80%BB%E7%BB%93%E5%BB%BA%E8%AE%AE"><span class="nav-number">6.</span> <span class="nav-text">总结建议</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E5%85%B6%E5%AE%83"><span class="nav-number">7.</span> <span class="nav-text">其它</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E5%8F%82%E8%80%83%E6%96%87%E7%AB%A0"><span class="nav-number">8.</span> <span class="nav-text">参考文章:</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E8%BD%AC%E8%BD%BD%E8%AF%B7%E6%B3%A8%E6%98%8E%E5%8E%9F%E4%BD%9C%E8%80%85-%E5%91%A8%E6%B7%91%E7%A7%91-https-izsk-me"><span class="nav-number">9.</span> <span class="nav-text">转载请注明原作者: 周淑科(https:&#x2F;&#x2F;izsk.me)</span></a></li></ol></div>
+            
+
+          </div>
+        </section>
+      <!--/noindex-->
+      
+
+    </div>
+  </aside>
+
+
+        
+      </div>
+    </main>
+
+    <footer id="footer" class="footer">
+      <div class="footer-inner">
+        <div class="copyright" >
+  
+  &copy; 
+  <span itemprop="copyrightYear">2023</span>
+  <span class="with-love">
+    <i class="fa fa-heart"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">Z.S.K.</span>
+</div>
+
+
+<div class="powered-by">
+  Supported by <a class="theme-link" target="_blank" rel="noopener" href="https://hexo.io">Hexo</a>
+</div>
+
+<div class="theme-info">
+  Theme -
+  <a class="theme-link" target="_blank" rel="noopener" href="https://github.com/iissnan/hexo-theme-next">
+    NexT.Mist
+  </a>
+</div>
+
+
+        
+
+        
+      </div>
+    </footer>
+
+    <div class="back-to-top">
+      <i class="fa fa-arrow-up"></i>
+    </div>
+  </div>
+
+  
+
+<script type="text/javascript">
+  if (Object.prototype.toString.call(window.Promise) !== '[object Function]') {
+    window.Promise = null;
+  }
+</script>
+
+
+
+
+
+
+
+
+
+  
+
+
+
+  
+  <script type="text/javascript" src="/lib/jquery/index.js?v=2.1.3"></script>
+
+  
+  <script type="text/javascript" src="/lib/fastclick/lib/fastclick.min.js?v=1.0.6"></script>
+
+  
+  <script type="text/javascript" src="/lib/jquery_lazyload/jquery.lazyload.js?v=1.9.7"></script>
+
+  
+  <script type="text/javascript" src="/lib/velocity/velocity.min.js?v=1.2.1"></script>
+
+  
+  <script type="text/javascript" src="/lib/velocity/velocity.ui.min.js?v=1.2.1"></script>
+
+  
+  <script type="text/javascript" src="/lib/fancybox/source/jquery.fancybox.pack.js?v=2.1.5"></script>
+
+
+  
+
+
+  <script type="text/javascript" src="/js/src/utils.js?v=5.1.0"></script>
+
+  <script type="text/javascript" src="/js/src/motion.js?v=5.1.0"></script>
+
+
+
+  
+  
+
+  
+  <script type="text/javascript" src="/js/src/scrollspy.js?v=5.1.0"></script>
+<script type="text/javascript" src="/js/src/post-details.js?v=5.1.0"></script>
+
+
+
+  
+
+
+  <script type="text/javascript" src="/js/src/bootstrap.js?v=5.1.0"></script>
+
+
+
+  
+
+
+
+  
+
+
+
+
+	
+
+
+
+
+
+  
+
+
+
+
+  
+  
+  <script type="text/javascript">
+    // Popup Window;
+    var isfetched = false;
+    // Search DB path;
+    var search_path = "search.xml";
+    if (search_path.length == 0) {
+      search_path = "search.xml";
+    }
+    var path = "/" + search_path;
+    // monitor main search box;
+
+    function proceedsearch() {
+      $("body").append('<div class="popoverlay">').css('overflow', 'hidden');
+      $('.popup').toggle();
+    }
+    // search function;
+    var searchFunc = function(path, search_id, content_id) {
+      'use strict';
+      $.ajax({
+        url: path,
+        dataType: "xml",
+        async: true,
+        success: function( xmlResponse ) {
+          // get the contents from search data
+          isfetched = true;
+          $('.popup').detach().appendTo('.header-inner');
+          var datas = $( "entry", xmlResponse ).map(function() {
+            return {
+              title: $( "title", this ).text(),
+              content: $("content",this).text(),
+              url: $( "url" , this).text()
+            };
+          }).get();
+          var $input = document.getElementById(search_id);
+          var $resultContent = document.getElementById(content_id);
+          $input.addEventListener('input', function(){
+            var matchcounts = 0;
+            var str='<ul class=\"search-result-list\">';
+            var keywords = this.value.trim().toLowerCase().split(/[\s\-]+/);
+            $resultContent.innerHTML = "";
+            if (this.value.trim().length > 1) {
+              // perform local searching
+              datas.forEach(function(data) {
+                var isMatch = false;
+                var content_index = [];
+                var data_title = data.title.trim().toLowerCase();
+                var data_content = data.content.trim().replace(/<[^>]+>/g,"").toLowerCase();
+                var data_url = decodeURIComponent(data.url);
+                var index_title = -1;
+                var index_content = -1;
+                var first_occur = -1;
+                // only match artiles with not empty titles and contents
+                if(data_title != '') {
+                  keywords.forEach(function(keyword, i) {
+                    index_title = data_title.indexOf(keyword);
+                    index_content = data_content.indexOf(keyword);
+                    if( index_title >= 0 || index_content >= 0 ){
+                      isMatch = true;
+                      if (i == 0) {
+                        first_occur = index_content;
+                      }
+                    }
+
+                  });
+                }
+                // show search results
+                if (isMatch) {
+                  matchcounts += 1;
+                  str += "<li><a href='"+ data_url +"' class='search-result-title'>"+ data_title +"</a>";
+                  var content = data.content.trim().replace(/<[^>]+>/g,"");
+                  if (first_occur >= 0) {
+                    // cut out 100 characters
+                    var start = first_occur - 20;
+                    var end = first_occur + 80;
+                    if(start < 0){
+                      start = 0;
+                    }
+                    if(start == 0){
+                      end = 50;
+                    }
+                    if(end > content.length){
+                      end = content.length;
+                    }
+                    var match_content = content.substring(start, end);
+                    // highlight all keywords
+                    keywords.forEach(function(keyword){
+                      var regS = new RegExp(keyword, "gi");
+                      match_content = match_content.replace(regS, "<b class=\"search-keyword\">"+keyword+"</b>");
+                    });
+
+                    str += "<p class=\"search-result\">" + match_content +"...</p>"
+                  }
+                  str += "</li>";
+                }
+              })};
+            str += "</ul>";
+            if (matchcounts == 0) { str = '<div id="no-result"><i class="fa fa-frown-o fa-5x" /></div>' }
+            if (keywords == "") { str = '<div id="no-result"><i class="fa fa-search fa-5x" /></div>' }
+            $resultContent.innerHTML = str;
+          });
+          proceedsearch();
+        }
+      });}
+
+    // handle and trigger popup window;
+    $('.popup-trigger').click(function(e) {
+      e.stopPropagation();
+      if (isfetched == false) {
+        searchFunc(path, 'local-search-input', 'local-search-result');
+      } else {
+        proceedsearch();
+      };
+    });
+
+    $('.popup-btn-close').click(function(e){
+      $('.popup').hide();
+      $(".popoverlay").remove();
+      $('body').css('overflow', '');
+    });
+    $('.popup').click(function(e){
+      e.stopPropagation();
+    });
+  </script>
+
+
+  
+
+  
+
+  
+
+  
+
+
+</body>
+</html>
