@@ -1,0 +1,933 @@
+<!doctype html>
+
+
+
+  
+
+
+<html class="theme-next mist use-motion" lang="zh-Hans">
+<head>
+  <meta charset="UTF-8"/>
+<meta http-equiv="X-UA-Compatible" content="IE=edge" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1"/>
+
+
+
+<meta http-equiv="Cache-Control" content="no-transform" />
+<meta http-equiv="Cache-Control" content="no-siteapp" />
+
+
+
+
+
+
+
+
+
+
+
+
+  
+  
+  <link href="/lib/fancybox/source/jquery.fancybox.css?v=2.1.5" rel="stylesheet" type="text/css" />
+
+
+
+
+  
+  
+  
+  
+
+  
+    
+    
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+    
+    
+    <link href="//fonts.googleapis.com/css?family=Lato:300,300italic,400,400italic,700,700italic&subset=latin,latin-ext" rel="stylesheet" type="text/css">
+  
+
+
+
+
+
+
+<link href="/lib/font-awesome/css/font-awesome.min.css?v=4.6.2" rel="stylesheet" type="text/css" />
+
+<link href="/css/main.css?v=5.1.0" rel="stylesheet" type="text/css" />
+
+
+  <meta name="keywords" content="HPC," />
+
+
+
+
+
+
+
+
+  <link rel="shortcut icon" type="image/x-icon" href="/favicon.ico?v=5.1.0" />
+
+
+
+
+
+
+<meta name="description" content="volcano做为CNCF目前唯一一款应对大规模资源批调度工具被大家熟知.作者负责的kubernetes集群每天都有大量的任务需要运行, GPU任务、短任务、长任务等等，同时还存在多租户场景、复杂的调度策略等, 依托volcano的高度可插拔能力, 同时结合业务场景进行相应的优化,极大提高了资源使用效率，结果导向明显在此也分享一下整个落地过程,也做为现阶段的一个工作总结, 工作之余尽量更新. 注:">
+<meta property="og:type" content="article">
+<meta property="og:title" content="volcano如何应对大规模任务系列之volcano插件系统">
+<meta property="og:url" content="https://zhoushuke.github.io/2024/05/31/volcano-actions-plugins/index.html">
+<meta property="og:site_name" content="Z.S.K.&#39;s Records">
+<meta property="og:description" content="volcano做为CNCF目前唯一一款应对大规模资源批调度工具被大家熟知.作者负责的kubernetes集群每天都有大量的任务需要运行, GPU任务、短任务、长任务等等，同时还存在多租户场景、复杂的调度策略等, 依托volcano的高度可插拔能力, 同时结合业务场景进行相应的优化,极大提高了资源使用效率，结果导向明显在此也分享一下整个落地过程,也做为现阶段的一个工作总结, 工作之余尽量更新. 注:">
+<meta property="og:locale">
+<meta property="og:image" content="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20231007170305.png">
+<meta property="article:published_time" content="2024-05-31T11:30:53.000Z">
+<meta property="article:modified_time" content="2024-06-04T05:58:18.416Z">
+<meta property="article:author" content="Z.S.K.">
+<meta property="article:tag" content="HPC">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:image" content="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20231007170305.png">
+
+
+
+<script type="text/javascript" id="hexo.configurations">
+  var NexT = window.NexT || {};
+  var CONFIG = {
+    root: '',
+    scheme: 'Mist',
+    sidebar: {"position":"left","display":"post"},
+    fancybox: true,
+    motion: true,
+    duoshuo: {
+      userId: 'undefined',
+      author: '博主'
+    },
+    algolia: {
+      applicationID: '',
+      apiKey: '',
+      indexName: '',
+      hits: {"per_page":10},
+      labels: {"input_placeholder":"Search for Posts","hits_empty":"We didn't find any results for the search: ${query}","hits_stats":"${hits} results found in ${time} ms"}
+    }
+  };
+</script>
+
+
+
+  <link rel="canonical" href="https://zhoushuke.github.io/2024/05/31/volcano-actions-plugins/"/>
+
+
+
+
+
+  <title> volcano如何应对大规模任务系列之volcano插件系统 | Z.S.K.'s Records </title>
+<meta name="generator" content="Hexo 6.2.0"></head>
+
+<body itemscope itemtype="http://schema.org/WebPage" lang="zh-Hans">
+
+  
+
+
+
+
+
+
+
+
+
+
+  
+  
+    
+  
+
+  <div class="container one-collumn sidebar-position-left page-post-detail ">
+    <div class="headband"></div>
+
+    <header id="header" class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-meta ">
+  
+
+  <div class="custom-logo-site-title">
+    <a href="/"  class="brand" rel="start">
+      <span class="logo-line-before"><i></i></span>
+      <span class="site-title">Z.S.K.'s Records</span>
+      <span class="logo-line-after"><i></i></span>
+    </a>
+  </div>
+    
+      <p class="site-subtitle"></p>
+    
+</div>
+
+<div class="site-nav-toggle">
+  <button>
+    <span class="btn-bar"></span>
+    <span class="btn-bar"></span>
+    <span class="btn-bar"></span>
+  </button>
+</div>
+
+<nav class="site-nav">
+  
+
+  
+    <ul id="menu" class="menu">
+      
+        
+        <li class="menu-item menu-item-home">
+          <a href="/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-home"></i> <br />
+            
+            首页
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-categories">
+          <a href="/categories" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-th"></i> <br />
+            
+            分类
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-about">
+          <a href="/about/ZSK-Profile.pdf" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-user"></i> <br />
+            
+            简历
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-archives">
+          <a href="/archives" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-archive"></i> <br />
+            
+            归档
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-tags">
+          <a href="/tags" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-tags"></i> <br />
+            
+            标签
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-commonweal">
+          <a href="/404.html" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-heartbeat"></i> <br />
+            
+            公益404
+          </a>
+        </li>
+      
+
+      
+        <li class="menu-item menu-item-search">
+          
+            <a href="javascript:;" class="popup-trigger">
+          
+            
+              <i class="menu-item-icon fa fa-search fa-fw"></i> <br />
+            
+            搜索
+          </a>
+        </li>
+      
+    </ul>
+  
+
+  
+    <div class="site-search">
+      
+  <div class="popup">
+ <span class="search-icon fa fa-search"></span>
+ <input type="text" id="local-search-input">
+ <div id="local-search-result"></div>
+ <span class="popup-btn-close">close</span>
+</div>
+
+
+    </div>
+  
+</nav>
+
+
+
+ </div>
+    </header>
+
+    <main id="main" class="main">
+      <div class="main-inner">
+        <div class="content-wrap">
+          <div id="content" class="content">
+            
+
+  <div id="posts" class="posts-expand">
+    
+
+  
+
+  
+  
+  
+
+  <article class="post post-type-normal " itemscope itemtype="http://schema.org/Article">
+  <link itemprop="mainEntityOfPage" href="https://zhoushuke.github.io/2024/05/31/volcano-actions-plugins/">
+
+  <span style="display:none" itemprop="author" itemscope itemtype="http://schema.org/Person">
+    <meta itemprop="name" content="">
+    <meta itemprop="description" content="">
+    <meta itemprop="image" content="/images/avatar.gif">
+  </span>
+
+  <span style="display:none" itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+    <meta itemprop="name" content="Z.S.K.'s Records">
+    <span style="display:none" itemprop="logo" itemscope itemtype="http://schema.org/ImageObject">
+      <img style="display:none;" itemprop="url image" alt="Z.S.K.'s Records" src="">
+    </span>
+  </span>
+
+    
+      <header class="post-header">
+
+        
+        
+          <h1 class="post-title" itemprop="name headline">
+            
+            
+              
+                volcano如何应对大规模任务系列之volcano插件系统
+              
+            
+          </h1>
+        
+
+        <div class="post-meta">
+          <span class="post-time">
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">发表于</span>
+              
+              <time title="Post created" itemprop="dateCreated datePublished" datetime="2024-05-31T19:30:53+08:00">
+                2024-05-31
+              </time>
+            
+
+            
+
+            
+          </span>
+
+          
+            <span class="post-category" >
+            
+              <span class="post-meta-divider">|</span>
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-folder-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">分类于</span>
+              
+              
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/HPC/" itemprop="url" rel="index">
+                    <span itemprop="name">HPC</span>
+                  </a>
+                </span>
+
+                
+                
+              
+            </span>
+          
+
+          
+            
+          
+
+          
+
+          
+          
+
+          
+
+          
+
+        </div>
+      </header>
+    
+
+
+    <div class="post-body" itemprop="articleBody">
+
+      
+      
+
+      
+        <p>volcano做为CNCF目前唯一一款应对大规模资源批调度工具被大家熟知.<br>作者负责的kubernetes集群每天都有大量的任务需要运行, GPU任务、短任务、长任务等等，同时还存在多租户场景、复杂的调度策略等, 依托volcano的高度<strong>可插拔</strong>能力, 同时结合业务场景进行相应的优化,极大提高了资源使用效率，<strong>结果导向明显</strong><br>在此也分享一下整个落地过程,也做为现阶段的一个工作总结, 工作之余尽量更新.</p>
+<p>注: 业务各有不同, 作者的选型及观点可能并不适用其它人<br>此篇为: volcano如何应对大规模任务系列之volcano插件系统</p>
+<span id="more"></span>
+
+<p>总体分为以下几块内容:<br><a target="_blank" rel="noopener" href="https://izsk.me/2023/08/31/volcano-introduction/">volcano如何应对大规模任务系列之volcano开篇介绍</a><br><a target="_blank" rel="noopener" href="https://izsk.me/2023/11/12/volcano-key-resources/">volcano如何应对大规模任务系列之volcano关键对象</a><br>volcano如何应对大规模任务系列之volcano插件系统<br>volcano如何应对大规模任务系列之volcano源码解析<br>volcano如何应对大规模任务系列之volcano优化之道<br>volcano如何应对大规模任务系列之volcano生产实践<br>volcano如何应对大规模任务系列之volcano总结建议</p>
+<p>本系列的所用volcano版本基于v1.7.0</p>
+<h3 id="工作流"><a href="#工作流" class="headerlink" title="工作流"></a>工作流</h3><p><img src="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20231007170305.png"></p>
+<p>再来简单说一下volcano的调度流程: </p>
+<p>每隔一个调度周期(默认是1s)开启一个Session对象，这个Session的初始化将集群中的节点、任务和队列的信息都会拷贝一份做为副本cache起来，然后依次执行action, action中会引用各plugin插件的实现逻辑</p>
+<p>现在支持的插件列表主要可归为以下几类:</p>
+<blockquote>
+<ul>
+<li><p>容量相关: 如proportion、capacity、resourcequota等</p>
+</li>
+<li><p>节点相关:  nodegroup、usage、numaaware等</p>
+</li>
+<li><p>任务相关: 剩下的基本就跟任务相关，比如priority、gang等</p>
+</li>
+</ul>
+</blockquote>
+<h3 id="Configuration"><a href="#Configuration" class="headerlink" title="Configuration"></a>Configuration</h3><p>这里以一个典型的volcano配置为例展开</p>
+<figure class="highlight yaml"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># default configuration for scheduler</span></span><br><span class="line"><span class="attr">actions:</span> <span class="string">&quot;enqueue,allocate,backfill,preempt,reclaim&quot;</span></span><br><span class="line"><span class="attr">tiers:</span></span><br><span class="line"><span class="bullet">-</span> <span class="attr">plugins:</span></span><br><span class="line">  <span class="bullet">-</span> <span class="attr">name:</span> <span class="string">priority</span></span><br><span class="line">  <span class="bullet">-</span> <span class="attr">name:</span> <span class="string">gang</span></span><br><span class="line">  <span class="bullet">-</span> <span class="attr">name:</span> <span class="string">conformance</span></span><br><span class="line"><span class="bullet">-</span> <span class="attr">plugins:</span></span><br><span class="line">  <span class="bullet">-</span> <span class="attr">name:</span> <span class="string">drf</span></span><br><span class="line">  <span class="bullet">-</span> <span class="attr">name:</span> <span class="string">predicates</span></span><br><span class="line">  <span class="bullet">-</span> <span class="attr">name:</span> <span class="string">proportion</span></span><br><span class="line">  <span class="bullet">-</span> <span class="attr">name:</span> <span class="string">resourcequota</span></span><br><span class="line">  <span class="bullet">-</span> <span class="attr">name:</span> <span class="string">nodeorder</span></span><br><span class="line">  <span class="bullet">-</span> <span class="attr">name:</span> <span class="string">binpack</span></span><br></pre></td></tr></table></figure>
+
+<p>首先解释一下这里为什么要分为多层的tiers?</p>
+<p>在网上看到这个<a target="_blank" rel="noopener" href="https://qiankunli.github.io/2021/09/30/volcano.html">解释</a>我觉得讲的清晰</p>
+<p>每个plugin 注册了一堆函数，action 会在会在适当的实际调用<code>Session.函数()</code>执行。<code>Session.函数()</code>的大体逻辑都是遍历plugin 注册的所有函数并执行，<strong>每个plugin 只注册了跟自己逻辑有关的函数。</strong></p>
+<p><code>Session.函数()</code>核心逻辑是两层循环，分为三种情况:</p>
+<ol>
+<li><p>“一言不合”直接返回的</p>
+<figure class="highlight golang"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">func</span> <span class="params">(ssn *Session)</span></span> xx() xx&#123;</span><br><span class="line">    <span class="keyword">for</span> _, tier := <span class="keyword">range</span> ssn.Tiers &#123;</span><br><span class="line">        <span class="keyword">for</span> _, plugin := <span class="keyword">range</span> tier.Plugins &#123;</span><br><span class="line">            <span class="keyword">if</span>(xx)&#123;</span><br><span class="line">                <span class="keyword">return</span> xx</span><br><span class="line">            &#125;</span><br><span class="line">        &#125;</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="keyword">return</span> xx</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+</li>
+<li><p>所有plugin 一起配合计算的，比如给某个node 打分</p>
+<figure class="highlight golang"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">func</span> <span class="params">(ssn *Session)</span></span> xx() xx&#123;</span><br><span class="line">    <span class="keyword">for</span> _, tier := <span class="keyword">range</span> ssn.Tiers &#123;</span><br><span class="line">        <span class="keyword">for</span> _, plugin := <span class="keyword">range</span> tier.Plugins &#123;</span><br><span class="line">            sum += xx</span><br><span class="line">        &#125;</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="keyword">return</span> sum</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+</li>
+<li><p>tier内 的所有plugin 参与计算。比如 Reclaimable 决定回收哪些正在运行的pod，即寻找victim。如果在第一层tier 中可以找到牺牲者 就直接返回了，毕竟能牺牲少点就牺牲少点，实在不行，才会计算第二层tier。</p>
+<figure class="highlight golang"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">func</span> <span class="params">(ssn *Session)</span></span> xx() xx&#123;</span><br><span class="line">    <span class="keyword">var</span> victims []*api.TaskInfo</span><br><span class="line">    <span class="keyword">for</span> _, tier := <span class="keyword">range</span> ssn.Tiers &#123;</span><br><span class="line">        <span class="keyword">for</span> _, plugin := <span class="keyword">range</span> tier.Plugins &#123;</span><br><span class="line">            <span class="comment">// 寻找victim</span></span><br><span class="line">        &#125;</span><br><span class="line">        <span class="keyword">if</span> victims != <span class="literal">nil</span> &#123;</span><br><span class="line">            <span class="keyword">return</span> victims</span><br><span class="line">        &#125;         &#125;</span><br><span class="line">    <span class="keyword">return</span> <span class="literal">nil</span></span><br></pre></td></tr></table></figure>
+
+<p>前两种情况，是不需要区分两层的，此时所有的plugin 先后顺序是重要的，是不是在一个tier 里不重要，即要么立即结束要么全局聚合。第三种情况， tier内 的plugin<strong>局部聚合</strong>，两层for 之间做判断，如果有数据则 return。以默认的配置文件<code>scheudler.conf</code>来说，第一个tier 更多是基于用户设置，第二个tier 是基于task 和集群的实际情况，以用户设置为优先。</p>
+</li>
+</ol>
+<p>要注意一点的是:如果config里配置的语法有误,比如当格式不对时，volcano-scheuler是不会panic退出的，它会直接使用内置的默认配置进行启动，我就在某一次配置变更时多写了一个冒号未及时发现，导致所有的调度策略都以意料之外的方式进行，跑了几天后才发现问题</p>
+<h3 id="actions"><a href="#actions" class="headerlink" title="actions"></a>actions</h3><p>在<a target="_blank" rel="noopener" href="https://izsk.me/2023/11/12/volcano-key-resources/">volcano如何应对大规模任务系列之volcano关键对象</a>一节中已经把现有的action对象都介绍了一遍, 这里不再赘述</p>
+<p><code>action在volcano中就像流水线</code>,从上面的工作流图中可以看出，在一个session开始时，会将cache中拿到的所有相关的信息依次经过configuration中配置的action列表, 然后action中调用各插件的逻辑。<br>actions列表也是可选择的, 这里以enqueue为例。</p>
+<p>enqueue校验pending job是否满足容量相关的条件, 如果满足，则可以从pending状态转到inqueue状态，那容量条件都有哪些呢? 从<code>pkg/scheduler/actions/enqueue.go</code>中可以看到</p>
+<figure class="highlight golang"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">// 省略 代码其它 </span></span><br><span class="line"><span class="keyword">if</span> job.PodGroup.Spec.MinResources == <span class="literal">nil</span> || ssn.JobEnqueueable(job) &#123;</span><br><span class="line">   <span class="comment">// 目前只有overcommit中注册</span></span><br><span class="line">   ssn.JobEnqueued(job)</span><br><span class="line">   job.PodGroup.Status.Phase = scheduling.PodGroupInqueue</span><br><span class="line">   ssn.Jobs[job.UID] = job</span><br><span class="line"> &#125;</span><br></pre></td></tr></table></figure>
+
+<p>enqueue.go中存在<code>ssn.JobEnqueueable(job)</code>, JobEnqueueable目前只在proportion、capacity、resourcequota三个plugin中有相关实现(如何知道???),从上面的配置文件来看，第一层的plugin并没有与容量相关的插件(如何知道???)，因此第一层会直接弃权(或者叫通过)，来到第二层，第二层里注册了proportion、resourcequota二个与容量相关的插件，那么这2个插件中一定会有<code>JobEnqueueable</code>的相关实现，这里以proportion为例</p>
+<figure class="highlight golang"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">// pkg/scheduler/plugins/proportion/proportions.go</span></span><br><span class="line">ssn.AddJobEnqueueableFn(pp.Name(), <span class="function"><span class="keyword">func</span><span class="params">(obj <span class="keyword">interface</span>&#123;&#125;)</span></span> <span class="type">int</span> &#123;</span><br><span class="line">    <span class="comment">// 省略相关代码</span></span><br><span class="line">    <span class="keyword">if</span> 容量检测通过 &#123;</span><br><span class="line">      <span class="keyword">return</span> util.Permit</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="keyword">else</span> &#123;</span><br><span class="line">        util.Reject </span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br><span class="line"></span><br></pre></td></tr></table></figure>
+
+<p>同样，在resourcequota plugin中也同样会有相同的逻辑,这两个插件需要同时满足，<code>ssn.JobEnqueueable(job)</code>才会满足,<br>这也很好理解, proportion是与queue的容量相关, 如果queue的容量无法满足这个job,那它自然需要继续pending,同理resourcequota是与namespacequota的容量相关，如果namespace的resourcequota资源无法满足这个job，那它还是需要pending。</p>
+<p>当然也可以不配置enqueue这个action，那么所有的待调度的pending状态的job默认都直接到达inqueue状态</p>
+<figure class="highlight golang"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">// pkg/scheduler/actions/allocate.go</span></span><br><span class="line"><span class="keyword">for</span> _, job := <span class="keyword">range</span> ssn.Jobs &#123;</span><br><span class="line">	<span class="comment">// If not config enqueue action, change Pending pg into Inqueue statue to avoid blocking job scheduling.</span></span><br><span class="line">	<span class="keyword">if</span> !conf.EnabledActionMap[<span class="string">&quot;enqueue&quot;</span>] &#123;</span><br><span class="line">		job.PodGroup.Status.Phase = scheduling.PodGroupInqueue</span><br><span class="line">       &#125;</span><br><span class="line">   &#125;</span><br></pre></td></tr></table></figure>
+
+<p>篇幅有限，源码以及上下文并没有说的很清楚，后续会有更详细的代码走读</p>
+<p>由于actions相对来说比较稳定，其中的很多功能都是由plugin实现的，<code>plugins才是volcano中自由扩展的利器。</code></p>
+<h3 id="plugins"><a href="#plugins" class="headerlink" title="plugins"></a>plugins</h3><p>在<code>pkg/scheduler/actions/plugins</code>下, 每一个目录实现了一种插件, 这些插件在调度过程会提供特定逻辑, 这里以priority为例来说明插件是什么时候起作用.<br>先试想一种典型的场景: 在集群中, 一般会存在紧急程度不一的各类job(这里的job是一种统称,可以是batchjob&#x2F;pytorchjob&#x2F;volcanojob&#x2F;deployment等等吧), 但是资源是永远不够的,那么我们期望的是在有限的资源下, 优先让紧急&#x2F;重要的job先运行起来, 不紧急的job可以排队<br>那priority如何发挥作用? 通过上面我们得知, plugins只在actions中”调用”，因此，当进入到enqueue action时<br>对于所有的jobs, enqueue会通过jobOrderFn这类的函数对所有的job进行排序, 排序的方法就在<code>pkg/schedule/plugins/priority/priority.go</code>中实现，方法可以是多样的，比如可以按PriorityClass、按创建时间等等，还自定义排序逻辑，只要能比对即可，最终生成一个heap map来存放所有job排序之后的结果提供到下一环节</p>
+<figure class="highlight golang"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">// pkg/scheduler/actions/enqueue.go</span></span><br><span class="line"><span class="keyword">if</span> job.IsPending() &#123;</span><br><span class="line">    <span class="comment">// 如果在jobsMap中没有该job所属的queue信息</span></span><br><span class="line">    <span class="comment">// 则先将该queue加入到jobsMap中</span></span><br><span class="line">    <span class="keyword">if</span> _, found := jobsMap[job.Queue]; !found &#123;</span><br><span class="line">    jobsMap[job.Queue] = util.NewPriorityQueue(ssn.JobOrderFn)</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>来看看<code>pkg/schedule/plugins/priority/priority.go</code>对jobOrderFn的实现</p>
+<figure class="highlight golang"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">// 其它代码</span></span><br><span class="line">jobOrderFn := <span class="function"><span class="keyword">func</span><span class="params">(l, r <span class="keyword">interface</span>&#123;&#125;)</span></span> <span class="type">int</span> &#123;</span><br><span class="line">    lv := l.(*api.JobInfo)</span><br><span class="line">    rv := r.(*api.JobInfo)</span><br><span class="line"></span><br><span class="line">    klog.V(<span class="number">4</span>).Infof(<span class="string">&quot;Priority JobOrderFn: &lt;%v/%v&gt; priority: %d, &lt;%v/%v&gt; priority: %d&quot;</span>,</span><br><span class="line">        lv.Namespace, lv.Name, lv.Priority, rv.Namespace, rv.Name, rv.Priority)</span><br><span class="line"></span><br><span class="line">    <span class="keyword">if</span> lv.Priority &gt; rv.Priority &#123;</span><br><span class="line">        <span class="keyword">return</span> <span class="number">-1</span></span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    <span class="keyword">if</span> lv.Priority &lt; rv.Priority &#123;</span><br><span class="line">        <span class="keyword">return</span> <span class="number">1</span></span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    <span class="keyword">return</span> <span class="number">0</span></span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line">ssn.AddJobOrderFn(pp.Name(), jobOrderFn)</span><br></pre></td></tr></table></figure>
+
+<p>很简单，将jobOrderFn add到ssn的AddJobOrderFn中，jobOrderFn接受两上jobinfo的对象，通过比对这两个对象的Priority大小返回<br>当然, jobOrderFn可以在多个action中进行注册. enqueue是一种场景，preempt是另外一种场景, 按优先级进行回收, 即先回收优先级低的job, 那么在preempt中就会需要通过<code>ssn.JobOrderFn</code>来引用</p>
+<p>说的可能会有些乱，比如上面的疑问，我怎么知道一个action中会调用哪些plugin, 或者说一个plugin都在哪些action中起作用以及在volcano system中如何将job封装成volcano中的job, pod如何封装成volcano中的task, 这些确实需要对照代码才能更加清晰, 好在volcano的代码风格还是比较统一, 有很多约定俗成的写法, 有些疑问可以先暂放，等走读代码后会有一个更直观的体验</p>
+<p><code>如何将volcano结合进业务中发挥最大的价值,这个需要结合业务特性才能得出最符合业务架构的生产实践</code></p>
+<h3 id="参考文章"><a href="#参考文章" class="headerlink" title="参考文章:"></a><strong>参考文章:</strong></h3><blockquote>
+<ul>
+<li><a target="_blank" rel="noopener" href="https://volcano.sh/">https://volcano.sh</a></li>
+<li><a target="_blank" rel="noopener" href="https://qiankunli.github.io/2021/09/30/volcano.html">https://qiankunli.github.io/2021/09/30/volcano.html</a></li>
+<li><a target="_blank" rel="noopener" href="https://zhuanlan.zhihu.com/p/349695188">https://zhuanlan.zhihu.com/p/349695188</a></li>
+<li><a target="_blank" rel="noopener" href="http://yost.top/2020/08/04/volcano-code-review">http://yost.top/2020/08/04/volcano-code-review</a></li>
+<li><a target="_blank" rel="noopener" href="https://izsk.me/2023/11/12/volcano-key-resources/">volcano如何应对大规模任务系列之volcano关键对象 | Z.S.K.’s Records</a></li>
+<li><a target="_blank" rel="noopener" href="https://izsk.me/2023/08/31/volcano-introduction/">volcano如何应对大规模任务系列之volcano开篇介绍 | Z.S.K.’s Records</a></li>
+</ul>
+</blockquote>
+<h3 id="转载请注明原作者-周淑科-https-izsk-me"><a href="#转载请注明原作者-周淑科-https-izsk-me" class="headerlink" title="转载请注明原作者: 周淑科(https://izsk.me)"></a><strong>转载请注明原作者: 周淑科(<a target="_blank" rel="noopener" href="https://izsk.me/">https://izsk.me</a>)</strong></h3>
+      
+    </div>
+
+    <div>
+      
+        
+<div id="wechat_subscriber" style="display: block; padding: 10px 0; margin: 20px auto; width: 100%; text-align: center">
+    <img id="wechat_subscriber_qcode" src="/images/websitecode250.png" alt=" wechat" style="width: 200px; max-width: 100%;"/>
+    <div>Scan Me To Read on Phone</div>
+</div>
+
+
+      
+    </div>
+
+    <div>
+      
+        
+  <div style="padding: 10px 0; margin: 20px auto; width: 90%; text-align: center;">
+    <div>I know you won't do this,but what if you did?</div>
+    <button id="rewardButton" disable="enable" onclick="var qr = document.getElementById('QR'); if (qr.style.display === 'none') {qr.style.display='block';} else {qr.style.display='none'}">
+      <span>赏</span>
+    </button>
+    <div id="QR" style="display: none;">
+      
+        <div id="wechat" style="display: inline-block">
+          <img id="wechat_qr" src="/images/wechatpayme.png" alt=" WeChat Pay"/>
+          <p>微信打赏</p>
+        </div>
+      
+      
+        <div id="alipay" style="display: inline-block">
+          <img id="alipay_qr" src="/images/alipayme.jpg" alt=" Alipay"/>
+          <p>支付宝打赏</p>
+        </div>
+      
+    </div>
+  </div>
+
+
+      
+    </div>
+
+
+    <footer class="post-footer">
+      
+        <div class="post-tags">
+          
+            <a href="/tags/HPC/" rel="tag"># HPC</a>
+          
+        </div>
+      
+
+      
+        <div class="post-nav">
+          <div class="post-nav-next post-nav-item">
+            
+              <a href="/2023/12/16/Kubernetes-listOption-2/" rel="next" title="Kubernetes之ListOption参数源码分析">
+                <i class="fa fa-chevron-left"></i> Kubernetes之ListOption参数源码分析
+              </a>
+            
+          </div>
+
+          <span class="post-nav-divider"></span>
+
+          <div class="post-nav-prev post-nav-item">
+            
+          </div>
+        </div>
+      
+
+      
+      
+    </footer>
+  </article>
+
+
+
+    <div class="post-spread">
+      
+    </div>
+  </div>
+
+
+          </div>
+          
+
+
+          
+  <div class="comments" id="comments">
+    
+  </div>
+
+
+        </div>
+        
+          
+  
+  <div class="sidebar-toggle">
+    <div class="sidebar-toggle-line-wrap">
+      <span class="sidebar-toggle-line sidebar-toggle-line-first"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-middle"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-last"></span>
+    </div>
+  </div>
+
+  <aside id="sidebar" class="sidebar">
+    <div class="sidebar-inner">
+
+      
+
+      
+        <ul class="sidebar-nav motion-element">
+          <li class="sidebar-nav-toc sidebar-nav-active" data-target="post-toc-wrap" >
+            文章目录
+          </li>
+          <li class="sidebar-nav-overview" data-target="site-overview">
+            站点概览
+          </li>
+        </ul>
+      
+
+      <section class="site-overview sidebar-panel">
+        <div class="site-author motion-element" itemprop="author" itemscope itemtype="http://schema.org/Person">
+          <img class="site-author-image" itemprop="image"
+               src="/images/avatar.gif"
+               alt="" />
+          <p class="site-author-name" itemprop="name"></p>
+          <p class="site-description motion-element" itemprop="description"></p>
+        </div>
+        <nav class="site-state motion-element">
+        
+          
+            <div class="site-state-item site-state-posts">
+              <a href="/archives">
+                <span class="site-state-item-count">212</span>
+                <span class="site-state-item-name">日志</span>
+              </a>
+            </div>
+          
+
+          
+            <div class="site-state-item site-state-categories">
+              <a href="/categories">
+                <span class="site-state-item-count">15</span>
+                <span class="site-state-item-name">分类</span>
+              </a>
+            </div>
+          
+
+          
+            <div class="site-state-item site-state-tags">
+              <a href="/tags">
+                <span class="site-state-item-count">15</span>
+                <span class="site-state-item-name">标签</span>
+              </a>
+            </div>
+          
+
+        </nav>
+
+        
+
+        <div class="links-of-author motion-element">
+          
+        </div>
+
+        
+        
+
+        
+        
+
+        
+
+
+      </section>
+
+      
+      <!--noindex-->
+        <section class="post-toc-wrap motion-element sidebar-panel sidebar-panel-active">
+          <div class="post-toc">
+
+            
+              
+            
+
+            
+              <div class="post-toc-content"><ol class="nav"><li class="nav-item nav-level-3"><a class="nav-link" href="#%E5%B7%A5%E4%BD%9C%E6%B5%81"><span class="nav-number">1.</span> <span class="nav-text">工作流</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#Configuration"><span class="nav-number">2.</span> <span class="nav-text">Configuration</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#actions"><span class="nav-number">3.</span> <span class="nav-text">actions</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#plugins"><span class="nav-number">4.</span> <span class="nav-text">plugins</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E5%8F%82%E8%80%83%E6%96%87%E7%AB%A0"><span class="nav-number">5.</span> <span class="nav-text">参考文章:</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E8%BD%AC%E8%BD%BD%E8%AF%B7%E6%B3%A8%E6%98%8E%E5%8E%9F%E4%BD%9C%E8%80%85-%E5%91%A8%E6%B7%91%E7%A7%91-https-izsk-me"><span class="nav-number">6.</span> <span class="nav-text">转载请注明原作者: 周淑科(https:&#x2F;&#x2F;izsk.me)</span></a></li></ol></div>
+            
+
+          </div>
+        </section>
+      <!--/noindex-->
+      
+
+    </div>
+  </aside>
+
+
+        
+      </div>
+    </main>
+
+    <footer id="footer" class="footer">
+      <div class="footer-inner">
+        <div class="copyright" >
+  
+  &copy; 
+  <span itemprop="copyrightYear">2024</span>
+  <span class="with-love">
+    <i class="fa fa-heart"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">Z.S.K.</span>
+</div>
+
+
+<div class="powered-by">
+  Supported by <a class="theme-link" target="_blank" rel="noopener" href="https://hexo.io">Hexo</a>
+</div>
+
+<div class="theme-info">
+  Theme -
+  <a class="theme-link" target="_blank" rel="noopener" href="https://github.com/iissnan/hexo-theme-next">
+    NexT.Mist
+  </a>
+</div>
+
+
+        
+
+        
+      </div>
+    </footer>
+
+    <div class="back-to-top">
+      <i class="fa fa-arrow-up"></i>
+    </div>
+  </div>
+
+  
+
+<script type="text/javascript">
+  if (Object.prototype.toString.call(window.Promise) !== '[object Function]') {
+    window.Promise = null;
+  }
+</script>
+
+
+
+
+
+
+
+
+
+  
+
+
+
+  
+  <script type="text/javascript" src="/lib/jquery/index.js?v=2.1.3"></script>
+
+  
+  <script type="text/javascript" src="/lib/fastclick/lib/fastclick.min.js?v=1.0.6"></script>
+
+  
+  <script type="text/javascript" src="/lib/jquery_lazyload/jquery.lazyload.js?v=1.9.7"></script>
+
+  
+  <script type="text/javascript" src="/lib/velocity/velocity.min.js?v=1.2.1"></script>
+
+  
+  <script type="text/javascript" src="/lib/velocity/velocity.ui.min.js?v=1.2.1"></script>
+
+  
+  <script type="text/javascript" src="/lib/fancybox/source/jquery.fancybox.pack.js?v=2.1.5"></script>
+
+
+  
+
+
+  <script type="text/javascript" src="/js/src/utils.js?v=5.1.0"></script>
+
+  <script type="text/javascript" src="/js/src/motion.js?v=5.1.0"></script>
+
+
+
+  
+  
+
+  
+  <script type="text/javascript" src="/js/src/scrollspy.js?v=5.1.0"></script>
+<script type="text/javascript" src="/js/src/post-details.js?v=5.1.0"></script>
+
+
+
+  
+
+
+  <script type="text/javascript" src="/js/src/bootstrap.js?v=5.1.0"></script>
+
+
+
+  
+
+
+
+  
+
+
+
+
+	
+
+
+
+
+
+  
+
+
+
+
+  
+  
+  <script type="text/javascript">
+    // Popup Window;
+    var isfetched = false;
+    // Search DB path;
+    var search_path = "search.xml";
+    if (search_path.length == 0) {
+      search_path = "search.xml";
+    }
+    var path = "/" + search_path;
+    // monitor main search box;
+
+    function proceedsearch() {
+      $("body").append('<div class="popoverlay">').css('overflow', 'hidden');
+      $('.popup').toggle();
+    }
+    // search function;
+    var searchFunc = function(path, search_id, content_id) {
+      'use strict';
+      $.ajax({
+        url: path,
+        dataType: "xml",
+        async: true,
+        success: function( xmlResponse ) {
+          // get the contents from search data
+          isfetched = true;
+          $('.popup').detach().appendTo('.header-inner');
+          var datas = $( "entry", xmlResponse ).map(function() {
+            return {
+              title: $( "title", this ).text(),
+              content: $("content",this).text(),
+              url: $( "url" , this).text()
+            };
+          }).get();
+          var $input = document.getElementById(search_id);
+          var $resultContent = document.getElementById(content_id);
+          $input.addEventListener('input', function(){
+            var matchcounts = 0;
+            var str='<ul class=\"search-result-list\">';
+            var keywords = this.value.trim().toLowerCase().split(/[\s\-]+/);
+            $resultContent.innerHTML = "";
+            if (this.value.trim().length > 1) {
+              // perform local searching
+              datas.forEach(function(data) {
+                var isMatch = false;
+                var content_index = [];
+                var data_title = data.title.trim().toLowerCase();
+                var data_content = data.content.trim().replace(/<[^>]+>/g,"").toLowerCase();
+                var data_url = decodeURIComponent(data.url);
+                var index_title = -1;
+                var index_content = -1;
+                var first_occur = -1;
+                // only match artiles with not empty titles and contents
+                if(data_title != '') {
+                  keywords.forEach(function(keyword, i) {
+                    index_title = data_title.indexOf(keyword);
+                    index_content = data_content.indexOf(keyword);
+                    if( index_title >= 0 || index_content >= 0 ){
+                      isMatch = true;
+                      if (i == 0) {
+                        first_occur = index_content;
+                      }
+                    }
+
+                  });
+                }
+                // show search results
+                if (isMatch) {
+                  matchcounts += 1;
+                  str += "<li><a href='"+ data_url +"' class='search-result-title'>"+ data_title +"</a>";
+                  var content = data.content.trim().replace(/<[^>]+>/g,"");
+                  if (first_occur >= 0) {
+                    // cut out 100 characters
+                    var start = first_occur - 20;
+                    var end = first_occur + 80;
+                    if(start < 0){
+                      start = 0;
+                    }
+                    if(start == 0){
+                      end = 50;
+                    }
+                    if(end > content.length){
+                      end = content.length;
+                    }
+                    var match_content = content.substring(start, end);
+                    // highlight all keywords
+                    keywords.forEach(function(keyword){
+                      var regS = new RegExp(keyword, "gi");
+                      match_content = match_content.replace(regS, "<b class=\"search-keyword\">"+keyword+"</b>");
+                    });
+
+                    str += "<p class=\"search-result\">" + match_content +"...</p>"
+                  }
+                  str += "</li>";
+                }
+              })};
+            str += "</ul>";
+            if (matchcounts == 0) { str = '<div id="no-result"><i class="fa fa-frown-o fa-5x" /></div>' }
+            if (keywords == "") { str = '<div id="no-result"><i class="fa fa-search fa-5x" /></div>' }
+            $resultContent.innerHTML = str;
+          });
+          proceedsearch();
+        }
+      });}
+
+    // handle and trigger popup window;
+    $('.popup-trigger').click(function(e) {
+      e.stopPropagation();
+      if (isfetched == false) {
+        searchFunc(path, 'local-search-input', 'local-search-result');
+      } else {
+        proceedsearch();
+      };
+    });
+
+    $('.popup-btn-close').click(function(e){
+      $('.popup').hide();
+      $(".popoverlay").remove();
+      $('body').css('overflow', '');
+    });
+    $('.popup').click(function(e){
+      e.stopPropagation();
+    });
+  </script>
+
+
+  
+
+  
+
+  
+
+  
+
+
+</body>
+</html>
