@@ -1,0 +1,1022 @@
+<!doctype html>
+
+
+
+  
+
+
+<html class="theme-next mist use-motion" lang="zh-Hans">
+<head>
+  <meta charset="UTF-8"/>
+<meta http-equiv="X-UA-Compatible" content="IE=edge" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1"/>
+
+
+
+<meta http-equiv="Cache-Control" content="no-transform" />
+<meta http-equiv="Cache-Control" content="no-siteapp" />
+
+
+
+
+
+
+
+
+
+
+
+
+  
+  
+  <link href="/lib/fancybox/source/jquery.fancybox.css?v=2.1.5" rel="stylesheet" type="text/css" />
+
+
+
+
+  
+  
+  
+  
+
+  
+    
+    
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+    
+    
+    <link href="//fonts.googleapis.com/css?family=Lato:300,300italic,400,400italic,700,700italic&subset=latin,latin-ext" rel="stylesheet" type="text/css">
+  
+
+
+
+
+
+
+<link href="/lib/font-awesome/css/font-awesome.min.css?v=4.6.2" rel="stylesheet" type="text/css" />
+
+<link href="/css/main.css?v=5.1.0" rel="stylesheet" type="text/css" />
+
+
+  <meta name="keywords" content="Kubernetes," />
+
+
+
+
+
+
+
+
+  <link rel="shortcut icon" type="image/x-icon" href="/favicon.ico?v=5.1.0" />
+
+
+
+
+
+
+<meta name="description" content="本篇内容主要围绕kubernetes中的各种内存，对以下灵魂话题进行深入剖析:  为什么容器没有到达limit后却被OOM了? 容器中产生的PageCache如何统计? 容器中emptydir类型为medium&#x3D;Memory是否会引起OOM? 如何更好地监控容器内存? PageCache相关参数  说明: 为了方便，这里不对容器与pod进行区分.">
+<meta property="og:type" content="article">
+<meta property="og:title" content="Kubernetes学习(再谈kubernetes中的各种内存)">
+<meta property="og:url" content="https://zhoushuke.github.io/2024/11/30/kubernetes-memory-talk/index.html">
+<meta property="og:site_name" content="Z.S.K.&#39;s Records">
+<meta property="og:description" content="本篇内容主要围绕kubernetes中的各种内存，对以下灵魂话题进行深入剖析:  为什么容器没有到达limit后却被OOM了? 容器中产生的PageCache如何统计? 容器中emptydir类型为medium&#x3D;Memory是否会引起OOM? 如何更好地监控容器内存? PageCache相关参数  说明: 为了方便，这里不对容器与pod进行区分.">
+<meta property="og:locale">
+<meta property="og:image" content="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20241130195008.png">
+<meta property="article:published_time" content="2024-11-30T09:30:53.000Z">
+<meta property="article:modified_time" content="2024-11-30T12:01:04.809Z">
+<meta property="article:author" content="Z.S.K.">
+<meta property="article:tag" content="Kubernetes">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:image" content="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20241130195008.png">
+
+
+
+<script type="text/javascript" id="hexo.configurations">
+  var NexT = window.NexT || {};
+  var CONFIG = {
+    root: '',
+    scheme: 'Mist',
+    sidebar: {"position":"left","display":"post"},
+    fancybox: true,
+    motion: true,
+    duoshuo: {
+      userId: 'undefined',
+      author: '博主'
+    },
+    algolia: {
+      applicationID: '',
+      apiKey: '',
+      indexName: '',
+      hits: {"per_page":10},
+      labels: {"input_placeholder":"Search for Posts","hits_empty":"We didn't find any results for the search: ${query}","hits_stats":"${hits} results found in ${time} ms"}
+    }
+  };
+</script>
+
+
+
+  <link rel="canonical" href="https://zhoushuke.github.io/2024/11/30/kubernetes-memory-talk/"/>
+
+
+
+
+
+  <title> Kubernetes学习(再谈kubernetes中的各种内存) | Z.S.K.'s Records </title>
+<meta name="generator" content="Hexo 6.2.0"></head>
+
+<body itemscope itemtype="http://schema.org/WebPage" lang="zh-Hans">
+
+  
+
+
+
+
+
+
+
+
+
+
+  
+  
+    
+  
+
+  <div class="container one-collumn sidebar-position-left page-post-detail ">
+    <div class="headband"></div>
+
+    <header id="header" class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-meta ">
+  
+
+  <div class="custom-logo-site-title">
+    <a href="/"  class="brand" rel="start">
+      <span class="logo-line-before"><i></i></span>
+      <span class="site-title">Z.S.K.'s Records</span>
+      <span class="logo-line-after"><i></i></span>
+    </a>
+  </div>
+    
+      <p class="site-subtitle"></p>
+    
+</div>
+
+<div class="site-nav-toggle">
+  <button>
+    <span class="btn-bar"></span>
+    <span class="btn-bar"></span>
+    <span class="btn-bar"></span>
+  </button>
+</div>
+
+<nav class="site-nav">
+  
+
+  
+    <ul id="menu" class="menu">
+      
+        
+        <li class="menu-item menu-item-home">
+          <a href="/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-home"></i> <br />
+            
+            首页
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-categories">
+          <a href="/categories" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-th"></i> <br />
+            
+            分类
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-about">
+          <a href="/about/ZSK-Profile.pdf" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-user"></i> <br />
+            
+            简历
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-archives">
+          <a href="/archives" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-archive"></i> <br />
+            
+            归档
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-tags">
+          <a href="/tags" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-tags"></i> <br />
+            
+            标签
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-commonweal">
+          <a href="/404.html" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-heartbeat"></i> <br />
+            
+            公益404
+          </a>
+        </li>
+      
+
+      
+        <li class="menu-item menu-item-search">
+          
+            <a href="javascript:;" class="popup-trigger">
+          
+            
+              <i class="menu-item-icon fa fa-search fa-fw"></i> <br />
+            
+            搜索
+          </a>
+        </li>
+      
+    </ul>
+  
+
+  
+    <div class="site-search">
+      
+  <div class="popup">
+ <span class="search-icon fa fa-search"></span>
+ <input type="text" id="local-search-input">
+ <div id="local-search-result"></div>
+ <span class="popup-btn-close">close</span>
+</div>
+
+
+    </div>
+  
+</nav>
+
+
+
+ </div>
+    </header>
+
+    <main id="main" class="main">
+      <div class="main-inner">
+        <div class="content-wrap">
+          <div id="content" class="content">
+            
+
+  <div id="posts" class="posts-expand">
+    
+
+  
+
+  
+  
+  
+
+  <article class="post post-type-normal " itemscope itemtype="http://schema.org/Article">
+  <link itemprop="mainEntityOfPage" href="https://zhoushuke.github.io/2024/11/30/kubernetes-memory-talk/">
+
+  <span style="display:none" itemprop="author" itemscope itemtype="http://schema.org/Person">
+    <meta itemprop="name" content="">
+    <meta itemprop="description" content="">
+    <meta itemprop="image" content="/images/avatar.gif">
+  </span>
+
+  <span style="display:none" itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+    <meta itemprop="name" content="Z.S.K.'s Records">
+    <span style="display:none" itemprop="logo" itemscope itemtype="http://schema.org/ImageObject">
+      <img style="display:none;" itemprop="url image" alt="Z.S.K.'s Records" src="">
+    </span>
+  </span>
+
+    
+      <header class="post-header">
+
+        
+        
+          <h1 class="post-title" itemprop="name headline">
+            
+            
+              
+                Kubernetes学习(再谈kubernetes中的各种内存)
+              
+            
+          </h1>
+        
+
+        <div class="post-meta">
+          <span class="post-time">
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">发表于</span>
+              
+              <time title="Post created" itemprop="dateCreated datePublished" datetime="2024-11-30T17:30:53+08:00">
+                2024-11-30
+              </time>
+            
+
+            
+
+            
+          </span>
+
+          
+            <span class="post-category" >
+            
+              <span class="post-meta-divider">|</span>
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-folder-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">分类于</span>
+              
+              
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/Kubernetes/" itemprop="url" rel="index">
+                    <span itemprop="name">Kubernetes</span>
+                  </a>
+                </span>
+
+                
+                
+              
+            </span>
+          
+
+          
+
+          
+
+          
+          
+
+          
+
+          
+
+        </div>
+      </header>
+    
+
+
+    <div class="post-body" itemprop="articleBody">
+
+      
+      
+
+      
+        <p>本篇内容主要围绕kubernetes中的各种内存，对以下<code>灵魂话题</code>进行深入剖析:</p>
+<ol>
+<li>为什么容器没有到达limit后却被OOM了?</li>
+<li>容器中产生的PageCache如何统计?</li>
+<li>容器中emptydir类型为medium&#x3D;Memory是否会引起OOM?</li>
+<li>如何更好地监控容器内存?</li>
+<li>PageCache相关参数</li>
+</ol>
+<p>说明: 为了方便，这里不对容器与pod进行区分.</p>
+<span id="more"></span>
+
+<p>之前也写有几篇关于kubernetes中OOM的文章, 感兴趣的以先睹为快, </p>
+<blockquote>
+<ul>
+<li><a target="_blank" rel="noopener" href="https://izsk.me/2022/12/30/Kubernetes-emptyDir/">Kubernetes学习(深入理解emptyDir)</a></li>
+<li><a target="_blank" rel="noopener" href="https://izsk.me/2023/02/15/Kubernetes-Out-Of-Memory-1/">Kubernetes学习(kubernetes中的OOM-killer和应用程序运行时含义)</a></li>
+<li><a target="_blank" rel="noopener" href="https://izsk.me/2023/02/15/Kubernetes-Out-Of-Memory-2/">Kubernetes学习(pod驱逐机制及OOM流程)</a></li>
+</ul>
+</blockquote>
+<p>这一篇与之前几篇的不同之处主要在于讨论了PageCache这类内存对OOM的影响.</p>
+<h3 id="OOM日志怎么看"><a href="#OOM日志怎么看" class="headerlink" title="OOM日志怎么看?"></a>OOM日志怎么看?</h3><p>首先还是有必要对Linux OOM日志做一个细致的说明,以便更好地带入下面的话题.</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br></pre></td><td class="code"><pre><span class="line">Apr 14 14:13:32 sha2uvp-gert01 kernel: telegraf invoked OOM-killer: gfp_mask=0x201da, order=0, oom_score_adj=0</span><br><span class="line">Apr 14 14:13:36 sha2uvp-gert01 kernel: Free swap  = 0kB</span><br><span class="line">Apr 14 14:13:36 sha2uvp-gert01 kernel: Total swap = 8191996kB</span><br><span class="line">Apr 14 14:13:36 sha2uvp-gert01 kernel: 9437070 pages RAM</span><br><span class="line">Apr 14 14:13:36 sha2uvp-gert01 kernel: 0 pages HighMem/MovableOnly</span><br><span class="line">Apr 14 14:13:36 sha2uvp-gert01 kernel: [ pid ]   uid  tgid total_vm      rss nr_ptes swapents oom_score_adj name</span><br><span class="line">Apr 14 14:13:36 sha2uvp-gert01 kernel: [ 5205]   996  5205  1285299    28846     522   180556             0 mysqld</span><br><span class="line">Apr 14 14:13:36 sha2uvp-gert01 kernel: [ 6033]  1005  6033  7482510  2656268    8492  1473287             0 java</span><br><span class="line">      0             0 sh</span><br><span class="line">Apr 14 14:13:36 sha2uvp-gert01 kernel: [10985]     0 10985   128215    13778     169        0             0 python</span><br><span class="line">.....</span><br><span class="line">Apr 14 14:13:36 sha2uvp-gert01 kernel: Out of memory: Kill process 6033 (java) score 367 or sacrifice child</span><br><span class="line">Apr 14 14:13:36 sha2uvp-gert01 kernel: Killed process 6033 (java) total-vm:29930040kB, anon-rss:10625048kB, file-rss:0kB, shmem-rss:24kB</span><br></pre></td></tr></table></figure>
+
+<p>以上log是发生了oom后内核打印出来的信息, 有几个重要的参数需要关注:<br>前几行说明系统在发生OOM时当前内存的一个snapshot, 第一行直接说明了是telegraf触发了OOM-killer<br>然后中间几行是发生OOM时各个进程内存的相关情况,需要说明的是:<br>最后二行是被OOM-killer选出来的进程(这里是telegraf)的内存占用情况<br>中间那几行中的total_vm那列所表示的值的单位<code>页</code>，在转换为内存kB时需要<code>*4</code>,<br>比如上面pid: 6033在中间的total_vm的值为<code>7482510*4=29930040</code>，刚好等于最后一行中的total-vm的kB值。</p>
+<p>好。这里再解释一下total_vm, anon-rss, file-rss, shmem-rss这几个名词的含义:</p>
+<blockquote>
+<ul>
+<li>total-vm：<br>含义：总虚拟内存（Total Virtual Memory）。<br>解释：表示进程使用的总虚拟内存量，包括所有已分配的内存（无论是否实际使用），即进程请求的虚拟地址空间的大小。</li>
+</ul>
+</blockquote>
+<blockquote>
+<ul>
+<li>anon-rss：<br>含义：匿名驻留集（Anonymous Resident Set Size）。<br>解释：表示进程当前使用的匿名内存部分，这部分内存不与任何文件关联，通常由动态分配（如通过 malloc()）生成。它反映了实际驻留在物理内存中的匿名页的数量</li>
+</ul>
+</blockquote>
+<blockquote>
+<ul>
+<li>file-rss：<br>含义：文件驻留集（File Resident Set Size）。<br>解释：表示进程使用的与文件映射相关的内存部分。这部分内存是通过文件映射（如 mmap）分配给进程的，反映了实际驻留在物理内存中的文件页的数量。</li>
+</ul>
+</blockquote>
+<blockquote>
+<ul>
+<li>shmem-rss：<br>含义：共享内存驻留集（Shared Memory Resident Set Size）。<br>解释：表示进程使用的共享内存部分。这种内存可以被多个进程访问，通常用于进程间通信, 最常见的有&#x2F;dev&#x2F;shm。</li>
+</ul>
+</blockquote>
+<p>使用一个简单的例子来说明:<br>假设一个进程通过 malloc() 请求了 1GB 的内存，但只使用了其中的一部分，比如256MB，其中&#x2F;dev&#x2F;shm中使用了100MB, 那么：<br>total-vm 将显示为 1GB<br>anon-rss 将显示为 256MB（实际使用的匿名内存）<br>没有映射到任何文件，file-rss 将为 0<br>因为使用了&#x2F;dev&#x2F;shm, 则shmem-rss将为100MB</p>
+<p>total-vm与shmem-rss都比较好理解，这里再重点说一下anon-rss与file-rss.</p>
+<p>上面提到, anon-rss是进程当前使用的<code>匿名内存, 它不与任何文件相关联</code>, 这到底是什么意思呢?<br>打个比方:</p>
+<p>我在C程序中通过malloc()方法申请了并使用了一段内存,之所以叫匿名内存指的是不需要手动指定对应的文件(linux中万物皆文件，内存也是如此)<br>最常见的是在<code>堆和栈</code>上分配的内存都属于 anon-rss, 这部分内存中的数据即使<code>被销毁了也不会被写回到任何文件中</code>,这就是它不与任何文件相关联的特点</p>
+<p>而file-rss内存则是通过文件映射（如 mmap）分配给进程的，这又是什么意思呢?<br>打个比方,假设你有一个进程打开了一个大文件并且该文件被映射到内存中。这个过程可能涉及以下步骤：</p>
+<ol>
+<li><p>打开文件：进程使用系统调用打开了这个文件。</p>
+</li>
+<li><p>内存映射：进程通过 mmap() 系统调用将该文件映射到其虚拟地址空间。这使得文件内容可以直接在内存中访问，而不需要每次都从磁盘读取。</p>
+</li>
+<li><p>使用文件：当进程读取或修改该文件的内容时，相关的内存页会被加载到物理内存中。</p>
+</li>
+</ol>
+<p>这就是最常见的场景: <code>在处理大文件或进行大量I/O操作时，file-rss的值可能会显著增加.</code></p>
+<p>ok, 了解了这些概念之后,再来分析内核中出现如上的OOM日志后就可以进一步分析。</p>
+<h3 id="为什么容器没有到达limit后却被OOM了"><a href="#为什么容器没有到达limit后却被OOM了" class="headerlink" title="为什么容器没有到达limit后却被OOM了?"></a>为什么容器没有到达limit后却被OOM了?</h3><p>正常的超过limit被OOM的场景这里就不分析了，如果监控比较完善就应该很容易发现。<br>那有没有可能一个node上的所有容器都没有达到limit，但产生了OOM事件，其中一个容器被OOM了?</p>
+<p>答案是肯定存在的, 有如下的几种常见场景都可能造成这个局面</p>
+<p>一、节点上有不受kubernetes管控的程序</p>
+<p>从<a target="_blank" rel="noopener" href="https://izsk.me/2023/02/15/Kubernetes-Out-Of-Memory-2/">这里</a>可以知道, 节点上显示的可分配资源(allocatable)无法控制运行在集群节点上、但在集群之外的应用使用的资源。<br>也就是说，如果我直接在节点上运行一个进程，这个进程所占用的内存是不被kubelet监控的，因此当所有容器使用的内存加上节点上直接运行的进程的内存达到系统的安全内存阈值之下(见最后一节)时，系统就会通过OOM-killer来杀死某些进程来让节点可用内存维持在安全阈值以下,<br>这个被杀的进程可能就是某个容器。至于系统怎么选择出被杀进程的过程将不在本文中展开。</p>
+<p>二、容器产生了大量的pageCache<br>详情见下文</p>
+<h3 id="容器中产生的PageCache如何统计"><a href="#容器中产生的PageCache如何统计" class="headerlink" title="容器中产生的PageCache如何统计?"></a>容器中产生的PageCache如何统计?</h3><p>考虑这样一种场景: 节点A上的容器B在运行过程中产生大量的page cache, 这部分内存该如何统计呢?</p>
+<p>这个例子相对来说比较复杂, 同样有几个概率需要先进行说明:</p>
+<p>首先，解释下page cache是什么?</p>
+<p>每当读取一个文件，数据会被缓存在 page cache 中以避免后续访问时重复读取磁盘带来的昂贵开销。也就是说我们平时访问文件（read 或 mmap 系统调用）都会创建对应的 page cache，<code>这部分内存由操作系统管理，并不记录在用户程序的内存开销中</code></p>
+<p><code>Page Cache 是由内核管理的内存</code>，位于虚拟文件系统（VFS）层与具体文件系统层之间。</p>
+<p>常见的查看page cache的命令如下:</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># free -h</span></span><br><span class="line">              total        used        free      shared  buff/cache   available</span><br><span class="line">Mem:           3.7G        239M        3.2G        580K        251M        3.2G</span><br><span class="line">Swap:            0B          0B          0B</span><br></pre></td></tr></table></figure>
+
+<p>其中:<br>shared对应的是shared memory共享内存。</p>
+<p>buff&#x2F;cache对应的就是page cache(这里没有必要去区别buff跟cache到底是什么区别，你看它们都放在了同一列)</p>
+<p>因此回到上面那个场景,如果容器B进行了大量的文件读写,将会导致free中的buff&#x2F;cache值增大,当大到一定程序时就有可能产生OOM事件, 这又是为什么呢?</p>
+<p><code>Page Cache 是由内核管理的内存</code>,请务必牢记这句话,下面的分析无时不刻地在印证这句话。<br>这句话有两层含义: 一是<code>page cache是由内核管理</code>, 二是<code>Page Cache是一种内存</code></p>
+<p>既然它是由内核直接管理的，因此将不会计算在容器的limit内，所以就会有这样的情况:<br>容器A(假如limit设置为1Gi)中的进程进行了大量的文件读写,可能产生了2Gi的pageCache, 但容器A本身的内存使用量（包括 <code>anon-rss 和 file-rss</code>）一直保持在1GiB, 所以不会OOM.</p>
+<p>但对于节点A来说就不一定，考虑一种极端情况, 如果节点A上存在很多容器B这样的问题，<br>虽然内核对pagecache有清理机制(LRU（Least Recently Used）算法)，当page cache增涨超出了内核安全内存的阈值之下，那么OOM-killer将会被激活,然后杀死进程以让系统可用内存保持在安全线之下.</p>
+<p>从这个例子可以看出，虽然<code>所有的容器使用的内存都在limit之内，但由于pagecache的原因还是会产生OOM事件</code></p>
+<p>还有以下结论我这里直接给出答案:</p>
+<p>Q1: 一个节点上产生的pagecache是否可以在这个节点上的所有容器中进行共享?<br>A: 由于pagecache是由内核管理的，所以当容器读取宿主机上相同的文件时，产生的PageCache是可以共享的，不过存在一些潜在的安全和一致性问题不在此讨论。</p>
+<p>Q2: 如果可以共享,这部分cache内存是算在哪个容器上的？<br>A: 有一个<code>metrics: container_memory_cache</code>是来统计容器使用了多少cache的,<br>产生的PageCache是算在第一个读取文件的容器对应的container_memory_cache, 后续读取相同文件的容器的container_memory_cache则不会被重复统计，<code>即使第一个容器被删除了，后面的容器的container_memory_cache也不统计</code>。</p>
+<p>Q3: 在容器中是否可以管理pagecache?<br>A: 由于pagecache是由内核统一管理的，正常情况下是不能在容器中进行管理的,注意这里说的是默认情况下你无法在容器中执行清理pagecache的操作, 但在<code>privileged模式</code>下可以</p>
+<p>Q4: 容器单是否可以隔离pagecache?<br>A: 不行, pagecache 是由宿主机内核统一管理</p>
+<p>Q5: 如果在宿主机上清理了pagecache, 是否会立即反映到容器里?<br>A: 是的, 这是因为容器共享宿主机的内核和物理内存，虽然容器通过cgroups限制了内存的使用上限，但还是因为pagecache 是由宿主机内核统一管理, 如果在宿主机上清理缓存，容器内也会感受到内存的释放效果。</p>
+<h3 id="容器中emptydir类型为medium-x3D-Memory是否会引起OOM"><a href="#容器中emptydir类型为medium-x3D-Memory是否会引起OOM" class="headerlink" title="容器中emptydir类型为medium&#x3D;Memory是否会引起OOM?"></a>容器中emptydir类型为medium&#x3D;Memory是否会引起OOM?</h3><p>对于在pod中使用emptydir类型为medium&#x3D;Memory，一般是直接将这种volume直接挂载到容器中的&#x2F;dev&#x2F;shm。</p>
+<p>这个话题在我的另一篇文章: <a target="_blank" rel="noopener" href="https://izsk.me/2022/12/30/Kubernetes-emptyDir/">Kubernetes学习(深入理解emptyDir)</a>中详细进行了说明, 感兴趣的可以移步,这里也直接说结论了:</p>
+<p><code>emptydir类型为medium=Memory中指定的内存不能超过pod中所有容器limit.memory资源之和, 所以会引起OOM</code></p>
+<h3 id="如何更好地监控容器内存"><a href="#如何更好地监控容器内存" class="headerlink" title="如何更好地监控容器内存?"></a>如何更好地监控容器内存?</h3><p>最后我想再说一下, 容器中存在多个与内存相关的metrics, 在生产上这几个metrics如何更好地反应容器的真实使用情况呢?<br>先来看看有哪些metrics</p>
+<table>
+<thead>
+<tr>
+<th><strong>指标名称</strong></th>
+<th><strong>含义</strong></th>
+<th><strong>是否包括缓存</strong></th>
+<th><strong>实际内存反映</strong></th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>container_memory_usage_bytes</code></td>
+<td>容器使用的总内存，包括匿名内存、Page Cache 和 Slab Cache。</td>
+<td>是</td>
+<td>部分反映实际使用，但包括可回收内存。</td>
+</tr>
+<tr>
+<td><code>container_memory_working_set_bytes</code></td>
+<td>实际使用的内存，不包括可回收的缓存（Page Cache 和交换空间）。</td>
+<td>否</td>
+<td>最能反映实际需求的内存。</td>
+</tr>
+<tr>
+<td><code>container_memory_rss</code></td>
+<td>容器分配的匿名内存和文件映射内存，实际占用的物理内存部分。</td>
+<td>否</td>
+<td>反映了物理内存使用。</td>
+</tr>
+<tr>
+<td><code>container_memory_cache</code></td>
+<td>文件系统缓存（Page Cache），用于加速磁盘访问。</td>
+<td>是</td>
+<td>只包含缓存，不反映应用需求。</td>
+</tr>
+</tbody></table>
+<p>总结起来的结论如下:</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">container_memory_cache = active_cache + inactive_cache</span><br><span class="line">container_memory_usage_bytes = container_memory_rss + container_memory_cache</span><br><span class="line">container_memory_working_set_bytes = container_memory_usage_bytes - inactive_cache = container_memory_rss + active_cache</span><br></pre></td></tr></table></figure>
+
+<ol>
+<li><code>container_memory_working_set_bytes是否OOM的唯一指标，当这个值到达limit后, OOM-killer将会生效</code></li>
+<li>容器中的共享内存(如&#x2F;dev&#x2F;shm)包含在除container_memory_cache外的其它3个metrics中。</li>
+<li>container_memory_cache无法直接区分出active和inactive的值, 如果需要采集，只能通过解析容器的<code>/sys/fs/cgroups/memory/memory.stat</code>文件获取</li>
+<li>文件映射内存是指通过 <code>mmap()</code> 系统调用将一个文件的内容映射到进程的虚拟地址空间中。这种方式允许进程直接访问文件数据，而不需要通过标准 I&#x2F;O 操作（如 <code>read()</code> 和 <code>write()</code>）进行数据传输</li>
+<li>container_memory_rss提到的实际占用的物理内存，这里的物理内存是实实在在的物理层面上的内存概念，有别于虚拟内存。</li>
+<li>表格中不存在<code>container_memory_swap以及container_memory_max_usage_bytes</code>, 这两个没有歧义不用在此讨论</li>
+</ol>
+<p>注:<br>active_file：活跃 LRU 列表中所有 file-backed 进程使用内存。<br>inactive_file：不活跃 LRU 列表中所有 file-backed 进程使用内存。<br><code>Linux内核使用LRU（Least Recently Used）算法来管理活动和非活动缓存</code>,当内存需要被回收时，系统会首先考虑回收非活动缓存，而保留活跃缓存。</p>
+<p><img src="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20241130195008.png"></p>
+<p>注: 该图引用于<a target="_blank" rel="noopener" href="https://kubeservice.cn/2024/06/24/fault-k8s-pod-container-memory-high/">这里</a>,原作者画的有识破，图中下面这个红色的应该是<code>total_inactive_file</code></p>
+<h3 id="PageCache相关参数"><a href="#PageCache相关参数" class="headerlink" title="PageCache相关参数"></a>PageCache相关参数</h3><p>Linux内存水位控制与可用内存计算中存在两个水位:</p>
+<ol>
+<li>low watermark：当 free 内存低于 low watermark 时触发异步内存回收</li>
+<li>min watermark：当内存低于 min watermark 时暂停内存分配，立即进行内存回收</li>
+</ol>
+<p>也就是说系统中剩余的内存不能低于min watermark，这是一个操作系统的保护机制：预留一部分内存给内存回收等关键程序使用。<br>可以通过 cat &#x2F;proc&#x2F;zoneinfo 看到 min watermark 的取值，单位是页。</p>
+<p>从上面的几个例子中可以PageCache的使用也会引起OOM的产生, linux中有以下参数可以控制pagecache的行为:</p>
+<p><code>vm.vfs_cache_pressure</code>是一个内核参数，控制 Linux 系统如何平衡 inode 和 dentry 缓存（VFS 缓存）的回收与匿名内存（进程使用的堆栈、数据段等）回收之间的优先级</p>
+<p>取值范围和含义：</p>
+<ol>
+<li><p>默认值: 100,内核会对 inode 和 dentry 缓存与其他内存类型（如匿名内存、page cache）进行平衡回收。</p>
+</li>
+<li><p>值 &gt; 100, 增大回收 inode 和 dentry 缓存的倾向，意味着系统会更快地释放这些缓存，以腾出内存给其他用途（如进程内存）<br>示例：vm.vfs_cache_pressure&#x3D;200 表示内核将更积极地回收 VFS 缓存。</p>
+</li>
+<li><p>值 &lt; 100, 降低对VFS缓存的回收倾向，保留更多的 inode 和 dentry 缓存，可能有助于加速文件系统访问。</p>
+</li>
+</ol>
+<p>推荐按场景进行设置:<br>适用于内存紧张的场景，希望减少缓存占用，优先保证进程内存, 推荐高值&gt;100<br>适用于I&#x2F;O密集型工作负载，希望提高文件访问性能，减少缓存被回收，推荐低值&lt;100</p>
+<p>当然，还有一些其它的内存对象如Slab Cache等，这个就更偏向底层了, 作者精力有限, 不再此讨论。</p>
+<h3 id="参考文章"><a href="#参考文章" class="headerlink" title="参考文章:"></a><strong>参考文章:</strong></h3><blockquote>
+<ul>
+<li><a target="_blank" rel="noopener" href="https://izsk.me/2022/12/30/Kubernetes-emptyDir/">https://izsk.me/2022/12/30/Kubernetes-emptyDir/</a></li>
+<li><a target="_blank" rel="noopener" href="https://izsk.me/2023/02/15/Kubernetes-Out-Of-Memory-1/">https://izsk.me/2023/02/15/Kubernetes-Out-Of-Memory-1/</a></li>
+<li><a target="_blank" rel="noopener" href="https://izsk.me/2023/02/15/Kubernetes-Out-Of-Memory-2/">https://izsk.me/2023/02/15/Kubernetes-Out-Of-Memory-2/</a></li>
+<li><a target="_blank" rel="noopener" href="https://help.aliyun.com/zh/alinux/support/causes-of-and-solutions-to-the-issue-of-oom-killer-being-triggered">https://help.aliyun.com/zh/alinux/support/causes-of-and-solutions-to-the-issue-of-oom-killer-being-triggered</a></li>
+<li><a target="_blank" rel="noopener" href="https://blog.hdls.me/17255242628777.html">https://blog.hdls.me/17255242628777.html</a></li>
+<li><a target="_blank" rel="noopener" href="https://blog.lv5.moe/p/from-k8s-pod-memory-usage-to-linux-memory-management">https://blog.lv5.moe/p/from-k8s-pod-memory-usage-to-linux-memory-management</a></li>
+<li><a target="_blank" rel="noopener" href="https://faun.pub/how-much-is-too-much-the-linux-oomkiller-and-used-memory-d32186f29c9d">https://faun.pub/how-much-is-too-much-the-linux-oomkiller-and-used-memory-d32186f29c9d</a></li>
+<li><a target="_blank" rel="noopener" href="https://kubeservice.cn/2024/06/24/fault-k8s-pod-container-memory-high/">https://kubeservice.cn/2024/06/24/fault-k8s-pod-container-memory-high/</a></li>
+</ul>
+</blockquote>
+<h3 id="转载请注明原作者-周淑科-https-izsk-me"><a href="#转载请注明原作者-周淑科-https-izsk-me" class="headerlink" title="转载请注明原作者: 周淑科(https://izsk.me)"></a><strong>转载请注明原作者: 周淑科(<a target="_blank" rel="noopener" href="https://izsk.me/">https://izsk.me</a>)</strong></h3>
+      
+    </div>
+
+    <div>
+      
+        
+<div id="wechat_subscriber" style="display: block; padding: 10px 0; margin: 20px auto; width: 100%; text-align: center">
+    <img id="wechat_subscriber_qcode" src="/images/websitecode250.png" alt=" wechat" style="width: 200px; max-width: 100%;"/>
+    <div>Scan Me To Read on Phone</div>
+</div>
+
+
+      
+    </div>
+
+    <div>
+      
+        
+  <div style="padding: 10px 0; margin: 20px auto; width: 90%; text-align: center;">
+    <div>I know you won't do this,but what if you did?</div>
+    <button id="rewardButton" disable="enable" onclick="var qr = document.getElementById('QR'); if (qr.style.display === 'none') {qr.style.display='block';} else {qr.style.display='none'}">
+      <span>赏</span>
+    </button>
+    <div id="QR" style="display: none;">
+      
+        <div id="wechat" style="display: inline-block">
+          <img id="wechat_qr" src="/images/wechatpayme.png" alt=" WeChat Pay"/>
+          <p>微信打赏</p>
+        </div>
+      
+      
+        <div id="alipay" style="display: inline-block">
+          <img id="alipay_qr" src="/images/alipayme.jpg" alt=" Alipay"/>
+          <p>支付宝打赏</p>
+        </div>
+      
+    </div>
+  </div>
+
+
+      
+    </div>
+
+
+    <footer class="post-footer">
+      
+        <div class="post-tags">
+          
+            <a href="/tags/Kubernetes/" rel="tag"># Kubernetes</a>
+          
+        </div>
+      
+
+      
+        <div class="post-nav">
+          <div class="post-nav-next post-nav-item">
+            
+              <a href="/2024/08/10/cilium-on-kubernetes-errors-apiratelimit/" rel="next" title="cilium在kubernetes中的生产实践六(cilium排错指南)之api-rate-limit">
+                <i class="fa fa-chevron-left"></i> cilium在kubernetes中的生产实践六(cilium排错指南)之api-rate-limit
+              </a>
+            
+          </div>
+
+          <span class="post-nav-divider"></span>
+
+          <div class="post-nav-prev post-nav-item">
+            
+          </div>
+        </div>
+      
+
+      
+      
+    </footer>
+  </article>
+
+
+
+    <div class="post-spread">
+      
+    </div>
+  </div>
+
+
+          </div>
+          
+
+
+          
+
+        </div>
+        
+          
+  
+  <div class="sidebar-toggle">
+    <div class="sidebar-toggle-line-wrap">
+      <span class="sidebar-toggle-line sidebar-toggle-line-first"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-middle"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-last"></span>
+    </div>
+  </div>
+
+  <aside id="sidebar" class="sidebar">
+    <div class="sidebar-inner">
+
+      
+
+      
+        <ul class="sidebar-nav motion-element">
+          <li class="sidebar-nav-toc sidebar-nav-active" data-target="post-toc-wrap" >
+            文章目录
+          </li>
+          <li class="sidebar-nav-overview" data-target="site-overview">
+            站点概览
+          </li>
+        </ul>
+      
+
+      <section class="site-overview sidebar-panel">
+        <div class="site-author motion-element" itemprop="author" itemscope itemtype="http://schema.org/Person">
+          <img class="site-author-image" itemprop="image"
+               src="/images/avatar.gif"
+               alt="" />
+          <p class="site-author-name" itemprop="name"></p>
+          <p class="site-description motion-element" itemprop="description"></p>
+        </div>
+        <nav class="site-state motion-element">
+        
+          
+            <div class="site-state-item site-state-posts">
+              <a href="/archives">
+                <span class="site-state-item-count">217</span>
+                <span class="site-state-item-name">日志</span>
+              </a>
+            </div>
+          
+
+          
+            <div class="site-state-item site-state-categories">
+              <a href="/categories">
+                <span class="site-state-item-count">15</span>
+                <span class="site-state-item-name">分类</span>
+              </a>
+            </div>
+          
+
+          
+            <div class="site-state-item site-state-tags">
+              <a href="/tags">
+                <span class="site-state-item-count">15</span>
+                <span class="site-state-item-name">标签</span>
+              </a>
+            </div>
+          
+
+        </nav>
+
+        
+
+        <div class="links-of-author motion-element">
+          
+        </div>
+
+        
+        
+
+        
+        
+
+        
+
+
+      </section>
+
+      
+      <!--noindex-->
+        <section class="post-toc-wrap motion-element sidebar-panel sidebar-panel-active">
+          <div class="post-toc">
+
+            
+              
+            
+
+            
+              <div class="post-toc-content"><ol class="nav"><li class="nav-item nav-level-3"><a class="nav-link" href="#OOM%E6%97%A5%E5%BF%97%E6%80%8E%E4%B9%88%E7%9C%8B"><span class="nav-number">1.</span> <span class="nav-text">OOM日志怎么看?</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E4%B8%BA%E4%BB%80%E4%B9%88%E5%AE%B9%E5%99%A8%E6%B2%A1%E6%9C%89%E5%88%B0%E8%BE%BElimit%E5%90%8E%E5%8D%B4%E8%A2%ABOOM%E4%BA%86"><span class="nav-number">2.</span> <span class="nav-text">为什么容器没有到达limit后却被OOM了?</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E5%AE%B9%E5%99%A8%E4%B8%AD%E4%BA%A7%E7%94%9F%E7%9A%84PageCache%E5%A6%82%E4%BD%95%E7%BB%9F%E8%AE%A1"><span class="nav-number">3.</span> <span class="nav-text">容器中产生的PageCache如何统计?</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E5%AE%B9%E5%99%A8%E4%B8%ADemptydir%E7%B1%BB%E5%9E%8B%E4%B8%BAmedium-x3D-Memory%E6%98%AF%E5%90%A6%E4%BC%9A%E5%BC%95%E8%B5%B7OOM"><span class="nav-number">4.</span> <span class="nav-text">容器中emptydir类型为medium&#x3D;Memory是否会引起OOM?</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E5%A6%82%E4%BD%95%E6%9B%B4%E5%A5%BD%E5%9C%B0%E7%9B%91%E6%8E%A7%E5%AE%B9%E5%99%A8%E5%86%85%E5%AD%98"><span class="nav-number">5.</span> <span class="nav-text">如何更好地监控容器内存?</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#PageCache%E7%9B%B8%E5%85%B3%E5%8F%82%E6%95%B0"><span class="nav-number">6.</span> <span class="nav-text">PageCache相关参数</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E5%8F%82%E8%80%83%E6%96%87%E7%AB%A0"><span class="nav-number">7.</span> <span class="nav-text">参考文章:</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E8%BD%AC%E8%BD%BD%E8%AF%B7%E6%B3%A8%E6%98%8E%E5%8E%9F%E4%BD%9C%E8%80%85-%E5%91%A8%E6%B7%91%E7%A7%91-https-izsk-me"><span class="nav-number">8.</span> <span class="nav-text">转载请注明原作者: 周淑科(https:&#x2F;&#x2F;izsk.me)</span></a></li></ol></div>
+            
+
+          </div>
+        </section>
+      <!--/noindex-->
+      
+
+    </div>
+  </aside>
+
+
+        
+      </div>
+    </main>
+
+    <footer id="footer" class="footer">
+      <div class="footer-inner">
+        <div class="copyright" >
+  
+  &copy; 
+  <span itemprop="copyrightYear">2024</span>
+  <span class="with-love">
+    <i class="fa fa-heart"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">Z.S.K.</span>
+</div>
+
+
+<div class="powered-by">
+  Supported by <a class="theme-link" target="_blank" rel="noopener" href="https://hexo.io">Hexo</a>
+</div>
+
+<div class="theme-info">
+  Theme -
+  <a class="theme-link" target="_blank" rel="noopener" href="https://github.com/iissnan/hexo-theme-next">
+    NexT.Mist
+  </a>
+</div>
+
+
+        
+
+        
+      </div>
+    </footer>
+
+    <div class="back-to-top">
+      <i class="fa fa-arrow-up"></i>
+    </div>
+  </div>
+
+  
+
+<script type="text/javascript">
+  if (Object.prototype.toString.call(window.Promise) !== '[object Function]') {
+    window.Promise = null;
+  }
+</script>
+
+
+
+
+
+
+
+
+
+  
+
+
+
+  
+  <script type="text/javascript" src="/lib/jquery/index.js?v=2.1.3"></script>
+
+  
+  <script type="text/javascript" src="/lib/fastclick/lib/fastclick.min.js?v=1.0.6"></script>
+
+  
+  <script type="text/javascript" src="/lib/jquery_lazyload/jquery.lazyload.js?v=1.9.7"></script>
+
+  
+  <script type="text/javascript" src="/lib/velocity/velocity.min.js?v=1.2.1"></script>
+
+  
+  <script type="text/javascript" src="/lib/velocity/velocity.ui.min.js?v=1.2.1"></script>
+
+  
+  <script type="text/javascript" src="/lib/fancybox/source/jquery.fancybox.pack.js?v=2.1.5"></script>
+
+
+  
+
+
+  <script type="text/javascript" src="/js/src/utils.js?v=5.1.0"></script>
+
+  <script type="text/javascript" src="/js/src/motion.js?v=5.1.0"></script>
+
+
+
+  
+  
+
+  
+  <script type="text/javascript" src="/js/src/scrollspy.js?v=5.1.0"></script>
+<script type="text/javascript" src="/js/src/post-details.js?v=5.1.0"></script>
+
+
+
+  
+
+
+  <script type="text/javascript" src="/js/src/bootstrap.js?v=5.1.0"></script>
+
+
+
+  
+
+
+
+  
+
+
+
+
+	
+
+
+
+
+
+  
+
+
+
+
+  
+  
+  <script type="text/javascript">
+    // Popup Window;
+    var isfetched = false;
+    // Search DB path;
+    var search_path = "search.xml";
+    if (search_path.length == 0) {
+      search_path = "search.xml";
+    }
+    var path = "/" + search_path;
+    // monitor main search box;
+
+    function proceedsearch() {
+      $("body").append('<div class="popoverlay">').css('overflow', 'hidden');
+      $('.popup').toggle();
+    }
+    // search function;
+    var searchFunc = function(path, search_id, content_id) {
+      'use strict';
+      $.ajax({
+        url: path,
+        dataType: "xml",
+        async: true,
+        success: function( xmlResponse ) {
+          // get the contents from search data
+          isfetched = true;
+          $('.popup').detach().appendTo('.header-inner');
+          var datas = $( "entry", xmlResponse ).map(function() {
+            return {
+              title: $( "title", this ).text(),
+              content: $("content",this).text(),
+              url: $( "url" , this).text()
+            };
+          }).get();
+          var $input = document.getElementById(search_id);
+          var $resultContent = document.getElementById(content_id);
+          $input.addEventListener('input', function(){
+            var matchcounts = 0;
+            var str='<ul class=\"search-result-list\">';
+            var keywords = this.value.trim().toLowerCase().split(/[\s\-]+/);
+            $resultContent.innerHTML = "";
+            if (this.value.trim().length > 1) {
+              // perform local searching
+              datas.forEach(function(data) {
+                var isMatch = false;
+                var content_index = [];
+                var data_title = data.title.trim().toLowerCase();
+                var data_content = data.content.trim().replace(/<[^>]+>/g,"").toLowerCase();
+                var data_url = decodeURIComponent(data.url);
+                var index_title = -1;
+                var index_content = -1;
+                var first_occur = -1;
+                // only match artiles with not empty titles and contents
+                if(data_title != '') {
+                  keywords.forEach(function(keyword, i) {
+                    index_title = data_title.indexOf(keyword);
+                    index_content = data_content.indexOf(keyword);
+                    if( index_title >= 0 || index_content >= 0 ){
+                      isMatch = true;
+                      if (i == 0) {
+                        first_occur = index_content;
+                      }
+                    }
+
+                  });
+                }
+                // show search results
+                if (isMatch) {
+                  matchcounts += 1;
+                  str += "<li><a href='"+ data_url +"' class='search-result-title'>"+ data_title +"</a>";
+                  var content = data.content.trim().replace(/<[^>]+>/g,"");
+                  if (first_occur >= 0) {
+                    // cut out 100 characters
+                    var start = first_occur - 20;
+                    var end = first_occur + 80;
+                    if(start < 0){
+                      start = 0;
+                    }
+                    if(start == 0){
+                      end = 50;
+                    }
+                    if(end > content.length){
+                      end = content.length;
+                    }
+                    var match_content = content.substring(start, end);
+                    // highlight all keywords
+                    keywords.forEach(function(keyword){
+                      var regS = new RegExp(keyword, "gi");
+                      match_content = match_content.replace(regS, "<b class=\"search-keyword\">"+keyword+"</b>");
+                    });
+
+                    str += "<p class=\"search-result\">" + match_content +"...</p>"
+                  }
+                  str += "</li>";
+                }
+              })};
+            str += "</ul>";
+            if (matchcounts == 0) { str = '<div id="no-result"><i class="fa fa-frown-o fa-5x" /></div>' }
+            if (keywords == "") { str = '<div id="no-result"><i class="fa fa-search fa-5x" /></div>' }
+            $resultContent.innerHTML = str;
+          });
+          proceedsearch();
+        }
+      });}
+
+    // handle and trigger popup window;
+    $('.popup-trigger').click(function(e) {
+      e.stopPropagation();
+      if (isfetched == false) {
+        searchFunc(path, 'local-search-input', 'local-search-result');
+      } else {
+        proceedsearch();
+      };
+    });
+
+    $('.popup-btn-close').click(function(e){
+      $('.popup').hide();
+      $(".popoverlay").remove();
+      $('body').css('overflow', '');
+    });
+    $('.popup').click(function(e){
+      e.stopPropagation();
+    });
+  </script>
+
+
+  
+
+  
+
+  
+
+  
+
+
+</body>
+</html>
