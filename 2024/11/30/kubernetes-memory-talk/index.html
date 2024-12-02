@@ -86,14 +86,14 @@
 
 <meta name="description" content="本篇内容主要围绕kubernetes中的各种内存，对以下灵魂话题进行深入剖析:  为什么容器没有到达limit后却被OOM了? 容器中产生的PageCache如何统计? 容器中emptydir类型为medium&#x3D;Memory是否会引起OOM? 如何更好地监控容器内存? PageCache相关参数  说明: 为了方便，这里不对容器与pod进行区分.">
 <meta property="og:type" content="article">
-<meta property="og:title" content="Kubernetes学习(再谈kubernetes中的各种内存)">
+<meta property="og:title" content="Kubernetes学习(再谈kubernetes中的各种内存OOM)">
 <meta property="og:url" content="https://zhoushuke.github.io/2024/11/30/kubernetes-memory-talk/index.html">
 <meta property="og:site_name" content="Z.S.K.&#39;s Records">
 <meta property="og:description" content="本篇内容主要围绕kubernetes中的各种内存，对以下灵魂话题进行深入剖析:  为什么容器没有到达limit后却被OOM了? 容器中产生的PageCache如何统计? 容器中emptydir类型为medium&#x3D;Memory是否会引起OOM? 如何更好地监控容器内存? PageCache相关参数  说明: 为了方便，这里不对容器与pod进行区分.">
 <meta property="og:locale">
 <meta property="og:image" content="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20241130195008.png">
 <meta property="article:published_time" content="2024-11-30T09:30:53.000Z">
-<meta property="article:modified_time" content="2024-11-30T12:01:04.809Z">
+<meta property="article:modified_time" content="2024-12-02T04:19:36.179Z">
 <meta property="article:author" content="Z.S.K.">
 <meta property="article:tag" content="Kubernetes">
 <meta name="twitter:card" content="summary">
@@ -131,7 +131,7 @@
 
 
 
-  <title> Kubernetes学习(再谈kubernetes中的各种内存) | Z.S.K.'s Records </title>
+  <title> Kubernetes学习(再谈kubernetes中的各种内存OOM) | Z.S.K.'s Records </title>
 <meta name="generator" content="Hexo 6.2.0"></head>
 
 <body itemscope itemtype="http://schema.org/WebPage" lang="zh-Hans">
@@ -321,7 +321,7 @@
             
             
               
-                Kubernetes学习(再谈kubernetes中的各种内存)
+                Kubernetes学习(再谈kubernetes中的各种内存OOM)
               
             
           </h1>
@@ -536,19 +536,11 @@
 <li>min watermark：当内存低于 min watermark 时暂停内存分配，立即进行内存回收</li>
 </ol>
 <p>也就是说系统中剩余的内存不能低于min watermark，这是一个操作系统的保护机制：预留一部分内存给内存回收等关键程序使用。<br>可以通过 cat &#x2F;proc&#x2F;zoneinfo 看到 min watermark 的取值，单位是页。</p>
-<p>从上面的几个例子中可以PageCache的使用也会引起OOM的产生, linux中有以下参数可以控制pagecache的行为:</p>
-<p><code>vm.vfs_cache_pressure</code>是一个内核参数，控制 Linux 系统如何平衡 inode 和 dentry 缓存（VFS 缓存）的回收与匿名内存（进程使用的堆栈、数据段等）回收之间的优先级</p>
-<p>取值范围和含义：</p>
-<ol>
-<li><p>默认值: 100,内核会对 inode 和 dentry 缓存与其他内存类型（如匿名内存、page cache）进行平衡回收。</p>
-</li>
-<li><p>值 &gt; 100, 增大回收 inode 和 dentry 缓存的倾向，意味着系统会更快地释放这些缓存，以腾出内存给其他用途（如进程内存）<br>示例：vm.vfs_cache_pressure&#x3D;200 表示内核将更积极地回收 VFS 缓存。</p>
-</li>
-<li><p>值 &lt; 100, 降低对VFS缓存的回收倾向，保留更多的 inode 和 dentry 缓存，可能有助于加速文件系统访问。</p>
-</li>
-</ol>
-<p>推荐按场景进行设置:<br>适用于内存紧张的场景，希望减少缓存占用，优先保证进程内存, 推荐高值&gt;100<br>适用于I&#x2F;O密集型工作负载，希望提高文件访问性能，减少缓存被回收，推荐低值&lt;100</p>
-<p>当然，还有一些其它的内存对象如Slab Cache等，这个就更偏向底层了, 作者精力有限, 不再此讨论。</p>
+<p>从上面的几个例子中可以看到PageCache的使用也会引起OOM的产生, linux中有以下参数可以控制pagecache的行为:</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br></pre></td><td class="code"><pre><span class="line">`vm.vfs_cache_pressure`是一个内核参数，控制 Linux 系统如何平衡 inode 和 dentry 缓存（VFS 缓存）的回收与匿名内存（进程使用的堆栈、数据段等）回收之间的优先级</span><br><span class="line"></span><br><span class="line">取值范围和含义：</span><br><span class="line">1. 默认值: 100,内核会对 inode 和 dentry 缓存与其他内存类型（如匿名内存、page cache）进行平衡回收。</span><br><span class="line">2. 值 &gt; 100, 增大回收 inode 和 dentry 缓存的倾向，意味着系统会更快地释放这些缓存，以腾出内存给其他用途（如进程内存）</span><br><span class="line">   示例：vm.vfs_cache_pressure=200 表示内核将更积极地回收 VFS 缓存。</span><br><span class="line">3. 值 &lt; 100, 降低对VFS缓存的回收倾向，保留更多的 inode 和 dentry 缓存，可能有助于加速文件系统访问。</span><br><span class="line"></span><br><span class="line">推荐按场景进行设置:</span><br><span class="line">适用于内存紧张的场景，希望减少缓存占用，优先保证进程内存, 推荐高值&gt;100</span><br><span class="line">适用于I/O密集型工作负载，希望提高文件访问性能，减少缓存被回收，推荐低值&lt;100</span><br><span class="line"></span><br><span class="line">`vm.dirty_ratio`: 定义脏页占用系统内存的最大比例。达到该比例时，会触发数据写回磁盘,调整这个参数可以降低pagecache的大小。</span><br><span class="line"></span><br><span class="line">`vm.dirty_background_ratio`: 定义后台写回进程开始写脏页的比例。比 dirty_ratio 小。</span><br></pre></td></tr></table></figure>
+
+
+<p>当然，还有一些其它的内存对象如Slab Cache等, 不再此讨论。</p>
 <h3 id="参考文章"><a href="#参考文章" class="headerlink" title="参考文章:"></a><strong>参考文章:</strong></h3><blockquote>
 <ul>
 <li><a target="_blank" rel="noopener" href="https://izsk.me/2022/12/30/Kubernetes-emptyDir/">https://izsk.me/2022/12/30/Kubernetes-emptyDir/</a></li>
