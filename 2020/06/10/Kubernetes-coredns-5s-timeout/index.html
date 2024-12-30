@@ -30,7 +30,7 @@
 <meta property="og:image" content="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20200610105313.png">
 <meta property="og:image" content="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20200612162959.png">
 <meta property="article:published_time" content="2020-06-10T12:10:53.000Z">
-<meta property="article:modified_time" content="2023-04-11T07:58:45.741Z">
+<meta property="article:modified_time" content="2024-12-30T07:21:59.533Z">
 <meta property="article:author" content="周淑科">
 <meta property="article:tag" content="Kubernetes">
 <meta name="twitter:card" content="summary">
@@ -142,7 +142,7 @@
       <div class="sidebar-panel-container">
         <!--noindex-->
         <div class="post-toc-wrap sidebar-panel">
-            <div class="post-toc animated"><ol class="nav"><li class="nav-item nav-level-3"><a class="nav-link" href="#%E7%8E%AF%E5%A2%83%E8%AF%B4%E6%98%8E"><span class="nav-number">1.</span> <span class="nav-text">环境说明</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E9%97%AE%E9%A2%98%E7%8E%B0%E8%B1%A1"><span class="nav-number">2.</span> <span class="nav-text">问题现象</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E6%8E%92%E6%9F%A5%E8%BF%87%E7%A8%8B"><span class="nav-number">3.</span> <span class="nav-text">排查过程</span></a><ol class="nav-child"><li class="nav-item nav-level-4"><a class="nav-link" href="#Services"><span class="nav-number">3.1.</span> <span class="nav-text">Services</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#ClusterIP"><span class="nav-number">3.2.</span> <span class="nav-text">ClusterIP</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#CoreDNS"><span class="nav-number">3.3.</span> <span class="nav-text">CoreDNS</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#Tcpdump"><span class="nav-number">3.4.</span> <span class="nav-text">Tcpdump</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#Kube-proxy"><span class="nav-number">3.5.</span> <span class="nav-text">Kube-proxy</span></a></li></ol></li><li class="nav-item nav-level-3"><a class="nav-link" href="#Why-5s"><span class="nav-number">4.</span> <span class="nav-text">Why 5s</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#Conntrack"><span class="nav-number">5.</span> <span class="nav-text">Conntrack</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#Prombles"><span class="nav-number">6.</span> <span class="nav-text">Prombles</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#Resolve"><span class="nav-number">7.</span> <span class="nav-text">Resolve</span></a><ol class="nav-child"><li class="nav-item nav-level-4"><a class="nav-link" href="#Use-TCP"><span class="nav-number">7.1.</span> <span class="nav-text">Use TCP</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#single-request-reopen-sing-request"><span class="nav-number">7.2.</span> <span class="nav-text">single-request-reopen&#x2F;sing-request</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#musl-libc"><span class="nav-number">7.3.</span> <span class="nav-text">musl libc</span></a></li></ol></li><li class="nav-item nav-level-3"><a class="nav-link" href="#getaddrinfo-%E3%80%81gethostbyname"><span class="nav-number">8.</span> <span class="nav-text">getaddrinfo()、gethostbyname()</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E5%8F%82%E8%80%83%E6%96%87%E7%AB%A0"><span class="nav-number">9.</span> <span class="nav-text">参考文章:</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E8%BD%AC%E8%BD%BD%E8%AF%B7%E6%B3%A8%E6%98%8E%E5%8E%9F%E4%BD%9C%E8%80%85-%E5%91%A8%E6%B7%91%E7%A7%91-https-izsk-me"><span class="nav-number">10.</span> <span class="nav-text">转载请注明原作者: 周淑科(https:&#x2F;&#x2F;izsk.me)</span></a></li></ol></div>
+            <div class="post-toc animated"><ol class="nav"><li class="nav-item nav-level-3"><a class="nav-link" href="#%E7%8E%AF%E5%A2%83%E8%AF%B4%E6%98%8E"><span class="nav-number">1.</span> <span class="nav-text">环境说明</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E9%97%AE%E9%A2%98%E7%8E%B0%E8%B1%A1"><span class="nav-number">2.</span> <span class="nav-text">问题现象</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E6%8E%92%E6%9F%A5%E8%BF%87%E7%A8%8B"><span class="nav-number">3.</span> <span class="nav-text">排查过程</span></a><ol class="nav-child"><li class="nav-item nav-level-4"><a class="nav-link" href="#Services"><span class="nav-number">3.1.</span> <span class="nav-text">Services</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#ClusterIP"><span class="nav-number">3.2.</span> <span class="nav-text">ClusterIP</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#CoreDNS"><span class="nav-number">3.3.</span> <span class="nav-text">CoreDNS</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#Tcpdump"><span class="nav-number">3.4.</span> <span class="nav-text">Tcpdump</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#Kube-proxy"><span class="nav-number">3.5.</span> <span class="nav-text">Kube-proxy</span></a></li></ol></li><li class="nav-item nav-level-3"><a class="nav-link" href="#Why-5s"><span class="nav-number">4.</span> <span class="nav-text">Why 5s</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#Conntrack"><span class="nav-number">5.</span> <span class="nav-text">Conntrack</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#Prombles"><span class="nav-number">6.</span> <span class="nav-text">Prombles</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#Resolve"><span class="nav-number">7.</span> <span class="nav-text">Resolve</span></a><ol class="nav-child"><li class="nav-item nav-level-4"><a class="nav-link" href="#Use-TCP"><span class="nav-number">7.1.</span> <span class="nav-text">Use TCP</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#single-request-reopen-sing-request"><span class="nav-number">7.2.</span> <span class="nav-text">single-request-reopen&#x2F;sing-request</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#musl-libc"><span class="nav-number">7.3.</span> <span class="nav-text">musl libc</span></a></li></ol></li><li class="nav-item nav-level-3"><a class="nav-link" href="#getaddrinfo-%E3%80%81gethostbyname"><span class="nav-number">8.</span> <span class="nav-text">getaddrinfo()、gethostbyname()</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E5%8F%82%E8%80%83%E6%96%87%E7%AB%A0"><span class="nav-number">9.</span> <span class="nav-text">参考文章:</span></a></li></ol></div>
         </div>
         <!--/noindex-->
 
@@ -360,7 +360,7 @@
 <li><a target="_blank" rel="noopener" href="https://opengers.github.io/openstack/openstack-base-netfilter-framework-overview/">https://opengers.github.io/openstack/openstack-base-netfilter-framework-overview/</a></li>
 </ul>
 </blockquote>
-<h3 id="转载请注明原作者-周淑科-https-izsk-me"><a href="#转载请注明原作者-周淑科-https-izsk-me" class="headerlink" title="转载请注明原作者: 周淑科(https://izsk.me)"></a><strong>转载请注明原作者: 周淑科(<a target="_blank" rel="noopener" href="https://izsk.me/">https://izsk.me</a>)</strong></h3>
+
     </div>
 
     
@@ -450,14 +450,14 @@
       <i class="fa fa-chart-line"></i>
     </span>
       <span>站点总字数：</span>
-    <span title="站点总字数">991k</span>
+    <span title="站点总字数">985k</span>
   </span>
   <span class="post-meta-item">
     <span class="post-meta-item-icon">
       <i class="fa fa-coffee"></i>
     </span>
       <span>站点阅读时长 &asymp;</span>
-    <span title="站点阅读时长">15:01</span>
+    <span title="站点阅读时长">14:55</span>
   </span>
 </div>
 <div class="busuanzi-count">

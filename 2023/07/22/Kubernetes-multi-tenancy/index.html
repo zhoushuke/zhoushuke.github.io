@@ -28,7 +28,7 @@
 <meta property="og:description" content="某种程度上说，kubernetes是个共享的架构，旨在通过共享来降低成本,但实际中,多租户是个绕不开的话题， Kubernetes 没有终端用户或租户概念， 不过kubernetes也提供了几个特性来帮助管理不同的租户需求，社区也有一些开源实现, 作者通过实践来聊一聊kubernetes中如何实现多租户(Multi-Tenancy)模型">
 <meta property="og:locale" content="zh_CN">
 <meta property="article:published_time" content="2023-07-22T09:30:53.000Z">
-<meta property="article:modified_time" content="2023-07-22T09:44:25.138Z">
+<meta property="article:modified_time" content="2024-12-30T07:21:59.534Z">
 <meta property="article:author" content="周淑科">
 <meta property="article:tag" content="Kubernetes">
 <meta name="twitter:card" content="summary">
@@ -139,7 +139,7 @@
       <div class="sidebar-panel-container">
         <!--noindex-->
         <div class="post-toc-wrap sidebar-panel">
-            <div class="post-toc animated"><ol class="nav"><li class="nav-item nav-level-3"><a class="nav-link" href="#%E7%A7%9F%E6%88%B7%E7%B1%BB%E5%9E%8B"><span class="nav-number">1.</span> <span class="nav-text">租户类型</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E5%BE%85%E5%86%B3%E9%97%AE%E9%A2%98"><span class="nav-number">2.</span> <span class="nav-text">待决问题</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E7%94%9F%E4%BA%A7%E9%9C%80%E6%B1%82"><span class="nav-number">3.</span> <span class="nav-text">生产需求</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#Namespace"><span class="nav-number">4.</span> <span class="nav-text">Namespace</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#hnc"><span class="nav-number">5.</span> <span class="nav-text">hnc</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#capsule"><span class="nav-number">6.</span> <span class="nav-text">capsule</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E5%8F%82%E8%80%83%E6%96%87%E7%AB%A0"><span class="nav-number">7.</span> <span class="nav-text">参考文章:</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E8%BD%AC%E8%BD%BD%E8%AF%B7%E6%B3%A8%E6%98%8E%E5%8E%9F%E4%BD%9C%E8%80%85-%E5%91%A8%E6%B7%91%E7%A7%91-https-izsk-me"><span class="nav-number">8.</span> <span class="nav-text">转载请注明原作者: 周淑科(https:&#x2F;&#x2F;izsk.me)</span></a></li></ol></div>
+            <div class="post-toc animated"><ol class="nav"><li class="nav-item nav-level-3"><a class="nav-link" href="#%E7%A7%9F%E6%88%B7%E7%B1%BB%E5%9E%8B"><span class="nav-number">1.</span> <span class="nav-text">租户类型</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E5%BE%85%E5%86%B3%E9%97%AE%E9%A2%98"><span class="nav-number">2.</span> <span class="nav-text">待决问题</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E7%94%9F%E4%BA%A7%E9%9C%80%E6%B1%82"><span class="nav-number">3.</span> <span class="nav-text">生产需求</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#Namespace"><span class="nav-number">4.</span> <span class="nav-text">Namespace</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#hnc"><span class="nav-number">5.</span> <span class="nav-text">hnc</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#capsule"><span class="nav-number">6.</span> <span class="nav-text">capsule</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E5%8F%82%E8%80%83%E6%96%87%E7%AB%A0"><span class="nav-number">7.</span> <span class="nav-text">参考文章:</span></a></li></ol></div>
         </div>
         <!--/noindex-->
 
@@ -370,7 +370,7 @@
 <p>但<strong>hnc与capsule目前还不能很好地解决资源怎样分配可以更加合理问题</strong>，话说回来，这也不是它们要解决的问题，如volcano这类的调度系统，也有queue对象，都是在解决租户与资源之间关系.</p>
 <p>当然，一些成熟的Kubernetes集群管理工具都会有自己的CRD来对租户进行管理, 比如rancher会有project这类的对象, kubesphere里有workspace等等</p>
 <p>总之: <strong>条条大路通罗马, OP同学可以不用疯掉了</strong></p>
-<h3 id="参考文章"><a href="#参考文章" class="headerlink" title="参考文章:"></a><strong>参考文章:</strong></h3><h3 id="转载请注明原作者-周淑科-https-izsk-me"><a href="#转载请注明原作者-周淑科-https-izsk-me" class="headerlink" title="转载请注明原作者: 周淑科(https://izsk.me)"></a><strong>转载请注明原作者: 周淑科(<a target="_blank" rel="noopener" href="https://izsk.me/">https://izsk.me</a>)</strong></h3><blockquote>
+<h3 id="参考文章"><a href="#参考文章" class="headerlink" title="参考文章:"></a><strong>参考文章:</strong></h3><blockquote>
 <ul>
 <li><a target="_blank" rel="noopener" href="https://izsk.me/2023/07/20/Kubernetes-hnc/">https://izsk.me/2023/07/20/Kubernetes-hnc/</a></li>
 <li><a target="_blank" rel="noopener" href="https://izsk.me/2023/07/21/Kubernetes-capsule/">https://izsk.me/2023/07/21/Kubernetes-capsule/</a></li>
@@ -471,14 +471,14 @@
       <i class="fa fa-chart-line"></i>
     </span>
       <span>站点总字数：</span>
-    <span title="站点总字数">991k</span>
+    <span title="站点总字数">985k</span>
   </span>
   <span class="post-meta-item">
     <span class="post-meta-item-icon">
       <i class="fa fa-coffee"></i>
     </span>
       <span>站点阅读时长 &asymp;</span>
-    <span title="站点阅读时长">15:01</span>
+    <span title="站点阅读时长">14:55</span>
   </span>
 </div>
 <div class="busuanzi-count">

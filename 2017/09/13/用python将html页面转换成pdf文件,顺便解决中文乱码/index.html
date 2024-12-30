@@ -28,7 +28,7 @@
 <meta property="og:description" content="现在很多主流的浏览器都直接支持把html转换成pdf,比如谷歌大神器,Ctrl+P就能直接完美的转换,再复杂的css样式都没毛病,但我们不能奢求所有客户都使用谷歌浏览器,也不是所有客户都知道可以Ctrl+P,所以不得不在项目中提供一个[另存为PDF]的功能,而且还需要能自动转换为PDF文件,这对于定期生成报表功能尤其重要.">
 <meta property="og:locale" content="zh_CN">
 <meta property="article:published_time" content="2017-09-13T02:42:53.000Z">
-<meta property="article:modified_time" content="2023-04-11T07:58:45.740Z">
+<meta property="article:modified_time" content="2024-12-30T07:37:32.330Z">
 <meta property="article:author" content="周淑科">
 <meta property="article:tag" content="Python">
 <meta name="twitter:card" content="summary">
@@ -139,7 +139,7 @@
       <div class="sidebar-panel-container">
         <!--noindex-->
         <div class="post-toc-wrap sidebar-panel">
-            <div class="post-toc animated"><ol class="nav"><li class="nav-item nav-level-3"><a class="nav-link" href="#%E7%8E%AF%E5%A2%83"><span class="nav-number">1.</span> <span class="nav-text">环境</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E9%97%AE%E9%A2%98"><span class="nav-number">2.</span> <span class="nav-text">问题</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E8%A7%A3%E5%86%B3"><span class="nav-number">3.</span> <span class="nav-text">解决</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E5%8F%82%E8%80%83%E6%96%87%E7%AB%A0"><span class="nav-number">4.</span> <span class="nav-text">参考文章:</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E8%BD%AC%E8%BD%BD%E8%AF%B7%E6%B3%A8%E6%98%8E%E5%8E%9F%E4%BD%9C%E8%80%85-%E5%91%A8%E6%B7%91%E7%A7%91-https-izsk-me"><span class="nav-number">5.</span> <span class="nav-text">转载请注明原作者: 周淑科(https:&#x2F;&#x2F;izsk.me)</span></a></li></ol></div>
+            <div class="post-toc animated"><ol class="nav"><li class="nav-item nav-level-3"><a class="nav-link" href="#%E7%8E%AF%E5%A2%83"><span class="nav-number">1.</span> <span class="nav-text">环境</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E9%97%AE%E9%A2%98"><span class="nav-number">2.</span> <span class="nav-text">问题</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E8%A7%A3%E5%86%B3"><span class="nav-number">3.</span> <span class="nav-text">解决</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E5%8F%82%E8%80%83%E6%96%87%E7%AB%A0"><span class="nav-number">4.</span> <span class="nav-text">参考文章:</span></a></li></ol></div>
         </div>
         <!--/noindex-->
 
@@ -299,6 +299,7 @@
 </blockquote>
 <h3 id="解决"><a href="#解决" class="headerlink" title="解决"></a><strong>解决</strong></h3><p><strong>第一个问题</strong>一般都是默认的引用字体不支持中文,故可在模板文件中直接引用对应的支持中文的字体文件,这里使用微软雅黑字体,去网上下一个,把该字体文体放到reportlab库的安装路径下&#x2F;font文件夹下,然后在模板文件中如下引用即可:</p>
 <figure class="highlight html"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line">@font-face &#123;</span><br><span class="line">   font-family: msyh;</span><br><span class="line">   src: url(&quot;msyh.ttf&quot;);</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
 <p>当然上面也可以不把字体文件放到font目录下,反正只需要上面代码src.url里能找到字体文件即可</p>
 <p><strong>第二个问题</strong>中文的自动换行问题,网上通用的做法是在.py文件中引用以下几句代码:</p>
 <figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">from</span> reportlab.pdfbase <span class="keyword">import</span> pdfmetrics</span><br><span class="line"><span class="keyword">from</span> reportlab.pdfbase.ttfonts <span class="keyword">import</span> TTFont </span><br><span class="line">pdfmetrics.registerFont(TTFont(<span class="string">&#x27;msyh&#x27;</span>, <span class="string">&#x27;msyh.ttf&#x27;</span>))</span><br><span class="line"><span class="keyword">import</span> reportlab.lib.styles</span><br><span class="line">reportlab.lib.styles.ParagraphStyle.defaults[<span class="string">&#x27;wordWrap&#x27;</span>] = <span class="string">&#x27;CJK&#x27;</span></span><br></pre></td></tr></table></figure>
@@ -309,6 +310,7 @@
 <p>但是很可惜,本人各种尝试之后追了源码之后也没有实现中文自动换行,后来没有办法只能使用手工br的方式,好在模板html文件不是很大,工作量不是很大也就忍了</p>
 <p><strong>第三个问题</strong>其实是版本的问题,网上很多教程都是基于python2.x环境下,python2.x环境下,StringIO是from cStringIO import StringIO,而在python3.x下,StringIO在io下了,要from io import StringIO,还有就是pisa.CreatePDF(StringIO(pdf_data.encode(‘utf-8’)), pdf)在python3.x下StringIO无法使用,只能使用BytesIO,查看源码document.py里也改成了out &#x3D; io.BytesIO(),故应该改成</p>
 <figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">pdf = pisa.CreatePDF(BytesIO(html.encode(<span class="string">&#x27;utf8&#x27;</span>)),result,encoding=<span class="string">&#x27;utf8&#x27;</span>,link_callback=fetch_resources)</span><br></pre></td></tr></table></figure>
+
 <p><strong>第四个问题</strong>则是flask运行,默认的根目录为app.py所有目录,如果模板中使用了资源引用,如</p>
 <figure class="highlight html"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line"><span class="tag">&lt;<span class="name">img</span> <span class="attr">src</span>=<span class="string">&quot;&#123;&#123; url_for(&#x27;static&#x27;,filename=&#x27;img/pdf/0.png&#x27;) &#125;&#125;&quot;</span> /&gt;</span></span><br></pre></td></tr></table></figure>
 
@@ -318,6 +320,7 @@
 
 <p>而如果是Djang则如下:</p>
 <figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">def</span> <span class="title function_">link_callback</span>(<span class="params">uri, rel</span>):</span><br><span class="line">    <span class="string">&quot;&quot;&quot;</span></span><br><span class="line"><span class="string">    Convert HTML URIs to absolute system paths so xhtml2pdf can access those</span></span><br><span class="line"><span class="string">    resources</span></span><br><span class="line"><span class="string">    &quot;&quot;&quot;</span></span><br><span class="line">    <span class="comment"># use short variable names</span></span><br><span class="line">    sUrl = settings.STATIC_URL      <span class="comment"># Typically /static/</span></span><br><span class="line">    sRoot = settings.STATIC_ROOT    <span class="comment"># Typically /home/userX/project_static/</span></span><br><span class="line">    mUrl = settings.MEDIA_URL       <span class="comment"># Typically /static/media/</span></span><br><span class="line">    mRoot = settings.MEDIA_ROOT     <span class="comment"># Typically /home/userX/project_static/media/</span></span><br><span class="line"></span><br><span class="line">    <span class="comment"># convert URIs to absolute system paths</span></span><br><span class="line">    <span class="keyword">if</span> uri.startswith(mUrl):</span><br><span class="line">        path = os.path.join(mRoot, uri.replace(mUrl, <span class="string">&quot;&quot;</span>))</span><br><span class="line">    <span class="keyword">elif</span> uri.startswith(sUrl):</span><br><span class="line">        path = os.path.join(sRoot, uri.replace(sUrl, <span class="string">&quot;&quot;</span>))</span><br><span class="line">    <span class="keyword">else</span>:</span><br><span class="line">        <span class="keyword">return</span> uri  <span class="comment"># handle absolute uri (ie: http://some.tld/foo.png)</span></span><br><span class="line"></span><br><span class="line">    <span class="comment"># make sure that file exists</span></span><br><span class="line">    <span class="keyword">if</span> <span class="keyword">not</span> os.path.isfile(path):</span><br><span class="line">            <span class="keyword">raise</span> Exception(</span><br><span class="line">                <span class="string">&#x27;media URI must start with %s or %s&#x27;</span> % (sUrl, mUrl)</span><br><span class="line">            )</span><br><span class="line">    <span class="keyword">return</span> path</span><br></pre></td></tr></table></figure>
+
 <p>生成PDF代码如下,这里当把PDF当做附件,下载的时候浏览器会提示另存为下载框:</p>
 <figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">#生成pdf</span></span><br><span class="line"><span class="meta">@app.route(<span class="params"><span class="string">&#x27;/pdfdownload/&#x27;</span>, methods=[<span class="string">&#x27;GET&#x27;</span>,<span class="string">&#x27;POST&#x27;</span>]</span>)</span></span><br><span class="line"><span class="keyword">def</span> <span class="title function_">pdfdownload</span>():</span><br><span class="line">    <span class="comment">#其它业务代码</span></span><br><span class="line">    <span class="comment">#填充pdf模板文件</span></span><br><span class="line">    html = render_template(<span class="string">&#x27;pdfdownload.html&#x27;</span>)</span><br><span class="line">    result = BytesIO()</span><br><span class="line">    <span class="comment">#生成pdf</span></span><br><span class="line">    pdf = pisa.CreatePDF(BytesIO(html.encode(<span class="string">&#x27;utf-8&#x27;</span>)),result,encoding=<span class="string">&#x27;utf-8&#x27;</span>,link_callback=fetch_resources)</span><br><span class="line">    resp = make_response(result.getvalue())</span><br><span class="line">    result.close()</span><br><span class="line">    resp.headers[<span class="string">&quot;Content-Disposition&quot;</span>] = (<span class="string">&quot;attachment; filename=&#x27;&#123;0&#125;&#x27;&quot;</span>.<span class="built_in">format</span>(<span class="string">&#x27;skxt-jkxj.pdf&#x27;</span>))</span><br><span class="line">    resp.headers[<span class="string">&#x27;Content-Type&#x27;</span>] = <span class="string">&#x27;application/pdf&#x27;</span></span><br><span class="line">    <span class="keyword">return</span> resp</span><br></pre></td></tr></table></figure>
 
@@ -330,7 +333,6 @@
 <li><a target="_blank" rel="noopener" href="https://github.com/xhtml2pdf">xhtml2pdf项目github</a></li>
 </ul>
 </blockquote>
-<h3 id="转载请注明原作者-周淑科-https-izsk-me"><a href="#转载请注明原作者-周淑科-https-izsk-me" class="headerlink" title="转载请注明原作者: 周淑科(https://izsk.me)"></a><strong>转载请注明原作者: 周淑科(<a target="_blank" rel="noopener" href="https://izsk.me/">https://izsk.me</a>)</strong></h3><hr>
 
     </div>
 
@@ -421,14 +423,14 @@
       <i class="fa fa-chart-line"></i>
     </span>
       <span>站点总字数：</span>
-    <span title="站点总字数">991k</span>
+    <span title="站点总字数">985k</span>
   </span>
   <span class="post-meta-item">
     <span class="post-meta-item-icon">
       <i class="fa fa-coffee"></i>
     </span>
       <span>站点阅读时长 &asymp;</span>
-    <span title="站点阅读时长">15:01</span>
+    <span title="站点阅读时长">14:55</span>
   </span>
 </div>
 <div class="busuanzi-count">

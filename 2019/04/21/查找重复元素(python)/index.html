@@ -28,7 +28,7 @@
 <meta property="og:description" content="题目是: 给定一个包含 n + 1 个整数的数组 nums，其数字都在 1 到 n 之间（包括 1 和 n），可知至少存在一个重复的整数。假设只有一个重复的整数，找出这个重复的数 这也是leetcode上的第287道题.">
 <meta property="og:locale" content="zh_CN">
 <meta property="article:published_time" content="2019-04-21T08:30:51.000Z">
-<meta property="article:modified_time" content="2023-04-11T07:58:45.721Z">
+<meta property="article:modified_time" content="2024-12-30T07:37:15.098Z">
 <meta property="article:author" content="周淑科">
 <meta property="article:tag" content="Python">
 <meta name="twitter:card" content="summary">
@@ -139,7 +139,7 @@
       <div class="sidebar-panel-container">
         <!--noindex-->
         <div class="post-toc-wrap sidebar-panel">
-            <div class="post-toc animated"><ol class="nav"><li class="nav-item nav-level-3"><a class="nav-link" href="#%E5%AF%BB%E6%89%BE%E9%87%8D%E5%A4%8D%E6%95%B0"><span class="nav-number">1.</span> <span class="nav-text">寻找重复数</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E5%8F%82%E8%80%83%E6%96%87%E7%AB%A0"><span class="nav-number">2.</span> <span class="nav-text">参考文章:</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E8%BD%AC%E8%BD%BD%E8%AF%B7%E6%B3%A8%E6%98%8E%E5%8E%9F%E4%BD%9C%E8%80%85-%E5%91%A8%E6%B7%91%E7%A7%91-https-izsk-me"><span class="nav-number">3.</span> <span class="nav-text">转载请注明原作者: 周淑科(https:&#x2F;&#x2F;izsk.me)</span></a></li></ol></div>
+            <div class="post-toc animated"><ol class="nav"><li class="nav-item nav-level-3"><a class="nav-link" href="#%E5%AF%BB%E6%89%BE%E9%87%8D%E5%A4%8D%E6%95%B0"><span class="nav-number">1.</span> <span class="nav-text">寻找重复数</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E5%8F%82%E8%80%83%E6%96%87%E7%AB%A0"><span class="nav-number">2.</span> <span class="nav-text">参考文章:</span></a></li></ol></div>
         </div>
         <!--/noindex-->
 
@@ -274,10 +274,7 @@
 <h3 id="寻找重复数"><a href="#寻找重复数" class="headerlink" title="寻找重复数"></a><strong>寻找重复数</strong></h3><p>这里有前置条件, 数组中所有的元素都是在1到n之间! </p>
 <figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">import</span> pysnooper</span><br><span class="line"></span><br><span class="line"><span class="comment">#解法一</span></span><br><span class="line"><span class="comment">#这里有个比较有意思的地方在于, 完全利用了数组中所有元素都在1跟n之间.</span></span><br><span class="line"><span class="comment">#所以对数组求中位数,因为一定存在重复元素, 所以如果比中位数大的元素的个数大于中位数</span></span><br><span class="line"><span class="comment">#则说明重复元素存在在中位素的右边，反之在左边.</span></span><br><span class="line"><span class="meta">@pysnooper.snoop()</span></span><br><span class="line"><span class="keyword">def</span> <span class="title function_">findDuplicate</span>(<span class="params">nums</span>):</span><br><span class="line">    low, high = <span class="number">1</span>, <span class="built_in">len</span>(nums)-<span class="number">1</span></span><br><span class="line"></span><br><span class="line">    <span class="keyword">while</span> low &lt; high:</span><br><span class="line">        mid = (high + low) // <span class="number">2</span></span><br><span class="line">        count = <span class="built_in">sum</span>(num &lt;= mid <span class="keyword">for</span> num <span class="keyword">in</span> nums)</span><br><span class="line">        <span class="keyword">if</span> count &lt;= mid:</span><br><span class="line">            low = mid + <span class="number">1</span></span><br><span class="line">        <span class="keyword">else</span>:</span><br><span class="line">            high = mid</span><br><span class="line">    <span class="keyword">return</span> low</span><br><span class="line"></span><br><span class="line"><span class="comment">#解决二</span></span><br><span class="line"><span class="comment">#使用数组中的值作为索引下标进行遍历，遍历的结果肯定是一个环（有一个重复元素） 检测重复元素问题转换成检测环的入口 为了找到环的入口，可以进行如下步骤：</span></span><br><span class="line"><span class="comment"># 设置两个快慢指针， fast每次走两步，slow每次走一步，最终走了slow走了n步与fast相遇，fast走了2*n，fast可能比slow多饶了环的i圈，得到环的周长为n/i</span></span><br><span class="line"><span class="comment"># slow指针继续走, 且另设第三个指针每次走一步，两个指针必定在入口处相遇</span></span><br><span class="line"><span class="comment"># 假设环的入口和起点的距离时m</span></span><br><span class="line"><span class="comment"># 当第三个指针走了m步到环的入口时</span></span><br><span class="line"><span class="comment"># slow刚好走了n + m步，换句话说时饶了环i圈（环的周长为n/i）加m步（起点到入口的距离）</span></span><br><span class="line"><span class="comment">#得到相遇的是环的入口，入口元素即为重复元素</span></span><br><span class="line"></span><br><span class="line"><span class="meta">@pysnooper.snoop()</span></span><br><span class="line"><span class="keyword">def</span> <span class="title function_">findDuplicate2</span>(<span class="params">nums</span>):</span><br><span class="line">    <span class="keyword">if</span> <span class="built_in">len</span>(nums) &gt; <span class="number">1</span>:</span><br><span class="line">        slow = nums[<span class="number">0</span>]</span><br><span class="line">        fast = nums[nums[<span class="number">0</span>]]</span><br><span class="line">        <span class="keyword">while</span> slow != fast:</span><br><span class="line">            slow = nums[slow]</span><br><span class="line">            fast = nums[nums[fast]]</span><br><span class="line">        <span class="comment">#如果些是 快慢指针相遇, 则说明相遇的点为环内的点</span></span><br><span class="line">        entry = <span class="number">0</span></span><br><span class="line">        <span class="keyword">while</span> entry != slow:</span><br><span class="line">            entry = nums[entry]</span><br><span class="line">            slow = nums[slow]</span><br><span class="line">        <span class="keyword">return</span> entry</span><br><span class="line">    <span class="keyword">return</span> -<span class="number">1</span></span><br></pre></td></tr></table></figure>
 
-
-
-<h3 id="参考文章"><a href="#参考文章" class="headerlink" title="参考文章:"></a><strong>参考文章:</strong></h3><h3 id="转载请注明原作者-周淑科-https-izsk-me"><a href="#转载请注明原作者-周淑科-https-izsk-me" class="headerlink" title="转载请注明原作者: 周淑科(https://izsk.me)"></a><strong>转载请注明原作者: 周淑科(<a target="_blank" rel="noopener" href="https://izsk.me/">https://izsk.me</a>)</strong></h3><hr>
-
+<h3 id="参考文章"><a href="#参考文章" class="headerlink" title="参考文章:"></a><strong>参考文章:</strong></h3>
     </div>
 
     
@@ -367,14 +364,14 @@
       <i class="fa fa-chart-line"></i>
     </span>
       <span>站点总字数：</span>
-    <span title="站点总字数">991k</span>
+    <span title="站点总字数">985k</span>
   </span>
   <span class="post-meta-item">
     <span class="post-meta-item-icon">
       <i class="fa fa-coffee"></i>
     </span>
       <span>站点阅读时长 &asymp;</span>
-    <span title="站点阅读时长">15:01</span>
+    <span title="站点阅读时长">14:55</span>
   </span>
 </div>
 <div class="busuanzi-count">

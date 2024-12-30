@@ -33,7 +33,7 @@
 <meta property="og:image" content="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20200428205558.png">
 <meta property="og:image" content="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20200428210203.png">
 <meta property="article:published_time" content="2019-07-27T00:10:53.000Z">
-<meta property="article:modified_time" content="2023-04-11T07:58:45.741Z">
+<meta property="article:modified_time" content="2024-12-30T07:37:32.330Z">
 <meta property="article:author" content="周淑科">
 <meta property="article:tag" content="Kubernetes">
 <meta name="twitter:card" content="summary">
@@ -145,7 +145,7 @@
       <div class="sidebar-panel-container">
         <!--noindex-->
         <div class="post-toc-wrap sidebar-panel">
-            <div class="post-toc animated"><ol class="nav"><li class="nav-item nav-level-3"><a class="nav-link" href="#%E5%8E%9F%E7%90%86"><span class="nav-number">1.</span> <span class="nav-text">原理</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E9%83%A8%E7%BD%B2"><span class="nav-number">2.</span> <span class="nav-text">部署</span></a><ol class="nav-child"><li class="nav-item nav-level-4"><a class="nav-link" href="#DaemonSet"><span class="nav-number">2.1.</span> <span class="nav-text">DaemonSet</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#Default-http-backend"><span class="nav-number">2.2.</span> <span class="nav-text">Default http backend</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#Ingress-Rule"><span class="nav-number">2.3.</span> <span class="nav-text">Ingress Rule</span></a></li></ol></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E6%94%AF%E6%8C%81TCP-x2F-UDP"><span class="nav-number">3.</span> <span class="nav-text">支持TCP&#x2F;UDP</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#Annotation-x2F-Configmap"><span class="nav-number">4.</span> <span class="nav-text">Annotation&#x2F;Configmap</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E9%97%AE%E9%A2%98"><span class="nav-number">5.</span> <span class="nav-text">问题</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E5%8F%82%E8%80%83%E6%96%87%E7%AB%A0"><span class="nav-number">6.</span> <span class="nav-text">参考文章:</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E8%BD%AC%E8%BD%BD%E8%AF%B7%E6%B3%A8%E6%98%8E%E5%8E%9F%E4%BD%9C%E8%80%85-%E5%91%A8%E6%B7%91%E7%A7%91-https-izsk-me"><span class="nav-number">7.</span> <span class="nav-text">转载请注明原作者: 周淑科(https:&#x2F;&#x2F;izsk.me)</span></a></li></ol></div>
+            <div class="post-toc animated"><ol class="nav"><li class="nav-item nav-level-3"><a class="nav-link" href="#%E5%8E%9F%E7%90%86"><span class="nav-number">1.</span> <span class="nav-text">原理</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E9%83%A8%E7%BD%B2"><span class="nav-number">2.</span> <span class="nav-text">部署</span></a><ol class="nav-child"><li class="nav-item nav-level-4"><a class="nav-link" href="#DaemonSet"><span class="nav-number">2.1.</span> <span class="nav-text">DaemonSet</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#Default-http-backend"><span class="nav-number">2.2.</span> <span class="nav-text">Default http backend</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#Ingress-Rule"><span class="nav-number">2.3.</span> <span class="nav-text">Ingress Rule</span></a></li></ol></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E6%94%AF%E6%8C%81TCP-x2F-UDP"><span class="nav-number">3.</span> <span class="nav-text">支持TCP&#x2F;UDP</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#Annotation-x2F-Configmap"><span class="nav-number">4.</span> <span class="nav-text">Annotation&#x2F;Configmap</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E9%97%AE%E9%A2%98"><span class="nav-number">5.</span> <span class="nav-text">问题</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E5%8F%82%E8%80%83%E6%96%87%E7%AB%A0"><span class="nav-number">6.</span> <span class="nav-text">参考文章:</span></a></li></ol></div>
         </div>
         <!--/noindex-->
 
@@ -276,8 +276,6 @@
     <div class="post-body" itemprop="articleBody"><p>kubernetes集群内的服务, 在集群外是无法访问的, 想访问的话, 必须通过一种方式将请求代理进集群内部, ingress就是最为常用的手段, ingress也有许多开源方案,这里以ingress-nginx为例.Nginx Ingress 也是本人最常用集群外对访问方式.</p>
 <span id="more"></span>
 
-
-
 <p>首先会将nginx ingress部署到集群中，然后会聊了聊它的使用方式.</p>
 <h3 id="原理"><a href="#原理" class="headerlink" title="原理"></a>原理</h3><p><strong>Nginx ingress 本质上就是nginx+Lua</strong>, 所以使用过nginx的，其实对它的原理一看就明白.</p>
 <p>首先看一下Nginx 的 反向代理模式</p>
@@ -318,8 +316,6 @@
 <p>最后来看看在nginx pod中生成的配置，其实就是转换成了nginx 的stram</p>
 <figure class="highlight yaml"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># 省略...</span></span><br><span class="line"><span class="comment"># TCP services</span></span><br><span class="line"><span class="string">server</span> &#123;</span><br><span class="line">        <span class="string">preread_by_lua_block</span> &#123;</span><br><span class="line">                <span class="string">ngx.var.proxy_upstream_name=&quot;tcp-clickhouse-operator-clickhouse-1box-9000&quot;;</span></span><br><span class="line">        &#125;</span><br><span class="line"></span><br><span class="line">        <span class="string">listen</span>                  <span class="number">9000</span><span class="string">;</span></span><br><span class="line"></span><br><span class="line">        <span class="string">proxy_timeout</span>           <span class="string">600s;</span></span><br><span class="line">        <span class="string">proxy_pass</span>              <span class="string">upstream_balancer;</span></span><br><span class="line"></span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="comment"># UDP services</span></span><br></pre></td></tr></table></figure>
 
-
-
 <h3 id="Annotation-x2F-Configmap"><a href="#Annotation-x2F-Configmap" class="headerlink" title="Annotation&#x2F;Configmap"></a>Annotation&#x2F;Configmap</h3><p>nginx本身强大的原因之一在于它的很多参数都是可以设置的, 在nginx ingress中也是如此，通过增加configmap及annotation可以自定义非常多的选项, 甚至可以使用自定义模板</p>
 <p>比如: 我需要自定义nginx的日志，或者调整一些参数配置，那么就可以使用一个nginx-config的cm, 然后在daemonset中指定使用这个cm即可.</p>
 <figure class="highlight yaml"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br></pre></td><td class="code"><pre><span class="line"><span class="attr">apiVersion:</span> <span class="string">v1</span></span><br><span class="line"><span class="attr">data:</span></span><br><span class="line">  <span class="attr">client-body-buffer-size:</span> <span class="string">10m</span></span><br><span class="line">  <span class="attr">error-log-level:</span> <span class="string">error</span></span><br><span class="line">  <span class="attr">http-redirect-code:</span> <span class="string">&quot;301&quot;</span></span><br><span class="line">  <span class="attr">log-format-upstream:</span> <span class="string">&#x27;&#123;&quot;time&quot;: &quot;$time_iso8601&quot;, &quot;remote_addr&quot;: &quot;$proxy_protocol_addr&quot;,</span></span><br><span class="line"><span class="string">    &quot;x-forward-for&quot;: &quot;$proxy_add_x_forwarded_for&quot;, &quot;request_id&quot;: &quot;$request_id&quot;, &quot;remote_user&quot;:</span></span><br><span class="line"><span class="string">    &quot;$remote_user&quot;, &quot;bytes_sent&quot;: $bytes_sent, &quot;request_time&quot;: $request_time, &quot;status&quot;:</span></span><br><span class="line"><span class="string">    $status, &quot;vhost&quot;: &quot;$host&quot;, &quot;request_proto&quot;: &quot;$server_protocol&quot;, &quot;path&quot;: &quot;$uri&quot;,</span></span><br><span class="line"><span class="string">    &quot;request_query&quot;: &quot;$args&quot;, &quot;request_length&quot;: $request_length, &quot;request_method&quot;:</span></span><br><span class="line"><span class="string">    &quot;$request_method&quot;, &quot;http_referrer&quot;: &quot;$http_referer&quot;, &quot;http_user_agent&quot;: &quot;$http_user_agent&quot;</span></span><br><span class="line"><span class="string">    &#125;&#x27;</span></span><br><span class="line">  <span class="attr">proxy-body-size:</span> <span class="string">10m</span></span><br><span class="line"><span class="attr">kind:</span> <span class="string">ConfigMap</span></span><br><span class="line"><span class="attr">metadata:</span></span><br><span class="line">  <span class="attr">labels:</span></span><br><span class="line">    <span class="attr">app:</span> <span class="string">ingress-nginx</span></span><br><span class="line">  <span class="attr">name:</span> <span class="string">nginx-configuration</span></span><br><span class="line">  <span class="attr">namespace:</span> <span class="string">ingress-nginx</span></span><br></pre></td></tr></table></figure>
@@ -347,7 +343,7 @@
 <li><a target="_blank" rel="noopener" href="https://www.servicemesher.com/blog/kubernetes-ingress-controller-deployment-and-ha/">https://www.servicemesher.com/blog/kubernetes-ingress-controller-deployment-and-ha/</a></li>
 </ul>
 </blockquote>
-<h3 id="转载请注明原作者-周淑科-https-izsk-me"><a href="#转载请注明原作者-周淑科-https-izsk-me" class="headerlink" title="转载请注明原作者: 周淑科(https://izsk.me)"></a><strong>转载请注明原作者: 周淑科(<a target="_blank" rel="noopener" href="https://izsk.me/">https://izsk.me</a>)</strong></h3>
+
     </div>
 
     
@@ -437,14 +433,14 @@
       <i class="fa fa-chart-line"></i>
     </span>
       <span>站点总字数：</span>
-    <span title="站点总字数">991k</span>
+    <span title="站点总字数">985k</span>
   </span>
   <span class="post-meta-item">
     <span class="post-meta-item-icon">
       <i class="fa fa-coffee"></i>
     </span>
       <span>站点阅读时长 &asymp;</span>
-    <span title="站点阅读时长">15:01</span>
+    <span title="站点阅读时长">14:55</span>
   </span>
 </div>
 <div class="busuanzi-count">

@@ -29,7 +29,7 @@
 <meta property="og:locale" content="zh_CN">
 <meta property="og:image" content="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/gitlab_workflow_example.png">
 <meta property="article:published_time" content="2020-05-15T05:30:53.000Z">
-<meta property="article:modified_time" content="2023-04-11T07:58:45.703Z">
+<meta property="article:modified_time" content="2024-12-30T07:37:32.328Z">
 <meta property="article:author" content="周淑科">
 <meta property="article:tag" content="Gitlab">
 <meta name="twitter:card" content="summary">
@@ -141,7 +141,7 @@
       <div class="sidebar-panel-container">
         <!--noindex-->
         <div class="post-toc-wrap sidebar-panel">
-            <div class="post-toc animated"><ol class="nav"><li class="nav-item nav-level-3"><a class="nav-link" href="#CI-x2F-CD%E6%B5%81%E7%A8%8B"><span class="nav-number">1.</span> <span class="nav-text">CI&#x2F;CD流程</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#merge-request"><span class="nav-number">2.</span> <span class="nav-text">merge request</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#kubernetes%E8%AE%A4%E8%AF%81"><span class="nav-number">3.</span> <span class="nav-text">kubernetes认证</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E5%A4%9A%E7%8E%AF%E5%A2%83%E5%8F%91%E5%B8%83%E6%B5%81%E7%A8%8B"><span class="nav-number">4.</span> <span class="nav-text">多环境发布流程</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E9%85%8D%E7%BD%AE%E6%96%87%E4%BB%B6%E5%A4%84%E7%90%86"><span class="nav-number">5.</span> <span class="nav-text">配置文件处理</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E5%8F%82%E8%80%83%E6%96%87%E7%AB%A0"><span class="nav-number">6.</span> <span class="nav-text">参考文章:</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E8%BD%AC%E8%BD%BD%E8%AF%B7%E6%B3%A8%E6%98%8E%E5%8E%9F%E4%BD%9C%E8%80%85-%E5%91%A8%E6%B7%91%E7%A7%91-https-izsk-me"><span class="nav-number">7.</span> <span class="nav-text">转载请注明原作者: 周淑科(https:&#x2F;&#x2F;izsk.me)</span></a></li></ol></div>
+            <div class="post-toc animated"><ol class="nav"><li class="nav-item nav-level-3"><a class="nav-link" href="#CI-x2F-CD%E6%B5%81%E7%A8%8B"><span class="nav-number">1.</span> <span class="nav-text">CI&#x2F;CD流程</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#merge-request"><span class="nav-number">2.</span> <span class="nav-text">merge request</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#kubernetes%E8%AE%A4%E8%AF%81"><span class="nav-number">3.</span> <span class="nav-text">kubernetes认证</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E5%A4%9A%E7%8E%AF%E5%A2%83%E5%8F%91%E5%B8%83%E6%B5%81%E7%A8%8B"><span class="nav-number">4.</span> <span class="nav-text">多环境发布流程</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E9%85%8D%E7%BD%AE%E6%96%87%E4%BB%B6%E5%A4%84%E7%90%86"><span class="nav-number">5.</span> <span class="nav-text">配置文件处理</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E5%8F%82%E8%80%83%E6%96%87%E7%AB%A0"><span class="nav-number">6.</span> <span class="nav-text">参考文章:</span></a></li></ol></div>
         </div>
         <!--/noindex-->
 
@@ -252,7 +252,7 @@
         <i class="far fa-file-word"></i>
       </span>
       <span class="post-meta-item-text">本文字数：</span>
-      <span>4k</span>
+      <span>3.9k</span>
     </span>
     <span class="post-meta-item" title="阅读时长">
       <span class="post-meta-item-icon">
@@ -271,8 +271,6 @@
     
     <div class="post-body" itemprop="articleBody"><p>随着环境的多样性, 频繁的集成、测试占用了大量的时间, 大公司都有专门的团队做效率工程, 而我司这种小公司则就只能自养自足. 好在所有的环境都切换到了kubernetes环境, k8s天然的属性结合gitlab end-to-end的能力，实现CI&#x2F;CD也能节省大量的时间.</p>
 <span id="more"></span>
-
-
 
 <p>目前存在有3个环境<code>dev, gray, prod</code>,都是基于k8s架构, 使用的开发语言大部分都是golang.</p>
 <p> <code>dev用于线下环境测试 --&gt;  gray用于灰度环境的联调 --&gt;  prod则是生产环境</code></p>
@@ -294,9 +292,7 @@
 <h3 id="kubernetes认证"><a href="#kubernetes认证" class="headerlink" title="kubernetes认证"></a>kubernetes认证</h3><p>多个kubernetes的认证也是根据环境来做的, 最简单的办法就是通过将各种环境下的kubeconfig文件作为变量,最好做为gitlab的组环境变量，这样所有的repo都能够使用了.</p>
 <p>在gitlab-ci.yml中通过不同的环境来选用不同的kubeconfig, 这样就能实现对集群的操作,</p>
 <p>比如修改gray环境下的某个应用的配置文件， 主要代码如下:</p>
-<figure class="highlight yaml"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br></pre></td><td class="code"><pre><span class="line"><span class="string">.exportenvgray:</span> <span class="meta">&amp;exportenvgray</span></span><br><span class="line">  <span class="bullet">-</span> <span class="string">export</span> <span class="string">MODE=gray</span></span><br><span class="line">  <span class="bullet">-</span> <span class="string">KUBE_CONFIG=$&#123;KUBE_CONFIG_GRAY&#125;</span></span><br><span class="line">  </span><br><span class="line"><span class="string">.kubeconfig:</span> <span class="meta">&amp;kubeconfig</span></span><br><span class="line">  <span class="bullet">-</span> <span class="string">mkdir</span> <span class="string">$HOME/.kube</span> <span class="string">&amp;&amp;</span> <span class="string">cat</span> <span class="string">$KUBE_CONFIG</span> <span class="string">&gt;</span> <span class="string">$HOME/.kube/config</span> <span class="comment">#需要在gilab中指定为文件类型的变量</span></span><br><span class="line"></span><br><span class="line"><span class="string">.k8supdateconfig:</span> <span class="meta">&amp;k8supdateconfig</span></span><br><span class="line">  <span class="bullet">-</span> <span class="string">kubectl</span> <span class="string">create</span> <span class="string">configmap</span> <span class="string">$&#123;APP&#125;-$&#123;KUBERNETES_NS&#125;-cm</span> <span class="string">--from-file=/tmp/config.yml</span> <span class="string">-n</span> <span class="string">$&#123;KUBERNETES_NS&#125;</span> <span class="string">-o</span> <span class="string">yaml</span> <span class="string">--dry-run</span> <span class="string">|</span> <span class="string">kubectl</span> <span class="string">apply</span> <span class="string">-f</span> <span class="bullet">-</span></span><br><span class="line">  </span><br><span class="line"><span class="string">.updateconfig:</span> <span class="meta">&amp;updateconfig</span></span><br><span class="line">  <span class="attr">image:</span> <span class="string">kubectl_yaml:v1.15.4</span></span><br><span class="line">  <span class="attr">dependencies:</span> []</span><br><span class="line">  <span class="attr">script:</span></span><br><span class="line">    <span class="bullet">-</span> <span class="string">*kubeconfig</span> <span class="comment"># 获取认证文件</span></span><br><span class="line">    <span class="bullet">-</span> <span class="string">*k8supdateconfig</span> <span class="comment"># 到这里就有权限能够更新configmap了</span></span><br><span class="line"></span><br><span class="line"><span class="attr">updateconfig:</span></span><br><span class="line">  <span class="string">&lt;&lt;:</span> <span class="meta">*updateconfig</span></span><br><span class="line">  <span class="attr">stage:</span> <span class="string">updateconfig1box</span></span><br><span class="line">  <span class="attr">before_script:</span></span><br><span class="line">    <span class="bullet">-</span> <span class="string">*exportenv1gray</span> <span class="comment"># 指定环境变量，通过不同的环境获取不同的kubeconfig变量.</span></span><br><span class="line">  <span class="attr">rules:</span></span><br><span class="line">    <span class="bullet">-</span> <span class="attr">if:</span> <span class="string">&#x27;$CI_COMMIT_MESSAGE =~ /\[gray[ _-]uc\]/i &amp;&amp; $CONFIGPATH != &quot;&quot;&#x27;</span> <span class="comment"># 指定执行条件</span></span><br></pre></td></tr></table></figure>
-
-
+<figure class="highlight yaml"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br></pre></td><td class="code"><pre><span class="line"><span class="string">.exportenvgray:</span> <span class="meta">&amp;exportenvgray</span></span><br><span class="line">  <span class="bullet">-</span> <span class="string">export</span> <span class="string">MODE=gray</span></span><br><span class="line">  <span class="bullet">-</span> <span class="string">KUBE_CONFIG=$&#123;KUBE_CONFIG_GRAY&#125;</span></span><br><span class="line"></span><br><span class="line"><span class="string">.kubeconfig:</span> <span class="meta">&amp;kubeconfig</span></span><br><span class="line">  <span class="bullet">-</span> <span class="string">mkdir</span> <span class="string">$HOME/.kube</span> <span class="string">&amp;&amp;</span> <span class="string">cat</span> <span class="string">$KUBE_CONFIG</span> <span class="string">&gt;</span> <span class="string">$HOME/.kube/config</span> <span class="comment">#需要在gilab中指定为文件类型的变量</span></span><br><span class="line"></span><br><span class="line"><span class="string">.k8supdateconfig:</span> <span class="meta">&amp;k8supdateconfig</span></span><br><span class="line">  <span class="bullet">-</span> <span class="string">kubectl</span> <span class="string">create</span> <span class="string">configmap</span> <span class="string">$&#123;APP&#125;-$&#123;KUBERNETES_NS&#125;-cm</span> <span class="string">--from-file=/tmp/config.yml</span> <span class="string">-n</span> <span class="string">$&#123;KUBERNETES_NS&#125;</span> <span class="string">-o</span> <span class="string">yaml</span> <span class="string">--dry-run</span> <span class="string">|</span> <span class="string">kubectl</span> <span class="string">apply</span> <span class="string">-f</span> <span class="bullet">-</span></span><br><span class="line"></span><br><span class="line"><span class="string">.updateconfig:</span> <span class="meta">&amp;updateconfig</span></span><br><span class="line">  <span class="attr">image:</span> <span class="string">kubectl_yaml:v1.15.4</span></span><br><span class="line">  <span class="attr">dependencies:</span> []</span><br><span class="line">  <span class="attr">script:</span></span><br><span class="line">    <span class="bullet">-</span> <span class="string">*kubeconfig</span> <span class="comment"># 获取认证文件</span></span><br><span class="line">    <span class="bullet">-</span> <span class="string">*k8supdateconfig</span> <span class="comment"># 到这里就有权限能够更新configmap了</span></span><br><span class="line"></span><br><span class="line"><span class="attr">updateconfig:</span></span><br><span class="line">  <span class="string">&lt;&lt;:</span> <span class="meta">*updateconfig</span></span><br><span class="line">  <span class="attr">stage:</span> <span class="string">updateconfig1box</span></span><br><span class="line">  <span class="attr">before_script:</span></span><br><span class="line">    <span class="bullet">-</span> <span class="string">*exportenv1gray</span> <span class="comment"># 指定环境变量，通过不同的环境获取不同的kubeconfig变量.</span></span><br><span class="line">  <span class="attr">rules:</span></span><br><span class="line">    <span class="bullet">-</span> <span class="attr">if:</span> <span class="string">&#x27;$CI_COMMIT_MESSAGE =~ /\[gray[ _-]uc\]/i &amp;&amp; $CONFIGPATH != &quot;&quot;&#x27;</span> <span class="comment"># 指定执行条件</span></span><br></pre></td></tr></table></figure>
 
 <h3 id="多环境发布流程"><a href="#多环境发布流程" class="headerlink" title="多环境发布流程"></a>多环境发布流程</h3><p>对于多个环境, 其实除了配置不一样之外，其它的操作都是一样的，因此可借用yaml文件的锚定及gitlab的external功能大于减少gitlab-ci.yml配置文件的行数</p>
 <p><strong>因为需要将gitlab-ci.yml做成标准化的流程，对于我来说, 我不需要区分是谁触发的pipeline，只需要知道你想触发哪个pipeline, 至于权限问题,则直接丢给了gitlab做管理</strong></p>
@@ -342,7 +338,7 @@
 <li><a target="_blank" rel="noopener" href="http://gitlab.bj.sensetime.com/help/ci/variables/README#variables">http://gitlab.bj.sensetime.com/help/ci/variables/README#variables</a></li>
 </ul>
 </blockquote>
-<h3 id="转载请注明原作者-周淑科-https-izsk-me"><a href="#转载请注明原作者-周淑科-https-izsk-me" class="headerlink" title="转载请注明原作者: 周淑科(https://izsk.me)"></a><strong>转载请注明原作者: 周淑科(<a target="_blank" rel="noopener" href="https://izsk.me/">https://izsk.me</a>)</strong></h3>
+
     </div>
 
     
@@ -432,14 +428,14 @@
       <i class="fa fa-chart-line"></i>
     </span>
       <span>站点总字数：</span>
-    <span title="站点总字数">991k</span>
+    <span title="站点总字数">985k</span>
   </span>
   <span class="post-meta-item">
     <span class="post-meta-item-icon">
       <i class="fa fa-coffee"></i>
     </span>
       <span>站点阅读时长 &asymp;</span>
-    <span title="站点阅读时长">15:01</span>
+    <span title="站点阅读时长">14:55</span>
   </span>
 </div>
 <div class="busuanzi-count">
