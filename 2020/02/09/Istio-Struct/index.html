@@ -13,10 +13,10 @@
 
 <link rel="stylesheet" href="/css/main.css">
 
-<link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Lato:300,300italic,400,400italic,700,700italic&display=swap&subset=latin,latin-ext">
+<link rel="stylesheet" href="https://fonts.loli.net/css?family=Lato:300,300italic,400,400italic,700,700italic%7CRoboto+Mono:300,300italic,400,400italic,700,700italic&display=swap&subset=latin,latin-ext">
 
-<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.6.0/css/all.min.css" integrity="sha256-5eIC48iZUHmSlSUz9XtjRyK2mzQkHScZY1WdMaoz74E=" crossorigin="anonymous">
-  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/animate.css@3.1.1/animate.min.css" integrity="sha256-PR7ttpcvz8qrF57fur/yAx1qXMFJeJFiA6pSzWi0OIE=" crossorigin="anonymous">
+<link rel="stylesheet" href="https://lib.baomitu.com/font-awesome/6.6.0/css/all.min.css" integrity="sha256-5eIC48iZUHmSlSUz9XtjRyK2mzQkHScZY1WdMaoz74E=" crossorigin="anonymous">
+  <link rel="stylesheet" href="https://lib.baomitu.com/animate.css/3.1.1/animate.min.css" integrity="sha256-PR7ttpcvz8qrF57fur/yAx1qXMFJeJFiA6pSzWi0OIE=" crossorigin="anonymous">
 
 <script class="next-config" data-name="main" type="application/json">{"hostname":"zhoushuke.github.io","root":"/","images":"/images","scheme":"Mist","darkmode":true,"version":"8.21.1","exturl":false,"sidebar":{"position":"right","width_expanded":320,"width_dual_column":240,"display":"post","padding":18,"offset":12},"hljswrap":true,"copycode":{"enable":true,"style":"mac"},"fold":{"enable":true,"height":500},"bookmark":{"enable":false,"color":"#222","save":"auto"},"mediumzoom":false,"lazyload":false,"pangu":false,"comments":{"style":"tabs","active":null,"storage":true,"lazyload":false,"nav":null},"stickytabs":false,"motion":{"enable":true,"async":false,"transition":{"menu_item":"fadeInDown","post_block":"fadeIn","post_header":"fadeInDown","post_body":"fadeInDown","coll_header":"fadeInLeft","sidebar":"fadeInUp"}},"prism":false,"i18n":{"placeholder":"搜索...","empty":"没有找到任何搜索结果：${query}","hits_time":"找到 ${hits} 个搜索结果（用时 ${time} 毫秒）","hits":"找到 ${hits} 个搜索结果"},"path":"/search.xml","localsearch":{"enable":true,"top_n_per_article":1,"unescape":false,"preload":false}}</script><script src="/js/config.js"></script>
 
@@ -27,17 +27,17 @@
 <meta property="og:site_name" content="Z.S.K.&#39;s Records">
 <meta property="og:description" content="上次在Kubernetes中安装好Istio之后, 忙了很长的时间在处理另一个事, 今天学习一下istio的架构及一些概念，后续分析整个数据的流向.">
 <meta property="og:locale" content="zh_CN">
-<meta property="og:image" content="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20200209153912.png">
-<meta property="og:image" content="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20200209154612.png">
-<meta property="og:image" content="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20200209212447.png">
-<meta property="og:image" content="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20200209155817.png">
-<meta property="og:image" content="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20200209160002.png">
+<meta property="og:image" content="https://raw.gitmirror.com/zhoushuke/BlogPhoto/master/githuboss/20200209153912.png">
+<meta property="og:image" content="https://raw.gitmirror.com/zhoushuke/BlogPhoto/master/githuboss/20200209154612.png">
+<meta property="og:image" content="https://raw.gitmirror.com/zhoushuke/BlogPhoto/master/githuboss/20200209212447.png">
+<meta property="og:image" content="https://raw.gitmirror.com/zhoushuke/BlogPhoto/master/githuboss/20200209155817.png">
+<meta property="og:image" content="https://raw.gitmirror.com/zhoushuke/BlogPhoto/master/githuboss/20200209160002.png">
 <meta property="article:published_time" content="2020-02-09T07:40:53.000Z">
-<meta property="article:modified_time" content="2024-12-30T07:21:59.539Z">
+<meta property="article:modified_time" content="2024-12-31T03:07:38.318Z">
 <meta property="article:author" content="周淑科">
 <meta property="article:tag" content="ServiceMesh">
 <meta name="twitter:card" content="summary">
-<meta name="twitter:image" content="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20200209153912.png">
+<meta name="twitter:image" content="https://raw.gitmirror.com/zhoushuke/BlogPhoto/master/githuboss/20200209153912.png">
 
 
 <link rel="canonical" href="https://zhoushuke.github.io/2020/02/09/Istio-Struct/">
@@ -177,7 +177,7 @@
   </nav>
 </div>
   <div class="cc-license animated" itemprop="license">
-    <a href="https://creativecommons.org/licenses/by-nc-sa/4.0/" class="cc-opacity" rel="noopener" target="_blank"><img src="https://cdn.jsdelivr.net/npm/@creativecommons/vocabulary@2020.11.3/assets/license_badges/small/by_nc_sa.svg" alt="Creative Commons"></a>
+    <a href="https://creativecommons.org/licenses/by-nc-sa/4.0/" class="cc-opacity" rel="noopener" target="_blank"><img src="https://lib.baomitu.com/creativecommons-vocabulary/2020.11.3/assets/license_badges/small/by_nc_sa.svg" alt="Creative Commons"></a>
   </div>
 
         </div>
@@ -272,7 +272,7 @@
 
 
 <h3 id="WhatFor"><a href="#WhatFor" class="headerlink" title="WhatFor"></a>WhatFor</h3><p>先来看看istio能做什么，从<a href="istio.io">官网</a>的首页很明确地指出了istio的作用</p>
-<p><img src="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20200209153912.png"></p>
+<p><img src="https://raw.gitmirror.com/zhoushuke/BlogPhoto/master/githuboss/20200209153912.png"></p>
 <p>主要提供四个方面的能力, 简单总结一下:</p>
 <blockquote>
 <ul>
@@ -284,9 +284,9 @@
 </blockquote>
 <p><code>从实际来看, 虽然Istio支持了很多的平台, 但是与之最为紧密结合使用的还是Kubernetes.</code></p>
 <h3 id="Struct"><a href="#Struct" class="headerlink" title="Struct"></a>Struct</h3><p>istio的整体架构图</p>
-<p><img src="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20200209154612.png"></p>
+<p><img src="https://raw.gitmirror.com/zhoushuke/BlogPhoto/master/githuboss/20200209154612.png"></p>
 <p>再细分, istio分为控制面及数据面, 如下: </p>
-<p><img src="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20200209212447.png"></p>
+<p><img src="https://raw.gitmirror.com/zhoushuke/BlogPhoto/master/githuboss/20200209212447.png"></p>
 <p>从架构图可以看出几个很重要的信息</p>
 <blockquote>
 <ul>
@@ -317,10 +317,10 @@
 </ul>
 </blockquote>
 <p>piolt架构图:</p>
-<p><img src="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20200209155817.png"></p>
+<p><img src="https://raw.gitmirror.com/zhoushuke/BlogPhoto/master/githuboss/20200209155817.png"></p>
 <h5 id="Mixer"><a href="#Mixer" class="headerlink" title="Mixer"></a>Mixer</h5><p><code>Mixer的主要功能是提供策略控制，并从Envoy代理收集遥测数据</code>。每次网络通信时Envoy代理都会向Mixer发出预检要求，用来检测调用者的合法性。调用之后Envoy代理会发送遥测数据供Mixer收集。一般情况下Sidecar代理可以缓存这些数据，不需要频繁地调用Mixer.</p>
 <p>​	同时,<code>Mixer彩用配器模式</code>, 可以支持不同的后端，如日志后端，监控后端, 调用链后端.</p>
-<p><img src="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20200209160002.png"></p>
+<p><img src="https://raw.gitmirror.com/zhoushuke/BlogPhoto/master/githuboss/20200209160002.png"></p>
 <h5 id="Citadel"><a href="#Citadel" class="headerlink" title="Citadel"></a>Citadel</h5><p>Citadel是与安全相关的组件，主要负责密钥和证书的管理。它可以提供服务间和终端用户的身份认证，还可以加密服务网格中的流量。</p>
 <h5 id="galley"><a href="#galley" class="headerlink" title="galley"></a>galley</h5><p>在2019年3月份发布的1.1版本中，Gally作为一个独立的组件被添加到了架构当中（在此之前的版本中Gally并未独立出现），它现在是Istio主要的配置管理组件，负责配置的获取、处理和分发。Gally使用了一种叫作MCP（Mesh Configuration Protocol，网格配置协议）的协议与其他组件进行通信。</p>
 <p>重点学习Pilot及Mix即可, citadel及galley一般都不会变动频繁, 知道怎么一回事就可以了.</p>
@@ -458,10 +458,10 @@
 
 
   
-  <script src="https://cdn.jsdelivr.net/npm/animejs@3.2.1/lib/anime.min.js" integrity="sha256-XL2inqUJaslATFnHdJOi9GfQ60on8Wx1C2H8DYiN1xY=" crossorigin="anonymous"></script>
+  <script src="https://lib.baomitu.com/animejs/3.2.1/anime.min.js" integrity="sha256-XL2inqUJaslATFnHdJOi9GfQ60on8Wx1C2H8DYiN1xY=" crossorigin="anonymous"></script>
 <script src="/js/comments.js"></script><script src="/js/utils.js"></script><script src="/js/motion.js"></script><script src="/js/sidebar.js"></script><script src="/js/next-boot.js"></script>
 
-  <script src="https://cdn.jsdelivr.net/npm/hexo-generator-searchdb@1.4.1/dist/search.js" integrity="sha256-1kfA5uHPf65M5cphT2dvymhkuyHPQp5A53EGZOnOLmc=" crossorigin="anonymous"></script>
+  <script src="https://lib.baomitu.com/hexo-generator-searchdb/1.4.1/search.js" integrity="sha256-1kfA5uHPf65M5cphT2dvymhkuyHPQp5A53EGZOnOLmc=" crossorigin="anonymous"></script>
 <script src="/js/third-party/search/local-search.js"></script>
 
 

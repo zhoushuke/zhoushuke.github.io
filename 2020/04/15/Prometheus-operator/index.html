@@ -13,10 +13,10 @@
 
 <link rel="stylesheet" href="/css/main.css">
 
-<link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Lato:300,300italic,400,400italic,700,700italic&display=swap&subset=latin,latin-ext">
+<link rel="stylesheet" href="https://fonts.loli.net/css?family=Lato:300,300italic,400,400italic,700,700italic%7CRoboto+Mono:300,300italic,400,400italic,700,700italic&display=swap&subset=latin,latin-ext">
 
-<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.6.0/css/all.min.css" integrity="sha256-5eIC48iZUHmSlSUz9XtjRyK2mzQkHScZY1WdMaoz74E=" crossorigin="anonymous">
-  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/animate.css@3.1.1/animate.min.css" integrity="sha256-PR7ttpcvz8qrF57fur/yAx1qXMFJeJFiA6pSzWi0OIE=" crossorigin="anonymous">
+<link rel="stylesheet" href="https://lib.baomitu.com/font-awesome/6.6.0/css/all.min.css" integrity="sha256-5eIC48iZUHmSlSUz9XtjRyK2mzQkHScZY1WdMaoz74E=" crossorigin="anonymous">
+  <link rel="stylesheet" href="https://lib.baomitu.com/animate.css/3.1.1/animate.min.css" integrity="sha256-PR7ttpcvz8qrF57fur/yAx1qXMFJeJFiA6pSzWi0OIE=" crossorigin="anonymous">
 
 <script class="next-config" data-name="main" type="application/json">{"hostname":"zhoushuke.github.io","root":"/","images":"/images","scheme":"Mist","darkmode":true,"version":"8.21.1","exturl":false,"sidebar":{"position":"right","width_expanded":320,"width_dual_column":240,"display":"post","padding":18,"offset":12},"hljswrap":true,"copycode":{"enable":true,"style":"mac"},"fold":{"enable":true,"height":500},"bookmark":{"enable":false,"color":"#222","save":"auto"},"mediumzoom":false,"lazyload":false,"pangu":false,"comments":{"style":"tabs","active":null,"storage":true,"lazyload":false,"nav":null},"stickytabs":false,"motion":{"enable":true,"async":false,"transition":{"menu_item":"fadeInDown","post_block":"fadeIn","post_header":"fadeInDown","post_body":"fadeInDown","coll_header":"fadeInLeft","sidebar":"fadeInUp"}},"prism":false,"i18n":{"placeholder":"搜索...","empty":"没有找到任何搜索结果：${query}","hits_time":"找到 ${hits} 个搜索结果（用时 ${time} 毫秒）","hits":"找到 ${hits} 个搜索结果"},"path":"/search.xml","localsearch":{"enable":true,"top_n_per_article":1,"unescape":false,"preload":false}}</script><script src="/js/config.js"></script>
 
@@ -27,13 +27,13 @@
 <meta property="og:site_name" content="Z.S.K.&#39;s Records">
 <meta property="og:description" content="在很多的一段时间内, 业务一直都是使用单独的prometheus进行集群业务的监控,通过prometheus提供的服务发现能力, 在业务svc加入指定的annotations即可实现数据收集, 但还是会面临时常需要修改prometheus的配置文件(比如static scrape)，prometheus虽然也提供了配置热加载的能力, 久而久之也烦,如果能够实现配置的动态加载, 对运维人员无感操作,">
 <meta property="og:locale" content="zh_CN">
-<meta property="og:image" content="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20200709213701.png">
+<meta property="og:image" content="https://raw.gitmirror.com/zhoushuke/BlogPhoto/master/githuboss/20200709213701.png">
 <meta property="article:published_time" content="2020-04-15T04:30:53.000Z">
-<meta property="article:modified_time" content="2024-12-30T07:21:59.530Z">
+<meta property="article:modified_time" content="2024-12-31T03:07:38.319Z">
 <meta property="article:author" content="周淑科">
 <meta property="article:tag" content="CloudNavi">
 <meta name="twitter:card" content="summary">
-<meta name="twitter:image" content="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20200709213701.png">
+<meta name="twitter:image" content="https://raw.gitmirror.com/zhoushuke/BlogPhoto/master/githuboss/20200709213701.png">
 
 
 <link rel="canonical" href="https://zhoushuke.github.io/2020/04/15/Prometheus-operator/">
@@ -173,7 +173,7 @@
   </nav>
 </div>
   <div class="cc-license animated" itemprop="license">
-    <a href="https://creativecommons.org/licenses/by-nc-sa/4.0/" class="cc-opacity" rel="noopener" target="_blank"><img src="https://cdn.jsdelivr.net/npm/@creativecommons/vocabulary@2020.11.3/assets/license_badges/small/by_nc_sa.svg" alt="Creative Commons"></a>
+    <a href="https://creativecommons.org/licenses/by-nc-sa/4.0/" class="cc-opacity" rel="noopener" target="_blank"><img src="https://lib.baomitu.com/creativecommons-vocabulary/2020.11.3/assets/license_badges/small/by_nc_sa.svg" alt="Creative Commons"></a>
   </div>
 
         </div>
@@ -270,7 +270,7 @@
 
 <p>需要对prometheus及operator的工作机制有所了解</p>
 <h3 id="架构"><a href="#架构" class="headerlink" title="架构"></a>架构</h3><p>Prometheus Operator 架构图如下：</p>
-<p><img src="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20200709213701.png"></p>
+<p><img src="https://raw.gitmirror.com/zhoushuke/BlogPhoto/master/githuboss/20200709213701.png"></p>
 <p>其中<code>Operator</code>是最核心的部分，作为一个控制器，他会去创建<code>Prometheus</code>、<code>ServiceMonitor</code>、<code>AlertManager</code>以及<code>PrometheusRule</code>4个<code>CRD</code>资源对象，然后会一直监控并维持这4个资源对象的状态</p>
 <p>其中创建的<code>prometheus</code>这种资源对象就是作为<code>Prometheus Server</code>存在, 而serviceMonitor则是通过label来选择需要监控的一组service对象, prometheus也通过label来选择serviceMonitor</p>
 <p>因此，每个业务线都是可以使用单独的prometheus server，这在海量监控数据下是推荐的用法，如果平台监控量不是很大也可以使用一个prometheus server， 然后serviceMonitor都关联该prometheus即可</p>
@@ -440,10 +440,10 @@
 
 
   
-  <script src="https://cdn.jsdelivr.net/npm/animejs@3.2.1/lib/anime.min.js" integrity="sha256-XL2inqUJaslATFnHdJOi9GfQ60on8Wx1C2H8DYiN1xY=" crossorigin="anonymous"></script>
+  <script src="https://lib.baomitu.com/animejs/3.2.1/anime.min.js" integrity="sha256-XL2inqUJaslATFnHdJOi9GfQ60on8Wx1C2H8DYiN1xY=" crossorigin="anonymous"></script>
 <script src="/js/comments.js"></script><script src="/js/utils.js"></script><script src="/js/motion.js"></script><script src="/js/sidebar.js"></script><script src="/js/next-boot.js"></script>
 
-  <script src="https://cdn.jsdelivr.net/npm/hexo-generator-searchdb@1.4.1/dist/search.js" integrity="sha256-1kfA5uHPf65M5cphT2dvymhkuyHPQp5A53EGZOnOLmc=" crossorigin="anonymous"></script>
+  <script src="https://lib.baomitu.com/hexo-generator-searchdb/1.4.1/search.js" integrity="sha256-1kfA5uHPf65M5cphT2dvymhkuyHPQp5A53EGZOnOLmc=" crossorigin="anonymous"></script>
 <script src="/js/third-party/search/local-search.js"></script>
 
 

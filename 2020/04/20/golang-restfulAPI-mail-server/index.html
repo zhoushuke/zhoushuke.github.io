@@ -13,10 +13,10 @@
 
 <link rel="stylesheet" href="/css/main.css">
 
-<link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Lato:300,300italic,400,400italic,700,700italic&display=swap&subset=latin,latin-ext">
+<link rel="stylesheet" href="https://fonts.loli.net/css?family=Lato:300,300italic,400,400italic,700,700italic%7CRoboto+Mono:300,300italic,400,400italic,700,700italic&display=swap&subset=latin,latin-ext">
 
-<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.6.0/css/all.min.css" integrity="sha256-5eIC48iZUHmSlSUz9XtjRyK2mzQkHScZY1WdMaoz74E=" crossorigin="anonymous">
-  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/animate.css@3.1.1/animate.min.css" integrity="sha256-PR7ttpcvz8qrF57fur/yAx1qXMFJeJFiA6pSzWi0OIE=" crossorigin="anonymous">
+<link rel="stylesheet" href="https://lib.baomitu.com/font-awesome/6.6.0/css/all.min.css" integrity="sha256-5eIC48iZUHmSlSUz9XtjRyK2mzQkHScZY1WdMaoz74E=" crossorigin="anonymous">
+  <link rel="stylesheet" href="https://lib.baomitu.com/animate.css/3.1.1/animate.min.css" integrity="sha256-PR7ttpcvz8qrF57fur/yAx1qXMFJeJFiA6pSzWi0OIE=" crossorigin="anonymous">
 
 <script class="next-config" data-name="main" type="application/json">{"hostname":"zhoushuke.github.io","root":"/","images":"/images","scheme":"Mist","darkmode":true,"version":"8.21.1","exturl":false,"sidebar":{"position":"right","width_expanded":320,"width_dual_column":240,"display":"post","padding":18,"offset":12},"hljswrap":true,"copycode":{"enable":true,"style":"mac"},"fold":{"enable":true,"height":500},"bookmark":{"enable":false,"color":"#222","save":"auto"},"mediumzoom":false,"lazyload":false,"pangu":false,"comments":{"style":"tabs","active":null,"storage":true,"lazyload":false,"nav":null},"stickytabs":false,"motion":{"enable":true,"async":false,"transition":{"menu_item":"fadeInDown","post_block":"fadeIn","post_header":"fadeInDown","post_body":"fadeInDown","coll_header":"fadeInLeft","sidebar":"fadeInUp"}},"prism":false,"i18n":{"placeholder":"搜索...","empty":"没有找到任何搜索结果：${query}","hits_time":"找到 ${hits} 个搜索结果（用时 ${time} 毫秒）","hits":"找到 ${hits} 个搜索结果"},"path":"/search.xml","localsearch":{"enable":true,"top_n_per_article":1,"unescape":false,"preload":false}}</script><script src="/js/config.js"></script>
 
@@ -27,13 +27,13 @@
 <meta property="og:site_name" content="Z.S.K.&#39;s Records">
 <meta property="og:description" content="最近在搞一个邮件RestfulAPI的邮件系统, 通过接口可直接发送邮件, 后端使用的是outlook,在测试过程发现会提示 Unrecognized authentication type错误, 折腾一下终于解决了, 记录一下.">
 <meta property="og:locale" content="zh_CN">
-<meta property="og:image" content="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20200421141715.png">
+<meta property="og:image" content="https://raw.gitmirror.com/zhoushuke/BlogPhoto/master/githuboss/20200421141715.png">
 <meta property="article:published_time" content="2020-04-20T10:30:53.000Z">
-<meta property="article:modified_time" content="2024-12-30T07:21:59.556Z">
+<meta property="article:modified_time" content="2024-12-31T03:07:38.319Z">
 <meta property="article:author" content="周淑科">
 <meta property="article:tag" content="Golang">
 <meta name="twitter:card" content="summary">
-<meta name="twitter:image" content="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20200421141715.png">
+<meta name="twitter:image" content="https://raw.gitmirror.com/zhoushuke/BlogPhoto/master/githuboss/20200421141715.png">
 
 
 <link rel="canonical" href="https://zhoushuke.github.io/2020/04/20/golang-restfulAPI-mail-server/">
@@ -173,7 +173,7 @@
   </nav>
 </div>
   <div class="cc-license animated" itemprop="license">
-    <a href="https://creativecommons.org/licenses/by-nc-sa/4.0/" class="cc-opacity" rel="noopener" target="_blank"><img src="https://cdn.jsdelivr.net/npm/@creativecommons/vocabulary@2020.11.3/assets/license_badges/small/by_nc_sa.svg" alt="Creative Commons"></a>
+    <a href="https://creativecommons.org/licenses/by-nc-sa/4.0/" class="cc-opacity" rel="noopener" target="_blank"><img src="https://lib.baomitu.com/creativecommons-vocabulary/2020.11.3/assets/license_badges/small/by_nc_sa.svg" alt="Creative Commons"></a>
   </div>
 
         </div>
@@ -274,7 +274,7 @@
 <p>可以通过telnet命令来查看一下邮件服务器支持的验证方式:</p>
 <figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">telnet yourmailserver 25</span><br></pre></td></tr></table></figure>
 
-<p><img src="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20200421141715.png"></p>
+<p><img src="https://raw.gitmirror.com/zhoushuke/BlogPhoto/master/githuboss/20200421141715.png"></p>
 <p>可以看到在这里是不支持<code>PlainAuth</code>这种认证方式的, 因此可以使用<code>STARTTLS</code>这种支持的方式</p>
 <p>好在大部分情况下都支持我们使用自定义的认证.</p>
 <figure class="highlight go"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">type</span> loginAuth <span class="keyword">struct</span> &#123;</span><br><span class="line">	username, password <span class="type">string</span></span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="function"><span class="keyword">func</span> <span class="title">LoginAuth</span><span class="params">(username, password <span class="type">string</span>)</span></span> smtp.Auth &#123;</span><br><span class="line">	<span class="keyword">return</span> &amp;loginAuth&#123;username, password&#125;</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="function"><span class="keyword">func</span> <span class="params">(a *loginAuth)</span></span> Start(server *smtp.ServerInfo) (<span class="type">string</span>, []<span class="type">byte</span>, <span class="type">error</span>) &#123;</span><br><span class="line">	<span class="keyword">return</span> <span class="string">&quot;LOGIN&quot;</span>, []<span class="type">byte</span>(a.username), <span class="literal">nil</span></span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="function"><span class="keyword">func</span> <span class="params">(a *loginAuth)</span></span> Next(fromServer []<span class="type">byte</span>, more <span class="type">bool</span>) ([]<span class="type">byte</span>, <span class="type">error</span>) &#123;</span><br><span class="line">	<span class="keyword">if</span> more &#123;</span><br><span class="line">		<span class="keyword">switch</span> <span class="type">string</span>(fromServer) &#123;</span><br><span class="line">		<span class="keyword">case</span> <span class="string">&quot;Username:&quot;</span>:</span><br><span class="line">			<span class="keyword">return</span> []<span class="type">byte</span>(a.username), <span class="literal">nil</span></span><br><span class="line">		<span class="keyword">case</span> <span class="string">&quot;Password:&quot;</span>:</span><br><span class="line">			<span class="keyword">return</span> []<span class="type">byte</span>(a.password), <span class="literal">nil</span></span><br><span class="line">		<span class="keyword">default</span>:</span><br><span class="line">			<span class="keyword">return</span> <span class="literal">nil</span>, errors.New(<span class="string">&quot;Unkown fromServer&quot;</span>)</span><br><span class="line">		&#125;</span><br><span class="line">	&#125;</span><br><span class="line">	<span class="keyword">return</span> <span class="literal">nil</span>, <span class="literal">nil</span></span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="comment">// 发送邮件</span></span><br><span class="line"><span class="comment">// auth := smtp.PlainAuth(&quot;&quot;, user, passwd, host)</span></span><br><span class="line">auth := LoginAuth(config.GlobalConfig.User, config.GlobalConfig.Password)</span><br><span class="line"></span><br><span class="line">err := smtp.SendMail(mailServer, auth, config.GlobalConfig.User, to, []<span class="type">byte</span>(msg)</span><br></pre></td></tr></table></figure>
@@ -413,10 +413,10 @@
 
 
   
-  <script src="https://cdn.jsdelivr.net/npm/animejs@3.2.1/lib/anime.min.js" integrity="sha256-XL2inqUJaslATFnHdJOi9GfQ60on8Wx1C2H8DYiN1xY=" crossorigin="anonymous"></script>
+  <script src="https://lib.baomitu.com/animejs/3.2.1/anime.min.js" integrity="sha256-XL2inqUJaslATFnHdJOi9GfQ60on8Wx1C2H8DYiN1xY=" crossorigin="anonymous"></script>
 <script src="/js/comments.js"></script><script src="/js/utils.js"></script><script src="/js/motion.js"></script><script src="/js/sidebar.js"></script><script src="/js/next-boot.js"></script>
 
-  <script src="https://cdn.jsdelivr.net/npm/hexo-generator-searchdb@1.4.1/dist/search.js" integrity="sha256-1kfA5uHPf65M5cphT2dvymhkuyHPQp5A53EGZOnOLmc=" crossorigin="anonymous"></script>
+  <script src="https://lib.baomitu.com/hexo-generator-searchdb/1.4.1/search.js" integrity="sha256-1kfA5uHPf65M5cphT2dvymhkuyHPQp5A53EGZOnOLmc=" crossorigin="anonymous"></script>
 <script src="/js/third-party/search/local-search.js"></script>
 
 

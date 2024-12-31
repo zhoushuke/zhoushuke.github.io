@@ -13,10 +13,10 @@
 
 <link rel="stylesheet" href="/css/main.css">
 
-<link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Lato:300,300italic,400,400italic,700,700italic&display=swap&subset=latin,latin-ext">
+<link rel="stylesheet" href="https://fonts.loli.net/css?family=Lato:300,300italic,400,400italic,700,700italic%7CRoboto+Mono:300,300italic,400,400italic,700,700italic&display=swap&subset=latin,latin-ext">
 
-<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.6.0/css/all.min.css" integrity="sha256-5eIC48iZUHmSlSUz9XtjRyK2mzQkHScZY1WdMaoz74E=" crossorigin="anonymous">
-  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/animate.css@3.1.1/animate.min.css" integrity="sha256-PR7ttpcvz8qrF57fur/yAx1qXMFJeJFiA6pSzWi0OIE=" crossorigin="anonymous">
+<link rel="stylesheet" href="https://lib.baomitu.com/font-awesome/6.6.0/css/all.min.css" integrity="sha256-5eIC48iZUHmSlSUz9XtjRyK2mzQkHScZY1WdMaoz74E=" crossorigin="anonymous">
+  <link rel="stylesheet" href="https://lib.baomitu.com/animate.css/3.1.1/animate.min.css" integrity="sha256-PR7ttpcvz8qrF57fur/yAx1qXMFJeJFiA6pSzWi0OIE=" crossorigin="anonymous">
 
 <script class="next-config" data-name="main" type="application/json">{"hostname":"zhoushuke.github.io","root":"/","images":"/images","scheme":"Mist","darkmode":true,"version":"8.21.1","exturl":false,"sidebar":{"position":"right","width_expanded":320,"width_dual_column":240,"display":"post","padding":18,"offset":12},"hljswrap":true,"copycode":{"enable":true,"style":"mac"},"fold":{"enable":true,"height":500},"bookmark":{"enable":false,"color":"#222","save":"auto"},"mediumzoom":false,"lazyload":false,"pangu":false,"comments":{"style":"tabs","active":null,"storage":true,"lazyload":false,"nav":null},"stickytabs":false,"motion":{"enable":true,"async":false,"transition":{"menu_item":"fadeInDown","post_block":"fadeIn","post_header":"fadeInDown","post_body":"fadeInDown","coll_header":"fadeInLeft","sidebar":"fadeInUp"}},"prism":false,"i18n":{"placeholder":"搜索...","empty":"没有找到任何搜索结果：${query}","hits_time":"找到 ${hits} 个搜索结果（用时 ${time} 毫秒）","hits":"找到 ${hits} 个搜索结果"},"path":"/search.xml","localsearch":{"enable":true,"top_n_per_article":1,"unescape":false,"preload":false}}</script><script src="/js/config.js"></script>
 
@@ -27,21 +27,21 @@
 <meta property="og:site_name" content="Z.S.K.&#39;s Records">
 <meta property="og:description" content="grafana出品的loki日志框架完美地与kubernetes的label理念结合，相对于EFK来说更加轻量级，非常适合不需要日志聚合的场景.目前新上集群考虑都彩loki做为基础工具, 直接在grafana中展示 在这里记录下使用Loki踩过的坑, 不定期更新">
 <meta property="og:locale" content="zh_CN">
-<meta property="og:image" content="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20220607165538.png">
-<meta property="og:image" content="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20220513132435.png">
-<meta property="og:image" content="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20211102143833.png">
-<meta property="og:image" content="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20210607142742.png">
-<meta property="og:image" content="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20210312182643.png">
-<meta property="og:image" content="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20210219121747.png">
-<meta property="og:image" content="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20201110195022.png">
-<meta property="og:image" content="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20200909190248.png">
-<meta property="og:image" content="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20200909200457.png">
+<meta property="og:image" content="https://raw.gitmirror.com/zhoushuke/BlogPhoto/master/githuboss/20220607165538.png">
+<meta property="og:image" content="https://raw.gitmirror.com/zhoushuke/BlogPhoto/master/githuboss/20220513132435.png">
+<meta property="og:image" content="https://raw.gitmirror.com/zhoushuke/BlogPhoto/master/githuboss/20211102143833.png">
+<meta property="og:image" content="https://raw.gitmirror.com/zhoushuke/BlogPhoto/master/githuboss/20210607142742.png">
+<meta property="og:image" content="https://raw.gitmirror.com/zhoushuke/BlogPhoto/master/githuboss/20210312182643.png">
+<meta property="og:image" content="https://raw.gitmirror.com/zhoushuke/BlogPhoto/master/githuboss/20210219121747.png">
+<meta property="og:image" content="https://raw.gitmirror.com/zhoushuke/BlogPhoto/master/githuboss/20201110195022.png">
+<meta property="og:image" content="https://raw.gitmirror.com/zhoushuke/BlogPhoto/master/githuboss/20200909190248.png">
+<meta property="og:image" content="https://raw.gitmirror.com/zhoushuke/BlogPhoto/master/githuboss/20200909200457.png">
 <meta property="article:published_time" content="2022-05-15T06:30:53.000Z">
-<meta property="article:modified_time" content="2024-12-30T07:21:59.543Z">
+<meta property="article:modified_time" content="2024-12-31T03:07:38.318Z">
 <meta property="article:author" content="周淑科">
 <meta property="article:tag" content="CloudNavi">
 <meta name="twitter:card" content="summary">
-<meta name="twitter:image" content="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20220607165538.png">
+<meta name="twitter:image" content="https://raw.gitmirror.com/zhoushuke/BlogPhoto/master/githuboss/20220607165538.png">
 
 
 <link rel="canonical" href="https://zhoushuke.github.io/2022/05/15/Loki-Prombles/">
@@ -181,7 +181,7 @@
   </nav>
 </div>
   <div class="cc-license animated" itemprop="license">
-    <a href="https://creativecommons.org/licenses/by-nc-sa/4.0/" class="cc-opacity" rel="noopener" target="_blank"><img src="https://cdn.jsdelivr.net/npm/@creativecommons/vocabulary@2020.11.3/assets/license_badges/small/by_nc_sa.svg" alt="Creative Commons"></a>
+    <a href="https://creativecommons.org/licenses/by-nc-sa/4.0/" class="cc-opacity" rel="noopener" target="_blank"><img src="https://lib.baomitu.com/creativecommons-vocabulary/2020.11.3/assets/license_badges/small/by_nc_sa.svg" alt="Creative Commons"></a>
   </div>
 
         </div>
@@ -276,20 +276,20 @@
 
 
 
-<h3 id="LOKI启动时提示-panic-invalid-page-type-11-10"><a href="#LOKI启动时提示-panic-invalid-page-type-11-10" class="headerlink" title="LOKI启动时提示 panic: invalid page type: 11: 10"></a>LOKI启动时提示 panic: invalid page type: 11: 10</h3><p><img src="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20220607165538.png"></p>
+<h3 id="LOKI启动时提示-panic-invalid-page-type-11-10"><a href="#LOKI启动时提示-panic-invalid-page-type-11-10" class="headerlink" title="LOKI启动时提示 panic: invalid page type: 11: 10"></a>LOKI启动时提示 panic: invalid page type: 11: 10</h3><p><img src="https://raw.gitmirror.com/zhoushuke/BlogPhoto/master/githuboss/20220607165538.png"></p>
 <p>原因: 对应的index table文件已经损坏</p>
 <p>解决: 删除相应的index文件即可解决</p>
-<h3 id="日志的label不对"><a href="#日志的label不对" class="headerlink" title="日志的label不对"></a>日志的label不对</h3><p><img src="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20220513132435.png"></p>
+<h3 id="日志的label不对"><a href="#日志的label不对" class="headerlink" title="日志的label不对"></a>日志的label不对</h3><p><img src="https://raw.gitmirror.com/zhoushuke/BlogPhoto/master/githuboss/20220513132435.png"></p>
 <p>原因: promtail中的scrape_config存在问题.</p>
 <p>参考: <a target="_blank" rel="noopener" href="https://izsk.me/2022/05/15/Loki-log-with-wrong-labels/">https://izsk.me/2022/05/15/Loki-log-with-wrong-labels/</a></p>
-<h3 id="grafana中开启实时日志时提示Query-error"><a href="#grafana中开启实时日志时提示Query-error" class="headerlink" title="grafana中开启实时日志时提示Query error"></a>grafana中开启实时日志时提示Query error</h3><p><img src="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20211102143833.png"></p>
+<h3 id="grafana中开启实时日志时提示Query-error"><a href="#grafana中开启实时日志时提示Query-error" class="headerlink" title="grafana中开启实时日志时提示Query error"></a>grafana中开启实时日志时提示Query error</h3><p><img src="https://raw.gitmirror.com/zhoushuke/BlogPhoto/master/githuboss/20211102143833.png"></p>
 <p>原因: 官方的解释是Note that live tailing relies on two websocket connections: one between the browser and the Grafana server, and another between the Grafana server and the Loki server. If you run any reverse proxies, please configure them accordingly.</p>
 <p>也就是说，如果在web与grafana,grafana与loki之间存在如nginx类的proxy,则需要开启websocket特性，洽洽作者的grafana是在nginx后的</p>
 <p>解决: nginx添加websocket配置,<a target="_blank" rel="noopener" href="https://www.nginx.com/blog/websocket-nginx/">详见</a></p>
 <p>参考: <a target="_blank" rel="noopener" href="https://github.com/grafana/grafana/blob/b5d8cb25e18fc73f37b3546246363464c9298684/docs/sources/features/datasources/loki.md">https://github.com/grafana/grafana/blob/b5d8cb25e18fc73f37b3546246363464c9298684/docs/sources/features/datasources/loki.md</a></p>
 <h3 id="Loki-file-size-too-small-nerror-creating-index-client"><a href="#Loki-file-size-too-small-nerror-creating-index-client" class="headerlink" title="Loki: file size too small\nerror creating index client"></a>Loki: file size too small\nerror creating index client</h3><p>解决: 删除loki的持久化目录下的boltdb-shipper-active&#x2F;index_18xxx目录 </p>
 <p>参考: <a target="_blank" rel="noopener" href="https://github.com/grafana/loki/issues/3219">https://github.com/grafana/loki/issues/3219</a></p>
-<h3 id="protail-context-deadline-exceeded"><a href="#protail-context-deadline-exceeded" class="headerlink" title="protail: context deadline exceeded"></a>protail: context deadline exceeded</h3><p><img src="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20210607142742.png"></p>
+<h3 id="protail-context-deadline-exceeded"><a href="#protail-context-deadline-exceeded" class="headerlink" title="protail: context deadline exceeded"></a>protail: context deadline exceeded</h3><p><img src="https://raw.gitmirror.com/zhoushuke/BlogPhoto/master/githuboss/20210607142742.png"></p>
 <p>原因: promtail无法连接loki所致</p>
 <h3 id="promtail-cpu使用过高"><a href="#promtail-cpu使用过高" class="headerlink" title="promtail cpu使用过高"></a>promtail cpu使用过高</h3><p>原因: 由于集群中存在大量的job类pod，这会对loki的服务发现会有很大的压力，需要调整promtail的配置，查看官方的issue，后续可能会将ds由promtail转到服务端来做，promtail需要调整的配置主要为</p>
 <figure class="highlight yaml"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line"><span class="attr">target_config:</span></span><br><span class="line">  <span class="attr">sync_period:</span> <span class="string">30s</span></span><br><span class="line"><span class="attr">positions:</span></span><br><span class="line">  <span class="attr">filename:</span> <span class="string">/run/promtail/positions.yaml</span></span><br><span class="line">  <span class="attr">sync_period:</span> <span class="string">30s</span></span><br></pre></td></tr></table></figure>
@@ -299,21 +299,21 @@
 <figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">curl localhost:3100/debug/pprof/profile\?seconds\=20</span><br></pre></td></tr></table></figure>
 
 <p>参考: <a target="_blank" rel="noopener" href="https://github.com/grafana/loki/issues/1315">https://github.com/grafana/loki/issues/1315</a></p>
-<h3 id="Maximum-active-stream-limit-exceeded"><a href="#Maximum-active-stream-limit-exceeded" class="headerlink" title="Maximum active stream limit exceeded"></a>Maximum active stream limit exceeded</h3><p><img src="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20210312182643.png"></p>
+<h3 id="Maximum-active-stream-limit-exceeded"><a href="#Maximum-active-stream-limit-exceeded" class="headerlink" title="Maximum active stream limit exceeded"></a>Maximum active stream limit exceeded</h3><p><img src="https://raw.gitmirror.com/zhoushuke/BlogPhoto/master/githuboss/20210312182643.png"></p>
 <p>原因： 同下，需要调整limit config中的max_streams_per_user， 设置为0即可</p>
-<h3 id="server-returned-HTTP-status-429-Too-Many-Requests"><a href="#server-returned-HTTP-status-429-Too-Many-Requests" class="headerlink" title="server returned HTTP status 429 Too Many Requests"></a>server returned HTTP status 429 Too Many Requests</h3><p><img src="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20210219121747.png"></p>
+<h3 id="server-returned-HTTP-status-429-Too-Many-Requests"><a href="#server-returned-HTTP-status-429-Too-Many-Requests" class="headerlink" title="server returned HTTP status 429 Too Many Requests"></a>server returned HTTP status 429 Too Many Requests</h3><p><img src="https://raw.gitmirror.com/zhoushuke/BlogPhoto/master/githuboss/20210219121747.png"></p>
 <p>原因: limit config中的参数: <code>ingestion_burst_size </code>默认值太小，调整即可</p>
 <p>参考: <a target="_blank" rel="noopener" href="https://github.com/grafana/loki/issues/1923">https://github.com/grafana/loki/issues/1923</a></p>
-<h3 id="Please-verify-permissions"><a href="#Please-verify-permissions" class="headerlink" title="Please verify permissions"></a>Please verify permissions</h3><p><img src="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20201110195022.png"></p>
+<h3 id="Please-verify-permissions"><a href="#Please-verify-permissions" class="headerlink" title="Please verify permissions"></a>Please verify permissions</h3><p><img src="https://raw.gitmirror.com/zhoushuke/BlogPhoto/master/githuboss/20201110195022.png"></p>
 <p>原因: 这条其实是warn,不影响promtail的正常工作，如果调整过日志的路径的话要确认promtail挂载的路径是否正常</p>
 <h3 id="loki-invalid-schema-config"><a href="#loki-invalid-schema-config" class="headerlink" title="loki: invalid schema config"></a>loki: invalid schema config</h3><p>原因: loki的配置文件格式错误.</p>
-<h3 id="promtail-too-many-open-files"><a href="#promtail-too-many-open-files" class="headerlink" title="promtail: too many open files"></a>promtail: too many open files</h3><p><img src="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20200909190248.png"></p>
+<h3 id="promtail-too-many-open-files"><a href="#promtail-too-many-open-files" class="headerlink" title="promtail: too many open files"></a>promtail: too many open files</h3><p><img src="https://raw.gitmirror.com/zhoushuke/BlogPhoto/master/githuboss/20200909190248.png"></p>
 <p>原因: &#x2F;var&#x2F;log&#x2F;pods下面的文件数量太多，导致超过内核参数(fs.inotify.max_user_instances)设置配置.</p>
 <p>解决：</p>
 <figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># 先查看当前机器设置的配置</span></span><br><span class="line"><span class="built_in">cat</span> /proc/sys/fs/inotify/max_user_instances</span><br><span class="line"><span class="comment"># 再查看promtail启动时watch的文件数</span></span><br><span class="line"><span class="built_in">cat</span> /run/promtail/positions.yaml | <span class="built_in">wc</span> -l</span><br><span class="line"><span class="comment"># 如果这个值比max_user_instances要大，则会出现上面的错误，可以通过修改内核参数进行调整</span></span><br><span class="line">sysctl -w fs.inotify.max_user_instances=1024</span><br><span class="line"><span class="comment"># 生效</span></span><br><span class="line">sysctl -p</span><br></pre></td></tr></table></figure>
 
 <p>参考: <a target="_blank" rel="noopener" href="https://github.com/grafana/loki/issues/1153">https://github.com/grafana/loki/issues/1153</a></p>
-<h3 id="promtail-no-such-file-ro-directory"><a href="#promtail-no-such-file-ro-directory" class="headerlink" title="promtail: no such file ro directory"></a>promtail: no such file ro directory</h3><p><img src="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20200909200457.png"></p>
+<h3 id="promtail-no-such-file-ro-directory"><a href="#promtail-no-such-file-ro-directory" class="headerlink" title="promtail: no such file ro directory"></a>promtail: no such file ro directory</h3><p><img src="https://raw.gitmirror.com/zhoushuke/BlogPhoto/master/githuboss/20200909200457.png"></p>
 <p>原因： promtail daemonset启动时会自动挂载好几个hostpath,如果docker containers的配置调整过，则需要volume跟volumemount都需要对应上.</p>
 <h3 id="未完待续"><a href="#未完待续" class="headerlink" title="未完待续"></a>未完待续</h3><h3 id="参考文章"><a href="#参考文章" class="headerlink" title="参考文章:"></a><strong>参考文章:</strong></h3><blockquote>
 <ul>
@@ -450,10 +450,10 @@
 
 
   
-  <script src="https://cdn.jsdelivr.net/npm/animejs@3.2.1/lib/anime.min.js" integrity="sha256-XL2inqUJaslATFnHdJOi9GfQ60on8Wx1C2H8DYiN1xY=" crossorigin="anonymous"></script>
+  <script src="https://lib.baomitu.com/animejs/3.2.1/anime.min.js" integrity="sha256-XL2inqUJaslATFnHdJOi9GfQ60on8Wx1C2H8DYiN1xY=" crossorigin="anonymous"></script>
 <script src="/js/comments.js"></script><script src="/js/utils.js"></script><script src="/js/motion.js"></script><script src="/js/sidebar.js"></script><script src="/js/next-boot.js"></script>
 
-  <script src="https://cdn.jsdelivr.net/npm/hexo-generator-searchdb@1.4.1/dist/search.js" integrity="sha256-1kfA5uHPf65M5cphT2dvymhkuyHPQp5A53EGZOnOLmc=" crossorigin="anonymous"></script>
+  <script src="https://lib.baomitu.com/hexo-generator-searchdb/1.4.1/search.js" integrity="sha256-1kfA5uHPf65M5cphT2dvymhkuyHPQp5A53EGZOnOLmc=" crossorigin="anonymous"></script>
 <script src="/js/third-party/search/local-search.js"></script>
 
 

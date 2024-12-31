@@ -13,10 +13,10 @@
 
 <link rel="stylesheet" href="/css/main.css">
 
-<link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Lato:300,300italic,400,400italic,700,700italic&display=swap&subset=latin,latin-ext">
+<link rel="stylesheet" href="https://fonts.loli.net/css?family=Lato:300,300italic,400,400italic,700,700italic%7CRoboto+Mono:300,300italic,400,400italic,700,700italic&display=swap&subset=latin,latin-ext">
 
-<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.6.0/css/all.min.css" integrity="sha256-5eIC48iZUHmSlSUz9XtjRyK2mzQkHScZY1WdMaoz74E=" crossorigin="anonymous">
-  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/animate.css@3.1.1/animate.min.css" integrity="sha256-PR7ttpcvz8qrF57fur/yAx1qXMFJeJFiA6pSzWi0OIE=" crossorigin="anonymous">
+<link rel="stylesheet" href="https://lib.baomitu.com/font-awesome/6.6.0/css/all.min.css" integrity="sha256-5eIC48iZUHmSlSUz9XtjRyK2mzQkHScZY1WdMaoz74E=" crossorigin="anonymous">
+  <link rel="stylesheet" href="https://lib.baomitu.com/animate.css/3.1.1/animate.min.css" integrity="sha256-PR7ttpcvz8qrF57fur/yAx1qXMFJeJFiA6pSzWi0OIE=" crossorigin="anonymous">
 
 <script class="next-config" data-name="main" type="application/json">{"hostname":"zhoushuke.github.io","root":"/","images":"/images","scheme":"Mist","darkmode":true,"version":"8.21.1","exturl":false,"sidebar":{"position":"right","width_expanded":320,"width_dual_column":240,"display":"post","padding":18,"offset":12},"hljswrap":true,"copycode":{"enable":true,"style":"mac"},"fold":{"enable":true,"height":500},"bookmark":{"enable":false,"color":"#222","save":"auto"},"mediumzoom":false,"lazyload":false,"pangu":false,"comments":{"style":"tabs","active":null,"storage":true,"lazyload":false,"nav":null},"stickytabs":false,"motion":{"enable":true,"async":false,"transition":{"menu_item":"fadeInDown","post_block":"fadeIn","post_header":"fadeInDown","post_body":"fadeInDown","coll_header":"fadeInLeft","sidebar":"fadeInUp"}},"prism":false,"i18n":{"placeholder":"搜索...","empty":"没有找到任何搜索结果：${query}","hits_time":"找到 ${hits} 个搜索结果（用时 ${time} 毫秒）","hits":"找到 ${hits} 个搜索结果"},"path":"/search.xml","localsearch":{"enable":true,"top_n_per_article":1,"unescape":false,"preload":false}}</script><script src="/js/config.js"></script>
 
@@ -27,15 +27,15 @@
 <meta property="og:site_name" content="Z.S.K.&#39;s Records">
 <meta property="og:description" content="在HPC场景下，底层网络的性能直接影响最终的结果，HPC往往会伴随海量的数据交换，特别是在跨Node之间，10Gb的以太网网络传输肯定要比100Gb的IB网络传输慢，本人所负责的训练平台也是如此，在一次训练过程中，GPU存在海量数据交换，虽然是在GPU之间，但本质还是通过网络进行传输，但是以太网的传输在HPC场景下往往显得不那么高效，因此可以通过RDMA或者如果预算够的话，通过硬件IB实现数据交换">
 <meta property="og:locale" content="zh_CN">
-<meta property="og:image" content="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20210704215748.png">
-<meta property="og:image" content="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20210704191648.png">
-<meta property="og:image" content="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20210704191622.png">
+<meta property="og:image" content="https://raw.gitmirror.com/zhoushuke/BlogPhoto/master/githuboss/20210704215748.png">
+<meta property="og:image" content="https://raw.gitmirror.com/zhoushuke/BlogPhoto/master/githuboss/20210704191648.png">
+<meta property="og:image" content="https://raw.gitmirror.com/zhoushuke/BlogPhoto/master/githuboss/20210704191622.png">
 <meta property="article:published_time" content="2021-07-02T08:10:53.000Z">
-<meta property="article:modified_time" content="2024-12-30T07:21:59.495Z">
+<meta property="article:modified_time" content="2024-12-31T03:07:38.319Z">
 <meta property="article:author" content="周淑科">
 <meta property="article:tag" content="Kubernetes">
 <meta name="twitter:card" content="summary">
-<meta name="twitter:image" content="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20210704215748.png">
+<meta name="twitter:image" content="https://raw.gitmirror.com/zhoushuke/BlogPhoto/master/githuboss/20210704215748.png">
 
 
 <link rel="canonical" href="https://zhoushuke.github.io/2021/07/02/Kubernetes-Infinitband-SRIOV-network-1-backgroud/">
@@ -175,7 +175,7 @@
   </nav>
 </div>
   <div class="cc-license animated" itemprop="license">
-    <a href="https://creativecommons.org/licenses/by-nc-sa/4.0/" class="cc-opacity" rel="noopener" target="_blank"><img src="https://cdn.jsdelivr.net/npm/@creativecommons/vocabulary@2020.11.3/assets/license_badges/small/by_nc_sa.svg" alt="Creative Commons"></a>
+    <a href="https://creativecommons.org/licenses/by-nc-sa/4.0/" class="cc-opacity" rel="noopener" target="_blank"><img src="https://lib.baomitu.com/creativecommons-vocabulary/2020.11.3/assets/license_badges/small/by_nc_sa.svg" alt="Creative Commons"></a>
   </div>
 
         </div>
@@ -271,7 +271,7 @@
 
 <p>本人所负责的训练平台是完全基于k8s的，现在要迁移至IB网络同时不影响现有业务进行，大大增加了实施难度，在经过一番调研之后，最终的方案为在原有的容器网络基础之上，再加一层IB网络层，即在k8s集群中同时存在2个网络，这在k8s是完全支持的，即在容器中除了eth0，由flannel cni分配， 还会有一个net1网络，由IB cni分配, eth0的网络用于集群之间的通信，而net1则用于训练时pod与pod节点进行通信，在实践之前先介绍几个比较重要的技术</p>
 <h3 id="Infinitband"><a href="#Infinitband" class="headerlink" title="Infinitband"></a>Infinitband</h3><p>infinitband做专门为高带宽，低时延，高可靠，不占用cpu资源的网络互联技术，大量被用于超算、AI等HPC场景下</p>
-<p><img src="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20210704215748.png"></p>
+<p><img src="https://raw.gitmirror.com/zhoushuke/BlogPhoto/master/githuboss/20210704215748.png"></p>
 <p>这里不对infintband展开细说，感兴趣的可以参考下列连接</p>
 <p><a target="_blank" rel="noopener" href="https://zhuanlan.zhihu.com/p/74238082">https://zhuanlan.zhihu.com/p/74238082</a></p>
 <p><a target="_blank" rel="noopener" href="https://zhuanlan.zhihu.com/p/163104439">https://zhuanlan.zhihu.com/p/163104439</a></p>
@@ -335,14 +335,14 @@
 </tbody></table>
 <p>master做为控制面，用于集群间的管理角色</p>
 <p>node上做为数据面，以太网用于与控制面进行交互，同时IB网卡用于HPC业务</p>
-<h3 id="组网图"><a href="#组网图" class="headerlink" title="组网图"></a>组网图</h3><p><img src="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20210704191648.png"></p>
+<h3 id="组网图"><a href="#组网图" class="headerlink" title="组网图"></a>组网图</h3><p><img src="https://raw.gitmirror.com/zhoushuke/BlogPhoto/master/githuboss/20210704191648.png"></p>
 <p>在集群物理机器上，实际存在3个网络:</p>
 <ol>
 <li>管理网(eth1), 用于机器的管控网，一般叫做ipmi或者带外、外带等,在服务器上有专门的网口标识</li>
 <li>业务网(eth0), 用于flannel的启动参数指定的网卡名，这个网络在pod中用于与k8s控制面进行交互</li>
 <li>IB网(eth100), 用于ib网卡,在这个网卡上会通过sriov虚拟出若干网卡用于pod中</li>
 </ol>
-<h3 id="架构图"><a href="#架构图" class="headerlink" title="架构图"></a>架构图</h3><p><img src="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20210704191622.png"></p>
+<h3 id="架构图"><a href="#架构图" class="headerlink" title="架构图"></a>架构图</h3><p><img src="https://raw.gitmirror.com/zhoushuke/BlogPhoto/master/githuboss/20210704191622.png"></p>
 <h3 id="实现目的"><a href="#实现目的" class="headerlink" title="实现目的"></a>实现目的</h3><p>最终要实现的目标为: 通过sriov在IB网卡上实现高性能容器网络以加速分布式训练的GPU数据交换</p>
 <h3 id="参考文章"><a href="#参考文章" class="headerlink" title="参考文章:"></a><strong>参考文章:</strong></h3><blockquote>
 <ul>
@@ -404,13 +404,13 @@
 
           <div class="post-nav">
             <div class="post-nav-item">
-                <a href="/2021/07/02/Kubernetes-Infinitband-SRIOV-network-1-background/" rel="prev" title="Kubernetes学习(k8s基于InfiniBand实现HPC高性能容器网络组网方案实践一)">
-                  <i class="fa fa-angle-left"></i> Kubernetes学习(k8s基于InfiniBand实现HPC高性能容器网络组网方案实践一)
+                <a href="/2021/05/15/Kong-grpc-proxy-multi/" rel="prev" title="Kong学习(代理多grpc后端)">
+                  <i class="fa fa-angle-left"></i> Kong学习(代理多grpc后端)
                 </a>
             </div>
             <div class="post-nav-item">
-                <a href="/2021/07/03/Kubernetes-Infinitband-SRIOV-network-2-deploy/" rel="next" title="Kubernetes学习(k8s基于InfiniBand实现HPC高性能容器网络组网方案实践二)">
-                  Kubernetes学习(k8s基于InfiniBand实现HPC高性能容器网络组网方案实践二) <i class="fa fa-angle-right"></i>
+                <a href="/2021/07/02/Kubernetes-Infinitband-SRIOV-network-1-background/" rel="next" title="Kubernetes学习(k8s基于InfiniBand实现HPC高性能容器网络组网方案实践一)">
+                  Kubernetes学习(k8s基于InfiniBand实现HPC高性能容器网络组网方案实践一) <i class="fa fa-angle-right"></i>
                 </a>
             </div>
           </div>
@@ -477,10 +477,10 @@
 
 
   
-  <script src="https://cdn.jsdelivr.net/npm/animejs@3.2.1/lib/anime.min.js" integrity="sha256-XL2inqUJaslATFnHdJOi9GfQ60on8Wx1C2H8DYiN1xY=" crossorigin="anonymous"></script>
+  <script src="https://lib.baomitu.com/animejs/3.2.1/anime.min.js" integrity="sha256-XL2inqUJaslATFnHdJOi9GfQ60on8Wx1C2H8DYiN1xY=" crossorigin="anonymous"></script>
 <script src="/js/comments.js"></script><script src="/js/utils.js"></script><script src="/js/motion.js"></script><script src="/js/sidebar.js"></script><script src="/js/next-boot.js"></script>
 
-  <script src="https://cdn.jsdelivr.net/npm/hexo-generator-searchdb@1.4.1/dist/search.js" integrity="sha256-1kfA5uHPf65M5cphT2dvymhkuyHPQp5A53EGZOnOLmc=" crossorigin="anonymous"></script>
+  <script src="https://lib.baomitu.com/hexo-generator-searchdb/1.4.1/search.js" integrity="sha256-1kfA5uHPf65M5cphT2dvymhkuyHPQp5A53EGZOnOLmc=" crossorigin="anonymous"></script>
 <script src="/js/third-party/search/local-search.js"></script>
 
 

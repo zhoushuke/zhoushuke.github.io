@@ -13,10 +13,10 @@
 
 <link rel="stylesheet" href="/css/main.css">
 
-<link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Lato:300,300italic,400,400italic,700,700italic&display=swap&subset=latin,latin-ext">
+<link rel="stylesheet" href="https://fonts.loli.net/css?family=Lato:300,300italic,400,400italic,700,700italic%7CRoboto+Mono:300,300italic,400,400italic,700,700italic&display=swap&subset=latin,latin-ext">
 
-<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.6.0/css/all.min.css" integrity="sha256-5eIC48iZUHmSlSUz9XtjRyK2mzQkHScZY1WdMaoz74E=" crossorigin="anonymous">
-  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/animate.css@3.1.1/animate.min.css" integrity="sha256-PR7ttpcvz8qrF57fur/yAx1qXMFJeJFiA6pSzWi0OIE=" crossorigin="anonymous">
+<link rel="stylesheet" href="https://lib.baomitu.com/font-awesome/6.6.0/css/all.min.css" integrity="sha256-5eIC48iZUHmSlSUz9XtjRyK2mzQkHScZY1WdMaoz74E=" crossorigin="anonymous">
+  <link rel="stylesheet" href="https://lib.baomitu.com/animate.css/3.1.1/animate.min.css" integrity="sha256-PR7ttpcvz8qrF57fur/yAx1qXMFJeJFiA6pSzWi0OIE=" crossorigin="anonymous">
 
 <script class="next-config" data-name="main" type="application/json">{"hostname":"zhoushuke.github.io","root":"/","images":"/images","scheme":"Mist","darkmode":true,"version":"8.21.1","exturl":false,"sidebar":{"position":"right","width_expanded":320,"width_dual_column":240,"display":"post","padding":18,"offset":12},"hljswrap":true,"copycode":{"enable":true,"style":"mac"},"fold":{"enable":true,"height":500},"bookmark":{"enable":false,"color":"#222","save":"auto"},"mediumzoom":false,"lazyload":false,"pangu":false,"comments":{"style":"tabs","active":null,"storage":true,"lazyload":false,"nav":null},"stickytabs":false,"motion":{"enable":true,"async":false,"transition":{"menu_item":"fadeInDown","post_block":"fadeIn","post_header":"fadeInDown","post_body":"fadeInDown","coll_header":"fadeInLeft","sidebar":"fadeInUp"}},"prism":false,"i18n":{"placeholder":"搜索...","empty":"没有找到任何搜索结果：${query}","hits_time":"找到 ${hits} 个搜索结果（用时 ${time} 毫秒）","hits":"找到 ${hits} 个搜索结果"},"path":"/search.xml","localsearch":{"enable":true,"top_n_per_article":1,"unescape":false,"preload":false}}</script><script src="/js/config.js"></script>
 
@@ -27,14 +27,14 @@
 <meta property="og:site_name" content="Z.S.K.&#39;s Records">
 <meta property="og:description" content="最近发生一件很诡异的事情, 某个ns下的pods会莫名其妙地被删了, 困扰了好一阵子，排查后发现问题的起因还是挺有意思。">
 <meta property="og:locale" content="zh_CN">
-<meta property="og:image" content="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/wecom-temp-ea679872d1ef4371071b5871e226a2c3.png">
-<meta property="og:image" content="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20210725211611.png">
+<meta property="og:image" content="https://raw.gitmirror.com/zhoushuke/BlogPhoto/master/githuboss/wecom-temp-ea679872d1ef4371071b5871e226a2c3.png">
+<meta property="og:image" content="https://raw.gitmirror.com/zhoushuke/BlogPhoto/master/githuboss/20210725211611.png">
 <meta property="article:published_time" content="2021-07-26T12:10:53.000Z">
-<meta property="article:modified_time" content="2024-12-30T07:21:59.490Z">
+<meta property="article:modified_time" content="2024-12-31T03:07:38.319Z">
 <meta property="article:author" content="周淑科">
 <meta property="article:tag" content="Kubernetes">
 <meta name="twitter:card" content="summary">
-<meta name="twitter:image" content="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/wecom-temp-ea679872d1ef4371071b5871e226a2c3.png">
+<meta name="twitter:image" content="https://raw.gitmirror.com/zhoushuke/BlogPhoto/master/githuboss/wecom-temp-ea679872d1ef4371071b5871e226a2c3.png">
 
 
 <link rel="canonical" href="https://zhoushuke.github.io/2021/07/26/Kubernetes-podGC/">
@@ -174,7 +174,7 @@
   </nav>
 </div>
   <div class="cc-license animated" itemprop="license">
-    <a href="https://creativecommons.org/licenses/by-nc-sa/4.0/" class="cc-opacity" rel="noopener" target="_blank"><img src="https://cdn.jsdelivr.net/npm/@creativecommons/vocabulary@2020.11.3/assets/license_badges/small/by_nc_sa.svg" alt="Creative Commons"></a>
+    <a href="https://creativecommons.org/licenses/by-nc-sa/4.0/" class="cc-opacity" rel="noopener" target="_blank"><img src="https://lib.baomitu.com/creativecommons-vocabulary/2020.11.3/assets/license_badges/small/by_nc_sa.svg" alt="Creative Commons"></a>
   </div>
 
         </div>
@@ -272,12 +272,12 @@
 <p>结果很直接，就是在ns下的某些状态为 Failed pod会被删掉(后来证实Succeeded状态的也会被删掉)，所以会出现尴尬的情况是想找这个pod的时候，发现这个pod却没了，之前反映过类似的问题，但一直以为是被别人删了，没有在意，但是第二次出现，感觉不是偶然</p>
 <p>开发同学肯定没权限做这个事，运维侧也可以肯定没有这类操作，排查了一圈几乎可以肯定的是，<strong>不是人为的</strong>, 那不是人做的，就只能中k8s这边的某些机制触发了这个删除的操作，kubernetes可以管理千千万万的pod资源，因此gc机制是必不可少的，作者也是第一时间想到了可能是gc机制引起的.</p>
 <p>在详细追踪k8s的podGC问题之前，其实还有一个嫌疑犯需要排查，那就是argo-workflow, argo-workflow做为一种任务workflow的实现方式，argo-workflow本身也可以通过<strong>CRD</strong>来检测当workflow执行到达什么状态时进行podGC, 如下图:</p>
-<p><img src="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/wecom-temp-ea679872d1ef4371071b5871e226a2c3.png"></p>
+<p><img src="https://raw.gitmirror.com/zhoushuke/BlogPhoto/master/githuboss/wecom-temp-ea679872d1ef4371071b5871e226a2c3.png"></p>
 <p>但作者可以肯定的是，那些被删除的pod中并未使用argo-workflow的podGC，因此argo-workflow的嫌疑可以排除.</p>
 <p>那么现在就剩k8s本身的机制了</p>
 <h3 id="PodGC"><a href="#PodGC" class="headerlink" title="PodGC"></a>PodGC</h3><p>k8s中存在在各种各样的controller(感兴趣的可以看看controllermanager.go中的NewControllerInitializers中列出来的controllers对象), 每一个controller专注于解决一个方面的问题， podGC controller也是如此，专门回收pod。</p>
 <p>既然pod被回收了，是不是可以从controllermanager的日志中看到什么呢?果然</p>
-<p><img src="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20210725211611.png"></p>
+<p><img src="https://raw.gitmirror.com/zhoushuke/BlogPhoto/master/githuboss/20210725211611.png"></p>
 <p>从上面的日志也可以证实，pod确实是controller被回收了，但是怎么个回收法呢？依据是什么,时间间隔多久等等一系列问题相继涌出</p>
 <h3 id="gc-controller-go"><a href="#gc-controller-go" class="headerlink" title="gc_controller.go"></a>gc_controller.go</h3><p>源码能够得到一切答案，大多数都来自于<code>pkg/controller/podgc/gc_controller.go</code></p>
 <figure class="highlight go"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">const</span> (</span><br><span class="line">	<span class="comment">// gcCheckPeriod defines frequency of running main controller loop</span></span><br><span class="line">	gcCheckPeriod = <span class="number">20</span> * time.Second</span><br><span class="line">	<span class="comment">// quarantineTime defines how long Orphaned GC waits for nodes to show up</span></span><br><span class="line">	<span class="comment">// in an informer before issuing a GET call to check if they are truly gone</span></span><br><span class="line">	quarantineTime = <span class="number">40</span> * time.Second</span><br><span class="line">)</span><br></pre></td></tr></table></figure>
@@ -454,10 +454,10 @@
 
 
   
-  <script src="https://cdn.jsdelivr.net/npm/animejs@3.2.1/lib/anime.min.js" integrity="sha256-XL2inqUJaslATFnHdJOi9GfQ60on8Wx1C2H8DYiN1xY=" crossorigin="anonymous"></script>
+  <script src="https://lib.baomitu.com/animejs/3.2.1/anime.min.js" integrity="sha256-XL2inqUJaslATFnHdJOi9GfQ60on8Wx1C2H8DYiN1xY=" crossorigin="anonymous"></script>
 <script src="/js/comments.js"></script><script src="/js/utils.js"></script><script src="/js/motion.js"></script><script src="/js/sidebar.js"></script><script src="/js/next-boot.js"></script>
 
-  <script src="https://cdn.jsdelivr.net/npm/hexo-generator-searchdb@1.4.1/dist/search.js" integrity="sha256-1kfA5uHPf65M5cphT2dvymhkuyHPQp5A53EGZOnOLmc=" crossorigin="anonymous"></script>
+  <script src="https://lib.baomitu.com/hexo-generator-searchdb/1.4.1/search.js" integrity="sha256-1kfA5uHPf65M5cphT2dvymhkuyHPQp5A53EGZOnOLmc=" crossorigin="anonymous"></script>
 <script src="/js/third-party/search/local-search.js"></script>
 
 

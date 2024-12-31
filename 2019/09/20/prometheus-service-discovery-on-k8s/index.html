@@ -13,10 +13,10 @@
 
 <link rel="stylesheet" href="/css/main.css">
 
-<link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Lato:300,300italic,400,400italic,700,700italic&display=swap&subset=latin,latin-ext">
+<link rel="stylesheet" href="https://fonts.loli.net/css?family=Lato:300,300italic,400,400italic,700,700italic%7CRoboto+Mono:300,300italic,400,400italic,700,700italic&display=swap&subset=latin,latin-ext">
 
-<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.6.0/css/all.min.css" integrity="sha256-5eIC48iZUHmSlSUz9XtjRyK2mzQkHScZY1WdMaoz74E=" crossorigin="anonymous">
-  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/animate.css@3.1.1/animate.min.css" integrity="sha256-PR7ttpcvz8qrF57fur/yAx1qXMFJeJFiA6pSzWi0OIE=" crossorigin="anonymous">
+<link rel="stylesheet" href="https://lib.baomitu.com/font-awesome/6.6.0/css/all.min.css" integrity="sha256-5eIC48iZUHmSlSUz9XtjRyK2mzQkHScZY1WdMaoz74E=" crossorigin="anonymous">
+  <link rel="stylesheet" href="https://lib.baomitu.com/animate.css/3.1.1/animate.min.css" integrity="sha256-PR7ttpcvz8qrF57fur/yAx1qXMFJeJFiA6pSzWi0OIE=" crossorigin="anonymous">
 
 <script class="next-config" data-name="main" type="application/json">{"hostname":"zhoushuke.github.io","root":"/","images":"/images","scheme":"Mist","darkmode":true,"version":"8.21.1","exturl":false,"sidebar":{"position":"right","width_expanded":320,"width_dual_column":240,"display":"post","padding":18,"offset":12},"hljswrap":true,"copycode":{"enable":true,"style":"mac"},"fold":{"enable":true,"height":500},"bookmark":{"enable":false,"color":"#222","save":"auto"},"mediumzoom":false,"lazyload":false,"pangu":false,"comments":{"style":"tabs","active":null,"storage":true,"lazyload":false,"nav":null},"stickytabs":false,"motion":{"enable":true,"async":false,"transition":{"menu_item":"fadeInDown","post_block":"fadeIn","post_header":"fadeInDown","post_body":"fadeInDown","coll_header":"fadeInLeft","sidebar":"fadeInUp"}},"prism":false,"i18n":{"placeholder":"搜索...","empty":"没有找到任何搜索结果：${query}","hits_time":"找到 ${hits} 个搜索结果（用时 ${time} 毫秒）","hits":"找到 ${hits} 个搜索结果"},"path":"/search.xml","localsearch":{"enable":true,"top_n_per_article":1,"unescape":false,"preload":false}}</script><script src="/js/config.js"></script>
 
@@ -27,16 +27,16 @@
 <meta property="og:site_name" content="Z.S.K.&#39;s Records">
 <meta property="og:description" content="之前学习了prometheus的架构及一些基本术语, 今天学习一下Prometheus的服务发现机制，这块的内容占据比较大的份额， 主要学习下基于kubernetes做服务发现.">
 <meta property="og:locale" content="zh_CN">
-<meta property="og:image" content="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20200317182657.png">
-<meta property="og:image" content="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20200317184413.png">
-<meta property="og:image" content="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20200317213527.png">
-<meta property="og:image" content="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20200318112248.png">
+<meta property="og:image" content="https://raw.gitmirror.com/zhoushuke/BlogPhoto/master/githuboss/20200317182657.png">
+<meta property="og:image" content="https://raw.gitmirror.com/zhoushuke/BlogPhoto/master/githuboss/20200317184413.png">
+<meta property="og:image" content="https://raw.gitmirror.com/zhoushuke/BlogPhoto/master/githuboss/20200317213527.png">
+<meta property="og:image" content="https://raw.gitmirror.com/zhoushuke/BlogPhoto/master/githuboss/20200318112248.png">
 <meta property="article:published_time" content="2019-09-20T13:30:53.000Z">
-<meta property="article:modified_time" content="2024-12-30T07:21:59.534Z">
+<meta property="article:modified_time" content="2024-12-31T03:07:38.318Z">
 <meta property="article:author" content="周淑科">
 <meta property="article:tag" content="CloudNavi">
 <meta name="twitter:card" content="summary">
-<meta name="twitter:image" content="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20200317182657.png">
+<meta name="twitter:image" content="https://raw.gitmirror.com/zhoushuke/BlogPhoto/master/githuboss/20200317182657.png">
 
 
 <link rel="canonical" href="https://zhoushuke.github.io/2019/09/20/prometheus-service-discovery-on-k8s/">
@@ -176,7 +176,7 @@
   </nav>
 </div>
   <div class="cc-license animated" itemprop="license">
-    <a href="https://creativecommons.org/licenses/by-nc-sa/4.0/" class="cc-opacity" rel="noopener" target="_blank"><img src="https://cdn.jsdelivr.net/npm/@creativecommons/vocabulary@2020.11.3/assets/license_badges/small/by_nc_sa.svg" alt="Creative Commons"></a>
+    <a href="https://creativecommons.org/licenses/by-nc-sa/4.0/" class="cc-opacity" rel="noopener" target="_blank"><img src="https://lib.baomitu.com/creativecommons-vocabulary/2020.11.3/assets/license_badges/small/by_nc_sa.svg" alt="Creative Commons"></a>
   </div>
 
         </div>
@@ -276,9 +276,9 @@
 <p>当然, 存在<code>服务发现</code>那必然就有<code>服务注册</code>，好在kubernetes本身做了这些事情, 使得我们可以更加专注于业务.</p>
 <p>可以有很多种方式实现<code>服务发现</code>, 最早使用的DNS其实就是一种， </p>
 <p>在prometheus的<a target="_blank" rel="noopener" href="https://prometheus.io/docs/prometheus/latest/configuration/configuration/">官网</a>上, 列出了目前支持的<code>服务发现</code>方式,图中的sd表示的<code> service discovery</code>, 这里了解下最kubernetes跟file这种方式</p>
-<p><img src="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20200317182657.png"></p>
+<p><img src="https://raw.gitmirror.com/zhoushuke/BlogPhoto/master/githuboss/20200317182657.png"></p>
 <h4 id="static-config"><a href="#static-config" class="headerlink" title="static_config"></a>static_config</h4><p>最简单的是静态配置, 这种也权当是一种<code>服务发现</code>吧, 就是直接在prometheus配置中直接指定需要抓取的目标</p>
-<p><img src="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20200317184413.png"></p>
+<p><img src="https://raw.gitmirror.com/zhoushuke/BlogPhoto/master/githuboss/20200317184413.png"></p>
 <p>像上图那样直接在target中指定目标地址即可, 非常简单</p>
 <h4 id="file-sd-config"><a href="#file-sd-config" class="headerlink" title="file_sd_config"></a>file_sd_config</h4><p>基于文件的服务发现, 可以理解通过解析文件的方式获取目标, 这种方式跟static_config差不太多</p>
 <p>这种方式的有点是可以根据业务进行分类, 而不用全都塞到一个配置文件中，当这个yaml或者json文件内容有改变的时候，prometheus 会通过watch file的形式感知到target内容的变动</p>
@@ -298,13 +298,13 @@
 <p>这里要说的是, 按照上面的理解, 我一定是需要指定target才行, 但是上面这段配置并没有target字段, 那又是为何呢?</p>
 <p>秘密就在于<code>role: pod</code>,上面已经标注出来, 在prometheus的<a target="_blank" rel="noopener" href="https://github.com/prometheus/prometheus/blob/master/discovery/kubernetes/pod.go">源码</a>中, 可以看到对pod的具体处理</p>
 <p>从prometheus的<a target="_blank" rel="noopener" href="https://github.com/prometheus/prometheus/blob/master/discovery/kubernetes/kubernetes.go">源码</a>中也可以看到对kubernetes支持的role共有<code>endpoints,ingress,node,pod,service</code></p>
-<p><img src="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20200317213527.png"></p>
+<p><img src="https://raw.gitmirror.com/zhoushuke/BlogPhoto/master/githuboss/20200317213527.png"></p>
 <p>所以，如果role 等于其它的值是没有用的, 因此在整个prometheus的配置文件中对于Kubernetes的配置只会有上面那5种role, 可以少, 比如我集群中没有ingress, 那么是可以没有ingress的配置的</p>
 <p>所以总结一下, <strong>prometheus通过list-watch机制来更新上面指定role资源</strong></p>
 <p>那另一个问题是, 对于上面pod的配置，<code>难道所有的pod对象都会prometheus抓取吗</code>？显然也不是的</p>
 <p>如果kubernetes集群到达一个数据级, 全部的pod都scrape的话,那对prometheus跟kubernetes的性能都是个巨大考验, 而且一般情况下，我们只会关心想关心的应用pod，另一此不是很重要的pod其实是可以不监控的。</p>
 <p>因此prometheus通过annotations的方式，指定哪些需要需要scrape, 哪些可以忽略.</p>
-<p><img src="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20200318112248.png"></p>
+<p><img src="https://raw.gitmirror.com/zhoushuke/BlogPhoto/master/githuboss/20200318112248.png"></p>
 <p>prometheus.io&#x2F;scrape: 如果加上这个annotations，表示当前pod是允许prometheus抓取数据的，如不加这个annotations，prometheus就不会自动把这个pod纳入到监控中,  scrape&#x3D;true：允许抓取；scrape&#x3D;flase：不允许抓取</p>
 <p>prometheus.io&#x2F;port: 抓取数据时使用的套接字端口, 这个端口用于暴露metric</p>
 <p>prometheus.io&#x2F;path: 当scrape&#x3D;true时，再加此annotation，表示当前Pod能够输出指标数据的Url,默认为&#x2F;metrics</p>
@@ -446,10 +446,10 @@
 
 
   
-  <script src="https://cdn.jsdelivr.net/npm/animejs@3.2.1/lib/anime.min.js" integrity="sha256-XL2inqUJaslATFnHdJOi9GfQ60on8Wx1C2H8DYiN1xY=" crossorigin="anonymous"></script>
+  <script src="https://lib.baomitu.com/animejs/3.2.1/anime.min.js" integrity="sha256-XL2inqUJaslATFnHdJOi9GfQ60on8Wx1C2H8DYiN1xY=" crossorigin="anonymous"></script>
 <script src="/js/comments.js"></script><script src="/js/utils.js"></script><script src="/js/motion.js"></script><script src="/js/sidebar.js"></script><script src="/js/next-boot.js"></script>
 
-  <script src="https://cdn.jsdelivr.net/npm/hexo-generator-searchdb@1.4.1/dist/search.js" integrity="sha256-1kfA5uHPf65M5cphT2dvymhkuyHPQp5A53EGZOnOLmc=" crossorigin="anonymous"></script>
+  <script src="https://lib.baomitu.com/hexo-generator-searchdb/1.4.1/search.js" integrity="sha256-1kfA5uHPf65M5cphT2dvymhkuyHPQp5A53EGZOnOLmc=" crossorigin="anonymous"></script>
 <script src="/js/third-party/search/local-search.js"></script>
 
 
