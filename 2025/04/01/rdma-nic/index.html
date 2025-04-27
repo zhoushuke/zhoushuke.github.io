@@ -1,0 +1,503 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width">
+<meta name="theme-color" content="#222" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#222" media="(prefers-color-scheme: dark)"><meta name="generator" content="Hexo 6.2.0">
+
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon-next.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32x32-next.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon-16x16-next.png">
+  <link rel="mask-icon" href="/images/logo.svg" color="#222">
+
+<link rel="stylesheet" href="/css/main.css">
+
+<link rel="stylesheet" href="https://fonts.loli.net/css?family=Lato:300,300italic,400,400italic,700,700italic%7CRoboto+Mono:300,300italic,400,400italic,700,700italic&display=swap&subset=latin,latin-ext">
+
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.6.0/css/all.min.css" integrity="sha256-5eIC48iZUHmSlSUz9XtjRyK2mzQkHScZY1WdMaoz74E=" crossorigin="anonymous">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/3.1.1/animate.min.css" integrity="sha256-PR7ttpcvz8qrF57fur/yAx1qXMFJeJFiA6pSzWi0OIE=" crossorigin="anonymous">
+
+<script class="next-config" data-name="main" type="application/json">{"hostname":"zhoushuke.github.io","root":"/","images":"/images","scheme":"Mist","darkmode":true,"version":"8.21.1","exturl":false,"sidebar":{"position":"right","width_expanded":320,"width_dual_column":240,"display":"post","padding":18,"offset":12},"hljswrap":true,"copycode":{"enable":true,"style":"mac"},"fold":{"enable":true,"height":500},"bookmark":{"enable":false,"color":"#222","save":"auto"},"mediumzoom":false,"lazyload":false,"pangu":false,"comments":{"style":"tabs","active":null,"storage":true,"lazyload":false,"nav":null},"stickytabs":false,"motion":{"enable":true,"async":false,"transition":{"menu_item":"fadeInDown","post_block":"fadeIn","post_header":"fadeInDown","post_body":"fadeInDown","coll_header":"fadeInLeft","sidebar":"fadeInUp"}},"prism":false,"i18n":{"placeholder":"搜索...","empty":"没有找到任何搜索结果：${query}","hits_time":"找到 ${hits} 个搜索结果（用时 ${time} 毫秒）","hits":"找到 ${hits} 个搜索结果"},"path":"/search.xml","localsearch":{"enable":true,"top_n_per_article":1,"unescape":false,"preload":false}}</script><script src="/js/config.js"></script>
+
+    <meta name="description" content="在多机训练场景下, 如何加速多机间的数据交换是绕不开的话题, 作者之前负责的集群是以IB网络为载体, 但由于其昂贵的成本及超高的专业性往往让人退而却步,基于以太网的RoCE则具有很高的性价比。作者经过一段时间的学习及落地,也算是对RoCE(英文读音类Rocky)技术有些了解,简单记录一下。">
+<meta property="og:type" content="article">
+<meta property="og:title" content="RDMA初探(以太网网卡数据)">
+<meta property="og:url" content="https://zhoushuke.github.io/2025/04/01/rdma-nic/index.html">
+<meta property="og:site_name" content="Z.S.K.&#39;s Records">
+<meta property="og:description" content="在多机训练场景下, 如何加速多机间的数据交换是绕不开的话题, 作者之前负责的集群是以IB网络为载体, 但由于其昂贵的成本及超高的专业性往往让人退而却步,基于以太网的RoCE则具有很高的性价比。作者经过一段时间的学习及落地,也算是对RoCE(英文读音类Rocky)技术有些了解,简单记录一下。">
+<meta property="og:locale" content="zh_CN">
+<meta property="og:image" content="https://raw.gitmirror.com/zhoushuke/BlogPhoto/master/githuboss/20250403112845.png">
+<meta property="og:image" content="https://raw.gitmirror.com/zhoushuke/BlogPhoto/master/githuboss/20250403131230.png">
+<meta property="article:published_time" content="2025-04-01T06:10:53.000Z">
+<meta property="article:modified_time" content="2025-04-27T06:21:40.255Z">
+<meta property="article:author" content="周淑科">
+<meta property="article:tag" content="HPC">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:image" content="https://raw.gitmirror.com/zhoushuke/BlogPhoto/master/githuboss/20250403112845.png">
+
+
+<link rel="canonical" href="https://zhoushuke.github.io/2025/04/01/rdma-nic/">
+
+
+<script class="next-config" data-name="page" type="application/json">{"sidebar":"","isHome":false,"isPost":true,"lang":"zh-CN","comments":true,"permalink":"https://zhoushuke.github.io/2025/04/01/rdma-nic/","path":"2025/04/01/rdma-nic/","title":"RDMA初探(以太网网卡数据)"}</script>
+
+<script class="next-config" data-name="calendar" type="application/json">""</script>
+<title>RDMA初探(以太网网卡数据) | Z.S.K.'s Records</title>
+  
+
+
+
+
+
+
+
+
+  <noscript>
+    <link rel="stylesheet" href="/css/noscript.css">
+  </noscript>
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage" class="use-motion">
+  <div class="headband"></div>
+
+  <main class="main">
+    <div class="column">
+      <header class="header" itemscope itemtype="http://schema.org/WPHeader"><div class="site-brand-container">
+  <div class="site-nav-toggle">
+    <div class="toggle" aria-label="切换导航栏" role="button">
+        <span class="toggle-line"></span>
+        <span class="toggle-line"></span>
+        <span class="toggle-line"></span>
+    </div>
+  </div>
+
+  <div class="site-meta">
+
+    <a href="/" class="brand" rel="start">
+      <i class="logo-line"></i>
+      <p class="site-title">Z.S.K.'s Records</p>
+      <i class="logo-line"></i>
+    </a>
+  </div>
+
+  <div class="site-nav-right">
+    <div class="toggle popup-trigger" aria-label="搜索" role="button">
+        <i class="fa fa-search fa-fw fa-lg"></i>
+    </div>
+  </div>
+</div>
+
+
+
+<nav class="site-nav">
+  <ul class="main-menu menu"><li class="menu-item menu-item-home"><a href="/" rel="section"><i class="fa fa-home fa-fw"></i>首页</a></li><li class="menu-item menu-item-about"><a href="/about/ZSK-Profile.pdf" rel="section"><i class="fa fa-user fa-fw"></i>简历</a></li><li class="menu-item menu-item-tags"><a href="/tags/" rel="section"><i class="fa fa-tags fa-fw"></i>标签</a></li><li class="menu-item menu-item-categories"><a href="/categories/" rel="section"><i class="fa fa-th fa-fw"></i>分类</a></li><li class="menu-item menu-item-archives"><a href="/archives/" rel="section"><i class="fa fa-archive fa-fw"></i>归档</a></li><li class="menu-item menu-item-commonweal"><a href="/404.html" rel="section"><i class="fa fa-heartbeat fa-fw"></i>公益 404</a></li>
+      <li class="menu-item menu-item-search">
+        <a role="button" class="popup-trigger"><i class="fa fa-search fa-fw"></i>搜索
+        </a>
+      </li>
+  </ul>
+</nav>
+
+
+
+  <div class="search-pop-overlay">
+    <div class="popup search-popup">
+      <div class="search-header">
+        <span class="search-icon">
+          <i class="fa fa-search"></i>
+        </span>
+        <div class="search-input-container">
+          <input autocomplete="off" autocapitalize="off" maxlength="80"
+                placeholder="搜索..." spellcheck="false"
+                type="search" class="search-input">
+        </div>
+        <span class="popup-btn-close" role="button">
+          <i class="fa fa-times-circle"></i>
+        </span>
+      </div>
+      <div class="search-result-container">
+        <div class="search-result-icon">
+          <i class="fa fa-spinner fa-pulse fa-5x"></i>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</header>
+        
+  
+  <aside class="sidebar">
+
+    <div class="sidebar-inner sidebar-nav-active sidebar-toc-active">
+      <ul class="sidebar-nav">
+        <li class="sidebar-nav-toc">
+          文章目录
+        </li>
+        <li class="sidebar-nav-overview">
+          站点概览
+        </li>
+      </ul>
+
+      <div class="sidebar-panel-container">
+        <!--noindex-->
+        <div class="post-toc-wrap sidebar-panel">
+            <div class="post-toc animated"><ol class="nav"><li class="nav-item nav-level-3"><a class="nav-link" href="#Tx-x2F-Rx"><span class="nav-number">1.</span> <span class="nav-text">Tx&#x2F;Rx</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#RingBuffer"><span class="nav-number">2.</span> <span class="nav-text">RingBuffer</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#sk-buff%EF%BC%88Socket-Buffer%EF%BC%89"><span class="nav-number">3.</span> <span class="nav-text">sk_buff（Socket Buffer）</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E5%8F%82%E8%80%83%E6%96%87%E7%AB%A0"><span class="nav-number">4.</span> <span class="nav-text">参考文章:</span></a></li></ol></div>
+        </div>
+        <!--/noindex-->
+
+        <div class="site-overview-wrap sidebar-panel">
+          <div class="site-author animated" itemprop="author" itemscope itemtype="http://schema.org/Person">
+    <img class="site-author-image" itemprop="image" alt="周淑科"
+      src="/images/avatar.gif">
+  <p class="site-author-name" itemprop="name">周淑科</p>
+  <div class="site-description" itemprop="description">Better Later Than Never</div>
+</div>
+<div class="site-state-wrap animated">
+  <nav class="site-state">
+      <div class="site-state-item site-state-posts">
+        <a href="/archives/">
+          <span class="site-state-item-count">221</span>
+          <span class="site-state-item-name">日志</span>
+        </a>
+      </div>
+      <div class="site-state-item site-state-categories">
+          <a href="/categories/">
+        <span class="site-state-item-count">15</span>
+        <span class="site-state-item-name">分类</span></a>
+      </div>
+      <div class="site-state-item site-state-tags">
+          <a href="/tags/">
+        <span class="site-state-item-count">15</span>
+        <span class="site-state-item-name">标签</span></a>
+      </div>
+  </nav>
+</div>
+  <div class="cc-license animated" itemprop="license">
+    <a href="https://creativecommons.org/licenses/by-nc-sa/4.0/" class="cc-opacity" rel="noopener" target="_blank"><img src="https://cdnjs.cloudflare.com/ajax/libs/creativecommons-vocabulary/2020.11.3/assets/license_badges/small/by_nc_sa.svg" alt="Creative Commons"></a>
+  </div>
+
+        </div>
+      </div>
+    </div>
+
+    
+  </aside>
+
+
+    </div>
+
+    <div class="main-inner post posts-expand">
+
+
+  
+
+
+<div class="post-block">
+  
+  
+
+  <article itemscope itemtype="http://schema.org/Article" class="post-content" lang="zh-CN">
+    <link itemprop="mainEntityOfPage" href="https://zhoushuke.github.io/2025/04/01/rdma-nic/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/avatar.gif">
+      <meta itemprop="name" content="周淑科">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="Z.S.K.'s Records">
+      <meta itemprop="description" content="Better Later Than Never">
+    </span>
+
+    <span hidden itemprop="post" itemscope itemtype="http://schema.org/CreativeWork">
+      <meta itemprop="name" content="RDMA初探(以太网网卡数据) | Z.S.K.'s Records">
+      <meta itemprop="description" content="">
+    </span>
+      <header class="post-header">
+        <h1 class="post-title" itemprop="name headline">
+          RDMA初探(以太网网卡数据)
+        </h1>
+
+        <div class="post-meta-container">
+          <div class="post-meta">
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-calendar"></i>
+      </span>
+      <span class="post-meta-item-text">发表于</span>
+
+      <time title="创建时间：2025-04-01 14:10:53" itemprop="dateCreated datePublished" datetime="2025-04-01T14:10:53+08:00">2025-04-01</time>
+    </span>
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-folder"></i>
+      </span>
+      <span class="post-meta-item-text">分类于</span>
+        <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+          <a href="/categories/HPC/" itemprop="url" rel="index"><span itemprop="name">HPC</span></a>
+        </span>
+    </span>
+
+  
+    <span class="post-meta-item" title="阅读次数" id="busuanzi_container_page_pv">
+      <span class="post-meta-item-icon">
+        <i class="far fa-eye"></i>
+      </span>
+      <span class="post-meta-item-text">阅读次数：</span>
+      <span id="busuanzi_value_page_pv"></span>
+    </span>
+    <span class="post-meta-break"></span>
+    <span class="post-meta-item" title="本文字数">
+      <span class="post-meta-item-icon">
+        <i class="far fa-file-word"></i>
+      </span>
+      <span class="post-meta-item-text">本文字数：</span>
+      <span>3.1k</span>
+    </span>
+    <span class="post-meta-item" title="阅读时长">
+      <span class="post-meta-item-icon">
+        <i class="far fa-clock"></i>
+      </span>
+      <span class="post-meta-item-text">阅读时长 &asymp;</span>
+      <span>3 分钟</span>
+    </span>
+</div>
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody"><p>在多机训练场景下, 如何加速多机间的数据交换是绕不开的话题, 作者之前负责的集群是以IB网络为载体, 但由于其昂贵的成本及超高的专业性往往让人退而却步,基于以太网的RoCE则具有很高的性价比。<br>作者经过一段时间的学习及落地,也算是对RoCE(英文读音类Rocky)技术有些了解,简单记录一下。</p>
+<span id="more"></span>
+
+
+<p>说到RoCE, 其实是个很大的范畴, 在作者学习的过程中会出现一千个疑问, 无奈作者是个细节控, 必须说服自己。<br>作者尽力从最基础的底层网卡 -&gt; DMA -&gt; RDMA -&gt; RoCE来铺开。<br>作者也不是网络工程专业出身, 整体还是非常复杂的，作者将更加聚焦于列出困惑,<br>比如，有哪些点作者花了比较长的时间去佐证、哪些点跟以往的认识有很大出入等等问题。<br>可细可简。</p>
+<p>网络设备&#x2F;网卡&#x2F;NIC 这里都代表同一种配件设备，就是我们常见的网卡。以下可能会混合使用，不再单独区分</p>
+<p>这里还是有必要对网卡的发送&#x2F;接收数据的过程进行展开。站在应用程序的角度看一个数据是如何通过网卡发送&#x2F;接收到应用中的。</p>
+<p>这篇文章<a target="_blank" rel="noopener" href="https://www.cnblogs.com/jmilkfan-fanguiju/p/12789806.html">网卡适配器收发数据帧流程</a>非常具体的阐述了网卡是如何进行发送&#x2F;接收数据的流程, 插图也是非常形象，值得好好沉下心好好地看一看。</p>
+<p>之所以说需要沉下心来，是因为确实如果不是对网络专业知识有很好掌握的话，其实是看不下去的，里面涉及到太多的专业流程:<br>协议栈、网络模块、软硬中断、NAPI等等。作者看了几遍也还是消化不了, 有些都是理论性的知识，其实在实践上并没有那么重要，因此只关注我们感兴趣的点即可。</p>
+<p><code>网络设备工作在物理层和数据链路层</code>。有一些比较重要的参数可以拿出来说一说。</p>
+<h3 id="Tx-x2F-Rx"><a href="#Tx-x2F-Rx" class="headerlink" title="Tx&#x2F;Rx"></a>Tx&#x2F;Rx</h3><figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># 执行ifconfig 网卡名, 其中有以下几个字段:</span></span><br><span class="line">Tx errors 0 drops 0 overruns 0 frame 0</span><br><span class="line">Rx errors 0 drops 0 overruns 0 frame 0</span><br><span class="line"><span class="comment"># 这些参数分别代表什么, 从这些参数中可以得出什么结论?</span></span><br></pre></td></tr></table></figure>
+
+<p>Tx&#x2F;Rx FIFO: Tx 表示发送（Transport）, Rx 是接收（Receive）</p>
+<ul>
+<li>errors: CRC错误、硬件故障、超长帧</li>
+<li>drops: 内存不足、应用层延迟、过滤规则</li>
+<li>overruns: 中断延迟、缓冲区过小、流量突发</li>
+<li>frame: 帧格式错误、MTU不匹配、信号干扰</li>
+</ul>
+<p>从这个局部图可以看出, drops与overruns的发生的时机有所不同。</p>
+<p><img src="https://raw.gitmirror.com/zhoushuke/BlogPhoto/master/githuboss/20250403112845.png"></p>
+<p>总结一下:<br>overruns vs dropped<br>overruns: <code>数据包未进入接收队列（硬件层）</code>, 但网卡硬件缓存（FIFO）满，通常因 CPU 处理中断不及时或队列配置过小。<br>dropped:  <code>数据包已进入接收队列（内核层）</code>, 但内核内存不足、协议栈处理能力不足，或应用程序未及时从Socket Buffer 读取数据。</p>
+<h3 id="RingBuffer"><a href="#RingBuffer" class="headerlink" title="RingBuffer"></a>RingBuffer</h3><p>网卡是一种硬件, 本身也有一些<strong>片上缓存(NIC On-Chip Memory)</strong>, 这些缓存也就几M的级别, 位于网卡芯片内部，作为指针指向主机内存中的实际数据区域。记录<code>数据包在主机内存中的地址</code>、长度和状态(如ready或used)</p>
+<p>另外一个比较重要的是<code>RingBuffer</code>, 可以通过以下命令查看网卡的RingBuffer设置</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># ethtool -g eth0: 查询ethx网口基本设置</span></span><br><span class="line"><span class="comment"># -g: 显示网卡的接收/发送环形参数(ringbuffer)。</span></span><br><span class="line"></span><br><span class="line">Ring parameters <span class="keyword">for</span> eth0:</span><br><span class="line">Pre-<span class="built_in">set</span> maximums:</span><br><span class="line">RX: 4096</span><br><span class="line">RX Mini: 0</span><br><span class="line">RX Jumbo: 0</span><br><span class="line">TX: 4096</span><br><span class="line">Current hardware settings:</span><br><span class="line">RX: 512</span><br><span class="line">RX Mini: 0</span><br><span class="line">RX Jumbo: 0</span><br><span class="line">TX: 512</span><br></pre></td></tr></table></figure>
+
+<p><code>Pre-set maximums</code>指的是RingBuffer的最大值。这个是由硬件的上限决定的，不能更改。<br>Current hardware settings指的是当前的设置。</p>
+<p>要特别注意的是，<code>这里的512/4096指的是BD(Buffer descriptor)的数量, 单位不是字节数, BD指向的是实际存放数据的skb的地址指针</code></p>
+<p>简单来说，如果内核处理得不及时导致RingBuffer满了(以当前设置的值为准,上述是RX&#x3D;512, TX&#x3D;512),那后面新来的数据包就会被丢弃,生成<code>overruns</code>,<br>因此当看到网卡在某个方面产生了<code>overruns</code>时，可以通过将RingBuffer适当调大来解决。</p>
+<p>但要注意，TX&#x2F;RX也不能一直调大。<code>因为RingBuffer指向的是内存地址，位于主机内存，系统启动初始化网卡驱动时时，内核为网卡分配 Rx Ring Buffer 的主机内存(可以理解为: 网卡驱动和操作系统合作，预留（reserve）出一段内存来给网卡使用)，并与网卡硬件描述符建立映射关系, 申请的是一段连续的物理内存块，确保网卡DMA控制器可直接访问(接下来收到的包就会放到这里，进而被 操作系统取走)</code></p>
+<p>当观察到RingBuffer过大时, 可能会引起排队的包过多，也会增加网络包的延时，因此如何加快内核处理网络包的速度，而不是让网络包在RingBuffer中排队是更好的选择。</p>
+<p>所以通过这篇文章<a target="_blank" rel="noopener" href="https://www.cnblogs.com/jmilkfan-fanguiju/p/12789806.html">网卡适配器收发数据帧流程</a>中的一张图来总结一下:</p>
+<p><img src="https://raw.gitmirror.com/zhoushuke/BlogPhoto/master/githuboss/20250403131230.png"></p>
+<ol>
+<li>网卡中可以配置ringbuffer的数量, ringbuffer数量的多少关系到是否会产生overruns还是drops</li>
+<li>网卡驱动申请Rx&#x2F;Tx descriptor并为其分配socket buffer, 本质上是在主内存中分配的一片缓冲区，用来接收数据帧。将数据缓存区的总线地址保存到 descriptor</li>
+</ol>
+<h3 id="sk-buff（Socket-Buffer）"><a href="#sk-buff（Socket-Buffer）" class="headerlink" title="sk_buff（Socket Buffer）"></a>sk_buff（Socket Buffer）</h3><p>当然还有一个概念会经常听到: sk_buffer(skb)<br>Linux 内核中，用sk_buff来描述一个缓存，所谓分配缓存空间，就是建立一定数量的 sk_buff.<br>sk_buff 是 <code>Linux 内核网络协议栈</code>实现中最重要的结构体，它是网络数据报文在内核中的表现形式以及在内核态和用户态间传递。</p>
+<p>三者的协作流程如下:</p>
+<blockquote>
+<ul>
+<li>接收数据:</li>
+</ul>
+</blockquote>
+<ol>
+<li>网卡根据Buffer Descriptor找到空闲内存块(可能是Rx Ring Buffer中的一个槽), 通过DMA写入数据。</li>
+<li>驱动从Rx Ring Buffer中读取数据，封装为sk_buff，递交给协议栈。</li>
+<li>协议栈处理完成后，sk_buff被释放或转发。</li>
+</ol>
+<p>网卡使用Buffer Descriptor将数据DMA到内存→驱动从Rx Ring取出数据→封装为sk_buff→协议栈处理→用户态读取</p>
+<blockquote>
+<ul>
+<li>发送数据:</li>
+</ul>
+</blockquote>
+<ol>
+<li>应用程序数据通过系统调用进入内核，构建sk_buff。</li>
+<li>协议栈处理后的sk_buff被放入Tx Ring Buffer。</li>
+<li>网卡通过Buffer Descriptor找到这段Tx Ring Buffer并读取其中的数据, 然后通过DMA发送。</li>
+</ol>
+<p>用户态数据构建sk_buff→协议栈处理→放入Tx Ring→网卡通过Buffer Descriptor经DMA读取后发送</p>
+<h3 id="参考文章"><a href="#参考文章" class="headerlink" title="参考文章:"></a><strong>参考文章:</strong></h3><blockquote>
+<ul>
+<li><a target="_blank" rel="noopener" href="https://www.cnblogs.com/h2zZhou/p/10714983.html">https://www.cnblogs.com/h2zZhou/p/10714983.html</a></li>
+<li><a target="_blank" rel="noopener" href="https://www.cnblogs.com/jmilkfan-fanguiju/p/12789806.html">https://www.cnblogs.com/jmilkfan-fanguiju/p/12789806.html</a></li>
+<li><a target="_blank" rel="noopener" href="https://devops-insider.mygraphql.com/zh-cn/latest/kernel/network/kernel-net-stack/receive-path/linux-net-stack-implementation-rx-zh.html#">https://devops-insider.mygraphql.com/zh-cn/latest/kernel/network/kernel-net-stack/receive-path/linux-net-stack-implementation-rx-zh.html#</a></li>
+</ul>
+</blockquote>
+
+    </div>
+
+    
+    
+    
+
+    <footer class="post-footer">
+          <div class="reward-container">
+  <div>Buy Me a Coffee</div>
+  <button>
+    赞赏
+  </button>
+  <div class="post-reward">
+      <div>
+        <img src="/images/wechatpayme.png" alt="周淑科 微信">
+        <span>微信</span>
+      </div>
+      <div>
+        <img src="/images/alipayme.jpg" alt="周淑科 支付宝">
+        <span>支付宝</span>
+      </div>
+
+  </div>
+</div>
+
+          
+
+<div class="post-copyright">
+<ul>
+  <li class="post-copyright-author">
+      <strong>本文作者： </strong>周淑科
+  </li>
+  <li class="post-copyright-link">
+      <strong>本文链接：</strong>
+      <a href="https://zhoushuke.github.io/2025/04/01/rdma-nic/" title="RDMA初探(以太网网卡数据)">https://zhoushuke.github.io/2025/04/01/rdma-nic/</a>
+  </li>
+  <li class="post-copyright-license">
+      <strong>版权声明： </strong>本站所有文章除特别声明外，均采用 <a href="https://creativecommons.org/licenses/by-nc-sa/4.0/" rel="noopener" target="_blank"><i class="fab fa-fw fa-creative-commons"></i>BY-NC-SA</a> 许可协议。转载请保留原文作者及链接！
+  </li>
+</ul>
+</div>
+
+          <div class="post-tags">
+              <a href="/tags/HPC/" rel="tag"># HPC</a>
+          </div>
+
+        
+
+          <div class="post-nav">
+            <div class="post-nav-item">
+                <a href="/2024/12/31/%E5%8D%9A%E5%AE%A2%E6%96%B0%E5%8A%9F%E8%83%BD2025/" rel="prev" title="博客新功能2025">
+                  <i class="fa fa-angle-left"></i> 博客新功能2025
+                </a>
+            </div>
+            <div class="post-nav-item">
+                <a href="/2025/04/04/rdma-dma/" rel="next" title="RDMA初探(DMA/RDMA)">
+                  RDMA初探(DMA/RDMA) <i class="fa fa-angle-right"></i>
+                </a>
+            </div>
+          </div>
+    </footer>
+  </article>
+</div>
+
+
+
+
+
+
+</div>
+  </main>
+
+  <footer class="footer">
+    <div class="footer-inner">
+
+  <div class="copyright">
+    &copy; 
+    <span itemprop="copyrightYear">2025</span>
+    <span class="with-love">
+      <i class="fa fa-heart"></i>
+    </span>
+    <span class="author" itemprop="copyrightHolder">周淑科</span>
+  </div>
+<div class="wordcount">
+  <span class="post-meta-item">
+    <span class="post-meta-item-icon">
+      <i class="fa fa-chart-line"></i>
+    </span>
+      <span>站点总字数：</span>
+    <span title="站点总字数">990k</span>
+  </span>
+  <span class="post-meta-item">
+    <span class="post-meta-item-icon">
+      <i class="fa fa-coffee"></i>
+    </span>
+      <span>站点阅读时长 &asymp;</span>
+    <span title="站点阅读时长">15:01</span>
+  </span>
+</div>
+<div class="busuanzi-count">
+    <span class="post-meta-item" id="busuanzi_container_site_uv">
+      <span class="post-meta-item-icon">
+        <i class="fa fa-user"></i>
+      </span>
+      <span class="site-uv" title="总访客量">
+        <span id="busuanzi_value_site_uv"></span>
+      </span>
+    </span>
+    <span class="post-meta-item" id="busuanzi_container_site_pv">
+      <span class="post-meta-item-icon">
+        <i class="fa fa-eye"></i>
+      </span>
+      <span class="site-pv" title="总访问量">
+        <span id="busuanzi_value_site_pv"></span>
+      </span>
+    </span>
+</div>
+  <div class="powered-by">Powered by <a href="https://hexo.io/" rel="noopener" target="_blank">Hexo</a> & <a href="https://theme-next.js.org/mist/" rel="noopener" target="_blank">NexT.Mist</a>
+  </div>
+
+    </div>
+  </footer>
+
+  
+  <div class="toggle sidebar-toggle" role="button">
+    <span class="toggle-line"></span>
+    <span class="toggle-line"></span>
+    <span class="toggle-line"></span>
+  </div>
+  <div class="sidebar-dimmer"></div>
+  <div class="back-to-top" role="button" aria-label="返回顶部">
+    <i class="fa fa-arrow-up fa-lg"></i>
+    <span>0%</span>
+  </div>
+
+<noscript>
+  <div class="noscript-warning">Theme NexT works best with JavaScript enabled</div>
+</noscript>
+
+
+  
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/animejs/3.2.1/anime.min.js" integrity="sha256-XL2inqUJaslATFnHdJOi9GfQ60on8Wx1C2H8DYiN1xY=" crossorigin="anonymous"></script>
+<script src="/js/comments.js"></script><script src="/js/utils.js"></script><script src="/js/motion.js"></script><script src="/js/sidebar.js"></script><script src="/js/next-boot.js"></script>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/hexo-generator-searchdb/1.4.1/search.js" integrity="sha256-1kfA5uHPf65M5cphT2dvymhkuyHPQp5A53EGZOnOLmc=" crossorigin="anonymous"></script>
+<script src="/js/third-party/search/local-search.js"></script>
+
+
+
+
+
+
+
+  
+  <script async src="https://cn.vercount.one/js"></script>
+
+
+
+
+
+</body>
+</html>
