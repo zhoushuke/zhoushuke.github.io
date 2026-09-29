@@ -27,15 +27,15 @@
 <meta property="og:site_name" content="Z.S.K.&#39;s Records">
 <meta property="og:description" content="最近有个同事说他在测试kubernetes中跑spark，在运行spark-job时提示Invalid DER: object is not integer，但是如果在线上环境跑同样的任务就没问题, 束手无措，想让我帮看一下什么问题">
 <meta property="og:locale" content="zh_CN">
-<meta property="og:image" content="https://raw.gitmirror.com/zhoushuke/BlogPhoto/master/githuboss/20200309123610.png">
-<meta property="og:image" content="https://raw.gitmirror.com/zhoushuke/BlogPhoto/master/githuboss/20200309141145.png">
-<meta property="og:image" content="https://raw.gitmirror.com/zhoushuke/BlogPhoto/master/githuboss/20200310103152.png">
+<meta property="og:image" content="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20200309123610.png">
+<meta property="og:image" content="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20200309141145.png">
+<meta property="og:image" content="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20200310103152.png">
 <meta property="article:published_time" content="2020-02-20T05:30:53.000Z">
-<meta property="article:modified_time" content="2024-12-31T03:07:38.318Z">
+<meta property="article:modified_time" content="2026-09-29T07:21:20.874Z">
 <meta property="article:author" content="周淑科">
 <meta property="article:tag" content="Kubernetes">
 <meta name="twitter:card" content="summary">
-<meta name="twitter:image" content="https://raw.gitmirror.com/zhoushuke/BlogPhoto/master/githuboss/20200309123610.png">
+<meta name="twitter:image" content="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20200309123610.png">
 
 
 <link rel="canonical" href="https://zhoushuke.github.io/2020/02/20/Kubernetes-Spark-Job-InvalidDER/">
@@ -158,7 +158,7 @@
   <nav class="site-state">
       <div class="site-state-item site-state-posts">
         <a href="/archives/">
-          <span class="site-state-item-count">222</span>
+          <span class="site-state-item-count">223</span>
           <span class="site-state-item-name">日志</span>
         </a>
       </div>
@@ -277,7 +277,7 @@
 
 
 <h3 id="问题"><a href="#问题" class="headerlink" title="问题"></a>问题</h3><p>在测试Kubernetes执行spark-job时提示的错误完整的如下:</p>
-<p><img src="https://raw.gitmirror.com/zhoushuke/BlogPhoto/master/githuboss/20200309123610.png"></p>
+<p><img src="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20200309123610.png"></p>
 <h3 id="排查"><a href="#排查" class="headerlink" title="排查"></a>排查</h3><p>从上面的报错来看, 很明显涉及kubernetes.client的问题, spark用的当然是java的client</p>
 <p>首先, 可以排除是spark, 同事可以确认spark版本及spark-job完全一样.</p>
 <p>那么很容易就联想到两个环境下的Kubernetes是有区别的, 开先, 我的同事怀疑是用户认证的问题, 这个基本可以排除, 我觉得是kubernetes集群上的区别关系很大, 那么很自然, 从差别着手</p>
@@ -287,9 +287,9 @@
 <p>kubernetes的java client 在github这个项目<a target="_blank" rel="noopener" href="https://github.com/fabric8io/kubernetes-client">https://github.com/fabric8io/kubernetes-client</a>上的<a target="_blank" rel="noopener" href="https://github.com/fabric8io/kubernetes-client/issues/1314">issue</a></p>
 <p>再根据提交的代码记录发现问题:</p>
 <p>在kubernetes的java client早版本的代码里</p>
-<p><img src="https://raw.gitmirror.com/zhoushuke/BlogPhoto/master/githuboss/20200309141145.png"></p>
+<p><img src="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20200309141145.png"></p>
 <p>在ClientCertificateAuthentication.java这个文件中, 是写死了证书的加密类型只能是RSA, 而测试的kubernetes使用的是minikube搭建的, 默认情况下使用的证书加密类型为EC(Eliptical Curve), 而测试的kubernetes并不支持, 如何查看证书的类型呢, 很简单, cat ca-key.pem, 第一行都标注了证书加密类型. </p>
-<p><img src="https://raw.gitmirror.com/zhoushuke/BlogPhoto/master/githuboss/20200310103152.png"></p>
+<p><img src="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20200310103152.png"></p>
 <p>线上环境没问题是因为kubernetes使用的版本已经支持了EC这种加密类型</p>
 <h3 id="解决"><a href="#解决" class="headerlink" title="解决"></a>解决</h3><p>所以，问题就很清晰了,有两个解决方案, **要么升级java client, 要么使用RSA的证书类型.**由于spark已经是最新版本的了, 因此只能切换到RSA证书，这其实还是比较麻烦的, 我建议直接使用新版本的kubernetes重新搭建, 也比换证书要快, 比较minikube、kubeadm一键式还是很爽的.</p>
 <p>所以, <strong>多多查找对应project的issue, 你遇到的问题, 大概率别人都遇到过.</strong></p>
@@ -378,7 +378,7 @@
 
   <div class="copyright">
     &copy; 
-    <span itemprop="copyrightYear">2025</span>
+    <span itemprop="copyrightYear">2026</span>
     <span class="with-love">
       <i class="fa fa-heart"></i>
     </span>
@@ -390,14 +390,14 @@
       <i class="fa fa-chart-line"></i>
     </span>
       <span>站点总字数：</span>
-    <span title="站点总字数">990k</span>
+    <span title="站点总字数">996k</span>
   </span>
   <span class="post-meta-item">
     <span class="post-meta-item-icon">
       <i class="fa fa-coffee"></i>
     </span>
       <span>站点阅读时长 &asymp;</span>
-    <span title="站点阅读时长">15:01</span>
+    <span title="站点阅读时长">15:05</span>
   </span>
 </div>
 <div class="busuanzi-count">

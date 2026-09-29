@@ -27,16 +27,16 @@
 <meta property="og:site_name" content="Z.S.K.&#39;s Records">
 <meta property="og:description" content="在使用kubernetes的时候，常常不太会关注docker这层, 在Node节点查看docker的进程, 会发现在docker-client、dockerd、containerd、containerd-shim、runC, 傻傻分不清楚这几个跟docker相关的进程到底扮演着什么角色.">
 <meta property="og:locale" content="zh_CN">
-<meta property="og:image" content="https://raw.gitmirror.com/zhoushuke/BlogPhoto/master/githuboss/20200422155644.png">
-<meta property="og:image" content="https://raw.gitmirror.com/zhoushuke/BlogPhoto/master/githuboss/20200422163423.png">
-<meta property="og:image" content="https://raw.gitmirror.com/zhoushuke/BlogPhoto/master/githuboss/20200414141636.png">
-<meta property="og:image" content="https://raw.gitmirror.com/zhoushuke/BlogPhoto/master/githuboss/20200422164159.png">
+<meta property="og:image" content="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20200422155644.png">
+<meta property="og:image" content="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20200422163423.png">
+<meta property="og:image" content="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20200414141636.png">
+<meta property="og:image" content="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20200422164159.png">
 <meta property="article:published_time" content="2019-11-15T09:30:53.000Z">
-<meta property="article:modified_time" content="2024-12-31T03:07:38.319Z">
+<meta property="article:modified_time" content="2026-09-29T07:21:19.953Z">
 <meta property="article:author" content="周淑科">
 <meta property="article:tag" content="Kubernetes">
 <meta name="twitter:card" content="summary">
-<meta name="twitter:image" content="https://raw.gitmirror.com/zhoushuke/BlogPhoto/master/githuboss/20200422155644.png">
+<meta name="twitter:image" content="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20200422155644.png">
 
 
 <link rel="canonical" href="https://zhoushuke.github.io/2019/11/15/Kubernetes-docker-arch/">
@@ -159,7 +159,7 @@
   <nav class="site-state">
       <div class="site-state-item site-state-posts">
         <a href="/archives/">
-          <span class="site-state-item-count">222</span>
+          <span class="site-state-item-count">223</span>
           <span class="site-state-item-name">日志</span>
         </a>
       </div>
@@ -282,17 +282,17 @@
 <p>关于容器时代几家大佬公司之间的竞争, 有兴趣的可以看下<a target="_blank" rel="noopener" href="https://zhuanlan.zhihu.com/p/87602649">这篇文章</a>.</p>
 <p>CRI在Kubernetes的架构中也是个很重要的部分, 至于为何需要这个, 不再这里详细, 今天只学一学docker(这里说的docker会存在歧义)做为CRI</p>
 <p>先来看看CRI在Kubernetes的位置</p>
-<p><img src="https://raw.gitmirror.com/zhoushuke/BlogPhoto/master/githuboss/20200422155644.png"></p>
+<p><img src="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20200422155644.png"></p>
 <p>Kubernetes中的docker那层的架构分为以下几层:</p>
-<p><img src="https://raw.gitmirror.com/zhoushuke/BlogPhoto/master/githuboss/20200422163423.png"></p>
+<p><img src="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20200422163423.png"></p>
 <p>而ContainerRuntime(docker)的结构如下</p>
-<p><img src="https://raw.gitmirror.com/zhoushuke/BlogPhoto/master/githuboss/20200414141636.png"></p>
+<p><img src="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20200414141636.png"></p>
 <h4 id="Client"><a href="#Client" class="headerlink" title="Client"></a>Client</h4><p>最上面那一层是个client，就是我们经常使用的docker ps等命令行的时候, 相当于我们做为client去请求docker的服务端, 那必须存在一个daemonset的进程一直来监听主机上发出的命令</p>
 <h4 id="dockerEngine"><a href="#dockerEngine" class="headerlink" title="dockerEngine"></a>dockerEngine</h4><p>这个其实就相当于是docker daemon, 负责监听主机上docker相关的命令,将相关命令发送给containerd.</p>
 <h4 id="containerd"><a href="#containerd" class="headerlink" title="containerd"></a>containerd</h4><p>先看下官方的说明:</p>
 <p><code>containerd is available as a daemon for Linux and Windows. It manages the complete container lifecycle of its host system, from image transfer and storage to container execution and supervision to low-level storage to network attachments and beyond.</code></p>
 <p>翻译一下: <strong>containerd</strong>在linux跟windows是一个守护进程我, 通过它管理容器的生命周期, 从图像传输和存储到容器执行和监督，再到低级存储再到网络附件等等</p>
-<p><img src="https://raw.gitmirror.com/zhoushuke/BlogPhoto/master/githuboss/20200422164159.png"></p>
+<p><img src="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20200422164159.png"></p>
 <p>containerd 向上为 Docker Daemon 提供了 gRPC 接口，使得 Docker Daemon 屏蔽下面的结构变化，确保原有接口向下兼容。向下通过 containerd-shim 结合 runC，使得引擎可以独立升级，避免之前 Docker Daemon 升级会导致所有容器不可用的问题</p>
 <p>其实 <code>containerd</code> 就包含了我们常用的 <code>docker</code> 的命令， 所以可以通过Client不经过docker daemon直接与containerd进行通信</p>
 <h4 id="containerd-shim"><a href="#containerd-shim" class="headerlink" title="containerd-shim"></a>containerd-shim</h4><p>containerd 通过 shim 调用 runc 的包函数来启动容器， 也就是说containerd通过shim操作runc，runc真正控制容器生命周期</p>
@@ -394,7 +394,7 @@
 
   <div class="copyright">
     &copy; 
-    <span itemprop="copyrightYear">2025</span>
+    <span itemprop="copyrightYear">2026</span>
     <span class="with-love">
       <i class="fa fa-heart"></i>
     </span>
@@ -406,14 +406,14 @@
       <i class="fa fa-chart-line"></i>
     </span>
       <span>站点总字数：</span>
-    <span title="站点总字数">990k</span>
+    <span title="站点总字数">996k</span>
   </span>
   <span class="post-meta-item">
     <span class="post-meta-item-icon">
       <i class="fa fa-coffee"></i>
     </span>
       <span>站点阅读时长 &asymp;</span>
-    <span title="站点阅读时长">15:01</span>
+    <span title="站点阅读时长">15:05</span>
   </span>
 </div>
 <div class="busuanzi-count">

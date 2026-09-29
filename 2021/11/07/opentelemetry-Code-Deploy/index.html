@@ -27,13 +27,13 @@
 <meta property="og:site_name" content="Z.S.K.&#39;s Records">
 <meta property="og:description" content="历史文章:可观测性到底在说什么 opentelemetry架构及名词介绍 全链路追踪的TraceID与SpanID 整个opentelemetry体系还是相当复杂的，这里没办法将所有opentelemetry的东西讲清楚，直接通过case顺带opentelemetry里的概念来拆解会比较直观 这里通过一个简单的golang demo来介绍怎么接入opentelemetry以实现Metrics跟Tr">
 <meta property="og:locale" content="zh_CN">
-<meta property="og:image" content="https://raw.gitmirror.com/zhoushuke/BlogPhoto/master/githuboss/20211101231146.png">
+<meta property="og:image" content="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20211101231146.png">
 <meta property="article:published_time" content="2021-11-07T13:10:53.000Z">
-<meta property="article:modified_time" content="2024-12-31T03:07:38.319Z">
+<meta property="article:modified_time" content="2026-09-29T07:21:20.256Z">
 <meta property="article:author" content="周淑科">
 <meta property="article:tag" content="CloudNavi">
 <meta name="twitter:card" content="summary">
-<meta name="twitter:image" content="https://raw.gitmirror.com/zhoushuke/BlogPhoto/master/githuboss/20211101231146.png">
+<meta name="twitter:image" content="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20211101231146.png">
 
 
 <link rel="canonical" href="https://zhoushuke.github.io/2021/11/07/opentelemetry-Code-Deploy/">
@@ -156,7 +156,7 @@
   <nav class="site-state">
       <div class="site-state-item site-state-posts">
         <a href="/archives/">
-          <span class="site-state-item-count">222</span>
+          <span class="site-state-item-count">223</span>
           <span class="site-state-item-name">日志</span>
         </a>
       </div>
@@ -286,7 +286,7 @@
 <p>要实现的效果为:</p>
 <p>当在浏览器中访问URL时，经过kong API网关转发到 Client端， Client端通过http调用server端， server端正确响应后按路径返回给web</p>
 <p>在这期间，借助opentelemetry暴露方法级的metrics，如请求时间、请求次数等度量数据以及整个链路的Trace.</p>
-<p><img src="https://raw.gitmirror.com/zhoushuke/BlogPhoto/master/githuboss/20211101231146.png"></p>
+<p><img src="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20211101231146.png"></p>
 <h3 id="说明"><a href="#说明" class="headerlink" title="说明"></a>说明</h3><p>由于Collector的Receivers支持多种数据模型，在这里，Metrics采用的是Prometheus的pull模式进行采集，而Trace则采用的是OTLP格式进行采集，当采集数据到达Receivers后，会再经过Collector的Processors进行处理，这里使用了Batch及k8s_tagger(在较新版本中重命名为k8sprocessor)，batch是基于性能考虑可对采集数据进行批量操作，k8s_tagger则是在采集原始的数据基础之上新增一些跟k8s相关的<code>label</code>，这部分留在后面进行详解，等processor处理完后，最终会到存储后端，显然，Metrics会落在Prometheus中，Trace的数据则存储在jeager中</p>
 <p>这里要重点说明的是: Receivers中的prometheus(也就是左边的)，不是一个真的prometheus实例，而是一个Prometheus的client,Collector从Instrumenttation获取到的数据按prometheus支持的数据模型进行转换，而右边的Prometheus才是具时存储序数据的实例，也就是最终真正存储时序metrics数据的实例.</p>
 <h3 id="部署"><a href="#部署" class="headerlink" title="部署"></a>部署</h3><p>上述kong、client、server都部署在k8s中，prometheus、jaeger这里为了方便，直接使用的<code>docker-compose</code> all-in-one的方式在k8s集群外部署.</p>
@@ -400,7 +400,7 @@
 
   <div class="copyright">
     &copy; 
-    <span itemprop="copyrightYear">2025</span>
+    <span itemprop="copyrightYear">2026</span>
     <span class="with-love">
       <i class="fa fa-heart"></i>
     </span>
@@ -412,14 +412,14 @@
       <i class="fa fa-chart-line"></i>
     </span>
       <span>站点总字数：</span>
-    <span title="站点总字数">990k</span>
+    <span title="站点总字数">996k</span>
   </span>
   <span class="post-meta-item">
     <span class="post-meta-item-icon">
       <i class="fa fa-coffee"></i>
     </span>
       <span>站点阅读时长 &asymp;</span>
-    <span title="站点阅读时长">15:01</span>
+    <span title="站点阅读时长">15:05</span>
   </span>
 </div>
 <div class="busuanzi-count">

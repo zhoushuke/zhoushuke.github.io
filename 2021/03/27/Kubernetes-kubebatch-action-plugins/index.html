@@ -27,14 +27,14 @@
 <meta property="og:site_name" content="Z.S.K.&#39;s Records">
 <meta property="og:description" content="接上篇，主要介绍了kube-batch中两个重要的对象，queue及podgroup，这次主要讲讲kube-batch的核心的几个模块">
 <meta property="og:locale" content="zh_CN">
-<meta property="og:image" content="https://raw.gitmirror.com/zhoushuke/BlogPhoto/master/githuboss/20210324234022.png">
-<meta property="og:image" content="https://raw.gitmirror.com/zhoushuke/BlogPhoto/master/githuboss/20210328221253.png">
+<meta property="og:image" content="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20210324234022.png">
+<meta property="og:image" content="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20210328221253.png">
 <meta property="article:published_time" content="2021-03-27T14:10:53.000Z">
-<meta property="article:modified_time" content="2024-12-31T03:07:38.319Z">
+<meta property="article:modified_time" content="2026-09-29T07:21:20.181Z">
 <meta property="article:author" content="周淑科">
 <meta property="article:tag" content="Kubernetes">
 <meta name="twitter:card" content="summary">
-<meta name="twitter:image" content="https://raw.gitmirror.com/zhoushuke/BlogPhoto/master/githuboss/20210324234022.png">
+<meta name="twitter:image" content="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20210324234022.png">
 
 
 <link rel="canonical" href="https://zhoushuke.github.io/2021/03/27/Kubernetes-kubebatch-action-plugins/">
@@ -157,7 +157,7 @@
   <nav class="site-state">
       <div class="site-state-item site-state-posts">
         <a href="/archives/">
-          <span class="site-state-item-count">222</span>
+          <span class="site-state-item-count">223</span>
           <span class="site-state-item-name">日志</span>
         </a>
       </div>
@@ -301,9 +301,9 @@
 <p>要注意的是，配置文件中actions及plugins的指定顺序非常重要，<strong>kube-batch不会考虑action及plugins列表之间的顺序是不是合理，它只会按照指定的顺序依次执行</strong>，因此，要根据实际情况谨慎、实操地对配置进行优化，最后才能达到合理效果</p>
 <p>tiers下的plugins是列表结构，对于actions来说，如果遇到了优先级更高的plugins，则不会再进行应用低优先级的plugins，比如上面的配置中，如果一个优先级高的跟一个优先级低的任务同时到来，则优先级高的获取到它需要的所有资源，而不会再考虑其它的plugins，如果两者优先级一样且都是以podgroup存在，则就会按drf plugins进行处理.</p>
 <p>这张图很形象地说明kube-batch的工作原因</p>
-<p><img src="https://raw.gitmirror.com/zhoushuke/BlogPhoto/master/githuboss/20210324234022.png"></p>
+<p><img src="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20210324234022.png"></p>
 <p>它通过 list-watch 监听 Pod, Queue, PodGroup 和 Node 等资源，在本地维护一份集群资源的全局缓存，依次通过如下的策略（reclaim, allocate, preemption，predict） 完成资源的调度</p>
-<p><img src="https://raw.gitmirror.com/zhoushuke/BlogPhoto/master/githuboss/20210328221253.png"></p>
+<p><img src="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20210328221253.png"></p>
 <h3 id="cache"><a href="#cache" class="headerlink" title="cache"></a>cache</h3><p>Cache模块封装了对API Server的节点、容器等对象的数据同步逻辑。Kubernetes的数据保存在分布式存储etcd中，所有对数据的查询和操作都通过调用API Server的接口，而非直接操作etcd。在调度时，需要集群中的节点和容器的使用资源和状态等信息。Cache模块通过调用Kubernetes的SDK，通过watch机制监听集群中的节点、容器的状态变化，将信息同步到自己的数据结构中。</p>
 <p>Cache模块还封装了对API server的接口的调用。比如Cache.Bind这个接口，会去调用API Server的Bind接口，将容器绑定到指定的节点上。在kube-batch中只有cache模块需要和API Server交互，其他模块只需要调用Cache模块的接口,一方面减少api-server的压力，另一方面加快kube-batch本身的调度性能</p>
 <h3 id="session"><a href="#session" class="headerlink" title="session"></a>session</h3><p>Session模块是将其他三个模块串联起来的一个模块。Kube-batch在每个调度周期开始时，都会新建一个Session对象，这个Session的初始化时，会做以下操作：</p>
@@ -428,13 +428,13 @@
 
           <div class="post-nav">
             <div class="post-nav-item">
-                <a href="/2021/03/27/Kubernetes-kubebatch-actions-plugins/" rel="prev" title="Kube-batch学习(核心模块)">
-                  <i class="fa fa-angle-left"></i> Kube-batch学习(核心模块)
+                <a href="/2021/03/27/Kubernetes-kubebatch-prombles/" rel="prev" title="Kube-batch学习(kube-batch踩坑记)">
+                  <i class="fa fa-angle-left"></i> Kube-batch学习(kube-batch踩坑记)
                 </a>
             </div>
             <div class="post-nav-item">
-                <a href="/2021/04/02/argoCD-prombles/" rel="next" title="argoCD学习(argocd踩坑记)">
-                  argoCD学习(argocd踩坑记) <i class="fa fa-angle-right"></i>
+                <a href="/2021/03/27/Kubernetes-kubebatch-actions-plugins/" rel="next" title="Kube-batch学习(核心模块)">
+                  Kube-batch学习(核心模块) <i class="fa fa-angle-right"></i>
                 </a>
             </div>
           </div>
@@ -455,7 +455,7 @@
 
   <div class="copyright">
     &copy; 
-    <span itemprop="copyrightYear">2025</span>
+    <span itemprop="copyrightYear">2026</span>
     <span class="with-love">
       <i class="fa fa-heart"></i>
     </span>
@@ -467,14 +467,14 @@
       <i class="fa fa-chart-line"></i>
     </span>
       <span>站点总字数：</span>
-    <span title="站点总字数">990k</span>
+    <span title="站点总字数">996k</span>
   </span>
   <span class="post-meta-item">
     <span class="post-meta-item-icon">
       <i class="fa fa-coffee"></i>
     </span>
       <span>站点阅读时长 &asymp;</span>
-    <span title="站点阅读时长">15:01</span>
+    <span title="站点阅读时长">15:05</span>
   </span>
 </div>
 <div class="busuanzi-count">

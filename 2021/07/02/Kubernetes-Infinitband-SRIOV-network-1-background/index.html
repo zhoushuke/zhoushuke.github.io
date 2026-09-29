@@ -27,15 +27,15 @@
 <meta property="og:site_name" content="Z.S.K.&#39;s Records">
 <meta property="og:description" content="在HPC场景下，底层网络的性能直接影响最终的结果，HPC往往会伴随海量的数据交换，特别是在跨Node之间，10Gb的以太网网络传输肯定要比100Gb的IB网络传输慢，本人所负责的训练平台也是如此，在一次训练过程中，GPU存在海量数据交换，虽然是在GPU之间，但本质还是通过网络进行传输，但是以太网的传输在HPC场景下往往显得不那么高效，因此可以通过RDMA或者如果预算够的话，通过硬件IB实现数据交换">
 <meta property="og:locale" content="zh_CN">
-<meta property="og:image" content="https://raw.gitmirror.com/zhoushuke/BlogPhoto/master/githuboss/20210704215748.png">
-<meta property="og:image" content="https://raw.gitmirror.com/zhoushuke/BlogPhoto/master/githuboss/20210704191648.png">
-<meta property="og:image" content="https://raw.gitmirror.com/zhoushuke/BlogPhoto/master/githuboss/20210704191622.png">
+<meta property="og:image" content="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20210704215748.png">
+<meta property="og:image" content="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20210704191648.png">
+<meta property="og:image" content="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20210704191622.png">
 <meta property="article:published_time" content="2021-07-02T08:10:53.000Z">
-<meta property="article:modified_time" content="2024-12-31T03:07:38.318Z">
+<meta property="article:modified_time" content="2026-09-29T07:21:20.632Z">
 <meta property="article:author" content="周淑科">
 <meta property="article:tag" content="HPC">
 <meta name="twitter:card" content="summary">
-<meta name="twitter:image" content="https://raw.gitmirror.com/zhoushuke/BlogPhoto/master/githuboss/20210704215748.png">
+<meta name="twitter:image" content="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20210704215748.png">
 
 
 <link rel="canonical" href="https://zhoushuke.github.io/2021/07/02/Kubernetes-Infinitband-SRIOV-network-1-background/">
@@ -158,7 +158,7 @@
   <nav class="site-state">
       <div class="site-state-item site-state-posts">
         <a href="/archives/">
-          <span class="site-state-item-count">222</span>
+          <span class="site-state-item-count">223</span>
           <span class="site-state-item-name">日志</span>
         </a>
       </div>
@@ -278,7 +278,7 @@
 
 <p>本人所负责的训练平台是完全基于k8s的，现在要迁移至IB网络同时不影响现有业务进行，大大增加了实施难度，在经过一番调研之后，最终的方案为在原有的容器网络基础之上，再加一层IB网络层，即在k8s集群中同时存在2个网络，这在k8s是完全支持的，即在容器中除了eth0，由flannel cni分配， 还会有一个net1网络，由IB cni分配, eth0的网络用于集群之间的通信，而net1则用于训练时pod与pod节点进行通信，在实践之前先介绍几个比较重要的技术</p>
 <h3 id="Infinitband"><a href="#Infinitband" class="headerlink" title="Infinitband"></a>Infinitband</h3><p>infinitband做专门为高带宽，低时延，高可靠，不占用cpu资源的网络互联技术，大量被用于超算、AI等HPC场景下</p>
-<p><img src="https://raw.gitmirror.com/zhoushuke/BlogPhoto/master/githuboss/20210704215748.png"></p>
+<p><img src="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20210704215748.png"></p>
 <p>这里不对infintband展开细说，感兴趣的可以参考下列连接</p>
 <p><a target="_blank" rel="noopener" href="https://zhuanlan.zhihu.com/p/74238082">https://zhuanlan.zhihu.com/p/74238082</a></p>
 <p><a target="_blank" rel="noopener" href="https://zhuanlan.zhihu.com/p/163104439">https://zhuanlan.zhihu.com/p/163104439</a></p>
@@ -342,14 +342,14 @@
 </tbody></table>
 <p>master做为控制面，用于集群间的管理角色</p>
 <p>node上做为数据面，以太网用于与控制面进行交互，同时IB网卡用于HPC业务</p>
-<h3 id="组网图"><a href="#组网图" class="headerlink" title="组网图"></a>组网图</h3><p><img src="https://raw.gitmirror.com/zhoushuke/BlogPhoto/master/githuboss/20210704191648.png"></p>
+<h3 id="组网图"><a href="#组网图" class="headerlink" title="组网图"></a>组网图</h3><p><img src="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20210704191648.png"></p>
 <p>在集群物理机器上，实际存在3个网络:</p>
 <ol>
 <li>管理网(eth1), 用于机器的管控网，一般叫做ipmi或者带外、外带等,在服务器上有专门的网口标识</li>
 <li>业务网(eth0), 用于flannel的启动参数指定的网卡名，这个网络在pod中用于与k8s控制面进行交互</li>
 <li>IB网(eth100), 用于ib网卡,在这个网卡上会通过sriov虚拟出若干网卡用于pod中</li>
 </ol>
-<h3 id="架构图"><a href="#架构图" class="headerlink" title="架构图"></a>架构图</h3><p><img src="https://raw.gitmirror.com/zhoushuke/BlogPhoto/master/githuboss/20210704191622.png"></p>
+<h3 id="架构图"><a href="#架构图" class="headerlink" title="架构图"></a>架构图</h3><p><img src="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20210704191622.png"></p>
 <h3 id="实现目的"><a href="#实现目的" class="headerlink" title="实现目的"></a>实现目的</h3><p>最终要实现的目标为: 通过sriov在IB网卡上实现高性能容器网络以加速分布式训练的GPU数据交换</p>
 <h3 id="参考文章"><a href="#参考文章" class="headerlink" title="参考文章:"></a><strong>参考文章:</strong></h3><blockquote>
 <ul>
@@ -411,13 +411,13 @@
 
           <div class="post-nav">
             <div class="post-nav-item">
-                <a href="/2021/05/15/Kong-grpc-proxy-multi/" rel="prev" title="Kong学习(代理多grpc后端)">
-                  <i class="fa fa-angle-left"></i> Kong学习(代理多grpc后端)
+                <a href="/2021/07/02/Kubernetes-Infinitband-SRIOV-network-1-backgroud/" rel="prev" title="Kubernetes学习(k8s基于InfiniBand实现HPC高性能容器网络组网方案实践一)">
+                  <i class="fa fa-angle-left"></i> Kubernetes学习(k8s基于InfiniBand实现HPC高性能容器网络组网方案实践一)
                 </a>
             </div>
             <div class="post-nav-item">
-                <a href="/2021/07/02/Kubernetes-Infinitband-SRIOV-network-1-backgroud/" rel="next" title="Kubernetes学习(k8s基于InfiniBand实现HPC高性能容器网络组网方案实践一)">
-                  Kubernetes学习(k8s基于InfiniBand实现HPC高性能容器网络组网方案实践一) <i class="fa fa-angle-right"></i>
+                <a href="/2021/07/03/Kubernetes-Infinitband-SRIOV-network-2-deploy/" rel="next" title="Kubernetes学习(k8s基于InfiniBand实现HPC高性能容器网络组网方案实践二)">
+                  Kubernetes学习(k8s基于InfiniBand实现HPC高性能容器网络组网方案实践二) <i class="fa fa-angle-right"></i>
                 </a>
             </div>
           </div>
@@ -438,7 +438,7 @@
 
   <div class="copyright">
     &copy; 
-    <span itemprop="copyrightYear">2025</span>
+    <span itemprop="copyrightYear">2026</span>
     <span class="with-love">
       <i class="fa fa-heart"></i>
     </span>
@@ -450,14 +450,14 @@
       <i class="fa fa-chart-line"></i>
     </span>
       <span>站点总字数：</span>
-    <span title="站点总字数">990k</span>
+    <span title="站点总字数">996k</span>
   </span>
   <span class="post-meta-item">
     <span class="post-meta-item-icon">
       <i class="fa fa-coffee"></i>
     </span>
       <span>站点阅读时长 &asymp;</span>
-    <span title="站点阅读时长">15:01</span>
+    <span title="站点阅读时长">15:05</span>
   </span>
 </div>
 <div class="busuanzi-count">

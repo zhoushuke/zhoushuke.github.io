@@ -27,13 +27,13 @@
 <meta property="og:site_name" content="Z.S.K.&#39;s Records">
 <meta property="og:description" content="NFS在kubernetes中做为共享存储，用的还是比较多的，之前也就是一直用着，也没有太关注是如何实现Dynamic provisioning，今天花了点时间研究了一下原理，还是挺有意思.">
 <meta property="og:locale" content="zh_CN">
-<meta property="og:image" content="https://raw.gitmirror.com/zhoushuke/BlogPhoto/master/githuboss/20200813165138.png">
+<meta property="og:image" content="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20200813165138.png">
 <meta property="article:published_time" content="2020-08-11T15:30:53.000Z">
-<meta property="article:modified_time" content="2024-12-31T03:07:38.319Z">
+<meta property="article:modified_time" content="2026-09-29T07:21:20.419Z">
 <meta property="article:author" content="周淑科">
 <meta property="article:tag" content="Kubernetes">
 <meta name="twitter:card" content="summary">
-<meta name="twitter:image" content="https://raw.gitmirror.com/zhoushuke/BlogPhoto/master/githuboss/20200813165138.png">
+<meta name="twitter:image" content="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20200813165138.png">
 
 
 <link rel="canonical" href="https://zhoushuke.github.io/2020/08/11/Kubernetes-nfs-provisioner/">
@@ -156,7 +156,7 @@
   <nav class="site-state">
       <div class="site-state-item site-state-posts">
         <a href="/archives/">
-          <span class="site-state-item-count">222</span>
+          <span class="site-state-item-count">223</span>
           <span class="site-state-item-name">日志</span>
         </a>
       </div>
@@ -310,7 +310,7 @@
 <p>pod生成使用一个pvc, 当pvc发布到集群中时, nfs-client-provisioner deployment就会根据该pvc的yaml文件获取namespace, pvc-name等信息在挂载的nfs共享目录下创建新的目录, 然后生成一个pv与该pvc绑定，pod使用该pv就相当于使用nfs server共享目录一样</p>
 <p>那nfs server的共享目录是如何做到的呢?</p>
 <h3 id="NFS-原理"><a href="#NFS-原理" class="headerlink" title="NFS 原理"></a>NFS 原理</h3><p>NFS 使用RPC(Remote Procedure Call)的机制进行实现，RPC使得客户端可以调用服务端的函数。同时，由于有 VFS 的存在，客户端可以像使用其它普通文件系统一样使用 NFS 文件系统。经由操作系统的内核，将 NFS 文件系统的调用请求通过 TCP&#x2F;IP 发送至服务端的 NFS 服务。NFS服务器执行相关的操作，并将操作结果返回给客户端</p>
-<p><img src="https://raw.gitmirror.com/zhoushuke/BlogPhoto/master/githuboss/20200813165138.png"></p>
+<p><img src="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20200813165138.png"></p>
 <p>我觉得上面那段话说的很明白, nfs实现共享存储还是通过网络将本地操作写入到nfs server端，只不过这个网络操作由RPC来完成, 同时也需要内核的支持. </p>
 <p>nfs更加详细的原理，感兴趣的可以参考<a target="_blank" rel="noopener" href="https://blog.51cto.com/atong/1343950">NFS原理详解</a></p>
 <h3 id="参考文章"><a href="#参考文章" class="headerlink" title="参考文章:"></a><strong>参考文章:</strong></h3><blockquote>
@@ -399,7 +399,7 @@
 
   <div class="copyright">
     &copy; 
-    <span itemprop="copyrightYear">2025</span>
+    <span itemprop="copyrightYear">2026</span>
     <span class="with-love">
       <i class="fa fa-heart"></i>
     </span>
@@ -411,14 +411,14 @@
       <i class="fa fa-chart-line"></i>
     </span>
       <span>站点总字数：</span>
-    <span title="站点总字数">990k</span>
+    <span title="站点总字数">996k</span>
   </span>
   <span class="post-meta-item">
     <span class="post-meta-item-icon">
       <i class="fa fa-coffee"></i>
     </span>
       <span>站点阅读时长 &asymp;</span>
-    <span title="站点阅读时长">15:01</span>
+    <span title="站点阅读时长">15:05</span>
   </span>
 </div>
 <div class="busuanzi-count">

@@ -27,17 +27,17 @@
 <meta property="og:site_name" content="Z.S.K.&#39;s Records">
 <meta property="og:description" content="在Kubernetes中, 更新configmap及secret是无法自动更新POD的, 如果需要配置生效, 需要重新部署,这无疑会增加多余操作, 刚好最近在测试gitlab的CI&#x2F;CD, 需要这个自动能力,调研了以下几种可用方式.">
 <meta property="og:locale" content="zh_CN">
-<meta property="og:image" content="https://raw.gitmirror.com/zhoushuke/BlogPhoto/master/githuboss/20200512114134.png">
-<meta property="og:image" content="https://raw.gitmirror.com/zhoushuke/BlogPhoto/master/githuboss/20200512114255.png">
-<meta property="og:image" content="https://raw.gitmirror.com/zhoushuke/BlogPhoto/master/githuboss/20200512114215.png">
-<meta property="og:image" content="https://raw.gitmirror.com/zhoushuke/BlogPhoto/master/githuboss/20200512121303.png">
-<meta property="og:image" content="https://raw.gitmirror.com/zhoushuke/BlogPhoto/master/githuboss/20200512122205.png">
+<meta property="og:image" content="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20200512114134.png">
+<meta property="og:image" content="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20200512114255.png">
+<meta property="og:image" content="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20200512114215.png">
+<meta property="og:image" content="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20200512121303.png">
+<meta property="og:image" content="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20200512122205.png">
 <meta property="article:published_time" content="2020-05-10T06:30:53.000Z">
-<meta property="article:modified_time" content="2024-12-31T03:07:38.319Z">
+<meta property="article:modified_time" content="2026-09-29T07:21:20.075Z">
 <meta property="article:author" content="周淑科">
 <meta property="article:tag" content="Kubernetes">
 <meta name="twitter:card" content="summary">
-<meta name="twitter:image" content="https://raw.gitmirror.com/zhoushuke/BlogPhoto/master/githuboss/20200512114134.png">
+<meta name="twitter:image" content="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20200512114134.png">
 
 
 <link rel="canonical" href="https://zhoushuke.github.io/2020/05/10/Kubernetes-deploy-hot-reload-when-configmap-update/">
@@ -160,7 +160,7 @@
   <nav class="site-state">
       <div class="site-state-item site-state-posts">
         <a href="/archives/">
-          <span class="site-state-item-count">222</span>
+          <span class="site-state-item-count">223</span>
           <span class="site-state-item-name">日志</span>
         </a>
       </div>
@@ -307,16 +307,16 @@
 <figure class="highlight yaml"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br></pre></td><td class="code"><pre><span class="line"><span class="attr">apiVersion:</span> <span class="string">apps/v1</span></span><br><span class="line"><span class="attr">kind:</span> <span class="string">Deployment</span></span><br><span class="line"><span class="attr">metadata:</span></span><br><span class="line">  <span class="attr">name:</span> <span class="string">demo-deployment</span></span><br><span class="line">  <span class="attr">namespace:</span> <span class="string">stage</span></span><br><span class="line">  <span class="attr">annotations:</span></span><br><span class="line">    <span class="attr">configmap.reloader.stakater.com/reload:</span> <span class="string">&quot;nginx-config, demo-config&quot;</span></span><br><span class="line">  <span class="attr">labels:</span></span><br><span class="line">    <span class="attr">app:</span> <span class="string">config-demo-app</span></span><br><span class="line"><span class="attr">spec:</span></span><br><span class="line">  <span class="attr">replicas:</span> <span class="number">1</span></span><br><span class="line">  <span class="attr">selector:</span></span><br><span class="line">    <span class="attr">matchLabels:</span></span><br><span class="line">      <span class="attr">app:</span> <span class="string">config-demo-app</span></span><br><span class="line">  <span class="attr">template:</span></span><br><span class="line">    <span class="attr">metadata:</span></span><br><span class="line">      <span class="attr">labels:</span></span><br><span class="line">        <span class="attr">app:</span> <span class="string">config-demo-app</span></span><br><span class="line">    <span class="attr">spec:</span></span><br><span class="line">      <span class="attr">volumes:</span></span><br><span class="line">        <span class="bullet">-</span> <span class="attr">name:</span> <span class="string">configmap-volume</span></span><br><span class="line">          <span class="attr">configMap:</span></span><br><span class="line">            <span class="attr">name:</span> <span class="string">nginx-config</span></span><br><span class="line">            <span class="attr">items:</span></span><br><span class="line">              <span class="bullet">-</span> <span class="attr">key:</span> <span class="string">nginx.conf</span></span><br><span class="line">                <span class="attr">path:</span> <span class="string">nginx.conf</span></span><br><span class="line">              <span class="bullet">-</span> <span class="attr">key:</span> <span class="string">mime.types</span></span><br><span class="line">                <span class="attr">path:</span> <span class="string">mime.types</span></span><br><span class="line">              <span class="bullet">-</span> <span class="attr">key:</span> <span class="string">conf.d__default.conf</span></span><br><span class="line">                <span class="attr">path:</span> <span class="string">conf.d/default.conf</span></span><br><span class="line">      <span class="attr">containers:</span></span><br><span class="line">      <span class="bullet">-</span> <span class="attr">name:</span> <span class="string">config-demo-app</span></span><br><span class="line">        <span class="attr">image:</span> <span class="string">nginx:latest</span> </span><br><span class="line">        <span class="attr">ports:</span></span><br><span class="line">          <span class="bullet">-</span> <span class="attr">containerPort:</span> <span class="number">80</span></span><br><span class="line">        <span class="attr">volumeMounts:</span></span><br><span class="line">          <span class="bullet">-</span> <span class="attr">mountPath:</span> <span class="string">/etc/nginx/</span></span><br><span class="line">            <span class="attr">name:</span> <span class="string">configmap-volume</span></span><br><span class="line">            <span class="attr">readOnly:</span> <span class="literal">true</span></span><br><span class="line">        <span class="attr">envFrom:</span></span><br><span class="line">          <span class="bullet">-</span> <span class="attr">configMapRef:</span></span><br><span class="line">              <span class="attr">name:</span> <span class="string">demo-config</span></span><br><span class="line"></span><br></pre></td></tr></table></figure>
 
 <p>更新configmap后会发现pod很快就重启了</p>
-<p><img src="https://raw.gitmirror.com/zhoushuke/BlogPhoto/master/githuboss/20200512114134.png"></p>
+<p><img src="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20200512114134.png"></p>
 <p>从reloader中看到以下日志:</p>
-<p><img src="https://raw.gitmirror.com/zhoushuke/BlogPhoto/master/githuboss/20200512114255.png"></p>
+<p><img src="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20200512114255.png"></p>
 <p>进入容器看到env更新了</p>
-<p><img src="https://raw.gitmirror.com/zhoushuke/BlogPhoto/master/githuboss/20200512114215.png"></p>
+<p><img src="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20200512114215.png"></p>
 <p>configmap配置文件也对应更新了</p>
-<p><img src="https://raw.gitmirror.com/zhoushuke/BlogPhoto/master/githuboss/20200512121303.png"></p>
+<p><img src="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20200512121303.png"></p>
 <p>完美</p>
 <h3 id="Reloader源码分析"><a href="#Reloader源码分析" class="headerlink" title="Reloader源码分析"></a>Reloader源码分析</h3><p>再来看deployment的yaml文件，会发现在容易的env中新增了两个环境变量(因为有两个configmap)</p>
-<p><img src="https://raw.gitmirror.com/zhoushuke/BlogPhoto/master/githuboss/20200512122205.png"></p>
+<p><img src="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20200512122205.png"></p>
 <p>核心思路就是通过计算新的configmap与旧的configmap的哈希值是否有变化，源代码核心的就是这一段了:</p>
 <figure class="highlight go"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">func</span> <span class="title">updateContainers</span><span class="params">(upgradeFuncs callbacks.RollingUpgradeFuncs, item <span class="keyword">interface</span>&#123;&#125;, config util.Config, autoReload <span class="type">bool</span>)</span></span> constants.Result &#123;</span><br><span class="line">	<span class="keyword">var</span> result constants.Result</span><br><span class="line">  <span class="comment">// 在这里指定添加的环境变量的前缀，就是上图中看到的新增的环境变量的格式</span></span><br><span class="line">	envar := constants.EnvVarPrefix + util.ConvertToEnvVarName(config.ResourceName) + <span class="string">&quot;_&quot;</span> + config.Type</span><br><span class="line">	container := getContainerToUpdate(upgradeFuncs, item, config, autoReload)</span><br><span class="line"></span><br><span class="line">	<span class="keyword">if</span> container == <span class="literal">nil</span> &#123;</span><br><span class="line">		<span class="keyword">return</span> constants.NoContainerFound</span><br><span class="line">	&#125;</span><br><span class="line"></span><br><span class="line">	<span class="comment">//update if env var exists</span></span><br><span class="line">	result = updateEnvVar(upgradeFuncs.ContainersFunc(item), envar, config.SHAValue)</span><br><span class="line"></span><br><span class="line">	<span class="comment">// if no existing env var exists lets create one</span></span><br><span class="line">	<span class="keyword">if</span> result == constants.NoEnvVarFound &#123;</span><br><span class="line">		e := v1.EnvVar&#123;</span><br><span class="line">			Name:  envar,</span><br><span class="line">			Value: config.SHAValue,</span><br><span class="line">		&#125;</span><br><span class="line">		container.Env = <span class="built_in">append</span>(container.Env, e)</span><br><span class="line">		result = constants.Updated</span><br><span class="line">	&#125;</span><br><span class="line">	<span class="keyword">return</span> result</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="function"><span class="keyword">func</span> <span class="title">updateEnvVar</span><span class="params">(containers []v1.Container, envar <span class="type">string</span>, shaData <span class="type">string</span>)</span></span> constants.Result &#123;</span><br><span class="line">	<span class="keyword">for</span> i := <span class="keyword">range</span> containers &#123;</span><br><span class="line">		envs := containers[i].Env</span><br><span class="line">		<span class="keyword">for</span> j := <span class="keyword">range</span> envs &#123;</span><br><span class="line">			<span class="keyword">if</span> envs[j].Name == envar &#123;</span><br><span class="line">				<span class="keyword">if</span> envs[j].Value != shaData &#123;</span><br><span class="line">					envs[j].Value = shaData</span><br><span class="line">					<span class="keyword">return</span> constants.Updated</span><br><span class="line">				&#125;</span><br><span class="line">				<span class="keyword">return</span> constants.NotUpdated</span><br><span class="line">			&#125;</span><br><span class="line">		&#125;</span><br><span class="line">	&#125;</span><br><span class="line">	<span class="keyword">return</span> constants.NoEnvVarFound</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
 
@@ -424,7 +424,7 @@
 
   <div class="copyright">
     &copy; 
-    <span itemprop="copyrightYear">2025</span>
+    <span itemprop="copyrightYear">2026</span>
     <span class="with-love">
       <i class="fa fa-heart"></i>
     </span>
@@ -436,14 +436,14 @@
       <i class="fa fa-chart-line"></i>
     </span>
       <span>站点总字数：</span>
-    <span title="站点总字数">990k</span>
+    <span title="站点总字数">996k</span>
   </span>
   <span class="post-meta-item">
     <span class="post-meta-item-icon">
       <i class="fa fa-coffee"></i>
     </span>
       <span>站点阅读时长 &asymp;</span>
-    <span title="站点阅读时长">15:01</span>
+    <span title="站点阅读时长">15:05</span>
   </span>
 </div>
 <div class="busuanzi-count">

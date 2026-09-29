@@ -1,0 +1,581 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width">
+<meta name="theme-color" content="#222" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#222" media="(prefers-color-scheme: dark)"><meta name="generator" content="Hexo 6.2.0">
+
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon-next.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32x32-next.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon-16x16-next.png">
+  <link rel="mask-icon" href="/images/logo.svg" color="#222">
+
+<link rel="stylesheet" href="/css/main.css">
+
+<link rel="stylesheet" href="https://fonts.loli.net/css?family=Lato:300,300italic,400,400italic,700,700italic%7CRoboto+Mono:300,300italic,400,400italic,700,700italic&display=swap&subset=latin,latin-ext">
+
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.6.0/css/all.min.css" integrity="sha256-5eIC48iZUHmSlSUz9XtjRyK2mzQkHScZY1WdMaoz74E=" crossorigin="anonymous">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/3.1.1/animate.min.css" integrity="sha256-PR7ttpcvz8qrF57fur/yAx1qXMFJeJFiA6pSzWi0OIE=" crossorigin="anonymous">
+
+<script class="next-config" data-name="main" type="application/json">{"hostname":"zhoushuke.github.io","root":"/","images":"/images","scheme":"Mist","darkmode":true,"version":"8.21.1","exturl":false,"sidebar":{"position":"right","width_expanded":320,"width_dual_column":240,"display":"post","padding":18,"offset":12},"hljswrap":true,"copycode":{"enable":true,"style":"mac"},"fold":{"enable":true,"height":500},"bookmark":{"enable":false,"color":"#222","save":"auto"},"mediumzoom":false,"lazyload":false,"pangu":false,"comments":{"style":"tabs","active":null,"storage":true,"lazyload":false,"nav":null},"stickytabs":false,"motion":{"enable":true,"async":false,"transition":{"menu_item":"fadeInDown","post_block":"fadeIn","post_header":"fadeInDown","post_body":"fadeInDown","coll_header":"fadeInLeft","sidebar":"fadeInUp"}},"prism":false,"i18n":{"placeholder":"搜索...","empty":"没有找到任何搜索结果：${query}","hits_time":"找到 ${hits} 个搜索结果（用时 ${time} 毫秒）","hits":"找到 ${hits} 个搜索结果"},"path":"/search.xml","localsearch":{"enable":true,"top_n_per_article":1,"unescape":false,"preload":false}}</script><script src="/js/config.js"></script>
+
+    <meta name="description" content="前面聊了网卡、DMA和RDMA，接下来把视角拉到多机训练。 假设每台服务器上都有两张RDMA网卡，分别接到两个网络平面。网卡单独测都没问题，但放到NCCL里，数据到底会走哪张卡？两个平面能不能同时用？如果平面之间根本不通，又该怎么办？ 这时候经常会碰到一个环境变量：NCCL_CROSS_NIC。名字里有个CROSS，很容易把它当成“多网卡开关”。但真按这个思路去配置，可能从第一步就理解偏了。 这篇">
+<meta property="og:type" content="article">
+<meta property="og:title" content="NCCL初探(NCCL_CROSS_NIC与多平面网络)">
+<meta property="og:url" content="https://zhoushuke.github.io/2026/09/28/nccl-cross-nic/index.html">
+<meta property="og:site_name" content="Z.S.K.&#39;s Records">
+<meta property="og:description" content="前面聊了网卡、DMA和RDMA，接下来把视角拉到多机训练。 假设每台服务器上都有两张RDMA网卡，分别接到两个网络平面。网卡单独测都没问题，但放到NCCL里，数据到底会走哪张卡？两个平面能不能同时用？如果平面之间根本不通，又该怎么办？ 这时候经常会碰到一个环境变量：NCCL_CROSS_NIC。名字里有个CROSS，很容易把它当成“多网卡开关”。但真按这个思路去配置，可能从第一步就理解偏了。 这篇">
+<meta property="og:locale" content="zh_CN">
+<meta property="og:image" content="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/202609282030310.png">
+<meta property="og:image" content="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/202609282030846.png">
+<meta property="og:image" content="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/202609282030630.png">
+<meta property="og:image" content="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/202609282030682.png">
+<meta property="og:image" content="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/202609282030558.png">
+<meta property="article:published_time" content="2026-09-28T09:00:00.000Z">
+<meta property="article:modified_time" content="2026-09-29T07:24:53.891Z">
+<meta property="article:author" content="周淑科">
+<meta property="article:tag" content="HPC">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:image" content="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/202609282030310.png">
+
+
+<link rel="canonical" href="https://zhoushuke.github.io/2026/09/28/nccl-cross-nic/">
+
+
+<script class="next-config" data-name="page" type="application/json">{"sidebar":"","isHome":false,"isPost":true,"lang":"zh-CN","comments":"","permalink":"https://zhoushuke.github.io/2026/09/28/nccl-cross-nic/","path":"2026/09/28/nccl-cross-nic/","title":"NCCL初探(NCCL_CROSS_NIC与多平面网络)"}</script>
+
+<script class="next-config" data-name="calendar" type="application/json">""</script>
+<title>NCCL初探(NCCL_CROSS_NIC与多平面网络) | Z.S.K.'s Records</title>
+  
+
+
+
+
+
+
+
+
+  <noscript>
+    <link rel="stylesheet" href="/css/noscript.css">
+  </noscript>
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage" class="use-motion">
+  <div class="headband"></div>
+
+  <main class="main">
+    <div class="column">
+      <header class="header" itemscope itemtype="http://schema.org/WPHeader"><div class="site-brand-container">
+  <div class="site-nav-toggle">
+    <div class="toggle" aria-label="切换导航栏" role="button">
+        <span class="toggle-line"></span>
+        <span class="toggle-line"></span>
+        <span class="toggle-line"></span>
+    </div>
+  </div>
+
+  <div class="site-meta">
+
+    <a href="/" class="brand" rel="start">
+      <i class="logo-line"></i>
+      <p class="site-title">Z.S.K.'s Records</p>
+      <i class="logo-line"></i>
+    </a>
+  </div>
+
+  <div class="site-nav-right">
+    <div class="toggle popup-trigger" aria-label="搜索" role="button">
+        <i class="fa fa-search fa-fw fa-lg"></i>
+    </div>
+  </div>
+</div>
+
+
+
+<nav class="site-nav">
+  <ul class="main-menu menu"><li class="menu-item menu-item-home"><a href="/" rel="section"><i class="fa fa-home fa-fw"></i>首页</a></li><li class="menu-item menu-item-about"><a href="/about/ZSK-Profile.pdf" rel="section"><i class="fa fa-user fa-fw"></i>简历</a></li><li class="menu-item menu-item-tags"><a href="/tags/" rel="section"><i class="fa fa-tags fa-fw"></i>标签</a></li><li class="menu-item menu-item-categories"><a href="/categories/" rel="section"><i class="fa fa-th fa-fw"></i>分类</a></li><li class="menu-item menu-item-archives"><a href="/archives/" rel="section"><i class="fa fa-archive fa-fw"></i>归档</a></li><li class="menu-item menu-item-commonweal"><a href="/404.html" rel="section"><i class="fa fa-heartbeat fa-fw"></i>公益 404</a></li>
+      <li class="menu-item menu-item-search">
+        <a role="button" class="popup-trigger"><i class="fa fa-search fa-fw"></i>搜索
+        </a>
+      </li>
+  </ul>
+</nav>
+
+
+
+  <div class="search-pop-overlay">
+    <div class="popup search-popup">
+      <div class="search-header">
+        <span class="search-icon">
+          <i class="fa fa-search"></i>
+        </span>
+        <div class="search-input-container">
+          <input autocomplete="off" autocapitalize="off" maxlength="80"
+                placeholder="搜索..." spellcheck="false"
+                type="search" class="search-input">
+        </div>
+        <span class="popup-btn-close" role="button">
+          <i class="fa fa-times-circle"></i>
+        </span>
+      </div>
+      <div class="search-result-container">
+        <div class="search-result-icon">
+          <i class="fa fa-spinner fa-pulse fa-5x"></i>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</header>
+        
+  
+  <aside class="sidebar">
+
+    <div class="sidebar-inner sidebar-nav-active sidebar-toc-active">
+      <ul class="sidebar-nav">
+        <li class="sidebar-nav-toc">
+          文章目录
+        </li>
+        <li class="sidebar-nav-overview">
+          站点概览
+        </li>
+      </ul>
+
+      <div class="sidebar-panel-container">
+        <!--noindex-->
+        <div class="post-toc-wrap sidebar-panel">
+            <div class="post-toc animated"><ol class="nav"><li class="nav-item nav-level-3"><a class="nav-link" href="#%E5%A4%9A%E5%B9%B3%E9%9D%A2"><span class="nav-number">1.</span> <span class="nav-text">多平面</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#NCCL-CROSS-NIC"><span class="nav-number">2.</span> <span class="nav-text">NCCL_CROSS_NIC</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E7%9C%8B%E4%B8%80%E7%82%B9%E6%BA%90%E7%A0%81"><span class="nav-number">3.</span> <span class="nav-text">看一点源码</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#PXN"><span class="nav-number">4.</span> <span class="nav-text">PXN</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E8%AE%BE%E6%88%900%EF%BC%8C%E4%B8%BA%E4%BB%80%E4%B9%88%E8%BF%98%E5%8F%AF%E8%83%BD%E5%8D%A1%E4%BD%8F"><span class="nav-number">5.</span> <span class="nav-text">设成0，为什么还可能卡住</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E8%AE%BE%E6%88%901%EF%BC%8C%E5%88%B0%E5%BA%95%E8%83%BD%E5%BF%AB%E5%A4%9A%E5%B0%91"><span class="nav-number">6.</span> <span class="nav-text">设成1，到底能快多少</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E6%80%8E%E4%B9%88%E5%9C%A8%E8%87%AA%E5%B7%B1%E7%9A%84%E7%8E%AF%E5%A2%83%E9%87%8C%E8%AF%95"><span class="nav-number">7.</span> <span class="nav-text">怎么在自己的环境里试</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E5%B0%8F%E7%BB%93"><span class="nav-number">8.</span> <span class="nav-text">小结</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E5%8F%82%E8%80%83%E6%96%87%E7%AB%A0"><span class="nav-number">9.</span> <span class="nav-text">参考文章:</span></a></li></ol></div>
+        </div>
+        <!--/noindex-->
+
+        <div class="site-overview-wrap sidebar-panel">
+          <div class="site-author animated" itemprop="author" itemscope itemtype="http://schema.org/Person">
+    <img class="site-author-image" itemprop="image" alt="周淑科"
+      src="/images/avatar.gif">
+  <p class="site-author-name" itemprop="name">周淑科</p>
+  <div class="site-description" itemprop="description">Better Later Than Never</div>
+</div>
+<div class="site-state-wrap animated">
+  <nav class="site-state">
+      <div class="site-state-item site-state-posts">
+        <a href="/archives/">
+          <span class="site-state-item-count">223</span>
+          <span class="site-state-item-name">日志</span>
+        </a>
+      </div>
+      <div class="site-state-item site-state-categories">
+          <a href="/categories/">
+        <span class="site-state-item-count">15</span>
+        <span class="site-state-item-name">分类</span></a>
+      </div>
+      <div class="site-state-item site-state-tags">
+          <a href="/tags/">
+        <span class="site-state-item-count">15</span>
+        <span class="site-state-item-name">标签</span></a>
+      </div>
+  </nav>
+</div>
+  <div class="cc-license animated" itemprop="license">
+    <a href="https://creativecommons.org/licenses/by-nc-sa/4.0/" class="cc-opacity" rel="noopener" target="_blank"><img src="https://cdnjs.cloudflare.com/ajax/libs/creativecommons-vocabulary/2020.11.3/assets/license_badges/small/by_nc_sa.svg" alt="Creative Commons"></a>
+  </div>
+
+        </div>
+      </div>
+    </div>
+
+    
+  </aside>
+
+
+    </div>
+
+    <div class="main-inner post posts-expand">
+
+
+  
+
+
+<div class="post-block">
+  
+  
+
+  <article itemscope itemtype="http://schema.org/Article" class="post-content" lang="zh-CN">
+    <link itemprop="mainEntityOfPage" href="https://zhoushuke.github.io/2026/09/28/nccl-cross-nic/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/avatar.gif">
+      <meta itemprop="name" content="周淑科">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="Z.S.K.'s Records">
+      <meta itemprop="description" content="Better Later Than Never">
+    </span>
+
+    <span hidden itemprop="post" itemscope itemtype="http://schema.org/CreativeWork">
+      <meta itemprop="name" content="NCCL初探(NCCL_CROSS_NIC与多平面网络) | Z.S.K.'s Records">
+      <meta itemprop="description" content="">
+    </span>
+      <header class="post-header">
+        <h1 class="post-title" itemprop="name headline">
+          NCCL初探(NCCL_CROSS_NIC与多平面网络)
+        </h1>
+
+        <div class="post-meta-container">
+          <div class="post-meta">
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-calendar"></i>
+      </span>
+      <span class="post-meta-item-text">发表于</span>
+
+      <time title="创建时间：2026-09-28 17:00:00" itemprop="dateCreated datePublished" datetime="2026-09-28T17:00:00+08:00">2026-09-28</time>
+    </span>
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-folder"></i>
+      </span>
+      <span class="post-meta-item-text">分类于</span>
+        <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+          <a href="/categories/HPC/" itemprop="url" rel="index"><span itemprop="name">HPC</span></a>
+        </span>
+    </span>
+
+  
+    <span class="post-meta-item" title="阅读次数" id="busuanzi_container_page_pv">
+      <span class="post-meta-item-icon">
+        <i class="far fa-eye"></i>
+      </span>
+      <span class="post-meta-item-text">阅读次数：</span>
+      <span id="busuanzi_value_page_pv"></span>
+    </span>
+    <span class="post-meta-break"></span>
+    <span class="post-meta-item" title="本文字数">
+      <span class="post-meta-item-icon">
+        <i class="far fa-file-word"></i>
+      </span>
+      <span class="post-meta-item-text">本文字数：</span>
+      <span>5.8k</span>
+    </span>
+    <span class="post-meta-item" title="阅读时长">
+      <span class="post-meta-item-icon">
+        <i class="far fa-clock"></i>
+      </span>
+      <span class="post-meta-item-text">阅读时长 &asymp;</span>
+      <span>5 分钟</span>
+    </span>
+</div>
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody"><p>前面聊了网卡、DMA和RDMA，接下来把视角拉到多机训练。</p>
+<p>假设每台服务器上都有两张RDMA网卡，分别接到两个网络平面。网卡单独测都没问题，但放到NCCL里，数据到底会走哪张卡？两个平面能不能同时用？如果平面之间根本不通，又该怎么办？</p>
+<p>这时候经常会碰到一个环境变量：<code>NCCL_CROSS_NIC</code>。名字里有个CROSS，很容易把它当成“多网卡开关”。但真按这个思路去配置，可能从第一步就理解偏了。</p>
+<p>这篇就围绕这个参数展开，把0、1、2的区别，以及容易想当然的几个地方说清楚。</p>
+<span id="more"></span>
+
+<p>作者比较关心的不是把参数说明再抄一遍，而是几个具体问题：</p>
+<blockquote>
+<ul>
+<li>设成0，是不是就只用一张网卡了？</li>
+<li>设成1，为什么有人更快，有人反而更慢？</li>
+<li>两个平面不互通，设成0是不是就万事大吉？</li>
+</ul>
+</blockquote>
+<p>先别急着改参数，从接线开始看。</p>
+<h3 id="多平面"><a href="#多平面" class="headerlink" title="多平面"></a>多平面</h3><p>假设有A、B两台服务器，每台两张网卡。A的NIC0和B的NIC0接在平面0，两个NIC1接在平面1。</p>
+<p>画出来其实很简单：</p>
+<p><img src="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/202609282030310.png" alt="双平面网络接线示意"></p>
+<p>这类接法接近NVIDIA文档里说的<code>rail-optimized</code>。这里先把一条rail理解成图中的一个网络平面即可，复杂硬件里的rail和plane不一定是一一对应关系。</p>
+<p>为什么要这样接？</p>
+<p>如果数据一直在对应的平面里传输，两路流量就不用都挤到平面间的链路上。NVIDIA的<a target="_blank" rel="noopener" href="https://developer.nvidia.com/blog/doubling-all2all-performance-with-nvidia-collective-communication-library-2-12/">这篇PXN介绍</a>里也解释了这种网络设计。</p>
+<p>但这里有一个很重要的前提：<strong>平面内部很快，不代表平面之间也很快。</strong></p>
+<p>比如，A.NIC0发给B.NIC0，留在平面0就能完成。A.NIC0要发给B.NIC1，则需要平面之间有路可走。如果这条路比较慢，就可能拖后腿；如果压根没连通，那就不只是性能问题了。</p>
+<p>反过来，如果所有网卡都接在同一台交换机上，跨NIC没有明显的额外代价，情况又不一样。</p>
+<p>所以，看到“多网卡”三个字，还不能决定这个参数该怎么配。<strong>先确认网卡接到了哪里。</strong></p>
+<p>还有，图中的NIC0只是为了方便说明。不要看到两台机器都叫<code>mlx5_0</code>，就认定它们属于同一个平面，实际布线和设备映射还是要核对。</p>
+<h3 id="NCCL-CROSS-NIC"><a href="#NCCL-CROSS-NIC" class="headerlink" title="NCCL_CROSS_NIC"></a>NCCL_CROSS_NIC</h3><p><a target="_blank" rel="noopener" href="https://docs.nvidia.com/deeplearning/nccl/user-guide/docs/env.html#nccl-cross-nic">官方文档</a>说，这个参数控制同一个ring&#x2F;tree是否允许使用不同的NIC。单网卡场景下，它没有作用。</p>
+<p>先用ring来理解。ring可以看成数据依次经过各个GPU的一条环形通信路径，这里只截取它在一台服务器里的部分：</p>
+<p><img src="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/202609282030846.png" alt="同一个ring的同NIC与跨NIC路径对比"></p>
+<blockquote>
+<ul>
+<li><strong>0：约束同一个ring使用对应的NIC。</strong></li>
+</ul>
+</blockquote>
+<p>上图左边，数据从NIC0进来，经过节点内的GPU，最后还是从NIC0出去。0对同NIC施加约束，不是像默认值2那样允许为性能放开限制；但能否在整个通信组里保持平面对齐，还有前提，后面会展开。</p>
+<p>先回答第一个疑问：<strong>这不代表整个任务只用NIC0。</strong></p>
+<p>另一个ring完全可以用NIC1，走另一个平面。因此，<code>不跨NIC</code>和<code>不用多网卡</code>是两回事。图里也没有说NCCL一定只建两个ring，或者一定把流量平均分到两张卡上。</p>
+<blockquote>
+<ul>
+<li><strong>1：允许一个ring从不同NIC进出。</strong></li>
+</ul>
+</blockquote>
+<p>上图右边，从NIC0进，经过GPU后从NIC1出，也是可以考虑的方案。</p>
+<p>好处是什么？有时最后一个GPU离NIC1更近，不必为了回到NIC0而走一条不理想的节点内路径。但节点内省下来的代价，可能又花在了节点外的跨平面链路上。</p>
+<p>所以它是<code>允许</code>，不是<code>强制</code>，更不是“开启后带宽自动翻倍”。</p>
+<blockquote>
+<ul>
+<li><strong>2：默认值，先尝试同NIC，再按搜索条件考虑其它方案。</strong></li>
+</ul>
+</blockquote>
+<p>可以把它理解成：优先照顾rail对齐，但给性能留一点调整空间。</p>
+<p>这里的“性能”来自NCCL的拓扑搜索与评估，<strong>不是先把0和1各跑一遍训练，选成绩好的那个</strong>，也不是运行过程中发现交换机堵了，就实时切换参数。</p>
+<p>回到开头的两种网络：</p>
+<ol>
+<li>平面间链路比较弱，优先用0做基线，再与2比较，比较容易看清跨平面的代价。</li>
+<li>各NIC充分互通、跨NIC没有明显额外成本，可以把1也拿来对照，看看放开限制是否有收益。</li>
+</ol>
+<p>如果两个平面完全隔离，则要先保证选出来的通信端点可达，不能只想着“哪个值最快”。</p>
+<h3 id="看一点源码"><a href="#看一点源码" class="headerlink" title="看一点源码"></a>看一点源码</h3><p>源码不展开太多，只看一处就能理解为什么0和2有时表现一样。</p>
+<p>在NCCL <code>v2.27.7-1</code>的<a target="_blank" rel="noopener" href="https://github.com/NVIDIA/nccl/blob/v2.27.7-1/src/graph/search.cc#L967-L973"><code>src/graph/search.cc</code></a>中，<code>ncclTopoCompute()</code>初始化图搜索状态时有这样一行：</p>
+<figure class="highlight cpp"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">graph-&gt;crossNic = crossNic == <span class="number">1</span> ? <span class="number">1</span> : <span class="number">0</span>;</span><br></pre></td></tr></table></figure>
+
+<p>也就是说，只有配置值1直接从允许跨NIC的状态开始，0和2都先从不跨NIC开始。</p>
+<p>后面的<a target="_blank" rel="noopener" href="https://github.com/NVIDIA/nccl/blob/v2.27.7-1/src/graph/search.cc#L1112-L1118">搜索分支</a>里，配置为2且满足相应条件时，才会对Ring等方案放开限制，再搜索一次。其它带宽、路径和停止条件，这里就不铺开了。</p>
+<p>另外，0在候选NIC筛选时会检查设备的<code>asic</code>和<code>port</code>。它依赖的是NCCL识别出来的拓扑，<strong>并不是拿着这个参数去检查交换机接线和路由表</strong>。</p>
+<p>还有一个看日志时容易踩的点：不要看到<code>crossNic</code>非零，就断定已经产生了跨平面流量。这个版本还有<a target="_blank" rel="noopener" href="https://github.com/NVIDIA/nccl/blob/v2.27.7-1/src/graph/connect.cc#L392-L405">交错ring来避免跨rail的处理</a>，最终还是要看两端连接到了哪个设备。</p>
+<p>源码先看到这里，记住：<code>参数影响的是路径怎么选，不会替我们把物理网络变成另一种拓扑。</code></p>
+<h3 id="PXN"><a href="#PXN" class="headerlink" title="PXN"></a>PXN</h3><p>这里顺带说一下PXN，因为它很容易和CROSS_NIC混在一起。</p>
+<p>问题：GPU0想把数据发给另一个节点的GPU1，但两者附近的网卡不在同一个平面，怎么办？</p>
+<p>在满足条件时，可以先在主机内部中转：</p>
+<p><img src="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/202609282030630.png" alt="PXN先通过NVLink中转，再经同一平面发送"></p>
+<ol>
+<li>A.GPU0先通过NVLink，把数据交到A.GPU1。</li>
+<li>再从A.GPU1附近的NIC1发出。</li>
+<li>经平面1，到达B.NIC1和B.GPU1。</li>
+</ol>
+<p>看起来在节点内部绕了一下，但数据出了服务器以后，反而不用跨平面了。</p>
+<p>所以，<strong>“GPU用了另一张网卡”和“数据在交换网络里跨了平面”，不是一回事。</strong></p>
+<p>NVIDIA项目成员在<a target="_blank" rel="noopener" href="https://github.com/NVIDIA/nccl/issues/2193#issuecomment-4609765058">issue #2193</a>里也解释了两者的关系：在平面不互通时，不同rail所属GPU之间的Send&#x2F;Recv可能需要PXN才能完成。</p>
+<p>不过，能不能中转，还取决于节点内连接和通信组。该讨论也<a target="_blank" rel="noopener" href="https://github.com/NVIDIA/nccl/issues/2193#issuecomment-4657130383">提醒PXN的中转范围限于单个OS</a>，不能理解成任意借用别的主机上的GPU。</p>
+<p>因此，测试<code>NCCL_CROSS_NIC=0</code>时，别顺手把PXN也关了。一次改两个变量，最后很难说清楚到底是谁起了作用。</p>
+<h3 id="设成0，为什么还可能卡住"><a href="#设成0，为什么还可能卡住" class="headerlink" title="设成0，为什么还可能卡住"></a>设成0，为什么还可能卡住</h3><p>前面留了一个问题：0既然约束同NIC，是不是两个隔离平面就可以放心用了？</p>
+<p><strong>不一定，还得看哪些GPU被放进了同一个通信组。</strong></p>
+<p>比如下面这个简化场景，只把A.GPU0和B.GPU1放到一起，其它GPU不参与，而且假设只能使用图中画出的GPU&#x2F;NIC路径：</p>
+<p><img src="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/202609282030682.png" alt="通信组未按平面对齐的不可达示例"></p>
+<p>这时候，不能指望NCCL凭空把两个平面连通，也不能随意让通信组以外的GPU来帮忙中转。</p>
+<p>这不是故意找一个极端例子。<a target="_blank" rel="noopener" href="https://docs.nvidia.com/deeplearning/nccl/user-guide/docs/env.html#nccl-cross-nic">官方文档</a>就注明：不同节点参与通信的GPU不一致时，仍可能需要跨NIC。<a target="_blank" rel="noopener" href="https://github.com/NVIDIA/nccl/issues/2193#issuecomment-4661668627">项目成员的回复</a>也举了跨节点GPU分组没有按rail对齐的例子。</p>
+<p>当然，上图不代表所有不对称分组都会失败；如果实际还有其它可用的GPU到NIC路径，需要按实际拓扑分析。</p>
+<p>因此，整机8张卡跑通，不等于训练框架切出来的每个小通信组都能照样跑通。排查时不只要问“每台机器几张卡”，还要问：<strong>具体是哪几张卡，被分到了哪一组？</strong></p>
+<p>公开问题里还有一个很直观的例子：<a target="_blank" rel="noopener" href="https://github.com/NVIDIA/nccl/issues/2345">issue #2345</a>。</p>
+<p>报告者使用两台服务器，每台4张H200，两个RoCE平面不互通，NCCL版本是<code>2.30.7+cuda13.3</code>。已经设了0，任务还是挂起。</p>
+<p>后来查日志，物理上只有两台服务器，NCCL却显示<code>nNodes=4、localRanks=2</code>。2026-09-15，报告者<a target="_blank" rel="noopener" href="https://github.com/NVIDIA/nccl/issues/2345#issuecomment-5673555331">反馈</a>：增加<code>NCCL_NET_DISABLE_INTRA=1</code>后，变成了<code>nNodes=2、localRanks=4</code>，任务不再挂起，但他仍对部分路径的性能有疑问。</p>
+<p>这里不是让大家照抄这个参数，而是提醒：<strong>我们以为的节点和通信组，未必就是NCCL实际看到的样子。</strong></p>
+<h3 id="设成1，到底能快多少"><a href="#设成1，到底能快多少" class="headerlink" title="设成1，到底能快多少"></a>设成1，到底能快多少</h3><p>这个问题没法脱离环境回答，但有一组别人的测试很值得看。</p>
+<p><a target="_blank" rel="noopener" href="https://github.com/NVIDIA/nccl/issues/1411">issue #1411</a>中，报告者在两台H800节点上测Ring AllReduce。每节点用4张GPU和用满8张GPU，改同一个参数，效果居然反过来了。</p>
+<p>把原帖8 GiB消息、out-of-place的<code>busbw</code>画出来：</p>
+<p><img src="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/202609282030558.png" alt="H800公开测试：4GPU与8GPU下设置0和1的带宽对比"></p>
+<p>每节点只用<code>0,2,4,6</code>时，设成1，带宽从164.78升到196.76 GB&#x2F;s。</p>
+<p>但用满8张卡后，设成1，反而从150.37降到120.78 GB&#x2F;s。</p>
+<p>光看前一组，很容易写出“打开CROSS_NIC可以提升带宽”的结论；把后一组也放进来，就知道不能这么下结论了。</p>
+<p>原帖没有给出维护者确认的完整原因，也没有2的同条件对照。能说明的是：<strong>哪几张GPU参与通信，本身就可能改变这个参数的收益。</strong> 不能据此说1一定更快，也不能推断默认值2一定会选到最好的结果。</p>
+<p>这里再提醒一个单位问题：<code>busbw</code>是nccl-tests按通信操作换算出来的指标，不是拿网卡计数器直接读出来的流量。<a target="_blank" rel="noopener" href="https://github.com/NVIDIA/nccl-tests/blob/master/doc/PERFORMANCE.md">计算方式</a>可以单独看，不宜拿它直接证明某一条NVLink或NIC“突破了物理带宽”。</p>
+<p>版本也别忽略。<a target="_blank" rel="noopener" href="https://github.com/NVIDIA/nccl/issues/1494">issue #1494</a>还报告过ring交错后GPU&#x2F;NIC匹配异常、性能下降和PFC的问题。虽然讨论中提到2.26有相关修复，但报告者后来仍反馈问题未完全解决，不能只读第一条回复就认为全部修好了。</p>
+<p>另一个<a target="_blank" rel="noopener" href="https://github.com/NVIDIA/nccl/issues/2097#issuecomment-4225708137">双端口HCA识别问题</a>，报告者最后发现实际测试的是2.29.3，而不是原先以为的2.29.7；后者已有相关修复。排查前先确认进程实际加载的NCCL版本，这一步并不多余。</p>
+<h3 id="怎么在自己的环境里试"><a href="#怎么在自己的环境里试" class="headerlink" title="怎么在自己的环境里试"></a>怎么在自己的环境里试</h3><p>不要一次复制一大串“调优参数”。先把变量控制住，只改<code>NCCL_CROSS_NIC</code>。</p>
+<p>下面以Open MPI、两节点、每节点8张GPU为例。假设nccl-tests已启用MPI编译，程序和动态库在两台机器上的路径一致；在nccl-tests根目录执行，主机名、网卡名按实际情况替换。</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># 先从0开始；网络允许时，再分别改成1、2做对照。</span></span><br><span class="line"><span class="built_in">export</span> NCCL_CROSS_NIC=0</span><br><span class="line"></span><br><span class="line"><span class="comment"># RDMA数据设备。=表示精确匹配，避免mlx5_1匹配到mlx5_10。</span></span><br><span class="line"><span class="built_in">export</span> NCCL_IB_HCA=<span class="string">&#x27;=mlx5_0:1,mlx5_1:1&#x27;</span></span><br><span class="line"></span><br><span class="line"><span class="comment"># IP socket接口，不是用来选择上面的RDMA网卡。</span></span><br><span class="line"><span class="built_in">export</span> NCCL_SOCKET_IFNAME=<span class="string">&#x27;=eth0&#x27;</span></span><br><span class="line"></span><br><span class="line"><span class="built_in">export</span> NCCL_DEBUG=INFO</span><br><span class="line"><span class="built_in">export</span> NCCL_DEBUG_SUBSYS=INIT,ENV,GRAPH,NET,TUNING</span><br><span class="line"><span class="built_in">export</span> NCCL_DEBUG_FILE=<span class="string">&quot;/tmp/nccl-<span class="variable">$&#123;NCCL_CROSS_NIC&#125;</span>.%h.%p.log&quot;</span></span><br><span class="line"></span><br><span class="line">mpirun -np 16 -H node-a:8,node-b:8 --bind-to none \</span><br><span class="line">  -x NCCL_CROSS_NIC -x NCCL_IB_HCA -x NCCL_SOCKET_IFNAME \</span><br><span class="line">  -x NCCL_DEBUG -x NCCL_DEBUG_SUBSYS -x NCCL_DEBUG_FILE \</span><br><span class="line">  ./build/all_reduce_perf -b 8 -e 1G -f 2 -g 1 -w 5 -n 20 -c 1</span><br></pre></td></tr></table></figure>
+
+<p><strong>两个平面完全隔离、可达性还没确认时，不要直接把1和2都跑一遍。</strong> 给测试任务设置运行时限，避免一直占着卡等。</p>
+<p>命令里也没有主动固定算法，先观察实际选择。如果已有配置里设置了<code>NCCL_ALGO</code>、PXN或其它调优项，要先记录清楚，几组测试保持一致。需要专门看Ring时，再单独固定<code>NCCL_ALGO=Ring</code>并传给所有rank。</p>
+<p>除了看最后一行带宽，至少再看这几件事：</p>
+<blockquote>
+<ul>
+<li>有没有挂起、网络错误，结果检查<code>#wrong</code>是不是0。</li>
+<li>两端日志各自选了哪张NIC，对应到哪个物理平面。</li>
+<li>各网卡流量和平面间链路流量是否符合预期，有没有拥塞或PFC增长。</li>
+<li>换成训练实际使用的GPU分组后，结果是否还成立。</li>
+</ul>
+</blockquote>
+<p>日志里的<code>%h</code>和<code>%p</code>分别是主机名和进程PID，记得把两台机器上的文件都收回来。只看其中一端，往往只能猜另一端怎么走。</p>
+<p>如果启用了NIC合并，还要确认日志里的逻辑设备对应哪些物理端口，别把一个<code>NET</code>编号直接当成一张物理网卡。</p>
+<p>最后，不要只测两台整机的一次AllReduce。多跑几次，覆盖实际节点规模、GPU分组和业务用到的其它通信操作，再决定这个参数要不要长期保留。</p>
+<h3 id="小结"><a href="#小结" class="headerlink" title="小结"></a>小结</h3><p>说了这么多，其实最想说明的是：<code>NCCL_CROSS_NIC不是多网卡开关，而是影响通信路径选择的参数。</code></p>
+<blockquote>
+<ul>
+<li>0，不等于只用一张卡，也不是隔离网络的万能保险。</li>
+<li>1，允许跨NIC，但不保证更快。</li>
+<li>2，默认的折中选择，不是自动测速选最优。</li>
+</ul>
+</blockquote>
+<p>先看接线，再看GPU怎么分组，最后看NCCL实际选了什么路径。比起反复试几个数字，这样更容易把问题说清楚。</p>
+<h3 id="参考文章"><a href="#参考文章" class="headerlink" title="参考文章:"></a><strong>参考文章:</strong></h3><blockquote>
+<ul>
+<li><a target="_blank" rel="noopener" href="https://docs.nvidia.com/deeplearning/nccl/user-guide/docs/env.html#nccl-cross-nic">https://docs.nvidia.com/deeplearning/nccl/user-guide/docs/env.html#nccl-cross-nic</a></li>
+<li><a target="_blank" rel="noopener" href="https://developer.nvidia.com/blog/doubling-all2all-performance-with-nvidia-collective-communication-library-2-12/">https://developer.nvidia.com/blog/doubling-all2all-performance-with-nvidia-collective-communication-library-2-12/</a></li>
+<li><a target="_blank" rel="noopener" href="https://github.com/NVIDIA/nccl/blob/v2.27.7-1/src/graph/search.cc">https://github.com/NVIDIA/nccl/blob/v2.27.7-1/src/graph/search.cc</a></li>
+<li><a target="_blank" rel="noopener" href="https://github.com/NVIDIA/nccl/blob/v2.27.7-1/src/graph/connect.cc">https://github.com/NVIDIA/nccl/blob/v2.27.7-1/src/graph/connect.cc</a></li>
+<li><a target="_blank" rel="noopener" href="https://github.com/NVIDIA/nccl/issues/2193">https://github.com/NVIDIA/nccl/issues/2193</a></li>
+<li><a target="_blank" rel="noopener" href="https://github.com/NVIDIA/nccl/issues/2345">https://github.com/NVIDIA/nccl/issues/2345</a></li>
+<li><a target="_blank" rel="noopener" href="https://github.com/NVIDIA/nccl/issues/1411">https://github.com/NVIDIA/nccl/issues/1411</a></li>
+<li><a target="_blank" rel="noopener" href="https://github.com/NVIDIA/nccl/issues/1494">https://github.com/NVIDIA/nccl/issues/1494</a></li>
+<li><a target="_blank" rel="noopener" href="https://github.com/NVIDIA/nccl/issues/2097">https://github.com/NVIDIA/nccl/issues/2097</a></li>
+<li><a target="_blank" rel="noopener" href="https://github.com/NVIDIA/nccl-tests">https://github.com/NVIDIA/nccl-tests</a></li>
+<li><a target="_blank" rel="noopener" href="https://github.com/NVIDIA/nccl-tests/blob/master/doc/PERFORMANCE.md">https://github.com/NVIDIA/nccl-tests/blob/master/doc/PERFORMANCE.md</a></li>
+</ul>
+</blockquote>
+
+    </div>
+
+    
+    
+    
+
+    <footer class="post-footer">
+          <div class="reward-container">
+  <div>Buy Me a Coffee</div>
+  <button>
+    赞赏
+  </button>
+  <div class="post-reward">
+      <div>
+        <img src="/images/wechatpayme.png" alt="周淑科 微信">
+        <span>微信</span>
+      </div>
+      <div>
+        <img src="/images/alipayme.jpg" alt="周淑科 支付宝">
+        <span>支付宝</span>
+      </div>
+
+  </div>
+</div>
+
+          
+
+<div class="post-copyright">
+<ul>
+  <li class="post-copyright-author">
+      <strong>本文作者： </strong>周淑科
+  </li>
+  <li class="post-copyright-link">
+      <strong>本文链接：</strong>
+      <a href="https://zhoushuke.github.io/2026/09/28/nccl-cross-nic/" title="NCCL初探(NCCL_CROSS_NIC与多平面网络)">https://zhoushuke.github.io/2026/09/28/nccl-cross-nic/</a>
+  </li>
+  <li class="post-copyright-license">
+      <strong>版权声明： </strong>本站所有文章除特别声明外，均采用 <a href="https://creativecommons.org/licenses/by-nc-sa/4.0/" rel="noopener" target="_blank"><i class="fab fa-fw fa-creative-commons"></i>BY-NC-SA</a> 许可协议。转载请保留原文作者及链接！
+  </li>
+</ul>
+</div>
+
+          <div class="post-tags">
+              <a href="/tags/HPC/" rel="tag"># HPC</a>
+          </div>
+
+        
+
+          <div class="post-nav">
+            <div class="post-nav-item">
+                <a href="/2025/12/31/2025/" rel="prev" title="再见2025,2026再见">
+                  <i class="fa fa-angle-left"></i> 再见2025,2026再见
+                </a>
+            </div>
+            <div class="post-nav-item">
+            </div>
+          </div>
+    </footer>
+  </article>
+</div>
+
+
+
+
+
+
+</div>
+  </main>
+
+  <footer class="footer">
+    <div class="footer-inner">
+
+  <div class="copyright">
+    &copy; 
+    <span itemprop="copyrightYear">2026</span>
+    <span class="with-love">
+      <i class="fa fa-heart"></i>
+    </span>
+    <span class="author" itemprop="copyrightHolder">周淑科</span>
+  </div>
+<div class="wordcount">
+  <span class="post-meta-item">
+    <span class="post-meta-item-icon">
+      <i class="fa fa-chart-line"></i>
+    </span>
+      <span>站点总字数：</span>
+    <span title="站点总字数">996k</span>
+  </span>
+  <span class="post-meta-item">
+    <span class="post-meta-item-icon">
+      <i class="fa fa-coffee"></i>
+    </span>
+      <span>站点阅读时长 &asymp;</span>
+    <span title="站点阅读时长">15:05</span>
+  </span>
+</div>
+<div class="busuanzi-count">
+    <span class="post-meta-item" id="busuanzi_container_site_uv">
+      <span class="post-meta-item-icon">
+        <i class="fa fa-user"></i>
+      </span>
+      <span class="site-uv" title="总访客量">
+        <span id="busuanzi_value_site_uv"></span>
+      </span>
+    </span>
+    <span class="post-meta-item" id="busuanzi_container_site_pv">
+      <span class="post-meta-item-icon">
+        <i class="fa fa-eye"></i>
+      </span>
+      <span class="site-pv" title="总访问量">
+        <span id="busuanzi_value_site_pv"></span>
+      </span>
+    </span>
+</div>
+  <div class="powered-by">Powered by <a href="https://hexo.io/" rel="noopener" target="_blank">Hexo</a> & <a href="https://theme-next.js.org/mist/" rel="noopener" target="_blank">NexT.Mist</a>
+  </div>
+
+    </div>
+  </footer>
+
+  
+  <div class="toggle sidebar-toggle" role="button">
+    <span class="toggle-line"></span>
+    <span class="toggle-line"></span>
+    <span class="toggle-line"></span>
+  </div>
+  <div class="sidebar-dimmer"></div>
+  <div class="back-to-top" role="button" aria-label="返回顶部">
+    <i class="fa fa-arrow-up fa-lg"></i>
+    <span>0%</span>
+  </div>
+
+<noscript>
+  <div class="noscript-warning">Theme NexT works best with JavaScript enabled</div>
+</noscript>
+
+
+  
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/animejs/3.2.1/anime.min.js" integrity="sha256-XL2inqUJaslATFnHdJOi9GfQ60on8Wx1C2H8DYiN1xY=" crossorigin="anonymous"></script>
+<script src="/js/comments.js"></script><script src="/js/utils.js"></script><script src="/js/motion.js"></script><script src="/js/sidebar.js"></script><script src="/js/next-boot.js"></script>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/hexo-generator-searchdb/1.4.1/search.js" integrity="sha256-1kfA5uHPf65M5cphT2dvymhkuyHPQp5A53EGZOnOLmc=" crossorigin="anonymous"></script>
+<script src="/js/third-party/search/local-search.js"></script>
+
+
+
+
+
+
+
+  
+  <script async src="https://cn.vercount.one/js"></script>
+
+
+
+
+
+</body>
+</html>

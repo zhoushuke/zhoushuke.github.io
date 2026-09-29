@@ -27,13 +27,13 @@
 <meta property="og:site_name" content="Z.S.K.&#39;s Records">
 <meta property="og:description" content="最近在搞一个邮件RestfulAPI的邮件系统, 通过接口可直接发送邮件, 后端使用的是outlook,在测试过程发现会提示 Unrecognized authentication type错误, 折腾一下终于解决了, 记录一下.">
 <meta property="og:locale" content="zh_CN">
-<meta property="og:image" content="https://raw.gitmirror.com/zhoushuke/BlogPhoto/master/githuboss/20200421141715.png">
+<meta property="og:image" content="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20200421141715.png">
 <meta property="article:published_time" content="2020-04-20T10:30:53.000Z">
-<meta property="article:modified_time" content="2024-12-31T03:07:38.319Z">
+<meta property="article:modified_time" content="2026-09-29T07:21:21.060Z">
 <meta property="article:author" content="周淑科">
 <meta property="article:tag" content="Golang">
 <meta name="twitter:card" content="summary">
-<meta name="twitter:image" content="https://raw.gitmirror.com/zhoushuke/BlogPhoto/master/githuboss/20200421141715.png">
+<meta name="twitter:image" content="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20200421141715.png">
 
 
 <link rel="canonical" href="https://zhoushuke.github.io/2020/04/20/golang-restfulAPI-mail-server/">
@@ -156,7 +156,7 @@
   <nav class="site-state">
       <div class="site-state-item site-state-posts">
         <a href="/archives/">
-          <span class="site-state-item-count">222</span>
+          <span class="site-state-item-count">223</span>
           <span class="site-state-item-name">日志</span>
         </a>
       </div>
@@ -281,7 +281,7 @@
 <p>可以通过telnet命令来查看一下邮件服务器支持的验证方式:</p>
 <figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">telnet yourmailserver 25</span><br></pre></td></tr></table></figure>
 
-<p><img src="https://raw.gitmirror.com/zhoushuke/BlogPhoto/master/githuboss/20200421141715.png"></p>
+<p><img src="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20200421141715.png"></p>
 <p>可以看到在这里是不支持<code>PlainAuth</code>这种认证方式的, 因此可以使用<code>STARTTLS</code>这种支持的方式</p>
 <p>好在大部分情况下都支持我们使用自定义的认证.</p>
 <figure class="highlight go"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">type</span> loginAuth <span class="keyword">struct</span> &#123;</span><br><span class="line">	username, password <span class="type">string</span></span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="function"><span class="keyword">func</span> <span class="title">LoginAuth</span><span class="params">(username, password <span class="type">string</span>)</span></span> smtp.Auth &#123;</span><br><span class="line">	<span class="keyword">return</span> &amp;loginAuth&#123;username, password&#125;</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="function"><span class="keyword">func</span> <span class="params">(a *loginAuth)</span></span> Start(server *smtp.ServerInfo) (<span class="type">string</span>, []<span class="type">byte</span>, <span class="type">error</span>) &#123;</span><br><span class="line">	<span class="keyword">return</span> <span class="string">&quot;LOGIN&quot;</span>, []<span class="type">byte</span>(a.username), <span class="literal">nil</span></span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="function"><span class="keyword">func</span> <span class="params">(a *loginAuth)</span></span> Next(fromServer []<span class="type">byte</span>, more <span class="type">bool</span>) ([]<span class="type">byte</span>, <span class="type">error</span>) &#123;</span><br><span class="line">	<span class="keyword">if</span> more &#123;</span><br><span class="line">		<span class="keyword">switch</span> <span class="type">string</span>(fromServer) &#123;</span><br><span class="line">		<span class="keyword">case</span> <span class="string">&quot;Username:&quot;</span>:</span><br><span class="line">			<span class="keyword">return</span> []<span class="type">byte</span>(a.username), <span class="literal">nil</span></span><br><span class="line">		<span class="keyword">case</span> <span class="string">&quot;Password:&quot;</span>:</span><br><span class="line">			<span class="keyword">return</span> []<span class="type">byte</span>(a.password), <span class="literal">nil</span></span><br><span class="line">		<span class="keyword">default</span>:</span><br><span class="line">			<span class="keyword">return</span> <span class="literal">nil</span>, errors.New(<span class="string">&quot;Unkown fromServer&quot;</span>)</span><br><span class="line">		&#125;</span><br><span class="line">	&#125;</span><br><span class="line">	<span class="keyword">return</span> <span class="literal">nil</span>, <span class="literal">nil</span></span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="comment">// 发送邮件</span></span><br><span class="line"><span class="comment">// auth := smtp.PlainAuth(&quot;&quot;, user, passwd, host)</span></span><br><span class="line">auth := LoginAuth(config.GlobalConfig.User, config.GlobalConfig.Password)</span><br><span class="line"></span><br><span class="line">err := smtp.SendMail(mailServer, auth, config.GlobalConfig.User, to, []<span class="type">byte</span>(msg)</span><br></pre></td></tr></table></figure>
@@ -374,7 +374,7 @@
 
   <div class="copyright">
     &copy; 
-    <span itemprop="copyrightYear">2025</span>
+    <span itemprop="copyrightYear">2026</span>
     <span class="with-love">
       <i class="fa fa-heart"></i>
     </span>
@@ -386,14 +386,14 @@
       <i class="fa fa-chart-line"></i>
     </span>
       <span>站点总字数：</span>
-    <span title="站点总字数">990k</span>
+    <span title="站点总字数">996k</span>
   </span>
   <span class="post-meta-item">
     <span class="post-meta-item-icon">
       <i class="fa fa-coffee"></i>
     </span>
       <span>站点阅读时长 &asymp;</span>
-    <span title="站点阅读时长">15:01</span>
+    <span title="站点阅读时长">15:05</span>
   </span>
 </div>
 <div class="busuanzi-count">

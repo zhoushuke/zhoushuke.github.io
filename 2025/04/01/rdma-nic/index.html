@@ -27,15 +27,15 @@
 <meta property="og:site_name" content="Z.S.K.&#39;s Records">
 <meta property="og:description" content="在多机训练场景下, 如何加速多机间的数据交换是绕不开的话题, 作者之前负责的集群是以IB网络为载体, 但由于其昂贵的成本及超高的专业性往往让人退而却步,基于以太网的RoCE则具有很高的性价比。作者经过一段时间的学习及落地,也算是对RoCE(英文读音类Rocky)技术有些了解,简单记录一下。">
 <meta property="og:locale" content="zh_CN">
-<meta property="og:image" content="https://raw.gitmirror.com/zhoushuke/BlogPhoto/master/githuboss/20250403112845.png">
-<meta property="og:image" content="https://raw.gitmirror.com/zhoushuke/BlogPhoto/master/githuboss/20250403131230.png">
-<meta property="og:image" content="https://raw.gitmirror.com/zhoushuke/BlogPhoto/master/githuboss/20250427151920.png">
+<meta property="og:image" content="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20250403112845.png">
+<meta property="og:image" content="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20250403131230.png">
+<meta property="og:image" content="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20250427151920.png">
 <meta property="article:published_time" content="2025-04-01T06:10:53.000Z">
-<meta property="article:modified_time" content="2025-04-27T07:44:02.664Z">
+<meta property="article:modified_time" content="2026-09-29T07:21:20.171Z">
 <meta property="article:author" content="周淑科">
 <meta property="article:tag" content="HPC">
 <meta name="twitter:card" content="summary">
-<meta name="twitter:image" content="https://raw.gitmirror.com/zhoushuke/BlogPhoto/master/githuboss/20250403112845.png">
+<meta name="twitter:image" content="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20250403112845.png">
 
 
 <link rel="canonical" href="https://zhoushuke.github.io/2025/04/01/rdma-nic/">
@@ -158,7 +158,7 @@
   <nav class="site-state">
       <div class="site-state-item site-state-posts">
         <a href="/archives/">
-          <span class="site-state-item-count">222</span>
+          <span class="site-state-item-count">223</span>
           <span class="site-state-item-name">日志</span>
         </a>
       </div>
@@ -291,7 +291,7 @@
 <li>frame: 帧格式错误、MTU不匹配、信号干扰</li>
 </ul>
 <p>从这个局部图可以看出, drops与overruns的发生的时机有所不同。</p>
-<p><img src="https://raw.gitmirror.com/zhoushuke/BlogPhoto/master/githuboss/20250403112845.png"></p>
+<p><img src="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20250403112845.png"></p>
 <p>总结一下:<br>overruns vs dropped<br>overruns: <code>数据包未进入接收队列（硬件层）</code>, 但网卡硬件缓存（FIFO）满，通常因 CPU 处理中断不及时或队列配置过小。<br>dropped:  <code>数据包已进入接收队列（内核层）</code>, 但内核内存不足、协议栈处理能力不足，或应用程序未及时从Socket Buffer 读取数据。</p>
 <h3 id="RingBuffer"><a href="#RingBuffer" class="headerlink" title="RingBuffer"></a>RingBuffer</h3><p>网卡是一种硬件, 本身也有一些<strong>片上缓存(NIC On-Chip Memory)</strong>, 这些缓存也就几M的级别, 位于网卡芯片内部，作为指针指向主机内存中的实际数据区域。记录<code>数据包在主机内存中的地址</code>、长度和状态(如ready或used)</p>
 <p>另外一个比较重要的是<code>RingBuffer</code>, 可以通过以下命令查看网卡的RingBuffer设置</p>
@@ -303,7 +303,7 @@
 <p>但要注意，TX&#x2F;RX也不能一直调大。<code>因为RingBuffer指向的是内存地址，位于主机内存，系统启动初始化网卡驱动时时，内核为网卡分配 Rx Ring Buffer 的主机内存(可以理解为: 网卡驱动和操作系统合作，预留（reserve）出一段内存来给网卡使用)，并与网卡硬件描述符建立映射关系, 申请的是一段连续的物理内存块，确保网卡DMA控制器可直接访问(接下来收到的包就会放到这里，进而被 操作系统取走)</code></p>
 <p>当观察到RingBuffer过大时, 可能会引起排队的包过多，也会增加网络包的延时，因此如何加快内核处理网络包的速度，而不是让网络包在RingBuffer中排队是更好的选择。</p>
 <p>所以通过这篇文章<a target="_blank" rel="noopener" href="https://www.cnblogs.com/jmilkfan-fanguiju/p/12789806.html">网卡适配器收发数据帧流程</a>中的一张图来总结一下:</p>
-<p><img src="https://raw.gitmirror.com/zhoushuke/BlogPhoto/master/githuboss/20250403131230.png"></p>
+<p><img src="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20250403131230.png"></p>
 <ol>
 <li>网卡中可以配置ringbuffer的数量, ringbuffer数量的多少关系到是否会产生overruns还是drops</li>
 <li>网卡驱动申请Rx&#x2F;Tx descriptor并为其分配socket buffer, 本质上是在主内存中分配的一片缓冲区，用来接收数据帧。将数据缓存区的总线地址保存到 descriptor</li>
@@ -334,7 +334,7 @@
 <p>用户态数据构建sk_buff→协议栈处理→放入Tx Ring→网卡通过Buffer Descriptor经DMA读取后发送</p>
 <p>最后以一张网卡内部结构图来结束</p>
 <p>以太网 RDMA 网卡模块架构图(以发送接收为例)</p>
-<p><img src="https://raw.gitmirror.com/zhoushuke/BlogPhoto/master/githuboss/20250427151920.png"></p>
+<p><img src="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20250427151920.png"></p>
 <h3 id="参考文章"><a href="#参考文章" class="headerlink" title="参考文章:"></a><strong>参考文章:</strong></h3><blockquote>
 <ul>
 <li><a target="_blank" rel="noopener" href="https://www.cnblogs.com/h2zZhou/p/10714983.html">https://www.cnblogs.com/h2zZhou/p/10714983.html</a></li>
@@ -420,7 +420,7 @@
 
   <div class="copyright">
     &copy; 
-    <span itemprop="copyrightYear">2025</span>
+    <span itemprop="copyrightYear">2026</span>
     <span class="with-love">
       <i class="fa fa-heart"></i>
     </span>
@@ -432,14 +432,14 @@
       <i class="fa fa-chart-line"></i>
     </span>
       <span>站点总字数：</span>
-    <span title="站点总字数">990k</span>
+    <span title="站点总字数">996k</span>
   </span>
   <span class="post-meta-item">
     <span class="post-meta-item-icon">
       <i class="fa fa-coffee"></i>
     </span>
       <span>站点阅读时长 &asymp;</span>
-    <span title="站点阅读时长">15:01</span>
+    <span title="站点阅读时长">15:05</span>
   </span>
 </div>
 <div class="busuanzi-count">

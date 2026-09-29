@@ -27,16 +27,16 @@
 <meta property="og:site_name" content="Z.S.K.&#39;s Records">
 <meta property="og:description" content="由于grpc天生的长连接特性, 如果要在kubernetes中使用grpc, 想要实现负载均衡问题需要考虑长连接问题. 由于本人对grpc了解的不是很深入，没法说的太多，看官们勿喷.">
 <meta property="og:locale" content="zh_CN">
-<meta property="og:image" content="https://raw.gitmirror.com/zhoushuke/BlogPhoto/master/githuboss/githubimage-20200117161415769.png">
-<meta property="og:image" content="https://raw.gitmirror.com/zhoushuke/BlogPhoto/master/githuboss/githubimage-20200117160438043.png">
-<meta property="og:image" content="https://raw.gitmirror.com/zhoushuke/BlogPhoto/master/githuboss/githubimage-20200117160526405.png">
-<meta property="og:image" content="https://raw.gitmirror.com/zhoushuke/BlogPhoto/master/githuboss/githubimage-20200117160438043.png">
+<meta property="og:image" content="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/githubimage-20200117161415769.png">
+<meta property="og:image" content="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/githubimage-20200117160438043.png">
+<meta property="og:image" content="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/githubimage-20200117160526405.png">
+<meta property="og:image" content="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/githubimage-20200117160438043.png">
 <meta property="article:published_time" content="2020-01-17T14:50:53.000Z">
-<meta property="article:modified_time" content="2024-12-31T03:07:38.319Z">
+<meta property="article:modified_time" content="2026-09-29T07:21:20.019Z">
 <meta property="article:author" content="周淑科">
 <meta property="article:tag" content="Kubernetes">
 <meta name="twitter:card" content="summary">
-<meta name="twitter:image" content="https://raw.gitmirror.com/zhoushuke/BlogPhoto/master/githuboss/githubimage-20200117161415769.png">
+<meta name="twitter:image" content="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/githubimage-20200117161415769.png">
 
 
 <link rel="canonical" href="https://zhoushuke.github.io/2020/01/17/grpc-service-on-kubernetes/">
@@ -159,7 +159,7 @@
   <nav class="site-state">
       <div class="site-state-item site-state-posts">
         <a href="/archives/">
-          <span class="site-state-item-count">222</span>
+          <span class="site-state-item-count">223</span>
           <span class="site-state-item-name">日志</span>
         </a>
       </div>
@@ -285,16 +285,16 @@
 <figure class="highlight go"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">func</span> <span class="title">lbconn</span><span class="params">()</span></span> *grpc.ClientConn &#123;</span><br><span class="line">	<span class="comment">//progress-service-svc.just-4-test.svc.cluster.local:50051  服务端服务名</span></span><br><span class="line">  <span class="comment">//使用dns进行resolv</span></span><br><span class="line">	conn, err := grpc.Dial(<span class="string">&quot;dns:///progress-service-svc.just-4-test.svc.cluster.local:50051&quot;</span>,</span><br><span class="line">		grpc.WithInsecure(),</span><br><span class="line">		grpc.WithBalancerName(roundrobin.Name),</span><br><span class="line">	)</span><br><span class="line">	<span class="keyword">if</span> err != <span class="literal">nil</span> &#123;</span><br><span class="line">		fmt.Printf(<span class="string">&quot;did not connect: %v \n&quot;</span>, err)</span><br><span class="line">		<span class="keyword">return</span> <span class="literal">nil</span></span><br><span class="line">	&#125;</span><br><span class="line">	<span class="keyword">return</span> conn</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="function"><span class="keyword">func</span> <span class="title">main</span><span class="params">()</span></span> &#123;</span><br><span class="line">	fmt.Println(<span class="string">&quot;begin client&quot;</span>)</span><br><span class="line">	conn := lbconn()</span><br><span class="line">	c := pb.NewHelloClient(conn)</span><br><span class="line">	<span class="keyword">for</span> i := <span class="number">0</span>; i &lt; <span class="number">1000000</span>; i++ &#123;</span><br><span class="line">		call(c, i)</span><br><span class="line">		time.Sleep(time.Second * <span class="number">5</span>)</span><br><span class="line">	&#125;</span><br><span class="line">  </span><br><span class="line">  <span class="function"><span class="keyword">func</span> <span class="title">call</span><span class="params">()</span></span>&#123;</span><br><span class="line">      <span class="comment">// 略</span></span><br><span class="line">  &#125;</span><br><span class="line"></span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
 
 <p>开始只有一个实例，启动日志: </p>
-<p><img src="https://raw.gitmirror.com/zhoushuke/BlogPhoto/master/githuboss/githubimage-20200117161415769.png"></p>
-<p><img src="https://raw.gitmirror.com/zhoushuke/BlogPhoto/master/githuboss/githubimage-20200117160438043.png"></p>
+<p><img src="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/githubimage-20200117161415769.png"></p>
+<p><img src="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/githubimage-20200117160438043.png"></p>
 <p>从这里也可以看到，grpc启动的时候，会直接通过服务名拿到服务端pod的ip列表</p>
 <p>下面是多个服务端实例的情况</p>
-<p><img src="https://raw.gitmirror.com/zhoushuke/BlogPhoto/master/githuboss/githubimage-20200117160526405.png"></p>
+<p><img src="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/githubimage-20200117160526405.png"></p>
 <h3 id="服务端"><a href="#服务端" class="headerlink" title="服务端"></a><strong>服务端</strong></h3><p>服务端主要代码:</p>
 <figure class="highlight go"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">func</span> <span class="params">(s *grpcServer)</span></span> Hi(ctx context.Context, in *pb.HiRequest) (*pb.HiResponse, <span class="type">error</span>) &#123;</span><br><span class="line">	fmt.Println(<span class="string">&quot;service got request!&quot;</span>, in)</span><br><span class="line">	<span class="keyword">return</span> &amp;pb.HiResponse&#123;FromWho: in.ToWho, Message: fmt.Sprintf(<span class="string">&quot; %v receive message : &quot;</span>, id) + in.Message&#125;, <span class="literal">nil</span></span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="function"><span class="keyword">func</span> <span class="title">main</span><span class="params">()</span></span> &#123;</span><br><span class="line">	rand.Seed(time.Now().UnixNano())</span><br><span class="line">	id = rand.Intn(<span class="number">10000</span>)</span><br><span class="line">	lis, err := net.Listen(<span class="string">&quot;tcp&quot;</span>, <span class="string">&quot;:50051&quot;</span>)</span><br><span class="line">	<span class="keyword">if</span> err != <span class="literal">nil</span> &#123;</span><br><span class="line">		log.Fatal(<span class="string">&quot;failed to listen: %v&quot;</span>, err)</span><br><span class="line">	&#125;</span><br><span class="line">	s := grpc.NewServer()</span><br><span class="line">	pb.RegisterHelloServer(s, &amp;grpcServer&#123;&#125;)</span><br><span class="line">	<span class="keyword">go</span> <span class="function"><span class="keyword">func</span><span class="params">()</span></span> &#123;</span><br><span class="line">		cf := &amp;gg.GatewayConfig&#123;</span><br><span class="line">			Fn:       pb.RegisterHelloHandlerFromEndpoint,</span><br><span class="line">			GrpcPort: <span class="string">&quot;:50051&quot;</span>,</span><br><span class="line">		&#125;</span><br><span class="line">		<span class="keyword">if</span> err := gg.RegisterGRPCGateway(cf); err != <span class="literal">nil</span> &#123;</span><br><span class="line">			fmt.Println(<span class="string">&quot;grpc gateway closed:&quot;</span>, err)</span><br><span class="line">		&#125;</span><br><span class="line">	&#125;()</span><br><span class="line">	fmt.Println(<span class="string">&quot;start...&quot;</span>)</span><br><span class="line">	s.Serve(lis)</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
 
 <p>服务端启动日志:</p>
-<p><img src="https://raw.gitmirror.com/zhoushuke/BlogPhoto/master/githuboss/githubimage-20200117160438043.png"></p>
+<p><img src="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/githubimage-20200117160438043.png"></p>
 <h3 id="ClusterIP"><a href="#ClusterIP" class="headerlink" title="ClusterIP"></a><strong>ClusterIP</strong></h3><p>服务端使用常规的ClusterIP的svc代理出来，这种情况我们发现, 客户端所有的请求都打在一个实例上, 服务端新增或者减少对客户端都没有影响(当然, 如果减少的刚好是连接的那个实例,那所有的实例都会切换到另一实例上), 至始至终都是一个服务端实例在响应.没有达到效果.</p>
 <p><strong>因为ClusterIP暴露出来的是一个ip, grpc通过这个ip只能转到某一个实例上进行响应, 所以客户端一起与这个特定的实例建立长连接.</strong></p>
 <p>可参考<a target="_blank" rel="noopener" href="https://medium.com/google-cloud/loadbalancing-grpc-for-kubernetes-cluster-services-3ba9a8d8fc03">这里</a></p>
@@ -396,7 +396,7 @@
 
   <div class="copyright">
     &copy; 
-    <span itemprop="copyrightYear">2025</span>
+    <span itemprop="copyrightYear">2026</span>
     <span class="with-love">
       <i class="fa fa-heart"></i>
     </span>
@@ -408,14 +408,14 @@
       <i class="fa fa-chart-line"></i>
     </span>
       <span>站点总字数：</span>
-    <span title="站点总字数">990k</span>
+    <span title="站点总字数">996k</span>
   </span>
   <span class="post-meta-item">
     <span class="post-meta-item-icon">
       <i class="fa fa-coffee"></i>
     </span>
       <span>站点阅读时长 &asymp;</span>
-    <span title="站点阅读时长">15:01</span>
+    <span title="站点阅读时长">15:05</span>
   </span>
 </div>
 <div class="busuanzi-count">

@@ -27,13 +27,13 @@
 <meta property="og:site_name" content="Z.S.K.&#39;s Records">
 <meta property="og:description" content="使用kubernetes遇到最多的70%问题都可以归于网络问题，最近发现如果内核参数: bridge-nf-call-iptables设置不当的话会影响kubernetes中Node节点上的Pod通过ClusterIP去访问同Node上的其它pod时会有超时现象，复盘记录一下排查的前因后因.">
 <meta property="og:locale" content="zh_CN">
-<meta property="og:image" content="https://raw.gitmirror.com/zhoushuke/BlogPhoto/master/githuboss/20210818235131.png">
+<meta property="og:image" content="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20210818235131.png">
 <meta property="article:published_time" content="2021-08-18T15:20:53.000Z">
-<meta property="article:modified_time" content="2024-12-31T03:07:38.319Z">
+<meta property="article:modified_time" content="2026-09-29T07:21:20.449Z">
 <meta property="article:author" content="周淑科">
 <meta property="article:tag" content="Kubernetes">
 <meta name="twitter:card" content="summary">
-<meta name="twitter:image" content="https://raw.gitmirror.com/zhoushuke/BlogPhoto/master/githuboss/20210818235131.png">
+<meta name="twitter:image" content="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20210818235131.png">
 
 
 <link rel="canonical" href="https://zhoushuke.github.io/2021/08/18/Kubernetes-bridge-nf-call-iptables/">
@@ -156,7 +156,7 @@
   <nav class="site-state">
       <div class="site-state-item site-state-posts">
         <a href="/archives/">
-          <span class="site-state-item-count">222</span>
+          <span class="site-state-item-count">223</span>
           <span class="site-state-item-name">日志</span>
         </a>
       </div>
@@ -312,7 +312,7 @@
 <p>so, 问题在哪?</p>
 <p>回到tcpdump的抓包数据, 可以发现，响应的数据没有按照请求的路径返回，嗯，Interesting</p>
 <h3 id="罪魁祸首"><a href="#罪魁祸首" class="headerlink" title="罪魁祸首"></a>罪魁祸首</h3><p>不管是 iptables 还是 ipvs 模式，Kubernetes 中访问 service都会进行 DNAT，将原本访问 ClusterIP:Port 的数据包 <strong>DNAT</strong> 成 service 的某个 Endpoint (PodIP:Port)，然后内核将连接信息插入 conntrack 表以记录连接，目的端回包的时候内核从 conntrack 表匹配连接并<strong>SNAT</strong>，这样原路返回形成一个完整的连接链路.</p>
-<p><img src="https://raw.gitmirror.com/zhoushuke/BlogPhoto/master/githuboss/20210818235131.png"></p>
+<p><img src="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20210818235131.png"></p>
 <p>从tcpdump看到请求被reset了, 没错, <strong>bridge-nf-call-iptables</strong>(如果是ipv6的话则是<strong>net.bridge.bridge-nf-call-ip6tables</strong>)参数</p>
 <p>但是不对，这个参数linux默认开启的呢?难道是有人修改了么？</p>
 <p>使用命令查看该参数是否开启:</p>
@@ -451,7 +451,7 @@
 
   <div class="copyright">
     &copy; 
-    <span itemprop="copyrightYear">2025</span>
+    <span itemprop="copyrightYear">2026</span>
     <span class="with-love">
       <i class="fa fa-heart"></i>
     </span>
@@ -463,14 +463,14 @@
       <i class="fa fa-chart-line"></i>
     </span>
       <span>站点总字数：</span>
-    <span title="站点总字数">990k</span>
+    <span title="站点总字数">996k</span>
   </span>
   <span class="post-meta-item">
     <span class="post-meta-item-icon">
       <i class="fa fa-coffee"></i>
     </span>
       <span>站点阅读时长 &asymp;</span>
-    <span title="站点阅读时长">15:01</span>
+    <span title="站点阅读时长">15:05</span>
   </span>
 </div>
 <div class="busuanzi-count">

@@ -27,15 +27,15 @@
 <meta property="og:site_name" content="Z.S.K.&#39;s Records">
 <meta property="og:description" content="今天在排查集群一个问题时，发现相关的pod的状态为UnexpectedAdmissionError,在这之前从未没遇到过pod还有这种状态的，一脸好奇，在解决问题的过程中，发现越挖越深, 里面涉及到的信息也是相当的多，特此记录一下.">
 <meta property="og:locale" content="zh_CN">
-<meta property="og:image" content="https://raw.gitmirror.com/zhoushuke/BlogPhoto/master/githuboss/20220125180525.png">
-<meta property="og:image" content="https://raw.gitmirror.com/zhoushuke/BlogPhoto/master/githuboss/20220126203956.png">
+<meta property="og:image" content="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20220125180525.png">
+<meta property="og:image" content="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20220126203956.png">
 <meta property="og:image" content="https://img-blog.csdnimg.cn/20181122102312898.jpg?x-oss-process=image/watermark,type_ZmFuZ3poZW5naGVpdGk,shadow_10,text_aHR0cHM6Ly9ibG9nLmNzZG4ubmV0L3M4MTIyODk0ODA=,size_16,color_FFFFFF,t_70">
 <meta property="article:published_time" content="2022-01-27T15:30:53.000Z">
-<meta property="article:modified_time" content="2024-12-31T03:07:38.319Z">
+<meta property="article:modified_time" content="2026-09-29T07:21:19.891Z">
 <meta property="article:author" content="周淑科">
 <meta property="article:tag" content="Kubernetes">
 <meta name="twitter:card" content="summary">
-<meta name="twitter:image" content="https://raw.gitmirror.com/zhoushuke/BlogPhoto/master/githuboss/20220125180525.png">
+<meta name="twitter:image" content="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20220125180525.png">
 
 
 <link rel="canonical" href="https://zhoushuke.github.io/2022/01/27/Kubernetes-pod-status-is-UnexpectedAdmissionError/">
@@ -158,7 +158,7 @@
   <nav class="site-state">
       <div class="site-state-item site-state-posts">
         <a href="/archives/">
-          <span class="site-state-item-count">222</span>
+          <span class="site-state-item-count">223</span>
           <span class="site-state-item-name">日志</span>
         </a>
       </div>
@@ -286,7 +286,7 @@
 <p>下述出现的资源，device，其实是一个意思，资源可能在日常中使用的较多，而官方都把资源比较是一种<code>device</code></p>
 <p>慢慢道来…</p>
 <h3 id="问题现象"><a href="#问题现象" class="headerlink" title="问题现象"></a>问题现象</h3><p>问题现象就是工作流(这里不展开细说，简单理解就是运行完就销毁的<code>pod</code>吧)的<code>pod</code>出现了如下图的状态</p>
-<p><img src="https://raw.gitmirror.com/zhoushuke/BlogPhoto/master/githuboss/20220125180525.png"></p>
+<p><img src="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20220125180525.png"></p>
 <p>在作者多年丰富的工作(自吹)经验中，<code>pod</code>的状态从未出现<code>UnexpectedAdmissionError</code>这种状态，甚至作者都不知道除了常见的那几种状态外还有其它的状态，看到这作者还是有点高兴的，因为作者知道，嗯，应该会挖出个盲区</p>
 <p>另外，工作流控制器返回的信息为: </p>
 <p><code>Pod Update plugin resources failed due to  requested number of devices unavailable for nvidia.com/gpu. Requested: 1, Available: 0, which is unexpected</code></p>
@@ -318,7 +318,7 @@
 </ol>
 <p>没办法，只能去查源码了</p>
 <h3 id="源码分析"><a href="#源码分析" class="headerlink" title="源码分析"></a>源码分析</h3><p>首先，从<code>kubelet</code>中看到了相关的报错信息，那么就从<code>kubelet</code>开始吧, 由于环境中的<code>kubelet</code>的日志级别不高，先调整成<code>--v 4</code>,代表<code>debug</code>日志，发现以下日志:</p>
-<p><img src="https://raw.gitmirror.com/zhoushuke/BlogPhoto/master/githuboss/20220126203956.png"></p>
+<p><img src="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20220126203956.png"></p>
 <p>结合<code>kubelet</code>侧关于<code>cm(containermanager的缩写)</code>代码,大体的调用过程: <code>scheduler(predicate.go) --&gt; kubelet(predicate.go) --&gt; manager.go </code></p>
 <p><a target="_blank" rel="noopener" href="https://github.com/kubernetes/kubernetes/blob/v1.15.5/pkg/kubelet/lifecycle/predicate.go">predictate.go</a>中也确认存在<code>UnexpectedAdmissionError</code></p>
 <figure class="highlight go"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">func</span> <span class="params">(w *predicateAdmitHandler)</span></span> Admit(attrs *PodAdmitAttributes) PodAdmitResult &#123;</span><br><span class="line">	node, err := w.getNodeAnyWayFunc()</span><br><span class="line">	<span class="keyword">if</span> err != <span class="literal">nil</span> &#123;</span><br><span class="line">		klog.Errorf(<span class="string">&quot;Cannot get Node info: %v&quot;</span>, err)</span><br><span class="line">		<span class="keyword">return</span> PodAdmitResult&#123;</span><br><span class="line">			Admit:   <span class="literal">false</span>,</span><br><span class="line">			Reason:  <span class="string">&quot;InvalidNodeInfo&quot;</span>,</span><br><span class="line">			Message: <span class="string">&quot;Kubelet cannot get node info.&quot;</span>,</span><br><span class="line">		&#125;</span><br><span class="line">	&#125;</span><br><span class="line">	admitPod := attrs.Pod</span><br><span class="line">	pods := attrs.OtherPods</span><br><span class="line">	nodeInfo := schedulernodeinfo.NewNodeInfo(pods...)</span><br><span class="line">	nodeInfo.SetNode(node)</span><br><span class="line">	<span class="comment">// ensure the node has enough plugin resources for that required in pods</span></span><br><span class="line">	<span class="keyword">if</span> err = w.pluginResourceUpdateFunc(nodeInfo, attrs); err != <span class="literal">nil</span> &#123;</span><br><span class="line">		message := fmt.Sprintf(<span class="string">&quot;Update plugin resources failed due to %v, which is unexpected.&quot;</span>, err)</span><br><span class="line">		klog.Warningf(<span class="string">&quot;Failed to admit pod %v - %s&quot;</span>, format.Pod(admitPod), message)</span><br><span class="line">		<span class="keyword">return</span> PodAdmitResult&#123;</span><br><span class="line">			Admit:   <span class="literal">false</span>,</span><br><span class="line">			Reason:  <span class="string">&quot;UnexpectedAdmissionError&quot;</span>,</span><br><span class="line">			Message: message,</span><br><span class="line">		&#125;</span><br><span class="line">	&#125;</span><br><span class="line"> <span class="comment">// 省略代码 ...</span></span><br></pre></td></tr></table></figure>
@@ -440,7 +440,7 @@
 
   <div class="copyright">
     &copy; 
-    <span itemprop="copyrightYear">2025</span>
+    <span itemprop="copyrightYear">2026</span>
     <span class="with-love">
       <i class="fa fa-heart"></i>
     </span>
@@ -452,14 +452,14 @@
       <i class="fa fa-chart-line"></i>
     </span>
       <span>站点总字数：</span>
-    <span title="站点总字数">990k</span>
+    <span title="站点总字数">996k</span>
   </span>
   <span class="post-meta-item">
     <span class="post-meta-item-icon">
       <i class="fa fa-coffee"></i>
     </span>
       <span>站点阅读时长 &asymp;</span>
-    <span title="站点阅读时长">15:01</span>
+    <span title="站点阅读时长">15:05</span>
   </span>
 </div>
 <div class="busuanzi-count">

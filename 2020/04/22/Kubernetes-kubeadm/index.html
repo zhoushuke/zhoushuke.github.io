@@ -27,18 +27,18 @@
 <meta property="og:site_name" content="Z.S.K.&#39;s Records">
 <meta property="og:description" content="相信很多同学在搭建kubernetes时都会选择使用工具进行安装, 现在开源的工具真是层出不穷，本人也体验过多种部署工具, 如rke、kubespray、kubeadm、minikube甚至手工安装等, kubeadm是本人第一个尝试的工具, 因此也使用的最多, kubeadm默认的证书是1年到期, client能够到期后自动进行续签,但是server端却不能, 如果在到期时没有及时进行证书的延期">
 <meta property="og:locale" content="zh_CN">
-<meta property="og:image" content="https://raw.gitmirror.com/zhoushuke/BlogPhoto/master/githuboss/20200428155835.png">
-<meta property="og:image" content="https://raw.gitmirror.com/zhoushuke/BlogPhoto/master/githuboss/20200428163928.png">
-<meta property="og:image" content="https://raw.gitmirror.com/zhoushuke/BlogPhoto/master/githuboss/20200428161521.png">
-<meta property="og:image" content="https://raw.gitmirror.com/zhoushuke/BlogPhoto/master/githuboss/20200428163448.png">
-<meta property="og:image" content="https://raw.gitmirror.com/zhoushuke/BlogPhoto/master/githuboss/20200428122925.png">
-<meta property="og:image" content="https://raw.gitmirror.com/zhoushuke/BlogPhoto/master/githuboss/20200428161640.png">
+<meta property="og:image" content="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20200428155835.png">
+<meta property="og:image" content="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20200428163928.png">
+<meta property="og:image" content="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20200428161521.png">
+<meta property="og:image" content="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20200428163448.png">
+<meta property="og:image" content="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20200428122925.png">
+<meta property="og:image" content="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20200428161640.png">
 <meta property="article:published_time" content="2020-04-22T09:10:53.000Z">
-<meta property="article:modified_time" content="2024-12-31T03:07:38.318Z">
+<meta property="article:modified_time" content="2026-09-29T07:21:20.744Z">
 <meta property="article:author" content="周淑科">
 <meta property="article:tag" content="Kubernetes">
 <meta name="twitter:card" content="summary">
-<meta name="twitter:image" content="https://raw.gitmirror.com/zhoushuke/BlogPhoto/master/githuboss/20200428155835.png">
+<meta name="twitter:image" content="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20200428155835.png">
 
 
 <link rel="canonical" href="https://zhoushuke.github.io/2020/04/22/Kubernetes-kubeadm/">
@@ -161,7 +161,7 @@
   <nav class="site-state">
       <div class="site-state-item site-state-posts">
         <a href="/archives/">
-          <span class="site-state-item-count">222</span>
+          <span class="site-state-item-count">223</span>
           <span class="site-state-item-name">日志</span>
         </a>
       </div>
@@ -279,7 +279,7 @@
 
 <h3 id="修改kubeadm源码"><a href="#修改kubeadm源码" class="headerlink" title="修改kubeadm源码"></a>修改kubeadm源码</h3><h4 id="切换分支"><a href="#切换分支" class="headerlink" title="切换分支"></a>切换分支</h4><figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">git <span class="built_in">clone</span> https://github.com/kubernetes/kubernetes.git</span><br><span class="line"><span class="built_in">cd</span> kubernetes</span><br></pre></td></tr></table></figure>
 
-<p><img src="https://raw.gitmirror.com/zhoushuke/BlogPhoto/master/githuboss/20200428155835.png"></p>
+<p><img src="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20200428155835.png"></p>
 <h4 id="修改kubeadm源码-1"><a href="#修改kubeadm源码-1" class="headerlink" title="修改kubeadm源码"></a>修改kubeadm源码</h4><figure class="highlight go"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">// kubernetes/cmd/kubeadm/app/constants/constants.go</span></span><br><span class="line"><span class="comment">// 修改以下常量</span></span><br><span class="line">CertificateValidity = time.Hour * <span class="number">24</span> * <span class="number">365</span></span><br><span class="line"><span class="comment">// 变成10年</span></span><br><span class="line"><span class="comment">// CertificateValidity = time.Hour * 24 * 3650</span></span><br><span class="line"></span><br><span class="line"><span class="comment">// CertificateValidity常量在kubernetes/cmd/kubeadm/app/util/pkiutil/pki_helpers.go中引用</span></span><br><span class="line"><span class="comment">// 当然， 在这里修改也是可以的</span></span><br><span class="line">NotAfter:     time.Now().Add(kubeadmconstants.CertificateValidity).UTC(),</span><br><span class="line"><span class="comment">// NotAfter:     time.Now().Add(kubeadmconstants.CertificateValidity * 100.UTC(),</span></span><br></pre></td></tr></table></figure>
 
 <p>这两个地方都可以修改, 只要最后这两个值能跟期望值对应上即可，修改完之后对kubeadm进行编译</p>
@@ -294,10 +294,10 @@
 <p>生成的可执行文件在当前文件夹下面</p>
 <figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line"><span class="built_in">ls</span> cmd/kubeadm/</span><br></pre></td></tr></table></figure>
 
-<p><img src="https://raw.gitmirror.com/zhoushuke/BlogPhoto/master/githuboss/20200428163928.png"></p>
+<p><img src="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20200428163928.png"></p>
 <h4 id="容器编译"><a href="#容器编译" class="headerlink" title="容器编译"></a>容器编译</h4><figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># 使用官方的kube-cross镜像进行编译.</span></span><br><span class="line">docker pull us.gcr.io/k8s-artifacts-prod/build-image/kube-cross:v1.12.17-1</span><br><span class="line">build/run.sh make kubeadm</span><br><span class="line"><span class="comment"># 经过几分钟后，最终会在以下目录生成kubeadm</span></span><br><span class="line">_output/dockerized/bin/linux/amd64</span><br><span class="line"><span class="comment"># 可以查看下kubeadm版本</span></span><br></pre></td></tr></table></figure>
 
-<p><img src="https://raw.gitmirror.com/zhoushuke/BlogPhoto/master/githuboss/20200428161521.png"></p>
+<p><img src="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20200428161521.png"></p>
 <h3 id="搭建新集群"><a href="#搭建新集群" class="headerlink" title="搭建新集群"></a>搭建新集群</h3><p>如果是新集群的话就比较容器了, 直接使用新的kubeadm进行部署, 那么部署出来的集群证书就是100年.p</p>
 <p>kubeadm如何进行集群部署, 这里不再详细记录了.这里只写主要步骤</p>
 <figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line">apt install -y kubelet=1.15.1-00 kubectl=1.15.1-00 kubeadm=1.15.1-00 --allow-change-held-packages</span><br><span class="line"></span><br><span class="line">kubeadm init --config=kubeadm-config.yaml --upload-certs</span><br><span class="line"></span><br><span class="line">kubectl apply -f https://raw.githubusercontent.com/coreos/flannel/2140ac876ef134e0ed5af15c65e414cf26827915/Documentation/kube-flannel.yml</span><br><span class="line"></span><br><span class="line">kubeadm init --config=kubeadm-config.yaml --upload-certs</span><br></pre></td></tr></table></figure>
@@ -307,19 +307,19 @@
 
 <p>kubeadm执行完了按照提示执行命令</p>
 <p>最终部署起来的集群证书有效期为100年</p>
-<p><img src="https://raw.gitmirror.com/zhoushuke/BlogPhoto/master/githuboss/20200428163448.png"></p>
+<p><img src="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20200428163448.png"></p>
 <h3 id="对现有集群进行证书更新"><a href="#对现有集群进行证书更新" class="headerlink" title="对现有集群进行证书更新"></a>对现有集群进行证书更新</h3><p>那如果是对存在的集群进行证书重签，如何操作呢?</p>
 <p>首先, 查看当前集群的证书有效期，这里使用的kubeadm是未修改源码的kubeadm</p>
 <figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">kubeadm alpha certs check-expiration</span><br></pre></td></tr></table></figure>
 
-<p><img src="https://raw.gitmirror.com/zhoushuke/BlogPhoto/master/githuboss/20200428122925.png"></p>
+<p><img src="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20200428122925.png"></p>
 <p>在没有使用kubeadm搭建的情况下,可以使用以下命令查看证书过期时间</p>
 <figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">openssl x509 -<span class="keyword">in</span> front-proxy-client.crt   -noout -text  |grep Not</span><br></pre></td></tr></table></figure>
 
 <p>然后使用证书100年的kubeadm执行以下操作即可</p>
 <figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># 使用100年的kubeadm更新证书</span></span><br><span class="line">./kubeadm alpha certs renew all</span><br><span class="line"><span class="comment"># 再次查看证书有效期， 对比前后会发现证书已经从1年变成了100年了.</span></span><br><span class="line">./kubeadm alpha certs check-expiration</span><br></pre></td></tr></table></figure>
 
-<p><img src="https://raw.gitmirror.com/zhoushuke/BlogPhoto/master/githuboss/20200428161640.png"></p>
+<p><img src="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20200428161640.png"></p>
 <p>至此, 不管是搭建集群之前操作证书有效期还是对存在的集群延长证书有效期进行操作都不怕了,完美.</p>
 <h3 id="参考文章"><a href="#参考文章" class="headerlink" title="参考文章:"></a><strong>参考文章:</strong></h3><blockquote>
 <ul>
@@ -406,7 +406,7 @@
 
   <div class="copyright">
     &copy; 
-    <span itemprop="copyrightYear">2025</span>
+    <span itemprop="copyrightYear">2026</span>
     <span class="with-love">
       <i class="fa fa-heart"></i>
     </span>
@@ -418,14 +418,14 @@
       <i class="fa fa-chart-line"></i>
     </span>
       <span>站点总字数：</span>
-    <span title="站点总字数">990k</span>
+    <span title="站点总字数">996k</span>
   </span>
   <span class="post-meta-item">
     <span class="post-meta-item-icon">
       <i class="fa fa-coffee"></i>
     </span>
       <span>站点阅读时长 &asymp;</span>
-    <span title="站点阅读时长">15:01</span>
+    <span title="站点阅读时长">15:05</span>
   </span>
 </div>
 <div class="busuanzi-count">

@@ -27,15 +27,15 @@
 <meta property="og:site_name" content="Z.S.K.&#39;s Records">
 <meta property="og:description" content="业务中要在kubernetes中接入grpc， 之前写过一篇文章测试过grpc服务在kubernetes中由于http&#x2F;2长连接的特性无法达到负载均衡效果, 上次使用的是直接在业务中引用kubernetes的list&#x2F;watch机制，这次使用istio，同样可以实现grpc的负载均衡.">
 <meta property="og:locale" content="zh_CN">
-<meta property="og:image" content="https://raw.gitmirror.com/zhoushuke/BlogPhoto/master/githuboss/grpc-on-kubernetes-loadbalance00.png">
-<meta property="og:image" content="https://raw.gitmirror.com/zhoushuke/BlogPhoto/master/githuboss/grpc-on-kubernetes-loadbalance01.png">
-<meta property="og:image" content="https://raw.gitmirror.com/zhoushuke/BlogPhoto/master/githuboss/grpc-on-kubernetes-loadbalance03.png">
+<meta property="og:image" content="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/grpc-on-kubernetes-loadbalance00.png">
+<meta property="og:image" content="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/grpc-on-kubernetes-loadbalance01.png">
+<meta property="og:image" content="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/grpc-on-kubernetes-loadbalance03.png">
 <meta property="article:published_time" content="2020-02-18T05:30:53.000Z">
-<meta property="article:modified_time" content="2024-12-31T03:07:38.319Z">
+<meta property="article:modified_time" content="2026-09-29T07:21:19.962Z">
 <meta property="article:author" content="周淑科">
 <meta property="article:tag" content="ServiceMesh">
 <meta name="twitter:card" content="summary">
-<meta name="twitter:image" content="https://raw.gitmirror.com/zhoushuke/BlogPhoto/master/githuboss/grpc-on-kubernetes-loadbalance00.png">
+<meta name="twitter:image" content="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/grpc-on-kubernetes-loadbalance00.png">
 
 
 <link rel="canonical" href="https://zhoushuke.github.io/2020/02/18/grpc-gateway-loadbalance-on-kubernetes-and-istio/">
@@ -158,7 +158,7 @@
   <nav class="site-state">
       <div class="site-state-item site-state-posts">
         <a href="/archives/">
-          <span class="site-state-item-count">222</span>
+          <span class="site-state-item-count">223</span>
           <span class="site-state-item-name">日志</span>
         </a>
       </div>
@@ -282,11 +282,11 @@
 <h3 id="Kubernetes-amp-Istio"><a href="#Kubernetes-amp-Istio" class="headerlink" title="Kubernetes &amp; Istio"></a>Kubernetes &amp; Istio</h3><p>首先有个kubernetes跟istio环境, 在这里就不细说安装流程了，各自的官网都有详细说明</p>
 <h3 id="grpc"><a href="#grpc" class="headerlink" title="grpc"></a>grpc</h3><p>准备一个grpc服务的demo，代码很简单，<strong>服务端跟客户端各自打印对方的容器地址</strong>，来反映负载均衡效果，详细的代码及使用方法在<a target="_blank" rel="noopener" href="https://github.com/zhoushuke/grpc-loadbalance-on-kubernetes-and-istio">这里</a>, 大家可参考</p>
 <h3 id="测试"><a href="#测试" class="headerlink" title="测试"></a>测试</h3><p>先启动<strong>一个服务端，一个客户端</strong>，很平常,</p>
-<p><img src="https://raw.gitmirror.com/zhoushuke/BlogPhoto/master/githuboss/grpc-on-kubernetes-loadbalance00.png"></p>
+<p><img src="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/grpc-on-kubernetes-loadbalance00.png"></p>
 <p><strong>服务端个数一个保持不变，客户端进行扩容</strong>，从一个扩到三个，这时在服务端显示有3个客户端的请求</p>
-<p><img src="https://raw.gitmirror.com/zhoushuke/BlogPhoto/master/githuboss/grpc-on-kubernetes-loadbalance01.png"></p>
+<p><img src="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/grpc-on-kubernetes-loadbalance01.png"></p>
 <p><strong>客户端个数三个保持不变, 服务端进行扩容，从一个扩容至五个</strong>，这下图可以从客户端发现，请求被均匀地分配给了服务端的5个地址, 说明，通过istio是可以实现grpc服务的负载均衡效果的</p>
-<p><img src="https://raw.gitmirror.com/zhoushuke/BlogPhoto/master/githuboss/grpc-on-kubernetes-loadbalance03.png"></p>
+<p><img src="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/grpc-on-kubernetes-loadbalance03.png"></p>
 <p>最后，测试了服务端的缩容操作,<strong>从五个降至一个</strong>, 客户端也能实时地发现服务的变动, 如上图下半部分所示。</p>
 <h3 id="结论"><a href="#结论" class="headerlink" title="结论"></a>结论</h3><p>从测试的结论可以看出, <strong>在istio的流量管理的作用下, grpc服务不需要做额外的操作即可实现负载均衡效果, 原因就是因为istio的xds是动态模型, 得到cluster后，根据cluster 实时地查询endpoint列表，然后再根据istio中配置的负载均衡配置(默认是roundbalance)直接路由到endpoint，而不需要经过kubernetes中的service(kube-proxy)机制</strong></p>
 <h3 id="参考文章"><a href="#参考文章" class="headerlink" title="参考文章:"></a><strong>参考文章:</strong></h3><blockquote>
@@ -374,7 +374,7 @@
 
   <div class="copyright">
     &copy; 
-    <span itemprop="copyrightYear">2025</span>
+    <span itemprop="copyrightYear">2026</span>
     <span class="with-love">
       <i class="fa fa-heart"></i>
     </span>
@@ -386,14 +386,14 @@
       <i class="fa fa-chart-line"></i>
     </span>
       <span>站点总字数：</span>
-    <span title="站点总字数">990k</span>
+    <span title="站点总字数">996k</span>
   </span>
   <span class="post-meta-item">
     <span class="post-meta-item-icon">
       <i class="fa fa-coffee"></i>
     </span>
       <span>站点阅读时长 &asymp;</span>
-    <span title="站点阅读时长">15:01</span>
+    <span title="站点阅读时长">15:05</span>
   </span>
 </div>
 <div class="busuanzi-count">

@@ -27,16 +27,16 @@
 <meta property="og:site_name" content="Z.S.K.&#39;s Records">
 <meta property="og:description" content="Ansible is a radically simple IT automation engine that automates cloud provisioning, configuration management, application deployment, intra-service orchestration, and many other IT needs.">
 <meta property="og:locale" content="zh_CN">
-<meta property="og:image" content="https://raw.gitmirror.com/zhoushuke/BlogPhoto/master/githuboss/image-20191122154626140.png">
-<meta property="og:image" content="https://raw.gitmirror.com/zhoushuke/BlogPhoto/master/githuboss/image-20191122161721880.png">
-<meta property="og:image" content="https://raw.gitmirror.com/zhoushuke/BlogPhoto/master/githuboss/unknown-4411877.png">
-<meta property="og:image" content="https://raw.gitmirror.com/zhoushuke/BlogPhoto/master/githuboss/ansible-tasks.jpg">
+<meta property="og:image" content="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/image-20191122154626140.png">
+<meta property="og:image" content="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/image-20191122161721880.png">
+<meta property="og:image" content="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/unknown-4411877.png">
+<meta property="og:image" content="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/ansible-tasks.jpg">
 <meta property="article:published_time" content="2019-02-23T12:10:53.000Z">
-<meta property="article:modified_time" content="2024-12-31T03:07:38.318Z">
+<meta property="article:modified_time" content="2026-09-29T07:21:20.828Z">
 <meta property="article:author" content="周淑科">
 <meta property="article:tag" content="分布式架构">
 <meta name="twitter:card" content="summary">
-<meta name="twitter:image" content="https://raw.gitmirror.com/zhoushuke/BlogPhoto/master/githuboss/image-20191122154626140.png">
+<meta name="twitter:image" content="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/image-20191122154626140.png">
 
 
 <link rel="canonical" href="https://zhoushuke.github.io/2019/02/23/ansible-basic-theory/">
@@ -159,7 +159,7 @@
   <nav class="site-state">
       <div class="site-state-item site-state-posts">
         <a href="/archives/">
-          <span class="site-state-item-count">222</span>
+          <span class="site-state-item-count">223</span>
           <span class="site-state-item-name">日志</span>
         </a>
       </div>
@@ -295,7 +295,7 @@
 <li>idempotency</li>
 </ul>
 </blockquote>
-<h4 id="工作架构"><a href="#工作架构" class="headerlink" title="工作架构"></a><strong>工作架构</strong></h4><p><img src="https://raw.gitmirror.com/zhoushuke/BlogPhoto/master/githuboss/image-20191122154626140.png"></p>
+<h4 id="工作架构"><a href="#工作架构" class="headerlink" title="工作架构"></a><strong>工作架构</strong></h4><p><img src="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/image-20191122154626140.png"></p>
 <p><code>ansible只是一种框架</code>, 真正执行任务是各种模块:</p>
 <blockquote>
 <ul>
@@ -317,7 +317,7 @@
 
 <p>Hosts文件称之为<code>host inventory</code>文件, 该文件指定机器组别.</p>
 <p><code>ansible -i /etc/ansible/hosts echo_date -m shell -a &#39;echo $(ifconfig|grep eth0)&#39;</code></p>
-<p><img src="https://raw.gitmirror.com/zhoushuke/BlogPhoto/master/githuboss/image-20191122161721880.png"></p>
+<p><img src="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/image-20191122161721880.png"></p>
 <p>这里使用了免密登录, 所以可以直接执行, 如果没有免密登录的情况下, 可以在执行时输入密码(由于只能输入一次密码，这种情况要求所有机器上所使用的密码一致)或者直接在主机清单文件中直接指定用户名密码</p>
 <figure class="highlight yaml"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line"><span class="string">k8snode-1</span> <span class="string">ansible_host=172.16.104.210</span> <span class="string">ansible_user=root</span> <span class="string">ansible_ssh_pass=&#x27;xxxx&#x27;</span></span><br><span class="line">[<span class="string">echo_date</span>]</span><br><span class="line"><span class="string">k8snode-1</span></span><br></pre></td></tr></table></figure>
 
@@ -329,7 +329,7 @@
 <h4 id="Playbook-x2F-Role"><a href="#Playbook-x2F-Role" class="headerlink" title="Playbook&#x2F;Role"></a><strong>Playbook&#x2F;Role</strong></h4><p><code>Playbook及role是ansible为了实现更加复杂的编排任务及更好地组织对象而设定的抽象对象.</code></p>
 <p>role主要将整个任务进行封装从而实现复用</p>
 <p>playbook则明确定义要完成这个任务需要执行哪些步骤</p>
-<h5 id="一个role的标准目录"><a href="#一个role的标准目录" class="headerlink" title="一个role的标准目录"></a><strong>一个role的<code>标准目录</code></strong></h5><p><img src="https://raw.gitmirror.com/zhoushuke/BlogPhoto/master/githuboss/unknown-4411877.png"></p>
+<h5 id="一个role的标准目录"><a href="#一个role的标准目录" class="headerlink" title="一个role的标准目录"></a><strong>一个role的<code>标准目录</code></strong></h5><p><img src="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/unknown-4411877.png"></p>
 <p>那么在其它有需要执行这个工作的地方则可以直接引用这个角色(或者角色中的部分步骤).</p>
 <p>playbook则明确定义了完成这个role需要执行的tasks.</p>
 <h5 id="playbook的样例"><a href="#playbook的样例" class="headerlink" title="playbook的样例"></a><strong>playbook的样例</strong></h5><p><code>cat roles/common/tasks/main.yml</code></p>
@@ -375,7 +375,7 @@
 <p><strong>ansible2.0+可指定<code>strategy=free</code> 即可让提前完成的机器无需等待同批机器一同完成而快速地让下批机器执行.</strong></p>
 <p>默认情况下的playbook执行过程:</p>
 <p>从这里也可以看出<code>playbook中的task是所有机器都执行完之后再执行下一个task</code></p>
-<p><img src="https://raw.gitmirror.com/zhoushuke/BlogPhoto/master/githuboss/ansible-tasks.jpg"></p>
+<p><img src="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/ansible-tasks.jpg"></p>
 <h5 id="异步模式"><a href="#异步模式" class="headerlink" title="异步模式"></a><strong>异步模式</strong></h5><p>ansible直接将机器的任务(取决于fork的数量)放在后台执行, 并每隔一段时间去检查这些节点的执行完成情况(通过job-id),同样直到这批机器都执行完(就算有机器提前执行完也需要等待所有机器执行完),ansible才会将下一批机器放在后台执行. 异步通过<code>async跟poll</code>两个参数决定</p>
 <p><code>同步跟异步的主要区别就是异步是通过轮询状态来判断任务是否执行成功的.</code></p>
 <p><code>特殊地: 如果poll参数被指定为0, 则ansible在将机器的任务放在后台执行后立刻返回, 迅速地在下一批机器开始执行</code></p>
@@ -474,7 +474,7 @@
 
   <div class="copyright">
     &copy; 
-    <span itemprop="copyrightYear">2025</span>
+    <span itemprop="copyrightYear">2026</span>
     <span class="with-love">
       <i class="fa fa-heart"></i>
     </span>
@@ -486,14 +486,14 @@
       <i class="fa fa-chart-line"></i>
     </span>
       <span>站点总字数：</span>
-    <span title="站点总字数">990k</span>
+    <span title="站点总字数">996k</span>
   </span>
   <span class="post-meta-item">
     <span class="post-meta-item-icon">
       <i class="fa fa-coffee"></i>
     </span>
       <span>站点阅读时长 &asymp;</span>
-    <span title="站点阅读时长">15:01</span>
+    <span title="站点阅读时长">15:05</span>
   </span>
 </div>
 <div class="busuanzi-count">
