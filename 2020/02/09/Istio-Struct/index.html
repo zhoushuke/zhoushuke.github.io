@@ -33,7 +33,7 @@
 <meta property="og:image" content="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20200209155817.png">
 <meta property="og:image" content="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20200209160002.png">
 <meta property="article:published_time" content="2020-02-09T07:40:53.000Z">
-<meta property="article:modified_time" content="2026-09-29T07:21:20.675Z">
+<meta property="article:modified_time" content="2026-11-04T12:26:44.916Z">
 <meta property="article:author" content="周淑科">
 <meta property="article:tag" content="ServiceMesh">
 <meta name="twitter:card" content="summary">
@@ -43,7 +43,7 @@
 <link rel="canonical" href="https://zhoushuke.github.io/2020/02/09/Istio-Struct/">
 
 
-<script class="next-config" data-name="page" type="application/json">{"sidebar":"","isHome":false,"isPost":true,"lang":"zh-CN","comments":true,"permalink":"https://zhoushuke.github.io/2020/02/09/Istio-Struct/","path":"2020/02/09/Istio-Struct/","title":"Istio学习(架构)"}</script>
+<script class="next-config" data-name="page" type="application/json">{"sidebar":"","isHome":false,"isPost":true,"lang":"zh-CN","comments":"","permalink":"https://zhoushuke.github.io/2020/02/09/Istio-Struct/","path":"2020/02/09/Istio-Struct/","title":"Istio学习(架构)"}</script>
 
 <script class="next-config" data-name="calendar" type="application/json">""</script>
 <title>Istio学习(架构) | Z.S.K.'s Records</title>
@@ -145,7 +145,7 @@
       <div class="sidebar-panel-container">
         <!--noindex-->
         <div class="post-toc-wrap sidebar-panel">
-            <div class="post-toc animated"><ol class="nav"><li class="nav-item nav-level-3"><a class="nav-link" href="#WhatFor"><span class="nav-number">1.</span> <span class="nav-text">WhatFor</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#Struct"><span class="nav-number">2.</span> <span class="nav-text">Struct</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#Components"><span class="nav-number">3.</span> <span class="nav-text">Components</span></a><ol class="nav-child"><li class="nav-item nav-level-4"><a class="nav-link" href="#%E6%95%B0%E6%8D%AE%E9%9D%A2"><span class="nav-number">3.1.</span> <span class="nav-text">数据面</span></a><ol class="nav-child"><li class="nav-item nav-level-5"><a class="nav-link" href="#envoy"><span class="nav-number">3.1.1.</span> <span class="nav-text">envoy</span></a></li></ol></li><li class="nav-item nav-level-4"><a class="nav-link" href="#%E6%8E%A7%E5%88%B6%E9%9D%A2"><span class="nav-number">3.2.</span> <span class="nav-text">控制面</span></a><ol class="nav-child"><li class="nav-item nav-level-5"><a class="nav-link" href="#pilot"><span class="nav-number">3.2.1.</span> <span class="nav-text">pilot</span></a></li><li class="nav-item nav-level-5"><a class="nav-link" href="#Mixer"><span class="nav-number">3.2.2.</span> <span class="nav-text">Mixer</span></a></li><li class="nav-item nav-level-5"><a class="nav-link" href="#Citadel"><span class="nav-number">3.2.3.</span> <span class="nav-text">Citadel</span></a></li><li class="nav-item nav-level-5"><a class="nav-link" href="#galley"><span class="nav-number">3.2.4.</span> <span class="nav-text">galley</span></a></li></ol></li></ol></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E5%8F%82%E8%80%83%E6%96%87%E7%AB%A0"><span class="nav-number">4.</span> <span class="nav-text">参考文章:</span></a></li></ol></div>
+            <div class="post-toc animated"><ol class="nav"><li class="nav-item nav-level-3"><a class="nav-link" href="#WhatFor"><span class="nav-number">1.</span> <span class="nav-text">WhatFor</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#Struct"><span class="nav-number">2.</span> <span class="nav-text">Struct</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#Components"><span class="nav-number">3.</span> <span class="nav-text">Components</span></a><ol class="nav-child"><li class="nav-item nav-level-4"><a class="nav-link" href="#%E6%95%B0%E6%8D%AE%E9%9D%A2"><span class="nav-number">3.1.</span> <span class="nav-text">数据面</span></a><ol class="nav-child"><li class="nav-item nav-level-5"><a class="nav-link" href="#envoy"><span class="nav-number">3.1.1.</span> <span class="nav-text">envoy</span></a></li></ol></li><li class="nav-item nav-level-4"><a class="nav-link" href="#%E6%8E%A7%E5%88%B6%E9%9D%A2"><span class="nav-number">3.2.</span> <span class="nav-text">控制面</span></a><ol class="nav-child"><li class="nav-item nav-level-5"><a class="nav-link" href="#pilot"><span class="nav-number">3.2.1.</span> <span class="nav-text">pilot</span></a></li><li class="nav-item nav-level-5"><a class="nav-link" href="#Mixer"><span class="nav-number">3.2.2.</span> <span class="nav-text">Mixer</span></a></li><li class="nav-item nav-level-5"><a class="nav-link" href="#Citadel"><span class="nav-number">3.2.3.</span> <span class="nav-text">Citadel</span></a></li><li class="nav-item nav-level-5"><a class="nav-link" href="#gallely"><span class="nav-number">3.2.4.</span> <span class="nav-text">gallely</span></a></li></ol></li></ol></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E5%8F%82%E8%80%83%E6%96%87%E7%AB%A0"><span class="nav-number">4.</span> <span class="nav-text">参考文章:</span></a></li></ol></div>
         </div>
         <!--/noindex-->
 
@@ -166,12 +166,12 @@
       </div>
       <div class="site-state-item site-state-categories">
           <a href="/categories/">
-        <span class="site-state-item-count">15</span>
+        <span class="site-state-item-count">16</span>
         <span class="site-state-item-name">分类</span></a>
       </div>
       <div class="site-state-item site-state-tags">
           <a href="/tags/">
-        <span class="site-state-item-count">15</span>
+        <span class="site-state-item-count">16</span>
         <span class="site-state-item-name">标签</span></a>
       </div>
   </nav>
@@ -329,8 +329,8 @@
 <p>​	同时,<code>Mixer彩用配器模式</code>, 可以支持不同的后端，如日志后端，监控后端, 调用链后端.</p>
 <p><img src="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20200209160002.png"></p>
 <h5 id="Citadel"><a href="#Citadel" class="headerlink" title="Citadel"></a>Citadel</h5><p>Citadel是与安全相关的组件，主要负责密钥和证书的管理。它可以提供服务间和终端用户的身份认证，还可以加密服务网格中的流量。</p>
-<h5 id="galley"><a href="#galley" class="headerlink" title="galley"></a>galley</h5><p>在2019年3月份发布的1.1版本中，Gally作为一个独立的组件被添加到了架构当中（在此之前的版本中Gally并未独立出现），它现在是Istio主要的配置管理组件，负责配置的获取、处理和分发。Gally使用了一种叫作MCP（Mesh Configuration Protocol，网格配置协议）的协议与其他组件进行通信。</p>
-<p>重点学习Pilot及Mix即可, citadel及galley一般都不会变动频繁, 知道怎么一回事就可以了.</p>
+<h5 id="gallely"><a href="#gallely" class="headerlink" title="gallely"></a>gallely</h5><p>在2019年3月份发布的1.1版本中，Galley作为一个独立的组件被添加到了架构当中（在此之前的版本中Galley并未独立出现），它现在是Istio主要的配置管理组件，负责配置的获取、处理和分发。Galley使用了一种叫作MCP（Mesh Configuration Protocol，网格配置协议）的协议与其他组件进行通信。</p>
+<p>重点学习Pilot及Mix即可, citadel及gallely一般都不会变动频繁, 知道怎么一回事就可以了.</p>
 <p>上面主要学习了下istio整体的框架,没有说明地很详细, 至于istio如何注入sidecar, sidecar又是如何劫持流向转发, 又是如何找到对端的容器地址的，挺有意思, 后续再更.</p>
 <h3 id="参考文章"><a href="#参考文章" class="headerlink" title="参考文章:"></a><strong>参考文章:</strong></h3><blockquote>
 <ul>
@@ -431,14 +431,14 @@
       <i class="fa fa-chart-line"></i>
     </span>
       <span>站点总字数：</span>
-    <span title="站点总字数">996k</span>
+    <span title="站点总字数">997k</span>
   </span>
   <span class="post-meta-item">
     <span class="post-meta-item-icon">
       <i class="fa fa-coffee"></i>
     </span>
       <span>站点阅读时长 &asymp;</span>
-    <span title="站点阅读时长">15:05</span>
+    <span title="站点阅读时长">15:06</span>
   </span>
 </div>
 <div class="busuanzi-count">

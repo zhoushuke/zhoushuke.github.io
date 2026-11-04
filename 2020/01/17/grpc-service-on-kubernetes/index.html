@@ -22,7 +22,7 @@
 
     <meta name="description" content="由于grpc天生的长连接特性, 如果要在kubernetes中使用grpc, 想要实现负载均衡问题需要考虑长连接问题. 由于本人对grpc了解的不是很深入，没法说的太多，看官们勿喷.">
 <meta property="og:type" content="article">
-<meta property="og:title" content="grpc gateway loadbalance on kubernetes">
+<meta property="og:title" content="grpc service on Kubernetes">
 <meta property="og:url" content="https://zhoushuke.github.io/2020/01/17/grpc-service-on-kubernetes/index.html">
 <meta property="og:site_name" content="Z.S.K.&#39;s Records">
 <meta property="og:description" content="由于grpc天生的长连接特性, 如果要在kubernetes中使用grpc, 想要实现负载均衡问题需要考虑长连接问题. 由于本人对grpc了解的不是很深入，没法说的太多，看官们勿喷.">
@@ -32,7 +32,7 @@
 <meta property="og:image" content="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/githubimage-20200117160526405.png">
 <meta property="og:image" content="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/githubimage-20200117160438043.png">
 <meta property="article:published_time" content="2020-01-17T14:50:53.000Z">
-<meta property="article:modified_time" content="2026-09-29T07:21:20.019Z">
+<meta property="article:modified_time" content="2026-11-04T12:26:44.994Z">
 <meta property="article:author" content="周淑科">
 <meta property="article:tag" content="Kubernetes">
 <meta name="twitter:card" content="summary">
@@ -42,10 +42,10 @@
 <link rel="canonical" href="https://zhoushuke.github.io/2020/01/17/grpc-service-on-kubernetes/">
 
 
-<script class="next-config" data-name="page" type="application/json">{"sidebar":"","isHome":false,"isPost":true,"lang":"zh-CN","comments":true,"permalink":"https://zhoushuke.github.io/2020/01/17/grpc-service-on-kubernetes/","path":"2020/01/17/grpc-service-on-kubernetes/","title":"grpc gateway loadbalance on kubernetes"}</script>
+<script class="next-config" data-name="page" type="application/json">{"sidebar":"","isHome":false,"isPost":true,"lang":"zh-CN","comments":"","permalink":"https://zhoushuke.github.io/2020/01/17/grpc-service-on-kubernetes/","path":"2020/01/17/grpc-service-on-kubernetes/","title":"grpc service on Kubernetes"}</script>
 
 <script class="next-config" data-name="calendar" type="application/json">""</script>
-<title>grpc gateway loadbalance on kubernetes | Z.S.K.'s Records</title>
+<title>grpc service on Kubernetes | Z.S.K.'s Records</title>
   
 
 
@@ -144,7 +144,7 @@
       <div class="sidebar-panel-container">
         <!--noindex-->
         <div class="post-toc-wrap sidebar-panel">
-            <div class="post-toc animated"><ol class="nav"><li class="nav-item nav-level-3"><a class="nav-link" href="#http-x2F-2%E9%95%BF%E8%BF%9E%E6%8E%A5"><span class="nav-number">1.</span> <span class="nav-text">http&#x2F;2长连接</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E5%AE%A2%E6%88%B7%E7%AB%AF"><span class="nav-number">2.</span> <span class="nav-text">客户端</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E6%9C%8D%E5%8A%A1%E7%AB%AF"><span class="nav-number">3.</span> <span class="nav-text">服务端</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#ClusterIP"><span class="nav-number">4.</span> <span class="nav-text">ClusterIP</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#Headless"><span class="nav-number">5.</span> <span class="nav-text">Headless</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E9%97%AE%E9%A2%98"><span class="nav-number">6.</span> <span class="nav-text">问题</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E5%8F%82%E8%80%83%E6%96%87%E7%AB%A0"><span class="nav-number">7.</span> <span class="nav-text">参考文章:</span></a></li></ol></div>
+            <div class="post-toc animated"><ol class="nav"><li class="nav-item nav-level-4"><a class="nav-link" href="#http-x2F-2%E9%95%BF%E8%BF%9E%E6%8E%A5"><span class="nav-number">1.</span> <span class="nav-text">http&#x2F;2长连接</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#%E5%AE%A2%E6%88%B7%E7%AB%AF"><span class="nav-number">2.</span> <span class="nav-text">客户端</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#%E6%9C%8D%E5%8A%A1%E7%AB%AF"><span class="nav-number">3.</span> <span class="nav-text">服务端</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#ClusterIP"><span class="nav-number">4.</span> <span class="nav-text">ClusterIP</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#Headless"><span class="nav-number">5.</span> <span class="nav-text">Headless</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#%E9%97%AE%E9%A2%98"><span class="nav-number">6.</span> <span class="nav-text">问题</span></a></li></ol></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E5%8F%82%E8%80%83%E6%96%87%E7%AB%A0"><span class="nav-number"></span> <span class="nav-text">参考文章:</span></a></div>
         </div>
         <!--/noindex-->
 
@@ -165,12 +165,12 @@
       </div>
       <div class="site-state-item site-state-categories">
           <a href="/categories/">
-        <span class="site-state-item-count">15</span>
+        <span class="site-state-item-count">16</span>
         <span class="site-state-item-name">分类</span></a>
       </div>
       <div class="site-state-item site-state-tags">
           <a href="/tags/">
-        <span class="site-state-item-count">15</span>
+        <span class="site-state-item-count">16</span>
         <span class="site-state-item-name">标签</span></a>
       </div>
   </nav>
@@ -213,12 +213,12 @@
     </span>
 
     <span hidden itemprop="post" itemscope itemtype="http://schema.org/CreativeWork">
-      <meta itemprop="name" content="grpc gateway loadbalance on kubernetes | Z.S.K.'s Records">
+      <meta itemprop="name" content="grpc service on Kubernetes | Z.S.K.'s Records">
       <meta itemprop="description" content="">
     </span>
       <header class="post-header">
         <h1 class="post-title" itemprop="name headline">
-          grpc gateway loadbalance on kubernetes
+          grpc service on Kubernetes
         </h1>
 
         <div class="post-meta-container">
@@ -276,12 +276,12 @@
 <p>由于本人对grpc了解的不是很深入，没法说的太多，看官们勿喷.</p>
 <span id="more"></span>
 
-<h3 id="http-x2F-2长连接"><a href="#http-x2F-2长连接" class="headerlink" title="http&#x2F;2长连接"></a><strong>http&#x2F;2长连接</strong></h3><p>详情大家可参考这篇文章<a target="_blank" rel="noopener" href="https://cloud.tencent.com/developer/news/394310">在K8S上使用gRPC做负载均衡</a></p>
+<h4 id="http-x2F-2长连接"><a href="#http-x2F-2长连接" class="headerlink" title="http&#x2F;2长连接"></a><strong>http&#x2F;2长连接</strong></h4><p>详情大家可参考这篇文章<a target="_blank" rel="noopener" href="https://cloud.tencent.com/developer/news/394310">在K8S上使用gRPC做负载均衡</a></p>
 <p>上述文章中也提出了可有多种方式处理这种场景.</p>
 <p>今天要跟大家说一说，使用kubernetes的headless 给grpc做负载均衡引出的问题.因为这种方式最简单且最直接.</p>
 <p><strong>需要很简单: 客户端通过grpc调用服务端, 请求可以负载均衡</strong></p>
 <p>很简单的demo, 一个服务端, 一个客户端</p>
-<h3 id="客户端"><a href="#客户端" class="headerlink" title="客户端"></a><strong>客户端</strong></h3><p>客户端逻辑很简单, 主要代码如下:</p>
+<h4 id="客户端"><a href="#客户端" class="headerlink" title="客户端"></a><strong>客户端</strong></h4><p>客户端逻辑很简单, 主要代码如下:</p>
 <figure class="highlight go"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">func</span> <span class="title">lbconn</span><span class="params">()</span></span> *grpc.ClientConn &#123;</span><br><span class="line">	<span class="comment">//progress-service-svc.just-4-test.svc.cluster.local:50051  服务端服务名</span></span><br><span class="line">  <span class="comment">//使用dns进行resolv</span></span><br><span class="line">	conn, err := grpc.Dial(<span class="string">&quot;dns:///progress-service-svc.just-4-test.svc.cluster.local:50051&quot;</span>,</span><br><span class="line">		grpc.WithInsecure(),</span><br><span class="line">		grpc.WithBalancerName(roundrobin.Name),</span><br><span class="line">	)</span><br><span class="line">	<span class="keyword">if</span> err != <span class="literal">nil</span> &#123;</span><br><span class="line">		fmt.Printf(<span class="string">&quot;did not connect: %v \n&quot;</span>, err)</span><br><span class="line">		<span class="keyword">return</span> <span class="literal">nil</span></span><br><span class="line">	&#125;</span><br><span class="line">	<span class="keyword">return</span> conn</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="function"><span class="keyword">func</span> <span class="title">main</span><span class="params">()</span></span> &#123;</span><br><span class="line">	fmt.Println(<span class="string">&quot;begin client&quot;</span>)</span><br><span class="line">	conn := lbconn()</span><br><span class="line">	c := pb.NewHelloClient(conn)</span><br><span class="line">	<span class="keyword">for</span> i := <span class="number">0</span>; i &lt; <span class="number">1000000</span>; i++ &#123;</span><br><span class="line">		call(c, i)</span><br><span class="line">		time.Sleep(time.Second * <span class="number">5</span>)</span><br><span class="line">	&#125;</span><br><span class="line">  </span><br><span class="line">  <span class="function"><span class="keyword">func</span> <span class="title">call</span><span class="params">()</span></span>&#123;</span><br><span class="line">      <span class="comment">// 略</span></span><br><span class="line">  &#125;</span><br><span class="line"></span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
 
 <p>开始只有一个实例，启动日志: </p>
@@ -290,17 +290,19 @@
 <p>从这里也可以看到，grpc启动的时候，会直接通过服务名拿到服务端pod的ip列表</p>
 <p>下面是多个服务端实例的情况</p>
 <p><img src="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/githubimage-20200117160526405.png"></p>
-<h3 id="服务端"><a href="#服务端" class="headerlink" title="服务端"></a><strong>服务端</strong></h3><p>服务端主要代码:</p>
+<h4 id="服务端"><a href="#服务端" class="headerlink" title="服务端"></a><strong>服务端</strong></h4><p>服务端主要代码:</p>
 <figure class="highlight go"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">func</span> <span class="params">(s *grpcServer)</span></span> Hi(ctx context.Context, in *pb.HiRequest) (*pb.HiResponse, <span class="type">error</span>) &#123;</span><br><span class="line">	fmt.Println(<span class="string">&quot;service got request!&quot;</span>, in)</span><br><span class="line">	<span class="keyword">return</span> &amp;pb.HiResponse&#123;FromWho: in.ToWho, Message: fmt.Sprintf(<span class="string">&quot; %v receive message : &quot;</span>, id) + in.Message&#125;, <span class="literal">nil</span></span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="function"><span class="keyword">func</span> <span class="title">main</span><span class="params">()</span></span> &#123;</span><br><span class="line">	rand.Seed(time.Now().UnixNano())</span><br><span class="line">	id = rand.Intn(<span class="number">10000</span>)</span><br><span class="line">	lis, err := net.Listen(<span class="string">&quot;tcp&quot;</span>, <span class="string">&quot;:50051&quot;</span>)</span><br><span class="line">	<span class="keyword">if</span> err != <span class="literal">nil</span> &#123;</span><br><span class="line">		log.Fatal(<span class="string">&quot;failed to listen: %v&quot;</span>, err)</span><br><span class="line">	&#125;</span><br><span class="line">	s := grpc.NewServer()</span><br><span class="line">	pb.RegisterHelloServer(s, &amp;grpcServer&#123;&#125;)</span><br><span class="line">	<span class="keyword">go</span> <span class="function"><span class="keyword">func</span><span class="params">()</span></span> &#123;</span><br><span class="line">		cf := &amp;gg.GatewayConfig&#123;</span><br><span class="line">			Fn:       pb.RegisterHelloHandlerFromEndpoint,</span><br><span class="line">			GrpcPort: <span class="string">&quot;:50051&quot;</span>,</span><br><span class="line">		&#125;</span><br><span class="line">		<span class="keyword">if</span> err := gg.RegisterGRPCGateway(cf); err != <span class="literal">nil</span> &#123;</span><br><span class="line">			fmt.Println(<span class="string">&quot;grpc gateway closed:&quot;</span>, err)</span><br><span class="line">		&#125;</span><br><span class="line">	&#125;()</span><br><span class="line">	fmt.Println(<span class="string">&quot;start...&quot;</span>)</span><br><span class="line">	s.Serve(lis)</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
 
 <p>服务端启动日志:</p>
 <p><img src="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/githubimage-20200117160438043.png"></p>
-<h3 id="ClusterIP"><a href="#ClusterIP" class="headerlink" title="ClusterIP"></a><strong>ClusterIP</strong></h3><p>服务端使用常规的ClusterIP的svc代理出来，这种情况我们发现, 客户端所有的请求都打在一个实例上, 服务端新增或者减少对客户端都没有影响(当然, 如果减少的刚好是连接的那个实例,那所有的实例都会切换到另一实例上), 至始至终都是一个服务端实例在响应.没有达到效果.</p>
+<h4 id="ClusterIP"><a href="#ClusterIP" class="headerlink" title="ClusterIP"></a><strong>ClusterIP</strong></h4><p>服务端使用常规的ClusterIP的svc代理出来，这种情况我们发现, 客户端所有的请求都打在一个实例上, 服务端新增或者减少对客户端都没有影响(当然, 如果减少的刚好是连接的那个实例,那所有的实例都会切换到另一实例上), 至始至终都是一个服务端实例在响应.没有达到效果.</p>
 <p><strong>因为ClusterIP暴露出来的是一个ip, grpc通过这个ip只能转到某一个实例上进行响应, 所以客户端一起与这个特定的实例建立长连接.</strong></p>
 <p>可参考<a target="_blank" rel="noopener" href="https://medium.com/google-cloud/loadbalancing-grpc-for-kubernetes-cluster-services-3ba9a8d8fc03">这里</a></p>
-<h3 id="Headless"><a href="#Headless" class="headerlink" title="Headless"></a><strong>Headless</strong></h3><figure class="highlight yaml"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br></pre></td><td class="code"><pre><span class="line"><span class="attr">apiVersion:</span> <span class="string">v1</span></span><br><span class="line"><span class="attr">kind:</span> <span class="string">Service</span></span><br><span class="line"><span class="attr">metadata:</span></span><br><span class="line">  <span class="attr">name:</span> <span class="string">progress-service-svc</span></span><br><span class="line">  <span class="attr">namespace:</span> <span class="string">just-4-test</span></span><br><span class="line"><span class="attr">spec:</span></span><br><span class="line">  <span class="attr">ports:</span></span><br><span class="line">  <span class="bullet">-</span> <span class="attr">name:</span> <span class="string">50051tcp50051</span></span><br><span class="line">    <span class="attr">port:</span> <span class="number">50051</span></span><br><span class="line">    <span class="attr">protocol:</span> <span class="string">TCP</span></span><br><span class="line">    <span class="attr">targetPort:</span> <span class="number">50051</span></span><br><span class="line">  <span class="attr">selector:</span></span><br><span class="line">    <span class="attr">workload.user.cattle.io/workloadselector:</span> <span class="string">deployment-just-4-test-process-service</span></span><br><span class="line">  <span class="attr">sessionAffinity:</span> <span class="string">None</span></span><br><span class="line">  <span class="attr">type:</span> <span class="string">ClusterIP</span></span><br><span class="line">  <span class="attr">clusterIP:</span> <span class="string">None</span></span><br><span class="line"><span class="attr">status:</span></span><br><span class="line">  <span class="attr">loadBalancer:</span> &#123;&#125;</span><br></pre></td></tr></table></figure>
+<h4 id="Headless"><a href="#Headless" class="headerlink" title="Headless"></a><strong>Headless</strong></h4><figure class="highlight yaml"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br></pre></td><td class="code"><pre><span class="line"><span class="attr">apiVersion:</span> <span class="string">v1</span></span><br><span class="line"><span class="attr">kind:</span> <span class="string">Service</span></span><br><span class="line"><span class="attr">metadata:</span></span><br><span class="line">  <span class="attr">name:</span> <span class="string">progress-service-svc</span></span><br><span class="line">  <span class="attr">namespace:</span> <span class="string">just-4-test</span></span><br><span class="line"><span class="attr">spec:</span></span><br><span class="line">  <span class="attr">ports:</span></span><br><span class="line">  <span class="bullet">-</span> <span class="attr">name:</span> <span class="string">50051tcp50051</span></span><br><span class="line">    <span class="attr">port:</span> <span class="number">50051</span></span><br><span class="line">    <span class="attr">protocol:</span> <span class="string">TCP</span></span><br><span class="line">    <span class="attr">targetPort:</span> <span class="number">50051</span></span><br><span class="line">  <span class="attr">selector:</span></span><br><span class="line">    <span class="attr">workload.user.cattle.io/workloadselector:</span> <span class="string">deployment-just-4-test-process-service</span></span><br><span class="line">  <span class="attr">sessionAffinity:</span> <span class="string">None</span></span><br><span class="line">  <span class="attr">type:</span> <span class="string">ClusterIP</span></span><br><span class="line">  <span class="attr">clusterIP:</span> <span class="string">None</span></span><br><span class="line"><span class="attr">status:</span></span><br><span class="line">  <span class="attr">loadBalancer:</span> &#123;&#125;</span><br></pre></td></tr></table></figure>
 
-<h3 id="问题"><a href="#问题" class="headerlink" title="问题"></a><strong>问题</strong></h3><p>从测试的情况来看:</p>
+
+
+<h4 id="问题"><a href="#问题" class="headerlink" title="问题"></a><strong>问题</strong></h4><p>从测试的情况来看:</p>
 <p>如果服务实例从2个scale up到5个, 所有的请求还是直接路由到之前的2个, 新增的3个没有请求进来. </p>
 <p>如果是从2个scale down到1个，那客户端可以感应到，请求会自动地切换剩余的实例,这个很好理解, grpc维持的长连接具有探活能力.</p>
 <p>Scale up这种情况grpc客户端无法更新服务端列表，原因估计<strong>是grpc启动的时候通过服务名 –&gt; dns –&gt; headless 直接就拿到了服务端pod的实例ip列表，维持在类似连接池中, 后面所有的请求都直接从连接池中做路由，而不是每次都通过服务名实时地查询dns记录, (实时查询的话那一定是会得到新增实例的.), 这也让grpc更高效</strong></p>
@@ -353,7 +355,7 @@
   </li>
   <li class="post-copyright-link">
       <strong>本文链接：</strong>
-      <a href="https://zhoushuke.github.io/2020/01/17/grpc-service-on-kubernetes/" title="grpc gateway loadbalance on kubernetes">https://zhoushuke.github.io/2020/01/17/grpc-service-on-kubernetes/</a>
+      <a href="https://zhoushuke.github.io/2020/01/17/grpc-service-on-kubernetes/" title="grpc service on Kubernetes">https://zhoushuke.github.io/2020/01/17/grpc-service-on-kubernetes/</a>
   </li>
   <li class="post-copyright-license">
       <strong>版权声明： </strong>本站所有文章除特别声明外，均采用 <a href="https://creativecommons.org/licenses/by-nc-sa/4.0/" rel="noopener" target="_blank"><i class="fab fa-fw fa-creative-commons"></i>BY-NC-SA</a> 许可协议。转载请保留原文作者及链接！
@@ -374,8 +376,8 @@
                 </a>
             </div>
             <div class="post-nav-item">
-                <a href="/2020/01/19/Prometheus-Write-Exporter/" rel="next" title="Prometheus学习(编写业务Exporter)">
-                  Prometheus学习(编写业务Exporter) <i class="fa fa-angle-right"></i>
+                <a href="/2020/01/19/Prometheus-Write-Exporter/" rel="next" title="Prometheus编写业务Exporter">
+                  Prometheus编写业务Exporter <i class="fa fa-angle-right"></i>
                 </a>
             </div>
           </div>
@@ -408,14 +410,14 @@
       <i class="fa fa-chart-line"></i>
     </span>
       <span>站点总字数：</span>
-    <span title="站点总字数">996k</span>
+    <span title="站点总字数">997k</span>
   </span>
   <span class="post-meta-item">
     <span class="post-meta-item-icon">
       <i class="fa fa-coffee"></i>
     </span>
       <span>站点阅读时长 &asymp;</span>
-    <span title="站点阅读时长">15:05</span>
+    <span title="站点阅读时长">15:06</span>
   </span>
 </div>
 <div class="busuanzi-count">

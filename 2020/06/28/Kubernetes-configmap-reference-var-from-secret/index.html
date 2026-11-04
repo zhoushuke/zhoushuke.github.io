@@ -27,17 +27,19 @@
 <meta property="og:site_name" content="Z.S.K.&#39;s Records">
 <meta property="og:description" content="使用kubernetes做为底层平台, 对于配置文件的部署形式, 如果没有统一的配置管理, 使用最多的就是configmap及secret 但有时候只会将敏感的信息放在secret中，而大多数的配置会放在configmap, 这就造成要么把secret以env的形式存在于容器中,要么就以volumn的形式挂载到容器中, 需要从两个源来引用配置， 从本质上, configmap与secret是一个东">
 <meta property="og:locale" content="zh_CN">
+<meta property="og:image" content="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20201128223124.png">
 <meta property="article:published_time" content="2020-06-28T12:10:53.000Z">
-<meta property="article:modified_time" content="2024-12-30T07:21:59.524Z">
+<meta property="article:modified_time" content="2026-11-04T12:26:45.006Z">
 <meta property="article:author" content="周淑科">
 <meta property="article:tag" content="Kubernetes">
 <meta name="twitter:card" content="summary">
+<meta name="twitter:image" content="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20201128223124.png">
 
 
 <link rel="canonical" href="https://zhoushuke.github.io/2020/06/28/Kubernetes-configmap-reference-var-from-secret/">
 
 
-<script class="next-config" data-name="page" type="application/json">{"sidebar":"","isHome":false,"isPost":true,"lang":"zh-CN","comments":true,"permalink":"https://zhoushuke.github.io/2020/06/28/Kubernetes-configmap-reference-var-from-secret/","path":"2020/06/28/Kubernetes-configmap-reference-var-from-secret/","title":"Kubernetes学习(在configmap中引用secret)"}</script>
+<script class="next-config" data-name="page" type="application/json">{"sidebar":"","isHome":false,"isPost":true,"lang":"zh-CN","comments":"","permalink":"https://zhoushuke.github.io/2020/06/28/Kubernetes-configmap-reference-var-from-secret/","path":"2020/06/28/Kubernetes-configmap-reference-var-from-secret/","title":"Kubernetes学习(在configmap中引用secret)"}</script>
 
 <script class="next-config" data-name="calendar" type="application/json">""</script>
 <title>Kubernetes学习(在configmap中引用secret) | Z.S.K.'s Records</title>
@@ -139,7 +141,7 @@
       <div class="sidebar-panel-container">
         <!--noindex-->
         <div class="post-toc-wrap sidebar-panel">
-            <div class="post-toc animated"><ol class="nav"><li class="nav-item nav-level-3"><a class="nav-link" href="#%E5%8E%9F%E7%90%86"><span class="nav-number">1.</span> <span class="nav-text">原理</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E4%BD%BF%E7%94%A8"><span class="nav-number">2.</span> <span class="nav-text">使用</span></a><ol class="nav-child"><li class="nav-item nav-level-4"><a class="nav-link" href="#%E5%AE%89%E8%A3%85CRD"><span class="nav-number">2.1.</span> <span class="nav-text">安装CRD</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#secret"><span class="nav-number">2.2.</span> <span class="nav-text">secret</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#ConfigmapSecret"><span class="nav-number">2.3.</span> <span class="nav-text">ConfigmapSecret</span></a></li></ol></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E5%85%B6%E5%AE%83%E6%B5%8B%E8%AF%95"><span class="nav-number">3.</span> <span class="nav-text">其它测试</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E6%BA%90%E7%A0%81%E5%88%86%E6%9E%90"><span class="nav-number">4.</span> <span class="nav-text">源码分析</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E4%B8%8D%E8%B6%B3"><span class="nav-number">5.</span> <span class="nav-text">不足</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E5%8F%82%E8%80%83%E6%96%87%E7%AB%A0"><span class="nav-number">6.</span> <span class="nav-text">参考文章:</span></a></li></ol></div>
+            <div class="post-toc animated"><ol class="nav"><li class="nav-item nav-level-3"><a class="nav-link" href="#%E5%8E%9F%E7%90%86"><span class="nav-number">1.</span> <span class="nav-text">原理</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E4%BD%BF%E7%94%A8"><span class="nav-number">2.</span> <span class="nav-text">使用</span></a><ol class="nav-child"><li class="nav-item nav-level-4"><a class="nav-link" href="#%E5%AE%89%E8%A3%85CRD"><span class="nav-number">2.1.</span> <span class="nav-text">安装CRD</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#secret"><span class="nav-number">2.2.</span> <span class="nav-text">secret</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#ConfigmapSecret"><span class="nav-number">2.3.</span> <span class="nav-text">ConfigmapSecret</span></a></li></ol></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E5%85%B6%E5%AE%83%E6%B5%8B%E8%AF%95"><span class="nav-number">3.</span> <span class="nav-text">其它测试</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E6%BA%90%E7%A0%81%E5%88%86%E6%9E%90"><span class="nav-number">4.</span> <span class="nav-text">源码分析</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E4%B8%8D%E8%B6%B3"><span class="nav-number">5.</span> <span class="nav-text">不足</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E9%97%AE%E9%A2%98"><span class="nav-number">6.</span> <span class="nav-text">问题:</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E5%8F%82%E8%80%83%E6%96%87%E7%AB%A0"><span class="nav-number">7.</span> <span class="nav-text">参考文章:</span></a></li></ol></div>
         </div>
         <!--/noindex-->
 
@@ -160,12 +162,12 @@
       </div>
       <div class="site-state-item site-state-categories">
           <a href="/categories/">
-        <span class="site-state-item-count">15</span>
+        <span class="site-state-item-count">16</span>
         <span class="site-state-item-name">分类</span></a>
       </div>
       <div class="site-state-item site-state-tags">
           <a href="/tags/">
-        <span class="site-state-item-count">15</span>
+        <span class="site-state-item-count">16</span>
         <span class="site-state-item-name">标签</span></a>
       </div>
   </nav>
@@ -250,14 +252,14 @@
         <i class="far fa-file-word"></i>
       </span>
       <span class="post-meta-item-text">本文字数：</span>
-      <span>4.7k</span>
+      <span>5.9k</span>
     </span>
     <span class="post-meta-item" title="阅读时长">
       <span class="post-meta-item-icon">
         <i class="far fa-clock"></i>
       </span>
       <span class="post-meta-item-text">阅读时长 &asymp;</span>
-      <span>4 分钟</span>
+      <span>5 分钟</span>
     </span>
 </div>
 
@@ -316,6 +318,27 @@
 <h3 id="不足"><a href="#不足" class="headerlink" title="不足"></a>不足</h3><p>如果使用容器平台，如rancher, UI上不支持显示crd， 因此configmapsecret无法显示在页面上.</p>
 <p>如果最终生成的形式为secret， 被base64编码，不能够直观地显示配置, 如果能够直接生成configmap，我觉得更合理</p>
 <p>但生成的secret也不影响这个库用于GitOps中，结合<a target="_blank" rel="noopener" href="https://github.com/bitnami-labs/sealed-secrets">SealedSecrets</a>对secret的加密处理, 至此可以实现整个资源端到端的闭环.</p>
+<h3 id="问题"><a href="#问题" class="headerlink" title="问题:"></a>问题:</h3><ol>
+<li><p>部署时提示:</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">error: unable to recognize <span class="string">&quot;customresourcedefinition.yaml&quot;</span>: no matches <span class="keyword">for</span> kind <span class="string">&quot;CustomResourceDefinition&quot;</span> <span class="keyword">in</span> version <span class="string">&quot;apiextensions.k8s.io/v1&quot;</span></span><br></pre></td></tr></table></figure>
+
+<p>原因: 在v1.16之前的版本， <code>CustomResourceDefinition</code>是在<code>apiextensions.k8s.io/v1beta1</code>中，v.1.16之后的版本才是v1</p>
+<p>解决：将<code>apiextensions.k8s.io/v1</code>改成<code>apiextensions.k8s.io/v1beta1</code></p>
+</li>
+<li><p>部署时提示:</p>
+</li>
+</ol>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">error: error validating <span class="string">&quot;customresourcedefinition.yaml&quot;</span>: error validating data: [ValidationError(CustomResourceDefinition.spec.versions[0].schema.openAPIV3Schema.properties.status.properties.conditions): unknown field <span class="string">&quot;x-kubernetes-list-map-keys&quot;</span> <span class="keyword">in</span> io.k8s.apiextensions-apiserver.pkg.apis.apiextensions.v1beta1.JSONSchemaProps, ValidationError(CustomResourceDefinition.spec.versions[0].schema.openAPIV3Schema.properties.status.properties.conditions): unknown field <span class="string">&quot;x-kubernetes-list-type&quot;</span> <span class="keyword">in</span> io.k8s.apiextensions-apiserver.pkg.apis.apiextensions.v1beta1.JSONSchemaProps]</span><br></pre></td></tr></table></figure>
+
+<p>原因: 跟上面的问题类似，也是因为kubernetes的版本引起的，如果是v1.16之前的版本，只能使用0.3的版本，0.4不支持.</p>
+<p>解决: 使用0.3版本即可</p>
+<ol start="3">
+<li><p>使用时出现以下错误:</p>
+<p><img src="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20201128223124.png"></p>
+<p>原因: 这个是作者的一个bug， 在tag0.3的manifest中，deployment.yaml中指定的镜像还是0.2的版本，0.2版本的镜像使用的是<code>secrets.k8s.mz.com/v1alpha1</code>这个API, 会跟crd对应不上</p>
+<p>解决: 将镜像换成configmapsecret-controller:v0.3即可</p>
+</li>
+</ol>
 <h3 id="参考文章"><a href="#参考文章" class="headerlink" title="参考文章:"></a><strong>参考文章:</strong></h3><blockquote>
 <ul>
 <li><a target="_blank" rel="noopener" href="https://github.com/kubernetes/kubernetes/issues/79224">https://github.com/kubernetes/kubernetes/issues/79224</a></li>
@@ -412,14 +435,14 @@
       <i class="fa fa-chart-line"></i>
     </span>
       <span>站点总字数：</span>
-    <span title="站点总字数">996k</span>
+    <span title="站点总字数">997k</span>
   </span>
   <span class="post-meta-item">
     <span class="post-meta-item-icon">
       <i class="fa fa-coffee"></i>
     </span>
       <span>站点阅读时长 &asymp;</span>
-    <span title="站点阅读时长">15:05</span>
+    <span title="站点阅读时长">15:06</span>
   </span>
 </div>
 <div class="busuanzi-count">

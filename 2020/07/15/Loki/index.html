@@ -33,7 +33,7 @@
 <meta property="og:image" content="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20200708194140.png">
 <meta property="og:image" content="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20200708194343.png">
 <meta property="article:published_time" content="2020-07-15T07:40:53.000Z">
-<meta property="article:modified_time" content="2026-09-29T07:21:19.687Z">
+<meta property="article:modified_time" content="2026-11-04T12:26:44.954Z">
 <meta property="article:author" content="周淑科">
 <meta property="article:tag" content="CloudNavi">
 <meta name="twitter:card" content="summary">
@@ -43,7 +43,7 @@
 <link rel="canonical" href="https://zhoushuke.github.io/2020/07/15/Loki/">
 
 
-<script class="next-config" data-name="page" type="application/json">{"sidebar":"","isHome":false,"isPost":true,"lang":"zh-CN","comments":true,"permalink":"https://zhoushuke.github.io/2020/07/15/Loki/","path":"2020/07/15/Loki/","title":"Grafana学习(Loki日志系统初试)"}</script>
+<script class="next-config" data-name="page" type="application/json">{"sidebar":"","isHome":false,"isPost":true,"lang":"zh-CN","comments":"","permalink":"https://zhoushuke.github.io/2020/07/15/Loki/","path":"2020/07/15/Loki/","title":"Grafana学习(Loki日志系统初试)"}</script>
 
 <script class="next-config" data-name="calendar" type="application/json">""</script>
 <title>Grafana学习(Loki日志系统初试) | Z.S.K.'s Records</title>
@@ -166,12 +166,12 @@
       </div>
       <div class="site-state-item site-state-categories">
           <a href="/categories/">
-        <span class="site-state-item-count">15</span>
+        <span class="site-state-item-count">16</span>
         <span class="site-state-item-name">分类</span></a>
       </div>
       <div class="site-state-item site-state-tags">
           <a href="/tags/">
-        <span class="site-state-item-count">15</span>
+        <span class="site-state-item-count">16</span>
         <span class="site-state-item-name">标签</span></a>
       </div>
   </nav>
@@ -276,8 +276,6 @@
     <div class="post-body" itemprop="articleBody"><p>基于kubernetes为容器平台的业种中， 对于日志的收集，使用最多的是FEK， 不过有时候，FEK在架构上会略显重， ES的查询及全文检索功能其实使用的不是很多.LoKi做为日志架构的新面孔, 由grafana开源， 使用了与Prometheus同样的label理念, 同时摒弃了全文检索的能力, 因此比较轻便, 非常具有潜力</p>
 <span id="more"></span>
 
-
-
 <h3 id="like-Prometheus-but-for-logs"><a href="#like-Prometheus-but-for-logs" class="headerlink" title="like Prometheus, but for logs"></a>like Prometheus, but for logs</h3><p><code>Loki</code>是 Grafana Labs 团队最新的开源项目，是一个水平可扩展，高可用性，多租户的日志聚合系统。它的设计非常经济高效且易于操作，因为它不会为日志内容编制索引，而是为每个日志流编制一组标签。项目受 Prometheus 启发，官方的介绍就是：<code>Like Prometheus, but for logs</code>，类似于 Prometheus 的日志系统</p>
 <p>与其他日志聚合系统相比，<code>Loki</code>具有下面的一些特性：</p>
 <ul>
@@ -296,8 +294,6 @@
 <h3 id="架构"><a href="#架构" class="headerlink" title="架构"></a>架构</h3><p><img src="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/20200718162524.png"></p>
 <h3 id="安装"><a href="#安装" class="headerlink" title="安装"></a>安装</h3><p>官方提供了多种的部署方式, 这里选择使用<code>helm</code>, 如果只是想试用的话则非常简单, 直接参考<a target="_blank" rel="noopener" href="https://github.com/grafana/loki/blob/v1.5.0/docs/installation/helm.md">helm</a>即可run起来，这里就不做搬运工了</p>
 <figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">helm repo add loki https://grafana.github.io/loki/charts</span><br><span class="line">helm repo update</span><br><span class="line">helm upgrade --install loki loki/loki-stack</span><br></pre></td></tr></table></figure>
-
-
 
 <h3 id="配置"><a href="#配置" class="headerlink" title="配置"></a>配置</h3><p>对于loki来说，loki端的配置相对来说会比较简单, 采集端由于可以使用pipeline， 因此会稍复杂点，但是如果接触过prometheus，那其它会觉得还是挺情切.</p>
 <p>先来看服务端loki的配置</p>
@@ -498,14 +494,14 @@
       <i class="fa fa-chart-line"></i>
     </span>
       <span>站点总字数：</span>
-    <span title="站点总字数">996k</span>
+    <span title="站点总字数">997k</span>
   </span>
   <span class="post-meta-item">
     <span class="post-meta-item-icon">
       <i class="fa fa-coffee"></i>
     </span>
       <span>站点阅读时长 &asymp;</span>
-    <span title="站点阅读时长">15:05</span>
+    <span title="站点阅读时长">15:06</span>
   </span>
 </div>
 <div class="busuanzi-count">

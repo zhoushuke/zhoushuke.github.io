@@ -28,7 +28,7 @@
 <meta property="og:description" content="由于kube-batch经久未修，导致在引入kube-batch到环境中验证期间fix了很多问题，记录于此">
 <meta property="og:locale" content="zh_CN">
 <meta property="article:published_time" content="2021-03-27T11:10:53.000Z">
-<meta property="article:modified_time" content="2024-12-30T07:37:32.329Z">
+<meta property="article:modified_time" content="2026-11-04T12:26:45.012Z">
 <meta property="article:author" content="周淑科">
 <meta property="article:tag" content="HPC">
 <meta name="twitter:card" content="summary">
@@ -37,7 +37,7 @@
 <link rel="canonical" href="https://zhoushuke.github.io/2021/03/27/Kubernetes-kubebatch-prombles/">
 
 
-<script class="next-config" data-name="page" type="application/json">{"sidebar":"","isHome":false,"isPost":true,"lang":"zh-CN","comments":true,"permalink":"https://zhoushuke.github.io/2021/03/27/Kubernetes-kubebatch-prombles/","path":"2021/03/27/Kubernetes-kubebatch-prombles/","title":"Kube-batch学习(kube-batch踩坑记)"}</script>
+<script class="next-config" data-name="page" type="application/json">{"sidebar":"","isHome":false,"isPost":true,"lang":"zh-CN","comments":"","permalink":"https://zhoushuke.github.io/2021/03/27/Kubernetes-kubebatch-prombles/","path":"2021/03/27/Kubernetes-kubebatch-prombles/","title":"Kube-batch学习(kube-batch踩坑记)"}</script>
 
 <script class="next-config" data-name="calendar" type="application/json">""</script>
 <title>Kube-batch学习(kube-batch踩坑记) | Z.S.K.'s Records</title>
@@ -160,12 +160,12 @@
       </div>
       <div class="site-state-item site-state-categories">
           <a href="/categories/">
-        <span class="site-state-item-count">15</span>
+        <span class="site-state-item-count">16</span>
         <span class="site-state-item-name">分类</span></a>
       </div>
       <div class="site-state-item site-state-tags">
           <a href="/tags/">
-        <span class="site-state-item-count">15</span>
+        <span class="site-state-item-count">16</span>
         <span class="site-state-item-name">标签</span></a>
       </div>
   </nav>
@@ -273,7 +273,7 @@
 <p>Kube-batch版本为v1.5.0, kube-batch github上能看到的最后一个release版本.</p>
 <h3 id="解决集群中如果存在pdb时出现的空指针问题"><a href="#解决集群中如果存在pdb时出现的空指针问题" class="headerlink" title="解决集群中如果存在pdb时出现的空指针问题"></a>解决集群中如果存在pdb时出现的空指针问题</h3><p>在kube-batch的稳定版本中(目前是v1.5.0),如果集群中有pdb，pdb在k8s中是一种安全机制，可<a target="_blank" rel="noopener" href="https://kubernetes.io/zh/docs/tasks/run-application/configure-pdb/">参考</a></p>
 <p>如果podb的属性值有空值时，kube-batch在启动时会出现空指针异常，核心代码:</p>
-<figure class="highlight go"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">func</span> <span class="params">(ji *JobInfo)</span></span> SetPDB(pdb *policyv1.PodDisruptionBudget) &#123;</span><br><span class="line">    ji.Name = pdb.Name</span><br><span class="line">    <span class="comment">//ji.MinAvailable = pdb.Spec.MinAvailable.IntVal  # fix之前的错误代码，以下是fix之后新增的代码</span></span><br><span class="line">  defaultMinAvailable := intstr.IntOrString&#123;Type: intstr.Int, IntVal: <span class="type">int32</span>(<span class="number">0</span>)&#125;</span><br><span class="line">    minAvailable := pdb.Spec.MinAvailable</span><br><span class="line">    ji.MinAvailable = <span class="type">int32</span>(intstr.ValueOrDefault(minAvailable, defaultMinAvailable).IntValue())</span><br><span class="line">    ji.Namespace = pdb.Namespace</span><br><span class="line"></span><br><span class="line">    ji.CreationTimestamp = pdb.GetCreationTimestamp()</span><br><span class="line">    ji.PDB = pdb</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<figure class="highlight go"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">func</span> <span class="params">(ji *JobInfo)</span></span> SetPDB(pdb *policyv1.PodDisruptionBudget) &#123;</span><br><span class="line">	ji.Name = pdb.Name</span><br><span class="line">	<span class="comment">//ji.MinAvailable = pdb.Spec.MinAvailable.IntVal  # fix之前的错误代码，以下是fix之后新增的代码</span></span><br><span class="line">  defaultMinAvailable := intstr.IntOrString&#123;Type: intstr.Int, IntVal: <span class="type">int32</span>(<span class="number">0</span>)&#125;</span><br><span class="line">	minAvailable := pdb.Spec.MinAvailable</span><br><span class="line">	ji.MinAvailable = <span class="type">int32</span>(intstr.ValueOrDefault(minAvailable, defaultMinAvailable).IntValue())</span><br><span class="line">	ji.Namespace = pdb.Namespace</span><br><span class="line"></span><br><span class="line">	ji.CreationTimestamp = pdb.GetCreationTimestamp()</span><br><span class="line">	ji.PDB = pdb</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
 
 <p>异常代码在于注释的那行，代码中直接获取min值，但是这个值可能为NaN值，没有做安全处理</p>
 <p>fix之后的代码如注释之后的代码</p>
@@ -284,7 +284,7 @@
 <h3 id="资源计算错误问题"><a href="#资源计算错误问题" class="headerlink" title="资源计算错误问题"></a>资源计算错误问题</h3><p>Kube-batch中对每一次调度之后都会计划queue中所有的task所占用的资源是不是超过了queue能够使用的最大资源，如果超过，则会返回一个标志位overUsed，返回这个标志位，kube-batch则不会对属于该queue中的task进行调度</p>
 <p>但是kube-batch在进行资源比较时出现了计算错误,</p>
 <p>核心代码如下:</p>
-<figure class="highlight go"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br></pre></td><td class="code"><pre><span class="line">ssn.AddOverusedFn(pp.Name(), <span class="function"><span class="keyword">func</span><span class="params">(obj <span class="keyword">interface</span>&#123;&#125;)</span></span> <span class="type">bool</span> &#123;</span><br><span class="line">        queue := obj.(*api.QueueInfo)</span><br><span class="line">        attr := pp.queueOpts[queue.UID]</span><br><span class="line"></span><br><span class="line">    <span class="comment">//overused := attr.deserved.Less(attr.allocated)</span></span><br><span class="line">        overused := attr.deserved.LessEqual(attr.allocated) </span><br><span class="line">        <span class="keyword">if</span> overused &#123;</span><br><span class="line">            glog.V(<span class="number">3</span>).Infof(<span class="string">&quot;Queue &lt;%v&gt;: deserved &lt;%v&gt;, allocated &lt;%v&gt;, share &lt;%v&gt;&quot;</span>,</span><br><span class="line">                queue.Name, attr.deserved, attr.allocated, attr.share)</span><br><span class="line">        &#125;</span><br><span class="line"></span><br><span class="line">        <span class="keyword">return</span> overused</span><br><span class="line">    &#125;)</span><br></pre></td></tr></table></figure>
+<figure class="highlight go"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br></pre></td><td class="code"><pre><span class="line">ssn.AddOverusedFn(pp.Name(), <span class="function"><span class="keyword">func</span><span class="params">(obj <span class="keyword">interface</span>&#123;&#125;)</span></span> <span class="type">bool</span> &#123;</span><br><span class="line">		queue := obj.(*api.QueueInfo)</span><br><span class="line">		attr := pp.queueOpts[queue.UID]</span><br><span class="line">  </span><br><span class="line">    <span class="comment">//overused := attr.deserved.Less(attr.allocated)</span></span><br><span class="line">		overused := attr.deserved.LessEqual(attr.allocated) </span><br><span class="line">		<span class="keyword">if</span> overused &#123;</span><br><span class="line">			glog.V(<span class="number">3</span>).Infof(<span class="string">&quot;Queue &lt;%v&gt;: deserved &lt;%v&gt;, allocated &lt;%v&gt;, share &lt;%v&gt;&quot;</span>,</span><br><span class="line">				queue.Name, attr.deserved, attr.allocated, attr.share)</span><br><span class="line">		&#125;</span><br><span class="line"></span><br><span class="line">		<span class="keyword">return</span> overused</span><br><span class="line">	&#125;)</span><br></pre></td></tr></table></figure>
 
 <p>该问题比较严重，<a target="_blank" rel="noopener" href="https://hub.fastgit.org/volcano-sh/volcano/pull/1116">fix</a></p>
 <h3 id="shadowpodgroup资源对象"><a href="#shadowpodgroup资源对象" class="headerlink" title="shadowpodgroup资源对象"></a>shadowpodgroup资源对象</h3><p>kube-batch支持直接在annotation中指定生成shadowpodgroup，这样就不需要每次都创建podgroup对象了</p>
@@ -361,7 +361,7 @@
                 </a>
             </div>
             <div class="post-nav-item">
-                <a href="/2021/03/27/Kubernetes-kubebatch-action-plugins/" rel="next" title="Kube-batch学习(核心模块)">
+                <a href="/2021/03/27/Kubernetes-kubebatch-actions-plugins/" rel="next" title="Kube-batch学习(核心模块)">
                   Kube-batch学习(核心模块) <i class="fa fa-angle-right"></i>
                 </a>
             </div>
@@ -395,14 +395,14 @@
       <i class="fa fa-chart-line"></i>
     </span>
       <span>站点总字数：</span>
-    <span title="站点总字数">996k</span>
+    <span title="站点总字数">997k</span>
   </span>
   <span class="post-meta-item">
     <span class="post-meta-item-icon">
       <i class="fa fa-coffee"></i>
     </span>
       <span>站点阅读时长 &asymp;</span>
-    <span title="站点阅读时长">15:05</span>
+    <span title="站点阅读时长">15:06</span>
   </span>
 </div>
 <div class="busuanzi-count">
