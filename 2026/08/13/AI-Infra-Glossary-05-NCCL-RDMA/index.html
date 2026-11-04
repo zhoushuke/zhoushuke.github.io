@@ -1,0 +1,721 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width">
+<meta name="theme-color" content="#222" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#222" media="(prefers-color-scheme: dark)"><meta name="generator" content="Hexo 6.2.0">
+
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon-next.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32x32-next.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon-16x16-next.png">
+  <link rel="mask-icon" href="/images/logo.svg" color="#222">
+
+<link rel="stylesheet" href="/css/main.css">
+
+<link rel="stylesheet" href="https://fonts.loli.net/css?family=Lato:300,300italic,400,400italic,700,700italic%7CRoboto+Mono:300,300italic,400,400italic,700,700italic&display=swap&subset=latin,latin-ext">
+
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.6.0/css/all.min.css" integrity="sha256-5eIC48iZUHmSlSUz9XtjRyK2mzQkHScZY1WdMaoz74E=" crossorigin="anonymous">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/3.1.1/animate.min.css" integrity="sha256-PR7ttpcvz8qrF57fur/yAx1qXMFJeJFiA6pSzWi0OIE=" crossorigin="anonymous">
+
+<script class="next-config" data-name="main" type="application/json">{"hostname":"zhoushuke.github.io","root":"/","images":"/images","scheme":"Mist","darkmode":true,"version":"8.21.1","exturl":false,"sidebar":{"position":"right","width_expanded":320,"width_dual_column":240,"display":"post","padding":18,"offset":12},"hljswrap":true,"copycode":{"enable":true,"style":"mac"},"fold":{"enable":true,"height":500},"bookmark":{"enable":false,"color":"#222","save":"auto"},"mediumzoom":false,"lazyload":false,"pangu":false,"comments":{"style":"tabs","active":null,"storage":true,"lazyload":false,"nav":null},"stickytabs":false,"motion":{"enable":true,"async":false,"transition":{"menu_item":"fadeInDown","post_block":"fadeIn","post_header":"fadeInDown","post_body":"fadeInDown","coll_header":"fadeInLeft","sidebar":"fadeInUp"}},"prism":false,"i18n":{"placeholder":"搜索...","empty":"没有找到任何搜索结果：${query}","hits_time":"找到 ${hits} 个搜索结果（用时 ${time} 毫秒）","hits":"找到 ${hits} 个搜索结果"},"path":"/search.xml","localsearch":{"enable":true,"top_n_per_article":1,"unescape":false,"preload":false}}</script><script src="/js/config.js"></script>
+
+    <meta name="description" content="对应路线图 Phase 2（W6-W9）的通信部分 + Phase 4（W17 nccl-tests）。这一份回答三个问题：多卡之间的数据到底怎么传？NCCL 在链路里扮演什么角色？为什么 NCCL 一挂，整个训练就卡死？ 读完你应该能看懂：NCCL_DEBUG&#x3D;INFO 日志、nvidia-smi topo -m 拓扑图、以及为什么 IB（InfiniBand）比普通以太网快一个数量级。">
+<meta property="og:type" content="article">
+<meta property="og:title" content="词汇图鉴⑤ NCCL 通信链路 + RDMA 网络（glossary-05）">
+<meta property="og:url" content="https://zhoushuke.github.io/2026/08/13/AI-Infra-Glossary-05-NCCL-RDMA/index.html">
+<meta property="og:site_name" content="Z.S.K.&#39;s Records">
+<meta property="og:description" content="对应路线图 Phase 2（W6-W9）的通信部分 + Phase 4（W17 nccl-tests）。这一份回答三个问题：多卡之间的数据到底怎么传？NCCL 在链路里扮演什么角色？为什么 NCCL 一挂，整个训练就卡死？ 读完你应该能看懂：NCCL_DEBUG&#x3D;INFO 日志、nvidia-smi topo -m 拓扑图、以及为什么 IB（InfiniBand）比普通以太网快一个数量级。">
+<meta property="og:locale" content="zh_CN">
+<meta property="og:image" content="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/202611041059290.png">
+<meta property="og:image" content="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/202611041059013.png">
+<meta property="og:image" content="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/202611041059868.png">
+<meta property="og:image" content="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/202611041100755.png">
+<meta property="article:published_time" content="2026-08-13T01:00:00.000Z">
+<meta property="article:modified_time" content="2026-11-04T12:37:33.794Z">
+<meta property="article:author" content="周淑科">
+<meta property="article:tag" content="AI-Infra">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:image" content="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/202611041059290.png">
+
+
+<link rel="canonical" href="https://zhoushuke.github.io/2026/08/13/AI-Infra-Glossary-05-NCCL-RDMA/">
+
+
+<script class="next-config" data-name="page" type="application/json">{"sidebar":"","isHome":false,"isPost":true,"lang":"zh-CN","comments":"","permalink":"https://zhoushuke.github.io/2026/08/13/AI-Infra-Glossary-05-NCCL-RDMA/","path":"2026/08/13/AI-Infra-Glossary-05-NCCL-RDMA/","title":"词汇图鉴⑤ NCCL 通信链路 + RDMA 网络（glossary-05）"}</script>
+
+<script class="next-config" data-name="calendar" type="application/json">""</script>
+<title>词汇图鉴⑤ NCCL 通信链路 + RDMA 网络（glossary-05） | Z.S.K.'s Records</title>
+  
+
+
+
+
+
+
+
+
+  <noscript>
+    <link rel="stylesheet" href="/css/noscript.css">
+  </noscript>
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage" class="use-motion">
+  <div class="headband"></div>
+
+  <main class="main">
+    <div class="column">
+      <header class="header" itemscope itemtype="http://schema.org/WPHeader"><div class="site-brand-container">
+  <div class="site-nav-toggle">
+    <div class="toggle" aria-label="切换导航栏" role="button">
+        <span class="toggle-line"></span>
+        <span class="toggle-line"></span>
+        <span class="toggle-line"></span>
+    </div>
+  </div>
+
+  <div class="site-meta">
+
+    <a href="/" class="brand" rel="start">
+      <i class="logo-line"></i>
+      <p class="site-title">Z.S.K.'s Records</p>
+      <i class="logo-line"></i>
+    </a>
+  </div>
+
+  <div class="site-nav-right">
+    <div class="toggle popup-trigger" aria-label="搜索" role="button">
+        <i class="fa fa-search fa-fw fa-lg"></i>
+    </div>
+  </div>
+</div>
+
+
+
+<nav class="site-nav">
+  <ul class="main-menu menu"><li class="menu-item menu-item-home"><a href="/" rel="section"><i class="fa fa-home fa-fw"></i>首页</a></li><li class="menu-item menu-item-about"><a href="/about/ZSK-Profile.pdf" rel="section"><i class="fa fa-user fa-fw"></i>简历</a></li><li class="menu-item menu-item-tags"><a href="/tags/" rel="section"><i class="fa fa-tags fa-fw"></i>标签</a></li><li class="menu-item menu-item-categories"><a href="/categories/" rel="section"><i class="fa fa-th fa-fw"></i>分类</a></li><li class="menu-item menu-item-archives"><a href="/archives/" rel="section"><i class="fa fa-archive fa-fw"></i>归档</a></li><li class="menu-item menu-item-commonweal"><a href="/404.html" rel="section"><i class="fa fa-heartbeat fa-fw"></i>公益 404</a></li>
+      <li class="menu-item menu-item-search">
+        <a role="button" class="popup-trigger"><i class="fa fa-search fa-fw"></i>搜索
+        </a>
+      </li>
+  </ul>
+</nav>
+
+
+
+  <div class="search-pop-overlay">
+    <div class="popup search-popup">
+      <div class="search-header">
+        <span class="search-icon">
+          <i class="fa fa-search"></i>
+        </span>
+        <div class="search-input-container">
+          <input autocomplete="off" autocapitalize="off" maxlength="80"
+                placeholder="搜索..." spellcheck="false"
+                type="search" class="search-input">
+        </div>
+        <span class="popup-btn-close" role="button">
+          <i class="fa fa-times-circle"></i>
+        </span>
+      </div>
+      <div class="search-result-container">
+        <div class="search-result-icon">
+          <i class="fa fa-spinner fa-pulse fa-5x"></i>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</header>
+        
+  
+  <aside class="sidebar">
+
+    <div class="sidebar-inner sidebar-nav-active sidebar-toc-active">
+      <ul class="sidebar-nav">
+        <li class="sidebar-nav-toc">
+          文章目录
+        </li>
+        <li class="sidebar-nav-overview">
+          站点概览
+        </li>
+      </ul>
+
+      <div class="sidebar-panel-container">
+        <!--noindex-->
+        <div class="post-toc-wrap sidebar-panel">
+            <div class="post-toc animated"><ol class="nav"><li class="nav-item nav-level-2"><a class="nav-link" href="#1-%E4%B8%80%E5%8F%A5%E8%AF%9D%EF%BC%9A%E4%B8%89%E6%9D%A1%E9%93%BE%E8%B7%AF%E7%9A%84%E5%85%A8%E6%99%AF"><span class="nav-number">1.</span> <span class="nav-text">1. 一句话：三条链路的全景</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#2-RDMA%EF%BC%9A%E7%BB%95%E8%BF%87%E5%86%85%E6%A0%B8%E7%9A%84%E2%80%9D%E7%9B%B4%E8%BE%BE%E5%86%85%E5%AD%98%E2%80%9D%E7%BD%91%E7%BB%9C"><span class="nav-number">2.</span> <span class="nav-text">2. RDMA：绕过内核的”直达内存”网络</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#2-1-%E4%B8%BA%E4%BB%80%E4%B9%88%E6%99%AE%E9%80%9A-TCP-%E4%B8%8D%E5%A4%9F%E5%BF%AB"><span class="nav-number">2.1.</span> <span class="nav-text">2.1 为什么普通 TCP 不够快</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#2-2-IB-vs-RoCE%EF%BC%9A%E4%B8%A4%E6%9D%A1-RDMA-%E7%89%A9%E7%90%86%E5%AE%9E%E7%8E%B0"><span class="nav-number">2.2.</span> <span class="nav-text">2.2 IB vs RoCE：两条 RDMA 物理实现</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#3-NCCL%EF%BC%9A%E5%A4%9A%E5%8D%A1%E9%9B%86%E5%90%88%E9%80%9A%E4%BF%A1%E7%9A%84%E2%80%9D%E8%BF%90%E8%A1%8C%E6%97%B6%E2%80%9D"><span class="nav-number">3.</span> <span class="nav-text">3. NCCL：多卡集合通信的”运行时”</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#3-1-NCCL-%E6%98%AF%E4%BB%80%E4%B9%88"><span class="nav-number">3.1.</span> <span class="nav-text">3.1 NCCL 是什么</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#3-2-NCCL-%E7%9A%84%E4%B8%89%E7%A7%8D%E9%80%9A%E4%BF%A1%E7%AE%97%E6%B3%95"><span class="nav-number">3.2.</span> <span class="nav-text">3.2 NCCL 的三种通信算法</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#3-3-%E4%B8%BB%E6%9C%BA%E5%86%85%E5%90%84-rank-%E7%9A%84-PCIe-%E6%8B%93%E6%89%91%EF%BC%88%E4%B8%BA%E4%BB%80%E4%B9%88%E6%8B%93%E6%89%91%E5%86%B3%E5%AE%9A%E9%80%9F%E5%BA%A6%EF%BC%89"><span class="nav-number">3.3.</span> <span class="nav-text">3.3 主机内各 rank 的 PCIe 拓扑（为什么拓扑决定速度）</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#3-4-%E5%85%B3%E9%94%AE-NCCL-%E7%8E%AF%E5%A2%83%E5%8F%98%E9%87%8F%EF%BC%88%E6%8E%92%E9%9A%9C%E6%89%8B%E5%86%8C%EF%BC%89"><span class="nav-number">3.4.</span> <span class="nav-text">3.4 关键 NCCL 环境变量（排障手册）</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#4-GPU-Direct-RDMA-GDR-%EF%BC%9A%E8%B7%A8%E6%9C%BA%E9%80%9A%E4%BF%A1%E7%9A%84%E7%BB%88%E6%9E%81%E5%BD%A2%E6%80%81"><span class="nav-number">4.</span> <span class="nav-text">4. GPU Direct RDMA (GDR)：跨机通信的终极形态</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#5-NCCL-%E5%B8%B8%E8%A7%81%E6%95%85%E9%9A%9C%E4%B8%8E%E6%8E%92%E6%9F%A5%E6%80%9D%E8%B7%AF%EF%BC%88%E7%AE%A1%E7%90%86%E5%91%98%E9%80%9F%E6%9F%A5%EF%BC%89"><span class="nav-number">5.</span> <span class="nav-text">5. NCCL 常见故障与排查思路（管理员速查）</span></a></li></ol></div>
+        </div>
+        <!--/noindex-->
+
+        <div class="site-overview-wrap sidebar-panel">
+          <div class="site-author animated" itemprop="author" itemscope itemtype="http://schema.org/Person">
+    <img class="site-author-image" itemprop="image" alt="周淑科"
+      src="/images/avatar.gif">
+  <p class="site-author-name" itemprop="name">周淑科</p>
+  <div class="site-description" itemprop="description">Better Later Than Never</div>
+</div>
+<div class="site-state-wrap animated">
+  <nav class="site-state">
+      <div class="site-state-item site-state-posts">
+        <a href="/archives/">
+          <span class="site-state-item-count">233</span>
+          <span class="site-state-item-name">日志</span>
+        </a>
+      </div>
+      <div class="site-state-item site-state-categories">
+          <a href="/categories/">
+        <span class="site-state-item-count">17</span>
+        <span class="site-state-item-name">分类</span></a>
+      </div>
+      <div class="site-state-item site-state-tags">
+          <a href="/tags/">
+        <span class="site-state-item-count">17</span>
+        <span class="site-state-item-name">标签</span></a>
+      </div>
+  </nav>
+</div>
+  <div class="cc-license animated" itemprop="license">
+    <a href="https://creativecommons.org/licenses/by-nc-sa/4.0/" class="cc-opacity" rel="noopener" target="_blank"><img src="https://cdnjs.cloudflare.com/ajax/libs/creativecommons-vocabulary/2020.11.3/assets/license_badges/small/by_nc_sa.svg" alt="Creative Commons"></a>
+  </div>
+
+        </div>
+      </div>
+    </div>
+
+    
+  </aside>
+
+
+    </div>
+
+    <div class="main-inner post posts-expand">
+
+
+  
+
+
+<div class="post-block">
+  
+  
+
+  <article itemscope itemtype="http://schema.org/Article" class="post-content" lang="zh-CN">
+    <link itemprop="mainEntityOfPage" href="https://zhoushuke.github.io/2026/08/13/AI-Infra-Glossary-05-NCCL-RDMA/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/avatar.gif">
+      <meta itemprop="name" content="周淑科">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="Z.S.K.'s Records">
+      <meta itemprop="description" content="Better Later Than Never">
+    </span>
+
+    <span hidden itemprop="post" itemscope itemtype="http://schema.org/CreativeWork">
+      <meta itemprop="name" content="词汇图鉴⑤ NCCL 通信链路 + RDMA 网络（glossary-05） | Z.S.K.'s Records">
+      <meta itemprop="description" content="">
+    </span>
+      <header class="post-header">
+        <h1 class="post-title" itemprop="name headline">
+          词汇图鉴⑤ NCCL 通信链路 + RDMA 网络（glossary-05）
+        </h1>
+
+        <div class="post-meta-container">
+          <div class="post-meta">
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-calendar"></i>
+      </span>
+      <span class="post-meta-item-text">发表于</span>
+
+      <time title="创建时间：2026-08-13 09:00:00" itemprop="dateCreated datePublished" datetime="2026-08-13T09:00:00+08:00">2026-08-13</time>
+    </span>
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-folder"></i>
+      </span>
+      <span class="post-meta-item-text">分类于</span>
+        <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+          <a href="/categories/AI-Infra/" itemprop="url" rel="index"><span itemprop="name">AI-Infra</span></a>
+        </span>
+    </span>
+
+  
+    <span class="post-meta-item" title="阅读次数" id="busuanzi_container_page_pv">
+      <span class="post-meta-item-icon">
+        <i class="far fa-eye"></i>
+      </span>
+      <span class="post-meta-item-text">阅读次数：</span>
+      <span id="busuanzi_value_page_pv"></span>
+    </span>
+    <span class="post-meta-break"></span>
+    <span class="post-meta-item" title="本文字数">
+      <span class="post-meta-item-icon">
+        <i class="far fa-file-word"></i>
+      </span>
+      <span class="post-meta-item-text">本文字数：</span>
+      <span>4.9k</span>
+    </span>
+    <span class="post-meta-item" title="阅读时长">
+      <span class="post-meta-item-icon">
+        <i class="far fa-clock"></i>
+      </span>
+      <span class="post-meta-item-text">阅读时长 &asymp;</span>
+      <span>4 分钟</span>
+    </span>
+</div>
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody"><blockquote>
+<p>对应路线图 Phase 2（W6-W9）的通信部分 + Phase 4（W17 nccl-tests）。<br>这一份回答三个问题：<strong>多卡之间的数据到底怎么传？NCCL 在链路里扮演什么角色？<br>为什么 NCCL 一挂，整个训练就卡死？</strong></p>
+<p>读完你应该能看懂：<code>NCCL_DEBUG=INFO</code> 日志、<code>nvidia-smi topo -m</code> 拓扑图、<br>以及为什么 IB（InfiniBand）比普通以太网快一个数量级。</p>
+</blockquote>
+<hr>
+<span id="more"></span>
+
+
+<h2 id="1-一句话：三条链路的全景"><a href="#1-一句话：三条链路的全景" class="headerlink" title="1. 一句话：三条链路的全景"></a>1. 一句话：三条链路的全景</h2><p>从单卡到跨机，GPU 通信分<strong>三个层次</strong>，快慢差 3-4 个数量级：</p>
+<p><img src="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/202611041059290.png" alt="概念图"></p>
+<table>
+<thead>
+<tr>
+<th>层级</th>
+<th>介质</th>
+<th>带宽</th>
+<th>时延</th>
+<th>谁在用</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>芯片内</td>
+<td>片上总线&#x2F;共享内存</td>
+<td>3.35 TB&#x2F;s (H100)</td>
+<td>~纳秒</td>
+<td>单卡 kernel 内部</td>
+</tr>
+<tr>
+<td>机内 GPU-GPU</td>
+<td>NVLink + NVSwitch</td>
+<td>900 GB&#x2F;s（每卡单向）</td>
+<td>~微秒</td>
+<td>TP、DP 梯度 AllReduce</td>
+</tr>
+<tr>
+<td>跨机 GPU-GPU</td>
+<td><strong>RDMA</strong>（IB&#x2F;RoCE）+ NCCL</td>
+<td>~400 Gbps &#x3D; 50 GB&#x2F;s</td>
+<td>~1-2μs</td>
+<td>DP&#x2F;PP&#x2F;EP 跨节点通信</td>
+</tr>
+</tbody></table>
+<p><strong>系统管理员类比</strong>：三级就是 CPU 的 寄存器→L2→内存→SSD 的带宽阶梯翻版——<br>NVLink 是”机内专线”，RDMA 是”跨机专网”。<strong>训练软件的并行度（TP&#x2F;PP&#x2F;DP）本质上是一个<br>“哪些通信走哪级链路”的布局决策。</strong></p>
+<p><strong>要记住的数字</strong>：</p>
+<ul>
+<li>NVLink 900 GB&#x2F;s vs RDMA 400Gbps(≈50GB&#x2F;s)：<strong>差 18 倍</strong>——这就是”TP 只放在机内”的物理原因</li>
+<li>RDMA 时延 1-2μs vs TCP 局域网 50-100μs：<strong>差 50-100 倍</strong></li>
+<li>跨机 AllReduce 的通信量随 GPU 数线性增长 → 你是带宽瓶颈还是算力瓶颈，决定了副本数能开多大</li>
+</ul>
+<hr>
+<h2 id="2-RDMA：绕过内核的”直达内存”网络"><a href="#2-RDMA：绕过内核的”直达内存”网络" class="headerlink" title="2. RDMA：绕过内核的”直达内存”网络"></a>2. RDMA：绕过内核的”直达内存”网络</h2><h3 id="2-1-为什么普通-TCP-不够快"><a href="#2-1-为什么普通-TCP-不够快" class="headerlink" title="2.1 为什么普通 TCP 不够快"></a>2.1 为什么普通 TCP 不够快</h3><p><img src="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/202611041059013.png" alt="TCP/IP 路径: 每包拷贝多次"></p>
+<p>TCP 慢的根源：数据要在 <strong>内核态</strong>里多次拷贝（用户态→内核态→网卡→对端），每次拷贝都要 CPU 参与 + 中断处理；<br>RDMA 的关键是 <strong>Kernel Bypass</strong>：NIC 直接<strong>通过 DMA 读写</strong>对端及本端内存，CPU 完全不碰数据，<br>只在启动时设置一次（注册内存、建立队列对）。</p>
+<p><strong>一次 RDMA 读的流程</strong>（工作量在硬件不在 CPU）：</p>
+<ol>
+<li>发送方把要传的内存区域注册（<code>ibv_reg_mr</code>），拿到 key</li>
+<li>建立 QP（Queue Pair，类似 TCP 连接）</li>
+<li>发送 <strong>WQE</strong>（工作请求）：”把这段内存读给对端”</li>
+<li>RNIC 硬件直接 DMA 抄数据到对端指定内存，完成后 CQE 通知</li>
+<li>CPU 全程不接触数据——这就是”零拷贝 + 内核旁路”</li>
+</ol>
+<p><strong>系统管理员类比</strong>：TCP 是快递员逐件搬（CPU 参与每包），RDMA 是”两台机器的内存地址通了条 DMA 专线”，<br>用”内存到内存”取代”内存→网卡→内存”。<strong>NCCL 的 AllReduce 数据全程不落 CPU 内存</strong>——这就是为什么<br>你 <code>top</code> 看 CPU 很低但网络跑满。</p>
+<h3 id="2-2-IB-vs-RoCE：两条-RDMA-物理实现"><a href="#2-2-IB-vs-RoCE：两条-RDMA-物理实现" class="headerlink" title="2.2 IB vs RoCE：两条 RDMA 物理实现"></a>2.2 IB vs RoCE：两条 RDMA 物理实现</h3><table>
+<thead>
+<tr>
+<th>特性</th>
+<th>InfiniBand (IB)</th>
+<th>RoCE（RDMA over Converged Ethernet）</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>本质</td>
+<td>专用 RDMA 网络（独立协议栈）</td>
+<td>以太网上跑的 RDMA</td>
+</tr>
+<tr>
+<td>速度代</td>
+<td>EDR 100G → HDR 200G → <strong>NDR 400G</strong> → XDR 800G</td>
+<td>与以太网同步：400G&#x2F;800G</td>
+</tr>
+<tr>
+<td>无损保证</td>
+<td>天生无损（链路层流控）</td>
+<td><strong>需要 PFC 流控 + ECN 标记</strong>（无损以太网）</td>
+</tr>
+<tr>
+<td>生态</td>
+<td>需 IB 交换机（NVIDIA&#x2F;Mellanox）</td>
+<td>通用交换机（Arista&#x2F;Cisco 等）+ RoCE 网卡</td>
+</tr>
+<tr>
+<td>成本</td>
+<td>贵（专属硬件）</td>
+<td>便宜（复用以太网）</td>
+</tr>
+<tr>
+<td>成熟度</td>
+<td>超算&#x2F;大厂训练标配</td>
+<td>成本敏感场景（部分云厂商）</td>
+</tr>
+<tr>
+<td>运维要点</td>
+<td>UFM 管理、SM 配置、AR 自适应路由</td>
+<td><strong>PFC 死锁、ECN 阈值调优是坑</strong></td>
+</tr>
+</tbody></table>
+<p><strong>管理员关键知识点</strong>：</p>
+<ol>
+<li><strong>无损网络是前提</strong>：RDMA 丢一个包重传代价极高 → 以太网要开 PFC（Priority Flow Control 暂停帧）保证不丢。<br><strong>PFC 配置不当（阈值错误）可导致整网死锁&#x2F;吞吐悬崖</strong>——这是 RoCE 集群最著名的排障点</li>
+<li><strong>GID&#x2F;Queue Pair</strong>：RDMA 寻址用 GID（IPv6 形式地址）；每个 QP 一对队列。<code>ibv_devinfo</code> 可查</li>
+<li><strong>SM&#x2F;AR</strong>：IB 需要子网管理器（SM）；自适应路由（AR）让不同报文走不同路径减少拥塞</li>
+</ol>
+<p><strong>要记住的数字</strong>：</p>
+<ul>
+<li>NDR 400Gbps ≈ <strong>50 GB&#x2F;s</strong> 单方向；双向 100 GB&#x2F;s</li>
+<li>IB 时延 ~0.5-1μs（端口间）；RoCE 略高</li>
+<li>一台 8 卡机通常配 8 个 400G 网卡（每 GPU 一张）做跨机——8×50GB&#x2F;s &#x3D; 400GB&#x2F;s 跨机总带宽，<br>仍远低于机内 NVLink 900GB&#x2F;s×8——所以跨机大模型并行必须”通信最少化”（PP&#x2F;ZeRO 多、TP 少）</li>
+</ul>
+<hr>
+<h2 id="3-NCCL：多卡集合通信的”运行时”"><a href="#3-NCCL：多卡集合通信的”运行时”" class="headerlink" title="3. NCCL：多卡集合通信的”运行时”"></a>3. NCCL：多卡集合通信的”运行时”</h2><h3 id="3-1-NCCL-是什么"><a href="#3-1-NCCL-是什么" class="headerlink" title="3.1 NCCL 是什么"></a>3.1 NCCL 是什么</h3><p><strong>NCCL（NVIDIA Collective Communications Library）</strong> 是 GPU 上的<strong>集合通信库</strong>：<br>给 PyTorch&#x2F;DeepSpeed&#x2F;Megatron 提供 <code>AllReduce / AllGather / ReduceScatter / AlltoAll</code> 等原语，<br><strong>内部自动选择最佳链路（NVLink or RDMA 或混合）和拓扑算法</strong>。</p>
+<p>你看到的封装：<code>torch.distributed.all_reduce()</code> → 后端（nccl）→ NCCL 内部创建通信组、选算法、派发 kernel。</p>
+<p><img src="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/202611041059868.png" alt="概念图"></p>
+<h3 id="3-2-NCCL-的三种通信算法"><a href="#3-2-NCCL-的三种通信算法" class="headerlink" title="3.2 NCCL 的三种通信算法"></a>3.2 NCCL 的三种通信算法</h3><table>
+<thead>
+<tr>
+<th>算法</th>
+<th>原理</th>
+<th>用在哪</th>
+<th>特点</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><strong>Ring</strong>（默认）</td>
+<td>张量切 N 块沿环搬运+局部归约；带宽利用 ≈ 2(N-1)&#x2F;N</td>
+<td>通用</td>
+<td>简单稳定、带宽高效，但<strong>任意一环慢→全链接慢</strong></td>
+</tr>
+<tr>
+<td><strong>Tree</strong></td>
+<td>树形分层归约（叶子算完向上合并）</td>
+<td>大消息 &#x2F; 跨机延迟敏感</td>
+<td>减少链路跳数；对坏链路不如 ring 敏感</td>
+</tr>
+<tr>
+<td><strong>NVLS（NVLink SHARP）</strong></td>
+<td><strong>NVSwitch 硬件内做归约</strong>（in-network reduction）</td>
+<td>机内 8 卡全互联</td>
+<td><strong>归约在交换机上完成</strong>：带宽更高、CPU&#x2F;SM 不参与；H100 起支持</td>
+</tr>
+</tbody></table>
+<p><strong>一句话理解 NVLS</strong>：以前 AllReduce 是”数据先搬进 SM 算完再搬出”；NVLS 让 <strong>NVSwitch（交换机芯片）直接在路上做求和</strong>，<br>GPU 只要发出数据、收最终结果——类似 <strong>数据面智能卸载（交换机内计算）</strong>，你排障时看 NCCL 日志里的 <code>nvls</code> 通道就懂了。</p>
+<h3 id="3-3-主机内各-rank-的-PCIe-拓扑（为什么拓扑决定速度）"><a href="#3-3-主机内各-rank-的-PCIe-拓扑（为什么拓扑决定速度）" class="headerlink" title="3.3 主机内各 rank 的 PCIe 拓扑（为什么拓扑决定速度）"></a>3.3 主机内各 rank 的 PCIe 拓扑（为什么拓扑决定速度）</h3><p><code>nvidia-smi topo -m</code> 输出里能看到 GPU 之间是 NV2（NVLink 直连）、NV1&#x2F;NV4（级联）、还是 PIX&#x2F;PXB&#x2F;SYS（PCIe&#x2F;跨节点）：</p>
+<figure class="highlight text"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">        GPU0  GPU1  GPU2  GPU3  GPU4  GPU5  GPU6  GPU7</span><br><span class="line">GPU0     X    NV2   NV2   NV2   SYS   SYS   SYS   SYS</span><br><span class="line">...</span><br></pre></td></tr></table></figure>
+
+<ul>
+<li><strong>NV2</strong> &#x3D; NVLink 直连（900GB&#x2F;s）→ 适合 TP</li>
+<li><strong>PXB&#x2F;PIX</strong> &#x3D; 经 PCIe Switch（~50GB&#x2F;s）→ 慢一个数量级，适合 DP（要的就少）</li>
+<li><strong>SYS</strong> &#x3D; 跨节点（RDMA 对等通信）→ 最慢</li>
+<li>DDP 若把 TP 组跨机放 → <strong>通信慢了 18 倍，训练被吞掉</strong>——这就是为什么 <code>rank</code> 分配必须拓扑感知</li>
+</ul>
+<h3 id="3-4-关键-NCCL-环境变量（排障手册）"><a href="#3-4-关键-NCCL-环境变量（排障手册）" class="headerlink" title="3.4 关键 NCCL 环境变量（排障手册）"></a>3.4 关键 NCCL 环境变量（排障手册）</h3><table>
+<thead>
+<tr>
+<th>环境变量</th>
+<th>作用</th>
+<th>你什么时候用</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>NCCL_DEBUG=INFO</code></td>
+<td>打印通信组建立、选路、通道分配</td>
+<td>每次多卡训练出问题第一步</td>
+</tr>
+<tr>
+<td><code>NCCL_DEBUG_SUBSYS=ALL</code></td>
+<td>更细（拓扑&#x2F;通信&#x2F;网络&#x2F;图）</td>
+<td>深挖时</td>
+</tr>
+<tr>
+<td><code>NCCL_IB_DISABLE=1</code></td>
+<td>关掉 IB 用 TCP（慢但能救急）</td>
+<td>IB 故障时保任务跑</td>
+</tr>
+<tr>
+<td><code>NCCL_SOCKET_IFNAME=eth0</code></td>
+<td>指定控制平面网口</td>
+<td>多网卡选错时（最常见坑）</td>
+</tr>
+<tr>
+<td><code>NCCL_IB_HCA=mlx5_0,mlx5_1</code></td>
+<td>指定用哪个 RDMA 网卡</td>
+<td>多 HCA 选错时</td>
+</tr>
+<tr>
+<td><code>NCCL_IB_GID_INDEX</code></td>
+<td>RoCE 选 GID</td>
+<td>RoCE 跨网段不通时</td>
+</tr>
+<tr>
+<td><code>NCCL_P2P_LEVEL=NVL</code></td>
+<td>限制 P2P 最高级别（NVL&#x2F;PIX&#x2F;PXB&#x2F;SYS）</td>
+<td>拓扑认错导致崩溃时</td>
+</tr>
+<tr>
+<td><code>NCCL_NET_GDR_LEVEL</code></td>
+<td>GPU-Direct RDMA 级别（GDR）</td>
+<td>检查 GDR 是否生效</td>
+</tr>
+<tr>
+<td><code>NCCL_IB_TIMEOUT / NCCL_IB_RETRY_CNT</code></td>
+<td>无损网络超时&#x2F;重试</td>
+<td>RoCE 抖动排障</td>
+</tr>
+<tr>
+<td><code>NCCL_ALGO=RING</code>（或<code>NVLS</code>）</td>
+<td>强制算法</td>
+<td>对比性能 &#x2F; 绕过坏链路</td>
+</tr>
+</tbody></table>
+<p><strong>管理员最常踩的三个坑</strong>：</p>
+<ol>
+<li><strong><code>NCCL_SOCKET_IFNAME</code> 选错了网口</strong>（默认 eth0 可能是管理网）→ 训练时快时慢、偶发 timeout</li>
+<li><strong>IB 掉线但没设 <code>NCCL_IB_DISABLE</code></strong> → 反复 retry 卡死 → 先用 disable 保命，再修网络</li>
+<li><strong><code>NCCL_DEBUG=INFO</code> 里出现 <code>ncclInternalError</code> &#x2F; 超时</strong> → 看最后几行往往是<strong>环路里的某张卡不可达</strong></li>
+</ol>
+<hr>
+<h2 id="4-GPU-Direct-RDMA-GDR-：跨机通信的终极形态"><a href="#4-GPU-Direct-RDMA-GDR-：跨机通信的终极形态" class="headerlink" title="4. GPU Direct RDMA (GDR)：跨机通信的终极形态"></a>4. GPU Direct RDMA (GDR)：跨机通信的终极形态</h2><p><img src="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/202611041100755.png" alt="普通路径 (无GDR)"></p>
+<p><strong>GPU Direct RDMA</strong>：NIC 允许<strong>直接访问 GPU 显存</strong>（通过 NVLink&#x2F;P2P 映射），<br>跨机数据从”GPU显存→Host→NIC”变”GPU显存→NIC”——<br>省掉 2 次主机内存拷贝和对应的 PCIe 往返，<strong>时延和带宽都显著改善</strong>。</p>
+<ul>
+<li>前提：NIC 插在 GPU 对等 PCIe 域、驱动开启 <code>NVReg</code>（nvidia_peermem）模块</li>
+<li>检查：<code>nvidia-smi</code> 里能看到 GPU↔NIC 的 P2P 连接；<code>NCCL_DEBUG=INFO</code> 日志显示 <code>net#0</code> 带 GDR</li>
+<li>没开 GDR 的常见现象：跨机带宽只有一半、<code>nvidia-smi topo -m</code> 无 NVLink 但通信慢</li>
+</ul>
+<p><strong>管理员检查命令</strong>：</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># 拓扑与 NVLink</span></span><br><span class="line">nvidia-smi topo -m</span><br><span class="line"><span class="comment"># RDMA 设备</span></span><br><span class="line">ibv_devinfo | grep -E <span class="string">&quot;state|link_layer|active_speed&quot;</span></span><br><span class="line"><span class="comment"># GDR 是否生效（kernel 模块 + 挂载点）</span></span><br><span class="line">lsmod | grep nvidia_peermem   <span class="comment"># 应看到</span></span><br><span class="line"><span class="comment"># 网络质量</span></span><br><span class="line">ibstat | grep -E <span class="string">&quot;State|Rate|Physical&quot;</span></span><br><span class="line"><span class="comment"># NCCL 带宽实测（这才是真相）</span></span><br><span class="line">mpirun -np 2 ./nccl-tests/build/allreduce_perf -b 8 -e 8G -f 2 -g 1</span><br></pre></td></tr></table></figure>
+
+<hr>
+<h2 id="5-NCCL-常见故障与排查思路（管理员速查）"><a href="#5-NCCL-常见故障与排查思路（管理员速查）" class="headerlink" title="5. NCCL 常见故障与排查思路（管理员速查）"></a>5. NCCL 常见故障与排查思路（管理员速查）</h2><table>
+<thead>
+<tr>
+<th>症状</th>
+<th>可能根因</th>
+<th>排查路径</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>训练卡住无超时</td>
+<td>NCCL 初始化失败，rank 等对端</td>
+<td><code>NCCL_DEBUG=INFO</code> 看第几个 rank 卡住；查网络连通</td>
+</tr>
+<tr>
+<td><code>ncclSystemError: cudaErrorDeviceUnavailable</code></td>
+<td>某卡被占&#x2F;掉卡</td>
+<td><code>nvidia-smi</code> 对比启动时编号</td>
+</tr>
+<tr>
+<td><code>ncclInternalError: invalid usage</code></td>
+<td>rank 参数不一致（world_size 对不上）</td>
+<td>核对启动命令 world&#x2F;rank&#x2F;env</td>
+</tr>
+<tr>
+<td>偶发超时 <code>ncclSystemError: timeout</code></td>
+<td>网卡&#x2F;链路抖动</td>
+<td><code>ibstat</code> 查 Rate；换网线&#x2F;换口；调 <code>NCCL_IB_TIMEOUT</code></td>
+</tr>
+<tr>
+<td>吞吐只有三分之一</td>
+<td>多轨没用上&#x2F;选错网口&#x2F;没 GDR</td>
+<td><code>NCCL_DEBUG=INFO</code> 看 <code>net</code> 通道数；<code>ibv_devinfo</code> 查端口激活</td>
+</tr>
+<tr>
+<td>八卡机内部也慢</td>
+<td>NVLink 拓扑没生效（如虚拟化环境）</td>
+<td><code>nvidia-smi topo -m</code> 看是否 NV2；K8s 里确认不是 MIG&#x2F;虚拟设备</td>
+</tr>
+<tr>
+<td>同一机柜快、跨机柜慢</td>
+<td>多轨（rail）布局没按节点连对叶交换机</td>
+<td>核对 rail 布线；让调度器保持节点内 8 卡同机（见 cluster 文档）</td>
+</tr>
+</tbody></table>
+<p><strong>最推荐的通用策略</strong>：<code>NCCL_DEBUG=INFO</code> 是第一工具；<strong>日志读倒数 10 行</strong>（错误往往在最后）；<br>保命手段 <code>NCCL_IB_DISABLE=1</code> 先把训练救起来，再慢慢修网络。</p>
+<blockquote>
+<p><strong>记忆锚点</strong>：三级链路 芯片内→NVLink→RDMA，分别管”算得快、机内传得快、跨机传得快”；<br>NCCL 是选路由的那层，全自动但需要环境变量伺候；RDMA 的本质是”绕过内核直达显存”；<br>GDR 让网卡直接读写 GPU 显存。排障口诀：<strong>先 DEBUG&#x3D;INFO，看倒数 10 行，再查 IB 状态。</strong></p>
+</blockquote>
+
+    </div>
+
+    
+    
+    
+
+    <footer class="post-footer">
+          <div class="reward-container">
+  <div>Buy Me a Coffee</div>
+  <button>
+    赞赏
+  </button>
+  <div class="post-reward">
+      <div>
+        <img src="/images/wechatpayme.png" alt="周淑科 微信">
+        <span>微信</span>
+      </div>
+      <div>
+        <img src="/images/alipayme.jpg" alt="周淑科 支付宝">
+        <span>支付宝</span>
+      </div>
+
+  </div>
+</div>
+
+          
+
+<div class="post-copyright">
+<ul>
+  <li class="post-copyright-author">
+      <strong>本文作者： </strong>周淑科
+  </li>
+  <li class="post-copyright-link">
+      <strong>本文链接：</strong>
+      <a href="https://zhoushuke.github.io/2026/08/13/AI-Infra-Glossary-05-NCCL-RDMA/" title="词汇图鉴⑤ NCCL 通信链路 + RDMA 网络（glossary-05）">https://zhoushuke.github.io/2026/08/13/AI-Infra-Glossary-05-NCCL-RDMA/</a>
+  </li>
+  <li class="post-copyright-license">
+      <strong>版权声明： </strong>本站所有文章除特别声明外，均采用 <a href="https://creativecommons.org/licenses/by-nc-sa/4.0/" rel="noopener" target="_blank"><i class="fab fa-fw fa-creative-commons"></i>BY-NC-SA</a> 许可协议。转载请保留原文作者及链接！
+  </li>
+</ul>
+</div>
+
+          <div class="post-tags">
+              <a href="/tags/AI-Infra/" rel="tag"># AI-Infra</a>
+          </div>
+
+        
+
+          <div class="post-nav">
+            <div class="post-nav-item">
+                <a href="/2026/07/14/AI-Infra-Glossary-04-GPU-Hardware/" rel="prev" title="词汇图鉴④ GPU 底层架构与性能（glossary-04）">
+                  <i class="fa fa-angle-left"></i> 词汇图鉴④ GPU 底层架构与性能（glossary-04）
+                </a>
+            </div>
+            <div class="post-nav-item">
+                <a href="/2026/09/12/AI-Infra-Cluster-Design-1000GPU/" rel="next" title="千卡级 NVIDIA GPU 集群设计指南（IDC 部署视角）">
+                  千卡级 NVIDIA GPU 集群设计指南（IDC 部署视角） <i class="fa fa-angle-right"></i>
+                </a>
+            </div>
+          </div>
+    </footer>
+  </article>
+</div>
+
+
+
+
+
+
+</div>
+  </main>
+
+  <footer class="footer">
+    <div class="footer-inner">
+
+  <div class="copyright">
+    &copy; 
+    <span itemprop="copyrightYear">2026</span>
+    <span class="with-love">
+      <i class="fa fa-heart"></i>
+    </span>
+    <span class="author" itemprop="copyrightHolder">周淑科</span>
+  </div>
+<div class="wordcount">
+  <span class="post-meta-item">
+    <span class="post-meta-item-icon">
+      <i class="fa fa-chart-line"></i>
+    </span>
+      <span>站点总字数：</span>
+    <span title="站点总字数">1m</span>
+  </span>
+  <span class="post-meta-item">
+    <span class="post-meta-item-icon">
+      <i class="fa fa-coffee"></i>
+    </span>
+      <span>站点阅读时长 &asymp;</span>
+    <span title="站点阅读时长">15:44</span>
+  </span>
+</div>
+<div class="busuanzi-count">
+    <span class="post-meta-item" id="busuanzi_container_site_uv">
+      <span class="post-meta-item-icon">
+        <i class="fa fa-user"></i>
+      </span>
+      <span class="site-uv" title="总访客量">
+        <span id="busuanzi_value_site_uv"></span>
+      </span>
+    </span>
+    <span class="post-meta-item" id="busuanzi_container_site_pv">
+      <span class="post-meta-item-icon">
+        <i class="fa fa-eye"></i>
+      </span>
+      <span class="site-pv" title="总访问量">
+        <span id="busuanzi_value_site_pv"></span>
+      </span>
+    </span>
+</div>
+  <div class="powered-by">Powered by <a href="https://hexo.io/" rel="noopener" target="_blank">Hexo</a> & <a href="https://theme-next.js.org/mist/" rel="noopener" target="_blank">NexT.Mist</a>
+  </div>
+
+    </div>
+  </footer>
+
+  
+  <div class="toggle sidebar-toggle" role="button">
+    <span class="toggle-line"></span>
+    <span class="toggle-line"></span>
+    <span class="toggle-line"></span>
+  </div>
+  <div class="sidebar-dimmer"></div>
+  <div class="back-to-top" role="button" aria-label="返回顶部">
+    <i class="fa fa-arrow-up fa-lg"></i>
+    <span>0%</span>
+  </div>
+
+<noscript>
+  <div class="noscript-warning">Theme NexT works best with JavaScript enabled</div>
+</noscript>
+
+
+  
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/animejs/3.2.1/anime.min.js" integrity="sha256-XL2inqUJaslATFnHdJOi9GfQ60on8Wx1C2H8DYiN1xY=" crossorigin="anonymous"></script>
+<script src="/js/comments.js"></script><script src="/js/utils.js"></script><script src="/js/motion.js"></script><script src="/js/sidebar.js"></script><script src="/js/next-boot.js"></script>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/hexo-generator-searchdb/1.4.1/search.js" integrity="sha256-1kfA5uHPf65M5cphT2dvymhkuyHPQp5A53EGZOnOLmc=" crossorigin="anonymous"></script>
+<script src="/js/third-party/search/local-search.js"></script>
+
+
+
+
+
+
+
+  
+  <script async src="https://cn.vercount.one/js"></script>
+
+
+
+
+
+</body>
+</html>

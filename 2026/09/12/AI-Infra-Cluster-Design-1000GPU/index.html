@@ -1,0 +1,690 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width">
+<meta name="theme-color" content="#222" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#222" media="(prefers-color-scheme: dark)"><meta name="generator" content="Hexo 6.2.0">
+
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon-next.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32x32-next.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon-16x16-next.png">
+  <link rel="mask-icon" href="/images/logo.svg" color="#222">
+
+<link rel="stylesheet" href="/css/main.css">
+
+<link rel="stylesheet" href="https://fonts.loli.net/css?family=Lato:300,300italic,400,400italic,700,700italic%7CRoboto+Mono:300,300italic,400,400italic,700,700italic&display=swap&subset=latin,latin-ext">
+
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.6.0/css/all.min.css" integrity="sha256-5eIC48iZUHmSlSUz9XtjRyK2mzQkHScZY1WdMaoz74E=" crossorigin="anonymous">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/3.1.1/animate.min.css" integrity="sha256-PR7ttpcvz8qrF57fur/yAx1qXMFJeJFiA6pSzWi0OIE=" crossorigin="anonymous">
+
+<script class="next-config" data-name="main" type="application/json">{"hostname":"zhoushuke.github.io","root":"/","images":"/images","scheme":"Mist","darkmode":true,"version":"8.21.1","exturl":false,"sidebar":{"position":"right","width_expanded":320,"width_dual_column":240,"display":"post","padding":18,"offset":12},"hljswrap":true,"copycode":{"enable":true,"style":"mac"},"fold":{"enable":true,"height":500},"bookmark":{"enable":false,"color":"#222","save":"auto"},"mediumzoom":false,"lazyload":false,"pangu":false,"comments":{"style":"tabs","active":null,"storage":true,"lazyload":false,"nav":null},"stickytabs":false,"motion":{"enable":true,"async":false,"transition":{"menu_item":"fadeInDown","post_block":"fadeIn","post_header":"fadeInDown","post_body":"fadeInDown","coll_header":"fadeInLeft","sidebar":"fadeInUp"}},"prism":false,"i18n":{"placeholder":"搜索...","empty":"没有找到任何搜索结果：${query}","hits_time":"找到 ${hits} 个搜索结果（用时 ${time} 毫秒）","hits":"找到 ${hits} 个搜索结果"},"path":"/search.xml","localsearch":{"enable":true,"top_n_per_article":1,"unescape":false,"preload":false}}</script><script src="/js/config.js"></script>
+
+    <meta name="description" content="场景假设：你要在 IDC 里落地一套 1024 卡（128 节点 × 8 卡） 的 NVIDIA GPU 集群，跑大模型训练（DP&#x2F;TP&#x2F;PP&#x2F;EP 混合并行）+ 推理。本文讲清楚：交换机怎么选、多轨（rail）怎么布、网络容量怎么算、以及 K8s&#x2F;调度要配合什么。 数字基于 DGX&#x2F;HGX 形态 + H100（NVLink 900GB&amp;#x2F">
+<meta property="og:type" content="article">
+<meta property="og:title" content="千卡级 NVIDIA GPU 集群设计指南（IDC 部署视角）">
+<meta property="og:url" content="https://zhoushuke.github.io/2026/09/12/AI-Infra-Cluster-Design-1000GPU/index.html">
+<meta property="og:site_name" content="Z.S.K.&#39;s Records">
+<meta property="og:description" content="场景假设：你要在 IDC 里落地一套 1024 卡（128 节点 × 8 卡） 的 NVIDIA GPU 集群，跑大模型训练（DP&#x2F;TP&#x2F;PP&#x2F;EP 混合并行）+ 推理。本文讲清楚：交换机怎么选、多轨（rail）怎么布、网络容量怎么算、以及 K8s&#x2F;调度要配合什么。 数字基于 DGX&#x2F;HGX 形态 + H100（NVLink 900GB&amp;#x2F">
+<meta property="og:locale" content="zh_CN">
+<meta property="og:image" content="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/202611041100849.png">
+<meta property="article:published_time" content="2026-09-12T01:00:00.000Z">
+<meta property="article:modified_time" content="2026-11-04T12:37:33.793Z">
+<meta property="article:author" content="周淑科">
+<meta property="article:tag" content="AI-Infra">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:image" content="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/202611041100849.png">
+
+
+<link rel="canonical" href="https://zhoushuke.github.io/2026/09/12/AI-Infra-Cluster-Design-1000GPU/">
+
+
+<script class="next-config" data-name="page" type="application/json">{"sidebar":"","isHome":false,"isPost":true,"lang":"zh-CN","comments":"","permalink":"https://zhoushuke.github.io/2026/09/12/AI-Infra-Cluster-Design-1000GPU/","path":"2026/09/12/AI-Infra-Cluster-Design-1000GPU/","title":"千卡级 NVIDIA GPU 集群设计指南（IDC 部署视角）"}</script>
+
+<script class="next-config" data-name="calendar" type="application/json">""</script>
+<title>千卡级 NVIDIA GPU 集群设计指南（IDC 部署视角） | Z.S.K.'s Records</title>
+  
+
+
+
+
+
+
+
+
+  <noscript>
+    <link rel="stylesheet" href="/css/noscript.css">
+  </noscript>
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage" class="use-motion">
+  <div class="headband"></div>
+
+  <main class="main">
+    <div class="column">
+      <header class="header" itemscope itemtype="http://schema.org/WPHeader"><div class="site-brand-container">
+  <div class="site-nav-toggle">
+    <div class="toggle" aria-label="切换导航栏" role="button">
+        <span class="toggle-line"></span>
+        <span class="toggle-line"></span>
+        <span class="toggle-line"></span>
+    </div>
+  </div>
+
+  <div class="site-meta">
+
+    <a href="/" class="brand" rel="start">
+      <i class="logo-line"></i>
+      <p class="site-title">Z.S.K.'s Records</p>
+      <i class="logo-line"></i>
+    </a>
+  </div>
+
+  <div class="site-nav-right">
+    <div class="toggle popup-trigger" aria-label="搜索" role="button">
+        <i class="fa fa-search fa-fw fa-lg"></i>
+    </div>
+  </div>
+</div>
+
+
+
+<nav class="site-nav">
+  <ul class="main-menu menu"><li class="menu-item menu-item-home"><a href="/" rel="section"><i class="fa fa-home fa-fw"></i>首页</a></li><li class="menu-item menu-item-about"><a href="/about/ZSK-Profile.pdf" rel="section"><i class="fa fa-user fa-fw"></i>简历</a></li><li class="menu-item menu-item-tags"><a href="/tags/" rel="section"><i class="fa fa-tags fa-fw"></i>标签</a></li><li class="menu-item menu-item-categories"><a href="/categories/" rel="section"><i class="fa fa-th fa-fw"></i>分类</a></li><li class="menu-item menu-item-archives"><a href="/archives/" rel="section"><i class="fa fa-archive fa-fw"></i>归档</a></li><li class="menu-item menu-item-commonweal"><a href="/404.html" rel="section"><i class="fa fa-heartbeat fa-fw"></i>公益 404</a></li>
+      <li class="menu-item menu-item-search">
+        <a role="button" class="popup-trigger"><i class="fa fa-search fa-fw"></i>搜索
+        </a>
+      </li>
+  </ul>
+</nav>
+
+
+
+  <div class="search-pop-overlay">
+    <div class="popup search-popup">
+      <div class="search-header">
+        <span class="search-icon">
+          <i class="fa fa-search"></i>
+        </span>
+        <div class="search-input-container">
+          <input autocomplete="off" autocapitalize="off" maxlength="80"
+                placeholder="搜索..." spellcheck="false"
+                type="search" class="search-input">
+        </div>
+        <span class="popup-btn-close" role="button">
+          <i class="fa fa-times-circle"></i>
+        </span>
+      </div>
+      <div class="search-result-container">
+        <div class="search-result-icon">
+          <i class="fa fa-spinner fa-pulse fa-5x"></i>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</header>
+        
+  
+  <aside class="sidebar">
+
+    <div class="sidebar-inner sidebar-nav-active sidebar-toc-active">
+      <ul class="sidebar-nav">
+        <li class="sidebar-nav-toc">
+          文章目录
+        </li>
+        <li class="sidebar-nav-overview">
+          站点概览
+        </li>
+      </ul>
+
+      <div class="sidebar-panel-container">
+        <!--noindex-->
+        <div class="post-toc-wrap sidebar-panel">
+            <div class="post-toc animated"><ol class="nav"><li class="nav-item nav-level-2"><a class="nav-link" href="#1-%E5%85%88%E5%AE%9A%E8%BE%B9%E7%95%8C%EF%BC%9A%E8%BF%99%E4%B8%89%E5%BC%A0%E7%BD%91%E7%BB%9C%E5%90%84%E5%8F%B8%E5%85%B6%E8%81%8C"><span class="nav-number">1.</span> <span class="nav-text">1. 先定边界：这三张网络各司其职</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#2-%E6%8B%93%E6%89%91%E9%80%89%E5%9E%8B%EF%BC%9A%E4%B8%BA%E4%BB%80%E4%B9%88%E6%98%AF%E2%80%9D%E5%A4%9A%E8%BD%A8%EF%BC%88Rail%EF%BC%89-%E4%B8%A4%E5%B1%82%EF%BC%88Leaf-Spine%EF%BC%89%E2%80%9D"><span class="nav-number">2.</span> <span class="nav-text">2. 拓扑选型：为什么是”多轨（Rail）+ 两层（Leaf-Spine）”</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#2-1-%E4%BB%8E-Fat-Tree-%E5%88%B0-Rail-Optimized"><span class="nav-number">2.1.</span> <span class="nav-text">2.1 从 Fat-Tree 到 Rail-Optimized</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#2-2-%E5%A4%9A%E8%BD%A8%E7%9A%84%E4%B8%A4%E4%B8%AA%E7%9B%B4%E8%A7%89%E6%94%B6%E7%9B%8A"><span class="nav-number">2.2.</span> <span class="nav-text">2.2 多轨的两个直觉收益</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#2-3-%E8%A7%84%E6%A8%A1%E4%B8%8A%E4%B8%8D%E6%9D%A5%E6%97%B6%E6%80%8E%E4%B9%88%E5%8A%9E%EF%BC%9A%E5%9D%97%EF%BC%88Block%EF%BC%89-x2F-%E5%8D%95%E5%85%83%EF%BC%88SU%EF%BC%89"><span class="nav-number">2.3.</span> <span class="nav-text">2.3 规模上不来时怎么办：块（Block）&#x2F; 单元（SU）</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#3-%E4%BA%A4%E6%8D%A2%E6%9C%BA%E6%80%8E%E4%B9%88%E9%80%89%EF%BC%9A%E7%9C%8B%E7%AB%AF%E5%8F%A3-%C3%97-%E5%B8%A6%E5%AE%BD%EF%BC%8C%E4%B8%8D%E6%98%AF%E7%9C%8B%E5%93%81%E7%89%8C"><span class="nav-number">3.</span> <span class="nav-text">3. 交换机怎么选：看端口 × 带宽，不是看品牌</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#3-1-%E4%B8%89%E7%B1%BB%E4%BA%A4%E6%8D%A2%E6%9C%BA%E8%A7%92%E8%89%B2"><span class="nav-number">3.1.</span> <span class="nav-text">3.1 三类交换机角色</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#3-2-%E5%85%B3%E9%94%AE%E9%80%89%E5%9E%8B%E5%8F%82%E6%95%B0"><span class="nav-number">3.2.</span> <span class="nav-text">3.2 关键选型参数</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#4-%E7%BD%91%E7%BB%9C%E5%AE%B9%E9%87%8F%E8%AE%A1%E7%AE%97%EF%BC%9A%E4%BB%8E%E2%80%9D%E8%A6%81%E5%A4%9A%E5%B0%91%E5%B8%A6%E5%AE%BD%E2%80%9D%E5%88%B0%E2%80%9D%E4%B9%B0%E5%A4%9A%E5%B0%91%E4%BA%A4%E6%8D%A2%E6%9C%BA%E2%80%9D"><span class="nav-number">4.</span> <span class="nav-text">4. 网络容量计算：从”要多少带宽”到”买多少交换机”</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#4-1-%E8%AE%AD%E7%BB%83%E9%80%9A%E4%BF%A1%E9%87%8F%E4%BC%B0%E7%AE%97%EF%BC%88%E5%AE%B9%E9%87%8F%E8%A7%84%E5%88%92%E7%9A%84%E8%B5%B7%E7%82%B9%EF%BC%89"><span class="nav-number">4.1.</span> <span class="nav-text">4.1 训练通信量估算（容量规划的起点）</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#4-2-%E6%94%B6%E6%95%9B%E6%AF%94%EF%BC%88Oversubscription%EF%BC%89%E4%B8%8E%E9%A2%84%E7%AE%97%E6%9D%83%E8%A1%A1"><span class="nav-number">4.2.</span> <span class="nav-text">4.2 收敛比（Oversubscription）与预算权衡</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#4-3-%E4%BA%A4%E6%8D%A2%E6%9C%BA%E6%95%B0%E9%87%8F%E9%80%9F%E7%AE%97%EF%BC%881024-%E5%8D%A1-IB-%E6%96%B9%E6%A1%88%EF%BC%89"><span class="nav-number">4.3.</span> <span class="nav-text">4.3 交换机数量速算（1024 卡 IB 方案）</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#5-%E5%A4%9A%E8%BD%A8%E5%B8%83%E7%BA%BF%E7%BB%86%E8%8A%82%EF%BC%9A%E8%8A%82%E7%82%B9%E5%86%85%E9%83%A8%E6%80%8E%E4%B9%88%E6%8E%92"><span class="nav-number">5.</span> <span class="nav-text">5. 多轨布线细节：节点内部怎么排</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#5-1-%E5%B8%83%E7%BA%BF%E7%9A%84%E9%93%81%E5%BE%8B"><span class="nav-number">5.1.</span> <span class="nav-text">5.1 布线的铁律</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#5-2-%E9%9C%80%E8%A6%81%E6%B3%A8%E6%84%8F%E7%9A%84%E2%80%9D%E9%9A%90%E8%97%8F%E5%9D%91%E2%80%9D"><span class="nav-number">5.2.</span> <span class="nav-text">5.2 需要注意的”隐藏坑”</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#6-%E8%B6%85%E4%BD%8E%E5%BB%B6%E8%BF%9F%E6%96%B9%E6%A1%88%EF%BC%88%E8%BF%9B%E9%98%B6%EF%BC%89%EF%BC%9AGB200-NVL72-%E5%92%8C-800G"><span class="nav-number">6.</span> <span class="nav-text">6. 超低延迟方案（进阶）：GB200 NVL72 和 800G</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#7-%E4%B8%8E-K8s-x2F-%E8%B0%83%E5%BA%A6%E5%99%A8%E7%9A%84%E9%85%8D%E5%90%88%EF%BC%88%E8%BF%99%E6%98%AF%E4%BD%A0%E8%83%BD%E7%9B%B4%E6%8E%A5%E8%90%BD%E5%9C%B0%E7%9A%84%EF%BC%89"><span class="nav-number">7.</span> <span class="nav-text">7. 与 K8s&#x2F;调度器的配合（这是你能直接落地的）</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#8-%E8%A6%81%E8%AE%B0%E4%BD%8F%E7%9A%84%E6%95%B0%E5%AD%97"><span class="nav-number">8.</span> <span class="nav-text">8. 要记住的数字</span></a></li></ol></div>
+        </div>
+        <!--/noindex-->
+
+        <div class="site-overview-wrap sidebar-panel">
+          <div class="site-author animated" itemprop="author" itemscope itemtype="http://schema.org/Person">
+    <img class="site-author-image" itemprop="image" alt="周淑科"
+      src="/images/avatar.gif">
+  <p class="site-author-name" itemprop="name">周淑科</p>
+  <div class="site-description" itemprop="description">Better Later Than Never</div>
+</div>
+<div class="site-state-wrap animated">
+  <nav class="site-state">
+      <div class="site-state-item site-state-posts">
+        <a href="/archives/">
+          <span class="site-state-item-count">233</span>
+          <span class="site-state-item-name">日志</span>
+        </a>
+      </div>
+      <div class="site-state-item site-state-categories">
+          <a href="/categories/">
+        <span class="site-state-item-count">17</span>
+        <span class="site-state-item-name">分类</span></a>
+      </div>
+      <div class="site-state-item site-state-tags">
+          <a href="/tags/">
+        <span class="site-state-item-count">17</span>
+        <span class="site-state-item-name">标签</span></a>
+      </div>
+  </nav>
+</div>
+  <div class="cc-license animated" itemprop="license">
+    <a href="https://creativecommons.org/licenses/by-nc-sa/4.0/" class="cc-opacity" rel="noopener" target="_blank"><img src="https://cdnjs.cloudflare.com/ajax/libs/creativecommons-vocabulary/2020.11.3/assets/license_badges/small/by_nc_sa.svg" alt="Creative Commons"></a>
+  </div>
+
+        </div>
+      </div>
+    </div>
+
+    
+  </aside>
+
+
+    </div>
+
+    <div class="main-inner post posts-expand">
+
+
+  
+
+
+<div class="post-block">
+  
+  
+
+  <article itemscope itemtype="http://schema.org/Article" class="post-content" lang="zh-CN">
+    <link itemprop="mainEntityOfPage" href="https://zhoushuke.github.io/2026/09/12/AI-Infra-Cluster-Design-1000GPU/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/avatar.gif">
+      <meta itemprop="name" content="周淑科">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="Z.S.K.'s Records">
+      <meta itemprop="description" content="Better Later Than Never">
+    </span>
+
+    <span hidden itemprop="post" itemscope itemtype="http://schema.org/CreativeWork">
+      <meta itemprop="name" content="千卡级 NVIDIA GPU 集群设计指南（IDC 部署视角） | Z.S.K.'s Records">
+      <meta itemprop="description" content="">
+    </span>
+      <header class="post-header">
+        <h1 class="post-title" itemprop="name headline">
+          千卡级 NVIDIA GPU 集群设计指南（IDC 部署视角）
+        </h1>
+
+        <div class="post-meta-container">
+          <div class="post-meta">
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-calendar"></i>
+      </span>
+      <span class="post-meta-item-text">发表于</span>
+
+      <time title="创建时间：2026-09-12 09:00:00" itemprop="dateCreated datePublished" datetime="2026-09-12T09:00:00+08:00">2026-09-12</time>
+    </span>
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-folder"></i>
+      </span>
+      <span class="post-meta-item-text">分类于</span>
+        <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+          <a href="/categories/AI-Infra/" itemprop="url" rel="index"><span itemprop="name">AI-Infra</span></a>
+        </span>
+    </span>
+
+  
+    <span class="post-meta-item" title="阅读次数" id="busuanzi_container_page_pv">
+      <span class="post-meta-item-icon">
+        <i class="far fa-eye"></i>
+      </span>
+      <span class="post-meta-item-text">阅读次数：</span>
+      <span id="busuanzi_value_page_pv"></span>
+    </span>
+    <span class="post-meta-break"></span>
+    <span class="post-meta-item" title="本文字数">
+      <span class="post-meta-item-icon">
+        <i class="far fa-file-word"></i>
+      </span>
+      <span class="post-meta-item-text">本文字数：</span>
+      <span>5.1k</span>
+    </span>
+    <span class="post-meta-item" title="阅读时长">
+      <span class="post-meta-item-icon">
+        <i class="far fa-clock"></i>
+      </span>
+      <span class="post-meta-item-text">阅读时长 &asymp;</span>
+      <span>5 分钟</span>
+    </span>
+</div>
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody"><blockquote>
+<p>场景假设：你要在 IDC 里落地一套 <strong>1024 卡（128 节点 × 8 卡）</strong> 的 NVIDIA GPU 集群，<br>跑大模型训练（DP&#x2F;TP&#x2F;PP&#x2F;EP 混合并行）+ 推理。本文讲清楚：<strong>交换机怎么选、多轨（rail）<br>怎么布、网络容量怎么算、以及 K8s&#x2F;调度要配合什么</strong>。</p>
+<p>数字基于 DGX&#x2F;HGX 形态 + H100（NVLink 900GB&#x2F;s、400G NIC），代际差异会注明。</p>
+</blockquote>
+<hr>
+<span id="more"></span>
+
+
+<h2 id="1-先定边界：这三张网络各司其职"><a href="#1-先定边界：这三张网络各司其职" class="headerlink" title="1. 先定边界：这三张网络各司其职"></a>1. 先定边界：这三张网络各司其职</h2><p>一个大模型集群<strong>不是一张网</strong>，是四张互相隔离的网络（俗称 4 平面）：</p>
+<table>
+<thead>
+<tr>
+<th>网络</th>
+<th>用途</th>
+<th>流量特征</th>
+<th>建议</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><strong>计算网络（后端）</strong></td>
+<td>GPU 跨机通信（NCCL&#x2F;RDMA）</td>
+<td>高带宽、突发、对延迟敏感</td>
+<td><strong>IB NDR 400G 或 RoCE 400G</strong>，无收敛（1:1）</td>
+</tr>
+<tr>
+<td><strong>存储网络</strong></td>
+<td>训练数据&#x2F;CKPT 读写</td>
+<td>高带宽、大流向</td>
+<td>以太网 100G-400G，可收敛 4:1</td>
+</tr>
+<tr>
+<td><strong>管理网络</strong></td>
+<td>BMC&#x2F;IPMI&#x2F;SSH&#x2F;监控</td>
+<td>低带宽</td>
+<td>万兆以太网足够</td>
+</tr>
+<tr>
+<td><strong>前端&#x2F;业务网</strong></td>
+<td>推理 API、登录</td>
+<td>多变</td>
+<td>以太网按需</td>
+</tr>
+</tbody></table>
+<p><strong>核心原则</strong>：计算网络与其它网络<strong>物理隔离</strong>（独享 IB 网卡+交换机）。<br>混用管理网跑 NCCL 是你把集群搞慢的头号原因。</p>
+<p><strong>千卡规模的两大用料估算</strong>：</p>
+<ul>
+<li>128 节点 × 8 网卡 &#x3D; <strong>1024 个 400G 端口</strong>（计算网）</li>
+<li>如果推理&#x2F;存储也要 400G，端口数会翻倍 → 交换机数量按端口算（见 §4）</li>
+</ul>
+<hr>
+<h2 id="2-拓扑选型：为什么是”多轨（Rail）-两层（Leaf-Spine）”"><a href="#2-拓扑选型：为什么是”多轨（Rail）-两层（Leaf-Spine）”" class="headerlink" title="2. 拓扑选型：为什么是”多轨（Rail）+ 两层（Leaf-Spine）”"></a>2. 拓扑选型：为什么是”多轨（Rail）+ 两层（Leaf-Spine）”</h2><h3 id="2-1-从-Fat-Tree-到-Rail-Optimized"><a href="#2-1-从-Fat-Tree-到-Rail-Optimized" class="headerlink" title="2.1 从 Fat-Tree 到 Rail-Optimized"></a>2.1 从 Fat-Tree 到 Rail-Optimized</h3><p>传统高性能计算用 <strong>Fat-Tree（胖树）</strong>：每个节点随机连到不同的 Leaf 交换机，<br>Leaf 之间通过 Spine 全互联，任意两点都能到达（有等价多路径 ECMP 负载均衡）。</p>
+<p><strong>但 GPU 训练有个 Fat-Tree 解决不了的问题</strong>：AllReduce 在任意一刻，<strong>同一个 GPU 要和<br>“它对应编号的兄弟”通信</strong>（比如 rank 8 和 rank 24 循环搬运）。胖树的随机连接导致：</p>
+<ul>
+<li>通信对分布不均匀 → 某些 Leaf 承载了大量流量（热点）</li>
+<li>跨 Leaf 的通信要绕 Spine → 时延变长</li>
+</ul>
+<p><strong>Rail-Optimized（多轨优化）</strong> 的思路：<strong>把”同轨道的兄弟”放在同一台 Leaf 下</strong>。</p>
+<p><img src="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/202611041100849.png" alt="节点 1（8 GPU）"></p>
+<p><strong>多轨定义</strong>：每台节点<strong>第 k 张 GPU 的网卡</strong>都连到<strong>同一台 Leaf（叫 rail k）</strong>。<br>128 个节点 → 每 rail 有 128 个端口 → rail 0 覆盖所有节点的 GPU0，rail 1 覆盖所有 GPU1……<br><strong>8 张卡 &#x2F; 节点 → 正好 8 条 rail</strong>。</p>
+<h3 id="2-2-多轨的两个直觉收益"><a href="#2-2-多轨的两个直觉收益" class="headerlink" title="2.2 多轨的两个直觉收益"></a>2.2 多轨的两个直觉收益</h3><ol>
+<li><strong>同规格通信流量天然均匀</strong>：AllReduce 时所有 rank 的 GPU_i 同时发数据给对应 rail——<br>每个 rail 内部流量自洽，不经过 Spine → <strong>每个 rail 都是局部化满带宽</strong>。</li>
+<li><strong>故障域清晰</strong>：某一个 Leaf 坏了，只影响它的那条 rail（比如 GPU0 的数据通不了，<br>但是 GPU1-GPU7 完好）→ 排障和带宽降级可控。</li>
+</ol>
+<h3 id="2-3-规模上不来时怎么办：块（Block）-x2F-单元（SU）"><a href="#2-3-规模上不来时怎么办：块（Block）-x2F-单元（SU）" class="headerlink" title="2.3 规模上不来时怎么办：块（Block）&#x2F; 单元（SU）"></a>2.3 规模上不来时怎么办：块（Block）&#x2F; 单元（SU）</h3><p>真正 1024 卡以上，你不可能一张图全连。NVIDIA 的 <strong>DGX SuperPOD</strong> 引入 <strong>SU（SuperPod Unit）</strong>：</p>
+<ul>
+<li>H100 SuperPOD：<strong>每个 SU &#x3D; 64 节点（512 卡）</strong>，rail 拓扑内部 1:1 无损</li>
+<li>64 节点 × 8 rail &#x3D; 64×8&#x3D;512 端口，用 <strong>8 台 64 端口 Leaf</strong>（如 QM9700 64×NDR）+ Spine 组内互联</li>
+<li>多个 SU 之间<strong>再加一层 Spine</strong>，跨 SU 通信会多一点跳数（带宽&gt;90% of intra-SU）</li>
+</ul>
+<blockquote>
+<p>（注：NVIDIA 官方 SU 数字随代际变，H200&#x2F;GB200 的 SU 规模不同；你设计时记住<br><strong>“同 rail 内 1:1、跨 rail 有收敛”</strong> 的分层哲学即可，也可以自定义 Block&#x3D;64卡 起步。）</p>
+</blockquote>
+<hr>
+<h2 id="3-交换机怎么选：看端口-×-带宽，不是看品牌"><a href="#3-交换机怎么选：看端口-×-带宽，不是看品牌" class="headerlink" title="3. 交换机怎么选：看端口 × 带宽，不是看品牌"></a>3. 交换机怎么选：看端口 × 带宽，不是看品牌</h2><h3 id="3-1-三类交换机角色"><a href="#3-1-三类交换机角色" class="headerlink" title="3.1 三类交换机角色"></a>3.1 三类交换机角色</h3><table>
+<thead>
+<tr>
+<th>角色</th>
+<th>典型设备</th>
+<th>端口&#x2F;带宽</th>
+<th>用途</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Leaf（接入&#x2F;轨道）</td>
+<td>NVIDIA QM9790（64×NDR400）等</td>
+<td>64×400G &#x3D; 25.6 Tbit&#x2F;s</td>
+<td>收 rail 内节点流量，1:1</td>
+</tr>
+<tr>
+<td>Spine（核心）</td>
+<td>同款大端口交换机</td>
+<td>负责 Leaf 间流量</td>
+<td>跨 rail 通信，可 2:1 收敛</td>
+</tr>
+<tr>
+<td>存储网交换机</td>
+<td>以太网 100G&#x2F;400G</td>
+<td>收敛 2:1~4:1</td>
+<td>存储&#x2F;训练数据</td>
+</tr>
+</tbody></table>
+<h3 id="3-2-关键选型参数"><a href="#3-2-关键选型参数" class="headerlink" title="3.2 关键选型参数"></a>3.2 关键选型参数</h3><ol>
+<li><strong>端口速率代差</strong>：EDR 100G → HDR 200G → <strong>NDR 400G</strong> → XDR 800G（2025 起）<ul>
+<li>400G 网卡 ↔ 400G Leaf 端口 → <strong>带宽不缩水</strong>（1:1 无收敛）</li>
+<li>别用 200G 交换机接 400G 卡（会降到 200G 但只花一半钱——取决于预算）</li>
+</ul>
+</li>
+<li><strong>端口密度</strong>：64 口（NDR） vs 40&#x2F;32 口 → 决定 rail 能覆盖多少节点<ul>
+<li>每 rail 节点数 &#x3D; 交换机端口数 - 上行口数；64 口 Leaf 上行到 Spine 后约剩 56 口 → 56 节点&#x2F;rail</li>
+<li><strong>1024 卡需求</strong>：128 节点 ÷ 56 ≈ 3 条腿不全 → 建议 128 节点用 2 个 64 节点 SU 更干净</li>
+</ul>
+</li>
+<li><strong>缓冲与无损</strong>：RDMA 无损需要 PFC&#x2F;ECN；交换机必须支持无损以太网（RoCE）或原生无损（IB）</li>
+<li><strong>网内计算</strong>：<strong>SHARP&#x2F;Gen-AI Switch</strong>（IB 交换机内置归约引擎）→ AllReduce 卸载更省网络带宽<br>（NCCL 的 NVLS 只能在机内 NVSwitch；跨机的网内归约靠 SHARP）</li>
+</ol>
+<p><strong>一个容易犯的错</strong>：以为”交换机会自动负载均衡”。<strong>ECMP 按流哈希，一个大 AllReduce 就是几十条大流，<br>哈希不均 → 一条链路过热另一条空闲</strong>。IB 的自适应路由（AR）能缓解，以太网要自己调 ECMP 或换让更均匀的方案。</p>
+<hr>
+<h2 id="4-网络容量计算：从”要多少带宽”到”买多少交换机”"><a href="#4-网络容量计算：从”要多少带宽”到”买多少交换机”" class="headerlink" title="4. 网络容量计算：从”要多少带宽”到”买多少交换机”"></a>4. 网络容量计算：从”要多少带宽”到”买多少交换机”</h2><h3 id="4-1-训练通信量估算（容量规划的起点）"><a href="#4-1-训练通信量估算（容量规划的起点）" class="headerlink" title="4.1 训练通信量估算（容量规划的起点）"></a>4.1 训练通信量估算（容量规划的起点）</h3><p><strong>跨机通信最大头 &#x3D; DP 梯度 AllReduce</strong>。每步通信量：</p>
+<figure class="highlight text"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br></pre></td><td class="code"><pre><span class="line">AllReduce 数据量 = 模型参数量 × 每个参数的字节数</span><br><span class="line">- BF16 训练（混合精度）：约 12×N 字节（2×权重fp32 + 2×梯度 + ...，简化按梯度+权重)</span><br><span class="line">  实际 AllReduce 每次同步的是梯度：≈ 4×N 字节（fp32 梯度）</span><br><span class="line">- 例：70B 模型、TP=8 机内、DP 跨机 128 机 → 每机 AllReduce ≈ 70e9×4 = 280GB/step</span><br><span class="line"></span><br><span class="line">每 step 时间预算（目标：不拖累计算）：</span><br><span class="line">  通信时间 &lt; 计算时间（比如 1-2 秒一个 step）</span><br><span class="line">  → 需求带宽 = 280GB / 1s ≈ 280GB/s ≈ 2.2 Tbit/s 每节点 ← 8×400G 正好满足</span><br><span class="line"></span><br><span class="line">经验法则（H100 世代，train 70B+ 用 8×400G 每节点）：</span><br><span class="line">  - 400G/卡 × 8 卡 = 3.2 Tbit/s 节点上行</span><br><span class="line">  - 128 节点 × 3.2Tbit = 409.6 Tbit/s 总带宽（这就是 1:1 无收敛的规模上限）</span><br></pre></td></tr></table></figure>
+
+<h3 id="4-2-收敛比（Oversubscription）与预算权衡"><a href="#4-2-收敛比（Oversubscription）与预算权衡" class="headerlink" title="4.2 收敛比（Oversubscription）与预算权衡"></a>4.2 收敛比（Oversubscription）与预算权衡</h3><table>
+<thead>
+<tr>
+<th>设计</th>
+<th>收敛比</th>
+<th>带宽保障</th>
+<th>成本</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>全 1:1（Leaf-Spine 全无收敛）</td>
+<td>1:1</td>
+<td>任意时刻全部通信满速</td>
+<td>最贵（Spine 台数翻倍）</td>
+</tr>
+<tr>
+<td>计算网 1:1、存储 4:1</td>
+<td>混合</td>
+<td>训练无瓶颈；存储突发让路</td>
+<td>推荐</td>
+</tr>
+<tr>
+<td>全套 2:1</td>
+<td>2:1</td>
+<td>高峰期打 7-8 折</td>
+<td>省一半 Spine</td>
+</tr>
+</tbody></table>
+<p><strong>结论</strong>：计算网络<strong>必须 1:1</strong>（训练对带宽最敏感）；存储网络 4:1 合理；管理网络万兆随意。</p>
+<h3 id="4-3-交换机数量速算（1024-卡-IB-方案）"><a href="#4-3-交换机数量速算（1024-卡-IB-方案）" class="headerlink" title="4.3 交换机数量速算（1024 卡 IB 方案）"></a>4.3 交换机数量速算（1024 卡 IB 方案）</h3><figure class="highlight text"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line">每个 Leaf（64口 NDR）：接 56 个节点上行 + 8 个上行到 Spine</span><br><span class="line">rail 数 = GPU/节点 = 8</span><br><span class="line">→ 每 SU（64节点）需 8 台 Leaf（每 rail 一台）</span><br><span class="line">SU 内 Spine：Leaf 上行 8 × 8 Leaf = 64 上行口 → 2 台 64口 Spine（或 4×32口）</span><br><span class="line">→ 1024 卡 = 2 个 SU：Leaf 16 台 + Spine 4 台 ≈ 20 台核心交换机（仅计算网）</span><br><span class="line">外加存储网（4:1）+ 管理网，总计通常 30-40 台交换机（含 ToR）</span><br></pre></td></tr></table></figure>
+
+<hr>
+<h2 id="5-多轨布线细节：节点内部怎么排"><a href="#5-多轨布线细节：节点内部怎么排" class="headerlink" title="5. 多轨布线细节：节点内部怎么排"></a>5. 多轨布线细节：节点内部怎么排</h2><h3 id="5-1-布线的铁律"><a href="#5-1-布线的铁律" class="headerlink" title="5.1 布线的铁律"></a>5.1 布线的铁律</h3><ol>
+<li><strong>每节点 8 卡 → 8 个 400G+ 网卡（每 GPU 一张）</strong>，不要共享网卡（那是推理贫民方案）</li>
+<li>NIC 要与 GPU 在<strong>同 PCIe 域&#x2F;同 NUMA</strong>（GPU Direct RDMA &amp; 局部 PCIe 带宽）<br>《HGX 主板》下——否则跨域通信慢一半</li>
+<li>节点 <strong>k 号 GPU 的 NIC</strong> → 固定接到 <strong>rail k 的 Leaf</strong></li>
+<li>机柜内：同 rail 的 8 张卡分插 8 台不同 Leaf 的上行口（或 4 台 Leaf 每口 x2，看拓扑）</li>
+</ol>
+<figure class="highlight text"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line">节点 128 台，每台 GPU0..GPU7：</span><br><span class="line">  GPU0 → NIC0 → 柜内线缆 → Leaf-Rail0 (64口) 上行口</span><br><span class="line">  GPU1 → NIC1 → Leaf-Rail1</span><br><span class="line">  ...</span><br><span class="line">  GPU7 → NIC7 → Leaf-Rail7</span><br><span class="line">这样 AllReduce 的 ring 在每 rail 内部运行，跨 rail 只走很小比例 → 带宽高效</span><br></pre></td></tr></table></figure>
+
+<h3 id="5-2-需要注意的”隐藏坑”"><a href="#5-2-需要注意的”隐藏坑”" class="headerlink" title="5.2 需要注意的”隐藏坑”"></a>5.2 需要注意的”隐藏坑”</h3><ul>
+<li><strong>CUDA 感知网络</strong>：<code>ibstat</code> 看到 Active 不代表 NCCL 在用它——看 <code>NCCL_DEBUG</code> 的 <code>net#</code> 通道</li>
+<li><strong>Rail 与机柜对齐</strong>：若交换机机柜和计算节点柜物理分布不规则，光线太长、模块种类杂会引入额外损耗</li>
+<li><strong>光纤预算</strong>：NDR 400G 通常用 100G&#x2F;400G 光模块 + 单模&#x2F;多模；<code>光模块类型与距离匹配</code> 错<br>会导致 BER 高、NCCL 偶发超时——这是”换卡没用、换线就好”的经典案例</li>
+</ul>
+<hr>
+<h2 id="6-超低延迟方案（进阶）：GB200-NVL72-和-800G"><a href="#6-超低延迟方案（进阶）：GB200-NVL72-和-800G" class="headerlink" title="6. 超低延迟方案（进阶）：GB200 NVL72 和 800G"></a>6. 超低延迟方案（进阶）：GB200 NVL72 和 800G</h2><p>如果你预算和建设周期允许，2024-2025 的新范式是<strong>机架级互联</strong>：</p>
+<table>
+<thead>
+<tr>
+<th>方案</th>
+<th>规模</th>
+<th>机内互联</th>
+<th>跨机互联</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>传统 HGX 8卡机</td>
+<td>8 卡&#x2F;节点</td>
+<td>NVLink 900GB&#x2F;s</td>
+<td>8×400G NIC</td>
+</tr>
+<tr>
+<td><strong>GB200 NVL72</strong></td>
+<td><strong>72 卡&#x2F;机架</strong></td>
+<td>NVLink5 <strong>130TB&#x2F;s</strong>（架内 NVSwitch 全互联）</td>
+<td>72×800G NIC 或 IB XDR</td>
+</tr>
+<tr>
+<td>意义</td>
+<td>把”TP 只限机内”扩大成”<strong>TP 可限架内</strong>“</td>
+<td>72 卡当一张超大 GPU</td>
+<td>跨架走 800G</td>
+</tr>
+</tbody></table>
+<ul>
+<li>NVL72 的 TP 域从 8 卡扩到 72 卡 → 大模型（400B）拆分更容易、KV cache 合并更高效</li>
+<li>网络成本下降（机架内不再需要 RDMA 交换机，纯铜缆 NVLink）</li>
+<li>但跨架仍要 IB&#x2F;RoCE 800G，且<strong>NVLink 域内单点故障影响 72 卡</strong> → 运维模型变了</li>
+</ul>
+<blockquote>
+<p>你现在管理的是 K8s；NVL72 的”节点”语义从”一台 8 卡服务器”变成”一个 72 卡机架”，<br>调度器和故障域（failure domain）设计要同步升级。</p>
+</blockquote>
+<hr>
+<h2 id="7-与-K8s-x2F-调度器的配合（这是你能直接落地的）"><a href="#7-与-K8s-x2F-调度器的配合（这是你能直接落地的）" class="headerlink" title="7. 与 K8s&#x2F;调度器的配合（这是你能直接落地的）"></a>7. 与 K8s&#x2F;调度器的配合（这是你能直接落地的）</h2><table>
+<thead>
+<tr>
+<th>集群设计要素</th>
+<th>调度&#x2F;平台侧配合</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>rail 拓扑</td>
+<td>调度时应把 <strong>TP 组放同一节点</strong>（8 卡满的节点 → NVLink）；DP 组可跨节点但其 GPU 编号对齐轨道</td>
+</tr>
+<tr>
+<td>故障域</td>
+<td>用 <strong>Pod 反亲和&#x2F;拓扑约束</strong>让 job 避开坏 Leaf&#x2F;坏 rail；坏一台 Leaf 只少 1&#x2F;8 带宽</td>
+</tr>
+<tr>
+<td>NUMA&#x2F;P2P 感知</td>
+<td>K8s Device Plugin 应暴露 GPU 的拓扑（NVLink 矩阵），调度器选”内部全互联”的 GPU 子集</td>
+</tr>
+<tr>
+<td>网络监控</td>
+<td>Sniffer（gap&#x2F;adaptive routing）、<code>ibdiagnet</code>、Cray&#x2F;UFM Telemetry 持续盯 IB 健康</td>
+</tr>
+<tr>
+<td>训练框架</td>
+<td>启动时自动避开坏链路（NCCL 环境变量下传给 Pod）</td>
+</tr>
+<tr>
+<td>资源回收</td>
+<td>推理离线混部时，<strong>计算网带宽是共享资源</strong>——给推理 job 限带宽（如 K8s NetworkPolicy&#x2F;QoS），防 NCCL 被抢</td>
+</tr>
+</tbody></table>
+<p><strong>千卡集群上线 checklist</strong>：</p>
+<ol>
+<li><input disabled="" type="checkbox"> 所有节点 8 NIC 都激活到对应 rail Leaf</li>
+<li><input disabled="" type="checkbox"> <code>nvidia-smi topo -m</code> 全部 NV2&#x2F;NVLink 内部直连</li>
+<li><input disabled="" type="checkbox"> nccl-tests AllReduce 带宽跨机 ≥ 90%理论（400G×8 每节点）</li>
+<li><input disabled="" type="checkbox"> 单 Leaf 拔线演练：确认只影响 1&#x2F;8 带宽且 job 不死</li>
+<li><input disabled="" type="checkbox"> 存储网和计算网隔离验证（<code>ibstat</code> 看不到计算网外的卡）</li>
+<li><input disabled="" type="checkbox"> 监控告警：GPU 掉线&#x2F;ECC&#x2F;NCCL timeout&#x2F;IB link down 都有告警</li>
+</ol>
+<hr>
+<h2 id="8-要记住的数字"><a href="#8-要记住的数字" class="headerlink" title="8. 要记住的数字"></a>8. 要记住的数字</h2><ul>
+<li><strong>千卡 &#x3D; 128节点 × 8卡</strong>；每卡 1 个 400G NIC（NDR）→ 计算网 1024 个 400G 端口</li>
+<li><strong>Rail &#x3D; 按 GPU 槽位分组</strong>：第 k 张卡的 NIC 全连到 Leaf-k；8 卡机 → 8 rail</li>
+<li><strong>计算网 1:1 无收敛</strong>，存储网 4:1，管理网万兆；<strong>训练 AllReduce 是带宽大户</strong></li>
+<li>跨机 AllReduce 70B ≈ 280GB&#x2F;step → 每节点 2.2Tbit&#x2F;s ≈ 8×400G</li>
+<li>64 节点 SU：8 台 64口 Leaf + 2 台 Spine；1024卡 ≈ 20 台核心交换机（仅计算网）</li>
+<li>NVLink 900GB&#x2F;s &#x3D; 18× 400G；TP 机内、DP 跨机是物理速率决定的</li>
+<li>NVL72 架内 NVLink 130TB&#x2F;s，TP 域从 8 卡扩到 72 卡；故障域变大是代价</li>
+<li>排障三件套：<code>nccl-tests</code> 压测、<code>ibdiagnet</code> 查光模块&#x2F;BER、<code>NCCL_DEBUG=INFO</code> 看通道</li>
+</ul>
+
+    </div>
+
+    
+    
+    
+
+    <footer class="post-footer">
+          <div class="reward-container">
+  <div>Buy Me a Coffee</div>
+  <button>
+    赞赏
+  </button>
+  <div class="post-reward">
+      <div>
+        <img src="/images/wechatpayme.png" alt="周淑科 微信">
+        <span>微信</span>
+      </div>
+      <div>
+        <img src="/images/alipayme.jpg" alt="周淑科 支付宝">
+        <span>支付宝</span>
+      </div>
+
+  </div>
+</div>
+
+          
+
+<div class="post-copyright">
+<ul>
+  <li class="post-copyright-author">
+      <strong>本文作者： </strong>周淑科
+  </li>
+  <li class="post-copyright-link">
+      <strong>本文链接：</strong>
+      <a href="https://zhoushuke.github.io/2026/09/12/AI-Infra-Cluster-Design-1000GPU/" title="千卡级 NVIDIA GPU 集群设计指南（IDC 部署视角）">https://zhoushuke.github.io/2026/09/12/AI-Infra-Cluster-Design-1000GPU/</a>
+  </li>
+  <li class="post-copyright-license">
+      <strong>版权声明： </strong>本站所有文章除特别声明外，均采用 <a href="https://creativecommons.org/licenses/by-nc-sa/4.0/" rel="noopener" target="_blank"><i class="fab fa-fw fa-creative-commons"></i>BY-NC-SA</a> 许可协议。转载请保留原文作者及链接！
+  </li>
+</ul>
+</div>
+
+          <div class="post-tags">
+              <a href="/tags/AI-Infra/" rel="tag"># AI-Infra</a>
+          </div>
+
+        
+
+          <div class="post-nav">
+            <div class="post-nav-item">
+                <a href="/2026/08/13/AI-Infra-Glossary-05-NCCL-RDMA/" rel="prev" title="词汇图鉴⑤ NCCL 通信链路 + RDMA 网络（glossary-05）">
+                  <i class="fa fa-angle-left"></i> 词汇图鉴⑤ NCCL 通信链路 + RDMA 网络（glossary-05）
+                </a>
+            </div>
+            <div class="post-nav-item">
+                <a href="/2026/09/28/nccl-cross-nic/" rel="next" title="NCCL初探(NCCL_CROSS_NIC与多平面网络)">
+                  NCCL初探(NCCL_CROSS_NIC与多平面网络) <i class="fa fa-angle-right"></i>
+                </a>
+            </div>
+          </div>
+    </footer>
+  </article>
+</div>
+
+
+
+
+
+
+</div>
+  </main>
+
+  <footer class="footer">
+    <div class="footer-inner">
+
+  <div class="copyright">
+    &copy; 
+    <span itemprop="copyrightYear">2026</span>
+    <span class="with-love">
+      <i class="fa fa-heart"></i>
+    </span>
+    <span class="author" itemprop="copyrightHolder">周淑科</span>
+  </div>
+<div class="wordcount">
+  <span class="post-meta-item">
+    <span class="post-meta-item-icon">
+      <i class="fa fa-chart-line"></i>
+    </span>
+      <span>站点总字数：</span>
+    <span title="站点总字数">1m</span>
+  </span>
+  <span class="post-meta-item">
+    <span class="post-meta-item-icon">
+      <i class="fa fa-coffee"></i>
+    </span>
+      <span>站点阅读时长 &asymp;</span>
+    <span title="站点阅读时长">15:44</span>
+  </span>
+</div>
+<div class="busuanzi-count">
+    <span class="post-meta-item" id="busuanzi_container_site_uv">
+      <span class="post-meta-item-icon">
+        <i class="fa fa-user"></i>
+      </span>
+      <span class="site-uv" title="总访客量">
+        <span id="busuanzi_value_site_uv"></span>
+      </span>
+    </span>
+    <span class="post-meta-item" id="busuanzi_container_site_pv">
+      <span class="post-meta-item-icon">
+        <i class="fa fa-eye"></i>
+      </span>
+      <span class="site-pv" title="总访问量">
+        <span id="busuanzi_value_site_pv"></span>
+      </span>
+    </span>
+</div>
+  <div class="powered-by">Powered by <a href="https://hexo.io/" rel="noopener" target="_blank">Hexo</a> & <a href="https://theme-next.js.org/mist/" rel="noopener" target="_blank">NexT.Mist</a>
+  </div>
+
+    </div>
+  </footer>
+
+  
+  <div class="toggle sidebar-toggle" role="button">
+    <span class="toggle-line"></span>
+    <span class="toggle-line"></span>
+    <span class="toggle-line"></span>
+  </div>
+  <div class="sidebar-dimmer"></div>
+  <div class="back-to-top" role="button" aria-label="返回顶部">
+    <i class="fa fa-arrow-up fa-lg"></i>
+    <span>0%</span>
+  </div>
+
+<noscript>
+  <div class="noscript-warning">Theme NexT works best with JavaScript enabled</div>
+</noscript>
+
+
+  
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/animejs/3.2.1/anime.min.js" integrity="sha256-XL2inqUJaslATFnHdJOi9GfQ60on8Wx1C2H8DYiN1xY=" crossorigin="anonymous"></script>
+<script src="/js/comments.js"></script><script src="/js/utils.js"></script><script src="/js/motion.js"></script><script src="/js/sidebar.js"></script><script src="/js/next-boot.js"></script>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/hexo-generator-searchdb/1.4.1/search.js" integrity="sha256-1kfA5uHPf65M5cphT2dvymhkuyHPQp5A53EGZOnOLmc=" crossorigin="anonymous"></script>
+<script src="/js/third-party/search/local-search.js"></script>
+
+
+
+
+
+
+
+  
+  <script async src="https://cn.vercount.one/js"></script>
+
+
+
+
+
+</body>
+</html>

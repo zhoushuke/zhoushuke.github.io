@@ -1,0 +1,593 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width">
+<meta name="theme-color" content="#222" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#222" media="(prefers-color-scheme: dark)"><meta name="generator" content="Hexo 6.2.0">
+
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon-next.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32x32-next.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon-16x16-next.png">
+  <link rel="mask-icon" href="/images/logo.svg" color="#222">
+
+<link rel="stylesheet" href="/css/main.css">
+
+<link rel="stylesheet" href="https://fonts.loli.net/css?family=Lato:300,300italic,400,400italic,700,700italic%7CRoboto+Mono:300,300italic,400,400italic,700,700italic&display=swap&subset=latin,latin-ext">
+
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.6.0/css/all.min.css" integrity="sha256-5eIC48iZUHmSlSUz9XtjRyK2mzQkHScZY1WdMaoz74E=" crossorigin="anonymous">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/3.1.1/animate.min.css" integrity="sha256-PR7ttpcvz8qrF57fur/yAx1qXMFJeJFiA6pSzWi0OIE=" crossorigin="anonymous">
+
+<script class="next-config" data-name="main" type="application/json">{"hostname":"zhoushuke.github.io","root":"/","images":"/images","scheme":"Mist","darkmode":true,"version":"8.21.1","exturl":false,"sidebar":{"position":"right","width_expanded":320,"width_dual_column":240,"display":"post","padding":18,"offset":12},"hljswrap":true,"copycode":{"enable":true,"style":"mac"},"fold":{"enable":true,"height":500},"bookmark":{"enable":false,"color":"#222","save":"auto"},"mediumzoom":false,"lazyload":false,"pangu":false,"comments":{"style":"tabs","active":null,"storage":true,"lazyload":false,"nav":null},"stickytabs":false,"motion":{"enable":true,"async":false,"transition":{"menu_item":"fadeInDown","post_block":"fadeIn","post_header":"fadeInDown","post_body":"fadeInDown","coll_header":"fadeInLeft","sidebar":"fadeInUp"}},"prism":false,"i18n":{"placeholder":"搜索...","empty":"没有找到任何搜索结果：${query}","hits_time":"找到 ${hits} 个搜索结果（用时 ${time} 毫秒）","hits":"找到 ${hits} 个搜索结果"},"path":"/search.xml","localsearch":{"enable":true,"top_n_per_article":1,"unescape":false,"preload":false}}</script><script src="/js/config.js"></script>
+
+    <meta name="description" content="这一层回答：为什么训练必须用很多 GPU？并行策略到底在切什么？每一刀切下去产生什么通信？出问题该查哪里？前置：已读词汇图鉴①（特别是”16B&#x2F;参数”和显存总账）。">
+<meta property="og:type" content="article">
+<meta property="og:title" content="词汇图鉴 ② — 训练是怎么&quot;铺开&quot;到多卡的（扩展层）">
+<meta property="og:url" content="https://zhoushuke.github.io/2026/05/15/AI-Infra-Glossary-02-Scaling/index.html">
+<meta property="og:site_name" content="Z.S.K.&#39;s Records">
+<meta property="og:description" content="这一层回答：为什么训练必须用很多 GPU？并行策略到底在切什么？每一刀切下去产生什么通信？出问题该查哪里？前置：已读词汇图鉴①（特别是”16B&#x2F;参数”和显存总账）。">
+<meta property="og:locale" content="zh_CN">
+<meta property="og:image" content="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/202611041058592.png">
+<meta property="og:image" content="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/202611041058599.png">
+<meta property="og:image" content="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/202611041058709.png">
+<meta property="og:image" content="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/202611041058829.png">
+<meta property="og:image" content="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/202611041059814.png">
+<meta property="og:image" content="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/202611041059275.png">
+<meta property="article:published_time" content="2026-05-15T01:00:00.000Z">
+<meta property="article:modified_time" content="2026-11-04T12:37:33.794Z">
+<meta property="article:author" content="周淑科">
+<meta property="article:tag" content="AI-Infra">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:image" content="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/202611041058592.png">
+
+
+<link rel="canonical" href="https://zhoushuke.github.io/2026/05/15/AI-Infra-Glossary-02-Scaling/">
+
+
+<script class="next-config" data-name="page" type="application/json">{"sidebar":"","isHome":false,"isPost":true,"lang":"zh-CN","comments":"","permalink":"https://zhoushuke.github.io/2026/05/15/AI-Infra-Glossary-02-Scaling/","path":"2026/05/15/AI-Infra-Glossary-02-Scaling/","title":"词汇图鉴 ② — 训练是怎么\"铺开\"到多卡的（扩展层）"}</script>
+
+<script class="next-config" data-name="calendar" type="application/json">""</script>
+<title>词汇图鉴 ② — 训练是怎么"铺开"到多卡的（扩展层） | Z.S.K.'s Records</title>
+  
+
+
+
+
+
+
+
+
+  <noscript>
+    <link rel="stylesheet" href="/css/noscript.css">
+  </noscript>
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage" class="use-motion">
+  <div class="headband"></div>
+
+  <main class="main">
+    <div class="column">
+      <header class="header" itemscope itemtype="http://schema.org/WPHeader"><div class="site-brand-container">
+  <div class="site-nav-toggle">
+    <div class="toggle" aria-label="切换导航栏" role="button">
+        <span class="toggle-line"></span>
+        <span class="toggle-line"></span>
+        <span class="toggle-line"></span>
+    </div>
+  </div>
+
+  <div class="site-meta">
+
+    <a href="/" class="brand" rel="start">
+      <i class="logo-line"></i>
+      <p class="site-title">Z.S.K.'s Records</p>
+      <i class="logo-line"></i>
+    </a>
+  </div>
+
+  <div class="site-nav-right">
+    <div class="toggle popup-trigger" aria-label="搜索" role="button">
+        <i class="fa fa-search fa-fw fa-lg"></i>
+    </div>
+  </div>
+</div>
+
+
+
+<nav class="site-nav">
+  <ul class="main-menu menu"><li class="menu-item menu-item-home"><a href="/" rel="section"><i class="fa fa-home fa-fw"></i>首页</a></li><li class="menu-item menu-item-about"><a href="/about/ZSK-Profile.pdf" rel="section"><i class="fa fa-user fa-fw"></i>简历</a></li><li class="menu-item menu-item-tags"><a href="/tags/" rel="section"><i class="fa fa-tags fa-fw"></i>标签</a></li><li class="menu-item menu-item-categories"><a href="/categories/" rel="section"><i class="fa fa-th fa-fw"></i>分类</a></li><li class="menu-item menu-item-archives"><a href="/archives/" rel="section"><i class="fa fa-archive fa-fw"></i>归档</a></li><li class="menu-item menu-item-commonweal"><a href="/404.html" rel="section"><i class="fa fa-heartbeat fa-fw"></i>公益 404</a></li>
+      <li class="menu-item menu-item-search">
+        <a role="button" class="popup-trigger"><i class="fa fa-search fa-fw"></i>搜索
+        </a>
+      </li>
+  </ul>
+</nav>
+
+
+
+  <div class="search-pop-overlay">
+    <div class="popup search-popup">
+      <div class="search-header">
+        <span class="search-icon">
+          <i class="fa fa-search"></i>
+        </span>
+        <div class="search-input-container">
+          <input autocomplete="off" autocapitalize="off" maxlength="80"
+                placeholder="搜索..." spellcheck="false"
+                type="search" class="search-input">
+        </div>
+        <span class="popup-btn-close" role="button">
+          <i class="fa fa-times-circle"></i>
+        </span>
+      </div>
+      <div class="search-result-container">
+        <div class="search-result-icon">
+          <i class="fa fa-spinner fa-pulse fa-5x"></i>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</header>
+        
+  
+  <aside class="sidebar">
+
+    <div class="sidebar-inner sidebar-nav-active sidebar-toc-active">
+      <ul class="sidebar-nav">
+        <li class="sidebar-nav-toc">
+          文章目录
+        </li>
+        <li class="sidebar-nav-overview">
+          站点概览
+        </li>
+      </ul>
+
+      <div class="sidebar-panel-container">
+        <!--noindex-->
+        <div class="post-toc-wrap sidebar-panel">
+            <div class="post-toc animated"><ol class="nav"><li class="nav-item nav-level-2"><a class="nav-link" href="#0-%E4%B8%A4%E4%B8%AA%E5%8A%A8%E6%9C%BA%EF%BC%9A%E4%B8%BA%E4%BB%80%E4%B9%88%E8%A6%81%E5%A4%9A%E5%8D%A1"><span class="nav-number">1.</span> <span class="nav-text">0. 两个动机：为什么要多卡</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#1-%E9%80%9A%E4%BF%A1%E5%8E%9F%E8%AF%AD%EF%BC%9A%E5%85%88%E8%AE%A4%E8%AF%86%E8%BF%99%E4%B8%89%E4%B8%AA%E2%80%9D%E6%90%AC%E8%BF%90%E6%93%8D%E4%BD%9C%E2%80%9D"><span class="nav-number">2.</span> <span class="nav-text">1. 通信原语：先认识这三个”搬运操作”</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#2-DP%EF%BC%88%E6%95%B0%E6%8D%AE%E5%B9%B6%E8%A1%8C%EF%BC%89%E2%80%94-%E6%9C%80%E7%AE%80%E5%8D%95%EF%BC%8C%E5%85%88%E5%90%83%E9%80%8F"><span class="nav-number">3.</span> <span class="nav-text">2. DP（数据并行）— 最简单，先吃透</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#3-TP%EF%BC%88%E5%BC%A0%E9%87%8F%E5%B9%B6%E8%A1%8C%EF%BC%89%E2%80%94-%E6%8A%8A%E5%8D%95%E4%B8%AA%E7%9F%A9%E9%98%B5%E5%88%87%E5%BC%80"><span class="nav-number">4.</span> <span class="nav-text">3. TP（张量并行）— 把单个矩阵切开</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#4-PP%EF%BC%88%E6%B5%81%E6%B0%B4%E7%BA%BF%E5%B9%B6%E8%A1%8C%EF%BC%89%E2%80%94-%E6%8A%8A%E5%B1%82%E5%88%87%E6%88%90%E6%AE%B5"><span class="nav-number">5.</span> <span class="nav-text">4. PP（流水线并行）— 把层切成段</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#5-EP%EF%BC%88%E4%B8%93%E5%AE%B6%E5%B9%B6%E8%A1%8C%EF%BC%89-MoE-%E5%A4%8D%E4%B9%A0"><span class="nav-number">6.</span> <span class="nav-text">5. EP（专家并行）+ MoE 复习</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#6-SP%EF%BC%88%E5%BA%8F%E5%88%97%E5%B9%B6%E8%A1%8C%EF%BC%89%E2%80%94-%E5%88%87%E5%BA%8F%E5%88%97%E7%BB%B4%E5%BA%A6"><span class="nav-number">7.</span> <span class="nav-text">6. SP（序列并行）— 切序列维度</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#7-3D-%E7%BB%84%E5%90%88%EF%BC%9ADP-%C3%97-TP-%C3%97-PP%EF%BC%88%E7%9C%9F%E5%AE%9E%E8%AE%AD%E7%BB%83%E7%9A%84%E4%B8%BB%E6%B5%81%E5%BD%A2%E6%80%81%EF%BC%89"><span class="nav-number">8.</span> <span class="nav-text">7. 3D 组合：DP × TP × PP（真实训练的主流形态）</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#8-ZeRO-%E4%B8%8E-FSDP%EF%BC%9A%E5%A6%82%E4%BD%95%E7%94%A8%E5%88%86%E7%89%87%E6%8D%A2%E6%98%BE%E5%AD%98"><span class="nav-number">9.</span> <span class="nav-text">8. ZeRO 与 FSDP：如何用分片换显存</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#9-Checkpoint%EF%BC%88%E8%AE%AD%E7%BB%83%E5%AD%98%E6%A1%A3%EF%BC%89%E4%B8%8E%E6%81%A2%E5%A4%8D"><span class="nav-number">10.</span> <span class="nav-text">9. Checkpoint（训练存档）与恢复</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#10-%E4%B8%80%E5%BC%A0%E5%9B%BE%E6%80%BB%E7%BB%93%EF%BC%9A%E8%AE%AD%E7%BB%83%E6%B5%81%E7%A8%8B%E9%87%8C%E7%9A%84%E8%B5%84%E6%BA%90%E6%B5%81"><span class="nav-number">11.</span> <span class="nav-text">10. 一张图总结：训练流程里的资源流</span></a></li></ol></div>
+        </div>
+        <!--/noindex-->
+
+        <div class="site-overview-wrap sidebar-panel">
+          <div class="site-author animated" itemprop="author" itemscope itemtype="http://schema.org/Person">
+    <img class="site-author-image" itemprop="image" alt="周淑科"
+      src="/images/avatar.gif">
+  <p class="site-author-name" itemprop="name">周淑科</p>
+  <div class="site-description" itemprop="description">Better Later Than Never</div>
+</div>
+<div class="site-state-wrap animated">
+  <nav class="site-state">
+      <div class="site-state-item site-state-posts">
+        <a href="/archives/">
+          <span class="site-state-item-count">233</span>
+          <span class="site-state-item-name">日志</span>
+        </a>
+      </div>
+      <div class="site-state-item site-state-categories">
+          <a href="/categories/">
+        <span class="site-state-item-count">17</span>
+        <span class="site-state-item-name">分类</span></a>
+      </div>
+      <div class="site-state-item site-state-tags">
+          <a href="/tags/">
+        <span class="site-state-item-count">17</span>
+        <span class="site-state-item-name">标签</span></a>
+      </div>
+  </nav>
+</div>
+  <div class="cc-license animated" itemprop="license">
+    <a href="https://creativecommons.org/licenses/by-nc-sa/4.0/" class="cc-opacity" rel="noopener" target="_blank"><img src="https://cdnjs.cloudflare.com/ajax/libs/creativecommons-vocabulary/2020.11.3/assets/license_badges/small/by_nc_sa.svg" alt="Creative Commons"></a>
+  </div>
+
+        </div>
+      </div>
+    </div>
+
+    
+  </aside>
+
+
+    </div>
+
+    <div class="main-inner post posts-expand">
+
+
+  
+
+
+<div class="post-block">
+  
+  
+
+  <article itemscope itemtype="http://schema.org/Article" class="post-content" lang="zh-CN">
+    <link itemprop="mainEntityOfPage" href="https://zhoushuke.github.io/2026/05/15/AI-Infra-Glossary-02-Scaling/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/avatar.gif">
+      <meta itemprop="name" content="周淑科">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="Z.S.K.'s Records">
+      <meta itemprop="description" content="Better Later Than Never">
+    </span>
+
+    <span hidden itemprop="post" itemscope itemtype="http://schema.org/CreativeWork">
+      <meta itemprop="name" content="词汇图鉴 ② — 训练是怎么"铺开"到多卡的（扩展层） | Z.S.K.'s Records">
+      <meta itemprop="description" content="">
+    </span>
+      <header class="post-header">
+        <h1 class="post-title" itemprop="name headline">
+          词汇图鉴 ② — 训练是怎么"铺开"到多卡的（扩展层）
+        </h1>
+
+        <div class="post-meta-container">
+          <div class="post-meta">
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-calendar"></i>
+      </span>
+      <span class="post-meta-item-text">发表于</span>
+
+      <time title="创建时间：2026-05-15 09:00:00" itemprop="dateCreated datePublished" datetime="2026-05-15T09:00:00+08:00">2026-05-15</time>
+    </span>
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-folder"></i>
+      </span>
+      <span class="post-meta-item-text">分类于</span>
+        <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+          <a href="/categories/AI-Infra/" itemprop="url" rel="index"><span itemprop="name">AI-Infra</span></a>
+        </span>
+    </span>
+
+  
+    <span class="post-meta-item" title="阅读次数" id="busuanzi_container_page_pv">
+      <span class="post-meta-item-icon">
+        <i class="far fa-eye"></i>
+      </span>
+      <span class="post-meta-item-text">阅读次数：</span>
+      <span id="busuanzi_value_page_pv"></span>
+    </span>
+    <span class="post-meta-break"></span>
+    <span class="post-meta-item" title="本文字数">
+      <span class="post-meta-item-icon">
+        <i class="far fa-file-word"></i>
+      </span>
+      <span class="post-meta-item-text">本文字数：</span>
+      <span>4.1k</span>
+    </span>
+    <span class="post-meta-item" title="阅读时长">
+      <span class="post-meta-item-icon">
+        <i class="far fa-clock"></i>
+      </span>
+      <span class="post-meta-item-text">阅读时长 &asymp;</span>
+      <span>4 分钟</span>
+    </span>
+</div>
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody"><blockquote>
+<p>这一层回答：为什么训练必须用很多 GPU？并行策略到底在切什么？<br>每一刀切下去产生什么通信？出问题该查哪里？<br>前置：已读词汇图鉴①（特别是”16B&#x2F;参数”和显存总账）。</p>
+</blockquote>
+<hr>
+<span id="more"></span>
+
+
+<h2 id="0-两个动机：为什么要多卡"><a href="#0-两个动机：为什么要多卡" class="headerlink" title="0. 两个动机：为什么要多卡"></a>0. 两个动机：为什么要多卡</h2><figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">动机A — 显存放不下 (capacity)：7B 模型训练要 112GB 参数+状态，单卡放不下</span><br><span class="line">动机B — 算得不够快 (throughput)：单卡训练一个 70B 模型要几年，必须并行</span><br></pre></td></tr></table></figure>
+
+<p>所有并行策略 &#x3D; 对”参数、数据、计算”三个东西做<strong>切分</strong>，切法不同 → 通信不同。</p>
+<p><img src="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/202611041058592.png" alt="概念图"></p>
+<hr>
+<h2 id="1-通信原语：先认识这三个”搬运操作”"><a href="#1-通信原语：先认识这三个”搬运操作”" class="headerlink" title="1. 通信原语：先认识这三个”搬运操作”"></a>1. 通信原语：先认识这三个”搬运操作”</h2><p>所有并行策略最终都编译为这几种集合通信（NCCL 里的 collective）：</p>
+<table>
+<thead>
+<tr>
+<th>原语</th>
+<th>输入→输出</th>
+<th>类比</th>
+<th>用在哪</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><strong>AllReduce</strong></td>
+<td>每卡有 partial → 每卡都拿到 sum&#x2F;avg</td>
+<td>全班作业汇总（每个人最后都有全班总分）</td>
+<td>DP 梯度平均</td>
+</tr>
+<tr>
+<td><strong>AllGather</strong></td>
+<td>每卡有我的一块 → 每卡都有全部</td>
+<td>把分片收集回全量</td>
+<td>FSDP 取权重、TP 输出拼接</td>
+</tr>
+<tr>
+<td><strong>ReduceScatter</strong></td>
+<td>每卡有我的一块 → 每卡拿到聚合后的一部分</td>
+<td>先汇总再按份分发</td>
+<td>ZeRO-2 梯度分片</td>
+</tr>
+</tbody></table>
+<p><strong>Ring AllReduce 内部</strong>（NCCL 默认实现，带宽利用率 ≈ 2(N-1)&#x2F;N）：</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">GPU0 ──&gt; GPU1 ──&gt; GPU2 ──&gt; ... ──&gt; GPU(N-1) ──&gt; GPU0   (把数据切成N块, 环形传递累加)</span><br><span class="line">  第一阶段: 每个GPU把自己那块的局部和往下一跳传，转一圈后每块都加完</span><br><span class="line">  第二阶段: 再把汇总结果环形传回每个GPU，各自拿到完整结果</span><br></pre></td></tr></table></figure>
+
+<p><strong>系统类比</strong>：AllReduce ≈ MapReduce 里的”汇集阶段（shuffle + reduce + broadcast）”，<br>环形实现 &#x3D; 环形令牌传递式通信，避免中心节点成为瓶颈。<br><strong>排障要点</strong>：NCCL 对网络延迟、带宽、链路错误极其敏感——一条坏线就会拖垮整个<br>ring（这就是 Phase 4 W17 要在集群上跑 <code>nccl-tests</code> 的原因）。</p>
+<hr>
+<h2 id="2-DP（数据并行）—-最简单，先吃透"><a href="#2-DP（数据并行）—-最简单，先吃透" class="headerlink" title="2. DP（数据并行）— 最简单，先吃透"></a>2. DP（数据并行）— 最简单，先吃透</h2><figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line">GPU0 模型副本 + batch[0:16]      GPU1 模型副本 + batch[16:32]</span><br><span class="line">      │ 各自前向/反向                  │</span><br><span class="line">      └────── AllReduce(梯度平均) ──────┘</span><br><span class="line">                每卡拿到平均梯度 → 各自更新参数</span><br></pre></td></tr></table></figure>
+
+<ul>
+<li>每卡一份完整模型（显存没省，反而翻倍），只切 <strong>batch</strong>；</li>
+<li>训练步末做一次梯度 AllReduce（通信量 &#x3D; 2 × 参数量 × 4字节 × 2次传递）；</li>
+<li>通信与反向计算可以 <strong>overlap</strong>（DDP 按 bucket 边算边传，隐藏通信延迟）。</li>
+</ul>
+<p><strong>scaling efficiency 公式</strong>（Phase 2 W6 要实测的）：</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">理想吞吐 = 单卡吞吐 × 卡数</span><br><span class="line">scaling efficiency = 实测吞吐 / 理想吞吐</span><br></pre></td></tr></table></figure>
+<p>卡越多，梯度 AllReduce 越频繁、网络越吃紧，效率必然下降——通常 4~8 卡内接近线性，<br>再往上要看网络。</p>
+<p><strong>系统类比</strong>：DP &#x3D; 多台 web 服务器各跑完整应用实例，前面挂负载均衡（分 batch），<br>每轮处理完通过一致协议同步状态（梯度 AllReduce）。</p>
+<hr>
+<h2 id="3-TP（张量并行）—-把单个矩阵切开"><a href="#3-TP（张量并行）—-把单个矩阵切开" class="headerlink" title="3. TP（张量并行）— 把单个矩阵切开"></a>3. TP（张量并行）— 把单个矩阵切开</h2><p>模型太大放不进单卡时，把<strong>层内的矩阵</strong>切开分到多卡，每卡算一块，算完拼回去。</p>
+<p>以 MLP 为例（为什么 up 列切、down 行切——你 Phase 2 W8 要亲手推一遍）：</p>
+<p><img src="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/202611041058599.png" alt="概念图"></p>
+<ul>
+<li>列切 up：每卡算一部分隐藏单元（无需通信，并行度高）；</li>
+<li>行切 down：每卡输出的部分和需要 <strong>AllReduce 相加</strong> 才能还原完整输出；</li>
+<li>所以 TP 的每一步前向都要通信 → TP 一般只用于<strong>机内&#x2F;NVLink 高速互联</strong>内<br>（跨机延迟太高会浪费）。</li>
+</ul>
+<p><strong>系统类比</strong>：TP &#x3D; 把一个大文件分块存储在多台机器并行计算，每算一步都要<br>“reduce 汇总一次”——像分布式 SQL 里的 exchange 算子，通信频繁。<br>NVLink（机内 900GB&#x2F;s 级）≈ 高端内存带宽；InfiniBand（跨机 400Gbps 级）≈ 网卡，<br>差一个数量级——所以 TP 不该跨机。</p>
+<hr>
+<h2 id="4-PP（流水线并行）—-把层切成段"><a href="#4-PP（流水线并行）—-把层切成段" class="headerlink" title="4. PP（流水线并行）— 把层切成段"></a>4. PP（流水线并行）— 把层切成段</h2><p>模型按”层”竖切成 P 段，每段的计算放在不同 GPU&#x2F;节点上，数据像流水线一样往下流：</p>
+<p><img src="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/202611041058709.png" alt="卡0: 层1-8"></p>
+<ul>
+<li>流水线需要把 batch 切成<strong>多个 micro-batch</strong> 依次灌入，才能让后段卡不闲着；</li>
+<li>气泡（bubble）：灌入&#x2F;排空阶段，前段后段卡空闲的比例 ≈ <strong>(P-1)&#x2F;M</strong><br>（P&#x3D;段数, M&#x3D;micro-batch 数）——M 越大气泡越小；</li>
+<li>现代调度（1F1B）让”前向一个 batch 后立刻反向一个 batch”交错推进，进一步压气泡；</li>
+<li><strong>关键点</strong>：PP 只传输”层与层之间的激活”（很小），通信量远小于 TP&#x2F;DP，<br>所以 PP 是<strong>跨机训练的默认选择</strong>。</li>
+</ul>
+<p><strong>系统类比</strong>：工厂流水线——分工越细（段多）产能越高，但工件传递（激活）要在<br>工位之间流转，且开机&#x2F;停机阶段有空转（bubble）。</p>
+<hr>
+<h2 id="5-EP（专家并行）-MoE-复习"><a href="#5-EP（专家并行）-MoE-复习" class="headerlink" title="5. EP（专家并行）+ MoE 复习"></a>5. EP（专家并行）+ MoE 复习</h2><p>MoE 模型（DeepSeek-V3 类）里，一个 transformer 层有 N 个”专家”MLP，<br>每个 token 只激活 top-k 个（DeepSeek-V3：671B 总参数，每 token 只激活 37B）。</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">token → 路由(router)：这个 token 归专家2和专家7处理</span><br><span class="line">专家分布在多张卡上 → 需要 All-to-All 通信把 token 送到对应卡</span><br></pre></td></tr></table></figure>
+
+<ul>
+<li>参数量巨大但激活少 → 推理快、省显存；</li>
+<li>训练&#x2F;推理时专家切到多卡 &#x3D; <strong>EP</strong>，token 跨卡路由 → <strong>All-to-All</strong> 通信<br>（比 AllReduce 更”散”的通信用法）；</li>
+<li>负载均衡是关键工程问题（某专家被疯狂路由就成热点）——DeepSeek-V3 用<br>无辅助损失的负载均衡策略，就是为了避免”为均衡而均衡”损质量。</li>
+</ul>
+<p><strong>系统类比</strong>：EP &#x3D; 镜像仓库换成”N路分片缓存”——请求（token）按 hash 路由到<br>对应的后端节点，节点间靠内部网络搬数据（all-to-all）。</p>
+<hr>
+<h2 id="6-SP（序列并行）—-切序列维度"><a href="#6-SP（序列并行）—-切序列维度" class="headerlink" title="6. SP（序列并行）— 切序列维度"></a>6. SP（序列并行）— 切序列维度</h2><p>把 (seq_len, d_model) 的序列维切开，配合 TP 一起用，<br>主要是为了<strong>降低激活显存</strong>（长上下文场景下激活可能比权重还大）。<br>Ring Attention 是它的进阶版（把序列切到多卡循环处理，支持超长上下文）。</p>
+<hr>
+<h2 id="7-3D-组合：DP-×-TP-×-PP（真实训练的主流形态）"><a href="#7-3D-组合：DP-×-TP-×-PP（真实训练的主流形态）" class="headerlink" title="7. 3D 组合：DP × TP × PP（真实训练的主流形态）"></a>7. 3D 组合：DP × TP × PP（真实训练的主流形态）</h2><p>单机 8 卡、跨机训练时，三层并行叠加：</p>
+<p><img src="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/202611041058829.png" alt="Node 0"></p>
+<p>组合原则（记忆口诀）：</p>
+<ul>
+<li><strong>TP 只走机内</strong>（NVLink，通信最频繁）；</li>
+<li><strong>PP 走机间</strong>（通信量小，跨机开销可控）；</li>
+<li><strong>DP 走机间</strong>（梯度 AllReduce 频率 &#x3D; 训练步频，每步一次，可控）。</li>
+</ul>
+<p>选型 &#x3D; 在”显存够不够放”与”通信开销”之间权衡：<br>梯度 AllReduce（DP）通信量与模型大小成正比；TP&#x2F;PP 通信量随切分增大。<br>给定模型和硬件算 “DP×TP×PP” 怎么配，是 Phase 2 W9 的实战题。</p>
+<hr>
+<h2 id="8-ZeRO-与-FSDP：如何用分片换显存"><a href="#8-ZeRO-与-FSDP：如何用分片换显存" class="headerlink" title="8. ZeRO 与 FSDP：如何用分片换显存"></a>8. ZeRO 与 FSDP：如何用分片换显存</h2><p><strong>问题</strong>：DP 每卡都存全量”权重+梯度+优化器状态”，7B 模型 &#x3D; 每卡 112GB，浪费且装不下。</p>
+<p><strong>ZeRO 的答案</strong>：不再每卡存全量，而是<strong>分片存储</strong>，用时再聚合。</p>
+<table>
+<thead>
+<tr>
+<th>阶段</th>
+<th>分片对象</th>
+<th>每卡显存变化</th>
+<th>带来的通信</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>ZeRO-1</td>
+<td>优化器状态（m,v）</td>
+<td>省约 12B&#x2F;参数 × (N-1)&#x2F;N</td>
+<td>无额外通信（梯度还是每卡全量）</td>
+</tr>
+<tr>
+<td>ZeRO-2</td>
+<td>+ 梯度</td>
+<td>梯度也分片</td>
+<td>ReduceScatter 梯度 + AllGather 参数</td>
+</tr>
+<tr>
+<td>ZeRO-3</td>
+<td>+ 参数本身</td>
+<td>权重也分片，最省</td>
+<td>前向&#x2F;反向每层都 AllGather 权重（通信最重）</td>
+</tr>
+</tbody></table>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">ZeRO-3 单卡显存 ≈ 16B × 参数量 / N  (+ 激活)</span><br><span class="line">DP:       16B × 参数量 × 1   (每卡全量, N卡=浪费N倍)</span><br><span class="line">ZeRO-3:   16B × 参数量 / N   (大家分着存)</span><br></pre></td></tr></table></figure>
+
+<p><strong>系统类比</strong>：DP &#x3D; 每台机器存全量数据副本（冗余）；<br>ZeRO-3 &#x3D; 分布式存储&#x2F;分片文件系统——数据打散存在 N 台机器，用时现取现拼<br>（AllGather），换来的是每次都多一次网络取数→<strong>通信换显存</strong>。</p>
+<p><strong>FSDP</strong> &#x3D; ZeRO-3 在 PyTorch 里的原生实现（<code>fully_shard</code>），和 ZeRO 的区别主要是<br>工程形态：FSDP 更 PyTorch 原生、易用；DeepSpeed ZeRO 附带更多高级功能<br>（offload 到 CPU&#x2F;NVMe、通信压缩等）。<strong>工程上两者二选一即可</strong>，<br>原理完全一致。FSDP2 又做了按参数切分粒度等改进。</p>
+<p><strong>选型直觉</strong>（Phase 2 W7 用实验验证）：</p>
+<ul>
+<li>模型能塞进单卡 → DP 最划算（通信最少）；</li>
+<li>塞不下但小集群 → FSDP&#x2F;ZeRO-3（省显存，代价是通信）；</li>
+<li>超大模型跨机 → TP+PP 为主（把通信压进 NVLink 域），ZeRO 做梯度&#x2F;状态分片。</li>
+</ul>
+<hr>
+<h2 id="9-Checkpoint（训练存档）与恢复"><a href="#9-Checkpoint（训练存档）与恢复" class="headerlink" title="9. Checkpoint（训练存档）与恢复"></a>9. Checkpoint（训练存档）与恢复</h2><p><strong>是什么</strong>：周期性把训练状态（权重、优化器状态 m&#x2F;v、学习率、step、随机种子）落盘，<br>崩溃后从最近的存档继续——否则跑两周的任务一个 OOM 就白干。</p>
+<p><strong>为什么分布式 checkpoint 难</strong>：</p>
+<ul>
+<li>每个 rank 的模型分片和优化器状态不同 → checkpoint 必须按 rank 存，还要记录”切分方案”；</li>
+<li>换 GPU 数量恢复（4卡存 → 2卡恢复）需要 <strong>resharding</strong>（重切）；</li>
+<li>大模型 checkpoint 动辄几十~几百 GB → 落盘慢，可能拖停训练 → 需要<br><strong>异步 checkpoint</strong>（后台拷贝，训练不阻塞）。</li>
+</ul>
+<p><img src="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/202611041059814.png" alt="概念图"></p>
+<p><strong>系统类比</strong>：数据库的 WAL&#x2F;备份策略——savepoint 频率 &#x3D; checkpoint 间隔，<br>要在大故障损失（间隔太长）与开销（太频繁拖慢训练）之间权衡。<br>在 K8s 上的体现：JobSet&#x2F;失败重试 + 存储挂载（PVC&#x2F;对象存储）决定 checkpoint<br>写哪、写多快——这是你作为管理员最熟悉的战场（Phase 2 W10 实战）。</p>
+<p><strong>可靠性数字</strong>（Phase 5 W22 会用到）：万卡集群上故障几乎是常态，<br>业界经验是”几百卡规模、几小时无失败，几千卡规模、错误率以小时计”——<br>checkpoint 频率和恢复时长（MTTR）直接决定 <strong>goodput</strong>（有效产出&#x2F;总时间）。</p>
+<hr>
+<h2 id="10-一张图总结：训练流程里的资源流"><a href="#10-一张图总结：训练流程里的资源流" class="headerlink" title="10. 一张图总结：训练流程里的资源流"></a>10. 一张图总结：训练流程里的资源流</h2><p><img src="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/202611041059275.png" alt="概念图"></p>
+<p><strong>现在你已能回答</strong>：训练任务里每部分显存是啥、通信发生在哪、为什么卡越多<br>通信越重、checkpoint 为什么是长训练的命门——这些就是 Phase 2 全部实验的主角。</p>
+
+    </div>
+
+    
+    
+    
+
+    <footer class="post-footer">
+          <div class="reward-container">
+  <div>Buy Me a Coffee</div>
+  <button>
+    赞赏
+  </button>
+  <div class="post-reward">
+      <div>
+        <img src="/images/wechatpayme.png" alt="周淑科 微信">
+        <span>微信</span>
+      </div>
+      <div>
+        <img src="/images/alipayme.jpg" alt="周淑科 支付宝">
+        <span>支付宝</span>
+      </div>
+
+  </div>
+</div>
+
+          
+
+<div class="post-copyright">
+<ul>
+  <li class="post-copyright-author">
+      <strong>本文作者： </strong>周淑科
+  </li>
+  <li class="post-copyright-link">
+      <strong>本文链接：</strong>
+      <a href="https://zhoushuke.github.io/2026/05/15/AI-Infra-Glossary-02-Scaling/" title="词汇图鉴 ② — 训练是怎么&quot;铺开&quot;到多卡的（扩展层）">https://zhoushuke.github.io/2026/05/15/AI-Infra-Glossary-02-Scaling/</a>
+  </li>
+  <li class="post-copyright-license">
+      <strong>版权声明： </strong>本站所有文章除特别声明外，均采用 <a href="https://creativecommons.org/licenses/by-nc-sa/4.0/" rel="noopener" target="_blank"><i class="fab fa-fw fa-creative-commons"></i>BY-NC-SA</a> 许可协议。转载请保留原文作者及链接！
+  </li>
+</ul>
+</div>
+
+          <div class="post-tags">
+              <a href="/tags/AI-Infra/" rel="tag"># AI-Infra</a>
+          </div>
+
+        
+
+          <div class="post-nav">
+            <div class="post-nav-item">
+                <a href="/2026/04/15/AI-Infra-Glossary-01-Foundations/" rel="prev" title="词汇图鉴 ① — 模型在"算"什么（计算语义层）">
+                  <i class="fa fa-angle-left"></i> 词汇图鉴 ① — 模型在"算"什么（计算语义层）
+                </a>
+            </div>
+            <div class="post-nav-item">
+                <a href="/2026/06/14/AI-Infra-Glossary-03-Inference-RL/" rel="next" title="词汇图鉴 ③ — 推理服务的核心矛盾 + RL 是什么（服务层）">
+                  词汇图鉴 ③ — 推理服务的核心矛盾 + RL 是什么（服务层） <i class="fa fa-angle-right"></i>
+                </a>
+            </div>
+          </div>
+    </footer>
+  </article>
+</div>
+
+
+
+
+
+
+</div>
+  </main>
+
+  <footer class="footer">
+    <div class="footer-inner">
+
+  <div class="copyright">
+    &copy; 
+    <span itemprop="copyrightYear">2026</span>
+    <span class="with-love">
+      <i class="fa fa-heart"></i>
+    </span>
+    <span class="author" itemprop="copyrightHolder">周淑科</span>
+  </div>
+<div class="wordcount">
+  <span class="post-meta-item">
+    <span class="post-meta-item-icon">
+      <i class="fa fa-chart-line"></i>
+    </span>
+      <span>站点总字数：</span>
+    <span title="站点总字数">1m</span>
+  </span>
+  <span class="post-meta-item">
+    <span class="post-meta-item-icon">
+      <i class="fa fa-coffee"></i>
+    </span>
+      <span>站点阅读时长 &asymp;</span>
+    <span title="站点阅读时长">15:44</span>
+  </span>
+</div>
+<div class="busuanzi-count">
+    <span class="post-meta-item" id="busuanzi_container_site_uv">
+      <span class="post-meta-item-icon">
+        <i class="fa fa-user"></i>
+      </span>
+      <span class="site-uv" title="总访客量">
+        <span id="busuanzi_value_site_uv"></span>
+      </span>
+    </span>
+    <span class="post-meta-item" id="busuanzi_container_site_pv">
+      <span class="post-meta-item-icon">
+        <i class="fa fa-eye"></i>
+      </span>
+      <span class="site-pv" title="总访问量">
+        <span id="busuanzi_value_site_pv"></span>
+      </span>
+    </span>
+</div>
+  <div class="powered-by">Powered by <a href="https://hexo.io/" rel="noopener" target="_blank">Hexo</a> & <a href="https://theme-next.js.org/mist/" rel="noopener" target="_blank">NexT.Mist</a>
+  </div>
+
+    </div>
+  </footer>
+
+  
+  <div class="toggle sidebar-toggle" role="button">
+    <span class="toggle-line"></span>
+    <span class="toggle-line"></span>
+    <span class="toggle-line"></span>
+  </div>
+  <div class="sidebar-dimmer"></div>
+  <div class="back-to-top" role="button" aria-label="返回顶部">
+    <i class="fa fa-arrow-up fa-lg"></i>
+    <span>0%</span>
+  </div>
+
+<noscript>
+  <div class="noscript-warning">Theme NexT works best with JavaScript enabled</div>
+</noscript>
+
+
+  
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/animejs/3.2.1/anime.min.js" integrity="sha256-XL2inqUJaslATFnHdJOi9GfQ60on8Wx1C2H8DYiN1xY=" crossorigin="anonymous"></script>
+<script src="/js/comments.js"></script><script src="/js/utils.js"></script><script src="/js/motion.js"></script><script src="/js/sidebar.js"></script><script src="/js/next-boot.js"></script>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/hexo-generator-searchdb/1.4.1/search.js" integrity="sha256-1kfA5uHPf65M5cphT2dvymhkuyHPQp5A53EGZOnOLmc=" crossorigin="anonymous"></script>
+<script src="/js/third-party/search/local-search.js"></script>
+
+
+
+
+
+
+
+  
+  <script async src="https://cn.vercount.one/js"></script>
+
+
+
+
+
+</body>
+</html>

@@ -1,0 +1,586 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width">
+<meta name="theme-color" content="#222" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#222" media="(prefers-color-scheme: dark)"><meta name="generator" content="Hexo 6.2.0">
+
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon-next.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32x32-next.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon-16x16-next.png">
+  <link rel="mask-icon" href="/images/logo.svg" color="#222">
+
+<link rel="stylesheet" href="/css/main.css">
+
+<link rel="stylesheet" href="https://fonts.loli.net/css?family=Lato:300,300italic,400,400italic,700,700italic%7CRoboto+Mono:300,300italic,400,400italic,700,700italic&display=swap&subset=latin,latin-ext">
+
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.6.0/css/all.min.css" integrity="sha256-5eIC48iZUHmSlSUz9XtjRyK2mzQkHScZY1WdMaoz74E=" crossorigin="anonymous">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/3.1.1/animate.min.css" integrity="sha256-PR7ttpcvz8qrF57fur/yAx1qXMFJeJFiA6pSzWi0OIE=" crossorigin="anonymous">
+
+<script class="next-config" data-name="main" type="application/json">{"hostname":"zhoushuke.github.io","root":"/","images":"/images","scheme":"Mist","darkmode":true,"version":"8.21.1","exturl":false,"sidebar":{"position":"right","width_expanded":320,"width_dual_column":240,"display":"post","padding":18,"offset":12},"hljswrap":true,"copycode":{"enable":true,"style":"mac"},"fold":{"enable":true,"height":500},"bookmark":{"enable":false,"color":"#222","save":"auto"},"mediumzoom":false,"lazyload":false,"pangu":false,"comments":{"style":"tabs","active":null,"storage":true,"lazyload":false,"nav":null},"stickytabs":false,"motion":{"enable":true,"async":false,"transition":{"menu_item":"fadeInDown","post_block":"fadeIn","post_header":"fadeInDown","post_body":"fadeInDown","coll_header":"fadeInLeft","sidebar":"fadeInUp"}},"prism":false,"i18n":{"placeholder":"搜索...","empty":"没有找到任何搜索结果：${query}","hits_time":"找到 ${hits} 个搜索结果（用时 ${time} 毫秒）","hits":"找到 ${hits} 个搜索结果"},"path":"/search.xml","localsearch":{"enable":true,"top_n_per_article":1,"unescape":false,"preload":false}}</script><script src="/js/config.js"></script>
+
+    <meta name="description" content="这一层回答：一次训练&#x2F;推理，GPU 上到底在做什么数学运算？面向读者：系统工程师。每个概念用你熟悉的系统思维来类比。建议：每读完一节，合上书把图示默画一遍，再对照。">
+<meta property="og:type" content="article">
+<meta property="og:title" content="词汇图鉴 ① — 模型在&quot;算&quot;什么（计算语义层）">
+<meta property="og:url" content="https://zhoushuke.github.io/2026/04/15/AI-Infra-Glossary-01-Foundations/index.html">
+<meta property="og:site_name" content="Z.S.K.&#39;s Records">
+<meta property="og:description" content="这一层回答：一次训练&#x2F;推理，GPU 上到底在做什么数学运算？面向读者：系统工程师。每个概念用你熟悉的系统思维来类比。建议：每读完一节，合上书把图示默画一遍，再对照。">
+<meta property="og:locale" content="zh_CN">
+<meta property="og:image" content="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/202611041058417.png">
+<meta property="og:image" content="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/202611041058377.png">
+<meta property="og:image" content="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/202611041058992.png">
+<meta property="og:image" content="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/202611041058654.png">
+<meta property="og:image" content="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/202611041058106.png">
+<meta property="og:image" content="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/202611041058935.png">
+<meta property="article:published_time" content="2026-04-15T01:00:00.000Z">
+<meta property="article:modified_time" content="2026-11-04T12:37:33.793Z">
+<meta property="article:author" content="周淑科">
+<meta property="article:tag" content="AI-Infra">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:image" content="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/202611041058417.png">
+
+
+<link rel="canonical" href="https://zhoushuke.github.io/2026/04/15/AI-Infra-Glossary-01-Foundations/">
+
+
+<script class="next-config" data-name="page" type="application/json">{"sidebar":"","isHome":false,"isPost":true,"lang":"zh-CN","comments":"","permalink":"https://zhoushuke.github.io/2026/04/15/AI-Infra-Glossary-01-Foundations/","path":"2026/04/15/AI-Infra-Glossary-01-Foundations/","title":"词汇图鉴 ① — 模型在\"算\"什么（计算语义层）"}</script>
+
+<script class="next-config" data-name="calendar" type="application/json">""</script>
+<title>词汇图鉴 ① — 模型在"算"什么（计算语义层） | Z.S.K.'s Records</title>
+  
+
+
+
+
+
+
+
+
+  <noscript>
+    <link rel="stylesheet" href="/css/noscript.css">
+  </noscript>
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage" class="use-motion">
+  <div class="headband"></div>
+
+  <main class="main">
+    <div class="column">
+      <header class="header" itemscope itemtype="http://schema.org/WPHeader"><div class="site-brand-container">
+  <div class="site-nav-toggle">
+    <div class="toggle" aria-label="切换导航栏" role="button">
+        <span class="toggle-line"></span>
+        <span class="toggle-line"></span>
+        <span class="toggle-line"></span>
+    </div>
+  </div>
+
+  <div class="site-meta">
+
+    <a href="/" class="brand" rel="start">
+      <i class="logo-line"></i>
+      <p class="site-title">Z.S.K.'s Records</p>
+      <i class="logo-line"></i>
+    </a>
+  </div>
+
+  <div class="site-nav-right">
+    <div class="toggle popup-trigger" aria-label="搜索" role="button">
+        <i class="fa fa-search fa-fw fa-lg"></i>
+    </div>
+  </div>
+</div>
+
+
+
+<nav class="site-nav">
+  <ul class="main-menu menu"><li class="menu-item menu-item-home"><a href="/" rel="section"><i class="fa fa-home fa-fw"></i>首页</a></li><li class="menu-item menu-item-about"><a href="/about/ZSK-Profile.pdf" rel="section"><i class="fa fa-user fa-fw"></i>简历</a></li><li class="menu-item menu-item-tags"><a href="/tags/" rel="section"><i class="fa fa-tags fa-fw"></i>标签</a></li><li class="menu-item menu-item-categories"><a href="/categories/" rel="section"><i class="fa fa-th fa-fw"></i>分类</a></li><li class="menu-item menu-item-archives"><a href="/archives/" rel="section"><i class="fa fa-archive fa-fw"></i>归档</a></li><li class="menu-item menu-item-commonweal"><a href="/404.html" rel="section"><i class="fa fa-heartbeat fa-fw"></i>公益 404</a></li>
+      <li class="menu-item menu-item-search">
+        <a role="button" class="popup-trigger"><i class="fa fa-search fa-fw"></i>搜索
+        </a>
+      </li>
+  </ul>
+</nav>
+
+
+
+  <div class="search-pop-overlay">
+    <div class="popup search-popup">
+      <div class="search-header">
+        <span class="search-icon">
+          <i class="fa fa-search"></i>
+        </span>
+        <div class="search-input-container">
+          <input autocomplete="off" autocapitalize="off" maxlength="80"
+                placeholder="搜索..." spellcheck="false"
+                type="search" class="search-input">
+        </div>
+        <span class="popup-btn-close" role="button">
+          <i class="fa fa-times-circle"></i>
+        </span>
+      </div>
+      <div class="search-result-container">
+        <div class="search-result-icon">
+          <i class="fa fa-spinner fa-pulse fa-5x"></i>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</header>
+        
+  
+  <aside class="sidebar">
+
+    <div class="sidebar-inner sidebar-nav-active sidebar-toc-active">
+      <ul class="sidebar-nav">
+        <li class="sidebar-nav-toc">
+          文章目录
+        </li>
+        <li class="sidebar-nav-overview">
+          站点概览
+        </li>
+      </ul>
+
+      <div class="sidebar-panel-container">
+        <!--noindex-->
+        <div class="post-toc-wrap sidebar-panel">
+            <div class="post-toc animated"><ol class="nav"><li class="nav-item nav-level-2"><a class="nav-link" href="#0-%E5%85%A8%E5%B1%80%E5%9B%BE%EF%BC%9A%E4%B8%80%E4%B8%AA-token-%E5%9C%A8%E6%A8%A1%E5%9E%8B%E9%87%8C%E7%9A%84%E6%97%85%E7%A8%8B"><span class="nav-number">1.</span> <span class="nav-text">0. 全局图：一个 token 在模型里的旅程</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#1-Tokenizer%EF%BC%88%E5%88%86%E8%AF%8D%E5%99%A8%EF%BC%89"><span class="nav-number">2.</span> <span class="nav-text">1. Tokenizer（分词器）</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#2-Embedding%EF%BC%88%E5%B5%8C%E5%85%A5%E5%B1%82-x2F-%E6%9F%A5%E8%A1%A8%EF%BC%89"><span class="nav-number">3.</span> <span class="nav-text">2. Embedding（嵌入层 &#x2F; 查表）</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#3-%E4%BD%8D%E7%BD%AE%E7%BC%96%E7%A0%81%EF%BC%88Position-Encoding-x2F-RoPE%EF%BC%89"><span class="nav-number">4.</span> <span class="nav-text">3. 位置编码（Position Encoding &#x2F; RoPE）</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#4-Attention%EF%BC%88QKV-%E6%B3%A8%E6%84%8F%E5%8A%9B%EF%BC%89%E2%80%94-%E5%85%A8%E6%96%87%E6%9C%80%E9%87%8D%E8%A6%81%E7%9A%84%E4%B8%80%E5%9D%97"><span class="nav-number">5.</span> <span class="nav-text">4. Attention（QKV 注意力）— 全文最重要的一块</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#5-Multi-Head-x2F-GQA-x2F-MQA-x2F-MLA%EF%BC%88%E5%A4%9A%E5%A4%B4%E4%B8%8E%E5%90%84%E7%B1%BB%E5%8F%98%E4%BD%93%EF%BC%89"><span class="nav-number">6.</span> <span class="nav-text">5. Multi-Head &#x2F; GQA &#x2F; MQA &#x2F; MLA（多头与各类变体）</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#6-MLP-x2F-FFN%EF%BC%88%E5%89%8D%E9%A6%88%E7%BD%91%E7%BB%9C%EF%BC%89"><span class="nav-number">7.</span> <span class="nav-text">6. MLP &#x2F; FFN（前馈网络）</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#7-LayerNorm-x2F-RMSNorm%EF%BC%88%E5%BD%92%E4%B8%80%E5%8C%96%EF%BC%89"><span class="nav-number">8.</span> <span class="nav-text">7. LayerNorm &#x2F; RMSNorm（归一化）</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#8-%E6%8A%8A-Block-%E4%B8%B2%E8%B5%B7%E6%9D%A5%EF%BC%9A%E4%B8%80%E4%B8%AA-Transformer-Layer-%E7%9A%84%E5%AE%8C%E6%95%B4%E5%89%8D%E5%90%91"><span class="nav-number">9.</span> <span class="nav-text">8. 把 Block 串起来：一个 Transformer Layer 的完整前向</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#9-Loss%EF%BC%88%E4%BA%A4%E5%8F%89%E7%86%B5%EF%BC%89%EF%BC%9A%E8%AE%AD%E7%BB%83%E7%9A%84%E7%9B%AE%E6%A0%87%E5%87%BD%E6%95%B0"><span class="nav-number">10.</span> <span class="nav-text">9. Loss（交叉熵）：训练的目标函数</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#10-Forward-%E4%B8%8E-Backward%EF%BC%88%E5%89%8D%E5%90%91%E4%BC%A0%E6%92%AD-x2F-%E5%8F%8D%E5%90%91%E4%BC%A0%E6%92%AD%EF%BC%89"><span class="nav-number">11.</span> <span class="nav-text">10. Forward 与 Backward（前向传播 &#x2F; 反向传播）</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#11-Gradient%EF%BC%88%E6%A2%AF%E5%BA%A6%EF%BC%89"><span class="nav-number">12.</span> <span class="nav-text">11. Gradient（梯度）</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#12-Optimizer-%E4%B8%8E-Optimizer-State%EF%BC%88%E4%BC%98%E5%8C%96%E5%99%A8%E7%8A%B6%E6%80%81%EF%BC%89%E2%80%94-%E6%98%BE%E5%AD%98%E5%A4%A7%E5%A4%B4"><span class="nav-number">13.</span> <span class="nav-text">12. Optimizer 与 Optimizer State（优化器状态）— 显存大头</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#13-%E6%94%B6%E5%B0%BE%EF%BC%9A%E6%98%BE%E5%AD%98%E6%80%BB%E8%B4%A6"><span class="nav-number">14.</span> <span class="nav-text">13. 收尾：显存总账</span></a></li></ol></div>
+        </div>
+        <!--/noindex-->
+
+        <div class="site-overview-wrap sidebar-panel">
+          <div class="site-author animated" itemprop="author" itemscope itemtype="http://schema.org/Person">
+    <img class="site-author-image" itemprop="image" alt="周淑科"
+      src="/images/avatar.gif">
+  <p class="site-author-name" itemprop="name">周淑科</p>
+  <div class="site-description" itemprop="description">Better Later Than Never</div>
+</div>
+<div class="site-state-wrap animated">
+  <nav class="site-state">
+      <div class="site-state-item site-state-posts">
+        <a href="/archives/">
+          <span class="site-state-item-count">233</span>
+          <span class="site-state-item-name">日志</span>
+        </a>
+      </div>
+      <div class="site-state-item site-state-categories">
+          <a href="/categories/">
+        <span class="site-state-item-count">17</span>
+        <span class="site-state-item-name">分类</span></a>
+      </div>
+      <div class="site-state-item site-state-tags">
+          <a href="/tags/">
+        <span class="site-state-item-count">17</span>
+        <span class="site-state-item-name">标签</span></a>
+      </div>
+  </nav>
+</div>
+  <div class="cc-license animated" itemprop="license">
+    <a href="https://creativecommons.org/licenses/by-nc-sa/4.0/" class="cc-opacity" rel="noopener" target="_blank"><img src="https://cdnjs.cloudflare.com/ajax/libs/creativecommons-vocabulary/2020.11.3/assets/license_badges/small/by_nc_sa.svg" alt="Creative Commons"></a>
+  </div>
+
+        </div>
+      </div>
+    </div>
+
+    
+  </aside>
+
+
+    </div>
+
+    <div class="main-inner post posts-expand">
+
+
+  
+
+
+<div class="post-block">
+  
+  
+
+  <article itemscope itemtype="http://schema.org/Article" class="post-content" lang="zh-CN">
+    <link itemprop="mainEntityOfPage" href="https://zhoushuke.github.io/2026/04/15/AI-Infra-Glossary-01-Foundations/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/avatar.gif">
+      <meta itemprop="name" content="周淑科">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="Z.S.K.'s Records">
+      <meta itemprop="description" content="Better Later Than Never">
+    </span>
+
+    <span hidden itemprop="post" itemscope itemtype="http://schema.org/CreativeWork">
+      <meta itemprop="name" content="词汇图鉴 ① — 模型在"算"什么（计算语义层） | Z.S.K.'s Records">
+      <meta itemprop="description" content="">
+    </span>
+      <header class="post-header">
+        <h1 class="post-title" itemprop="name headline">
+          词汇图鉴 ① — 模型在"算"什么（计算语义层）
+        </h1>
+
+        <div class="post-meta-container">
+          <div class="post-meta">
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-calendar"></i>
+      </span>
+      <span class="post-meta-item-text">发表于</span>
+
+      <time title="创建时间：2026-04-15 09:00:00" itemprop="dateCreated datePublished" datetime="2026-04-15T09:00:00+08:00">2026-04-15</time>
+    </span>
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-folder"></i>
+      </span>
+      <span class="post-meta-item-text">分类于</span>
+        <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+          <a href="/categories/AI-Infra/" itemprop="url" rel="index"><span itemprop="name">AI-Infra</span></a>
+        </span>
+    </span>
+
+  
+    <span class="post-meta-item" title="阅读次数" id="busuanzi_container_page_pv">
+      <span class="post-meta-item-icon">
+        <i class="far fa-eye"></i>
+      </span>
+      <span class="post-meta-item-text">阅读次数：</span>
+      <span id="busuanzi_value_page_pv"></span>
+    </span>
+    <span class="post-meta-break"></span>
+    <span class="post-meta-item" title="本文字数">
+      <span class="post-meta-item-icon">
+        <i class="far fa-file-word"></i>
+      </span>
+      <span class="post-meta-item-text">本文字数：</span>
+      <span>4.8k</span>
+    </span>
+    <span class="post-meta-item" title="阅读时长">
+      <span class="post-meta-item-icon">
+        <i class="far fa-clock"></i>
+      </span>
+      <span class="post-meta-item-text">阅读时长 &asymp;</span>
+      <span>4 分钟</span>
+    </span>
+</div>
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody"><blockquote>
+<p>这一层回答：一次训练&#x2F;推理，GPU 上到底在做什么数学运算？<br>面向读者：系统工程师。每个概念用你熟悉的系统思维来类比。<br>建议：每读完一节，合上书把图示默画一遍，再对照。</p>
+</blockquote>
+<hr>
+<span id="more"></span>
+
+
+<h2 id="0-全局图：一个-token-在模型里的旅程"><a href="#0-全局图：一个-token-在模型里的旅程" class="headerlink" title="0. 全局图：一个 token 在模型里的旅程"></a>0. 全局图：一个 token 在模型里的旅程</h2><p><img src="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/202611041058417.png" alt="概念图"></p>
+<p><strong>记忆锚点</strong>：文本进模型 &#x3D; 一串数字进来，经过 N 层”交换信息+消化信息”的循环，<br>最后变成”下一个词的概率表”。</p>
+<hr>
+<h2 id="1-Tokenizer（分词器）"><a href="#1-Tokenizer（分词器）" class="headerlink" title="1. Tokenizer（分词器）"></a>1. Tokenizer（分词器）</h2><p><strong>一句话</strong>：把自然语言切成模型能处理的”词元（token）”，每个 token 对应词表里的一个整数 id。</p>
+<p><strong>内部做了什么</strong>（以 GPT 系用的 BPE &#x2F; Byte-level BPE 为例）：</p>
+<ol>
+<li>把文本按 Unicode 解码成字节序列；</li>
+<li>统计相邻字节对（byte pair）出现的频率，把最高频的一对<strong>合并</strong>成一个新符号；</li>
+<li>重复合并，直到词表达到目标大小（GPT-2 是 50,257，Llama-3 是 128,256）；</li>
+<li>得到一个合并规则表，运行时按规则贪心切分。</li>
+</ol>
+<p><img src="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/202611041058377.png" alt="概念图"></p>
+<p><strong>系统类比</strong>：Tokenizer 像”压缩算法的字典 + 最短前缀匹配的分词器”。<br>输入变短了（一个 token ≈ 4 个字符、约 0.75 个英文单词），模型的计算量就小得多。<br>注意：<strong>它不是按词切</strong>——“hello” 和 “hello!” 会拆成不同的 token 组合，<br>而且分词粒度和数学能力直接相关（”3+5” 拆成 1 个 token 还是 3 个 token，影响数感）。</p>
+<p><strong>要记住的数字</strong>：约 4 字符&#x2F;token、约 0.75 英文单词&#x2F;token；<br>中文约 1 字 ≈ 1~2 个 token（中文字符在 byte-level BPE 下通常 1-2 token）。</p>
+<hr>
+<h2 id="2-Embedding（嵌入层-x2F-查表）"><a href="#2-Embedding（嵌入层-x2F-查表）" class="headerlink" title="2. Embedding（嵌入层 &#x2F; 查表）"></a>2. Embedding（嵌入层 &#x2F; 查表）</h2><p><strong>一句话</strong>：把 token id 映射成一个固定维度的稠密向量（如 d_model&#x3D;4096），<br>让”意思相近的词”在向量空间里距离近。</p>
+<p><strong>内部做了什么</strong>：就是一个<strong>查表</strong>（lookup table）——一个形状为 (vocab_size, d_model)<br>的权重矩阵，第 i 行就是 token id &#x3D; i 的向量。几乎不花算力，花的是显存。</p>
+<p><img src="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/202611041058992.png" alt="概念图"></p>
+<p><strong>系统类比</strong>：像一张 <code>(key=id) → (value=vector)</code> 的哈希表 &#x2F; 内存查找。<br>也可以理解为把 one-hot（128256 维、只有1个1）乘以嵌入矩阵，得到压缩表示——<br>但实践中直接取行，不做矩阵乘。</p>
+<p><strong>要记住的</strong>：Embedding 矩阵参数 &#x3D; vocab_size × d_model。<br>Llama-3-8B：128,256 × 4096 ≈ 5.25 亿参数，占总参数约 6%（不算很小的开销）。</p>
+<hr>
+<h2 id="3-位置编码（Position-Encoding-x2F-RoPE）"><a href="#3-位置编码（Position-Encoding-x2F-RoPE）" class="headerlink" title="3. 位置编码（Position Encoding &#x2F; RoPE）"></a>3. 位置编码（Position Encoding &#x2F; RoPE）</h2><p><strong>一句话</strong>：attention 本身<strong>不知道词的顺序</strong>（它是集合运算），需要显式注入位置信息。</p>
+<p><strong>内部做了什么</strong>：</p>
+<ul>
+<li>绝对位置编码（GPT-2）：学一个位置 embedding 表，加到 token 向量上；</li>
+<li><strong>RoPE</strong>（旋转位置编码，Llama&#x2F;Qwen 系标配）：把 Q 和 K 向量按位置做<strong>旋转</strong>变换，<br>使”两个 token 的点积”自动带上”相对位置”的相位差——位置信息进到 attention 分数里。</li>
+</ul>
+<p><strong>系统类比</strong>：像给数据包加序列号（绝对位置），而 RoPE 更像用”相位的相对差”<br>编码时序（类似 OFDM 的相位调制），好处是<strong>外推性</strong>更好——<br>训练时见过的位置范围之外，RoPE 也能平滑工作。</p>
+<hr>
+<h2 id="4-Attention（QKV-注意力）—-全文最重要的一块"><a href="#4-Attention（QKV-注意力）—-全文最重要的一块" class="headerlink" title="4. Attention（QKV 注意力）— 全文最重要的一块"></a>4. Attention（QKV 注意力）— 全文最重要的一块</h2><p><strong>一句话</strong>：让每个 token 去”看”序列里所有其他 token，按相关性加权汇总信息。</p>
+<p><strong>内部做了什么</strong>（单头缩放点积注意力）：</p>
+<ol>
+<li>每个 token 的向量 x，通过三个线性变换得到 <strong>Q</strong>（查询）、<strong>K</strong>（键）、<strong>V</strong>（值）；</li>
+<li>用当前 token 的 Q 和所有 token 的 K 做点积 → 相似度分数；</li>
+<li>除以 √d_k 缩放（防止 softmax 饱和），做 softmax → 权重（和为 1）；</li>
+<li>用权重对所有 V 加权求和 → 输出向量。</li>
+</ol>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line">            K1   K2   K3   K4  (序列里所有键)</span><br><span class="line">Q1 ──dot──&gt; s1   s2   s3   s4</span><br><span class="line">            │    │    │    │</span><br><span class="line">        softmax(s/√d) → a1 a2 a3 a4   (注意力权重, 和为1)</span><br><span class="line">            │    │    │    │</span><br><span class="line">            └────┴────┴────┘</span><br><span class="line">                        │ 加权求和</span><br><span class="line">              out = a1·V1+a2·V2+a3·V3+a4·V4</span><br></pre></td></tr></table></figure>
+
+<p><strong>系统类比</strong>：这就是一次<strong>数据库&#x2F;检索操作</strong>——Q 是”查询条件”，K 是”索引&#x2F;主键”，<br>V 是”要取的数据行”。token 的 Q 去和所有 K 匹配相似度，把最相关的 V 加权取回来。<br>注意力权重矩阵形状是 (seq_len, seq_len)，这就是”二次复杂度 O(N²)”的来源，<br>也是长上下文显存爆炸的根源。</p>
+<p><strong>Causal Mask（因果掩码）</strong>：训练时让 token 只能看到自己及之前的 token<br>（未来是”答案”，不能偷看）——分数矩阵右上三角置 -∞，softmax 后变 0：</p>
+<p><img src="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/202611041058654.png" alt="概念图"></p>
+<blockquote>
+<p><strong>关键伏笔</strong>：mask 决定了”新 token 只依赖历史，历史不依赖新 token”——<br>这就是推理时 KV Cache 合法的根本原因（见词汇图鉴③）。</p>
+</blockquote>
+<hr>
+<h2 id="5-Multi-Head-x2F-GQA-x2F-MQA-x2F-MLA（多头与各类变体）"><a href="#5-Multi-Head-x2F-GQA-x2F-MQA-x2F-MLA（多头与各类变体）" class="headerlink" title="5. Multi-Head &#x2F; GQA &#x2F; MQA &#x2F; MLA（多头与各类变体）"></a>5. Multi-Head &#x2F; GQA &#x2F; MQA &#x2F; MLA（多头与各类变体）</h2><p><strong>Multi-Head</strong>：不是用一个 Q&#x2F;K&#x2F;V 大向量算一次，而是切成 n_head 个头，每个头在<br>不同表示子空间上独立做 attention，最后拼起来再投影。像多个”关注点”并行工作，<br>有的头学语法、有的头学指代、有的头学位置。</p>
+<p><strong>变体都在解决同一个问题：KV 太多，推理显存太贵。</strong></p>
+<table>
+<thead>
+<tr>
+<th>变体</th>
+<th>KV 头数</th>
+<th>说明</th>
+<th>典型使用</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>MHA（多查询）</td>
+<td>&#x3D; Q 头数（每个头自己的 K&#x2F;V）</td>
+<td>KV cache 最大</td>
+<td>GPT-2、Llama-2</td>
+</tr>
+<tr>
+<td>GQA（分组查询）</td>
+<td>Q头数&#x2F;G（如 32→8）</td>
+<td>组内共享 K&#x2F;V，KV cache 缩 4 倍，质量损失小</td>
+<td>Llama-3、Qwen</td>
+</tr>
+<tr>
+<td>MQA（多查询）</td>
+<td>&#x3D; 1（所有 Q 头共享一份 K&#x2F;V）</td>
+<td>KV cache 最小，质量损失略大</td>
+<td>早期推理优化</td>
+</tr>
+<tr>
+<td>MLA（多头潜在）</td>
+<td>不存展开的 K&#x2F;V，存一个低秩压缩向量，使用时再解压</td>
+<td>KV cache 压缩最狠（DeepSeek 系）</td>
+<td>DeepSeek-V2&#x2F;V3</td>
+</tr>
+</tbody></table>
+<p><strong>要记住的</strong>：这些是架构层面为”推理显存”做的妥协——你在 Phase 1 W5 亲手实现过 GQA，<br>在 Phase 3 会亲手算出 KV cache 大小，这里先记住结论：<strong>KV 头越少，推理越省显存</strong>。</p>
+<hr>
+<h2 id="6-MLP-x2F-FFN（前馈网络）"><a href="#6-MLP-x2F-FFN（前馈网络）" class="headerlink" title="6. MLP &#x2F; FFN（前馈网络）"></a>6. MLP &#x2F; FFN（前馈网络）</h2><p><strong>一句话</strong>：attention 负责”token 之间交换信息”，MLP 负责”每个 token 自己消化信息”。</p>
+<p><strong>内部做了什么</strong>：两层线性 + 激活函数。标准配置是中间维度扩大到 4×：</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">x (d_model) ──W_up──&gt; z (4×d_model) ──GELU──&gt; 非线性 ──W_down──&gt; y (d_model)</span><br></pre></td></tr></table></figure>
+
+<p><strong>系统类比</strong>：attention &#x3D; 集群里的节点互相发消息（all-to-all 通信）；<br>MLP &#x3D; 每个节点拿到消息后自己做本地计算（并行度高、通信为零）。<br>MLP 是<strong>参数大户</strong>：Llama-7B 里约 2&#x2F;3 参数在 MLP，attention 只占约 1&#x2F;3。<br>这也是为什么 MoE（后面讲）主要换掉的是 MLP 层。</p>
+<hr>
+<h2 id="7-LayerNorm-x2F-RMSNorm（归一化）"><a href="#7-LayerNorm-x2F-RMSNorm（归一化）" class="headerlink" title="7. LayerNorm &#x2F; RMSNorm（归一化）"></a>7. LayerNorm &#x2F; RMSNorm（归一化）</h2><p><strong>一句话</strong>：把每层输出”拉回”到稳定尺度，让深层网络训练不炸。</p>
+<p><strong>内部做了什么</strong>：对<strong>每个 token 的向量</strong>（按特征维）算均值&#x2F;方差做标准化，<br>再乘可学习的 γ 加 β；RMSNorm 只按均方根缩放、不减去均值（省计算，效果几乎一样，<br>Llama&#x2F;Qwen 标配）。<strong>注意不是 batch 维度</strong>——和 CNN 里的 BatchNorm 完全不同。</p>
+<p><strong>系统类比</strong>：像把每个节点的负载（激活值）归一化到标准范围，避免某些节点数值<br>过大导致梯度爆炸&#x2F;消失——相当于给深水区降压，防止管线某段数值溢出。</p>
+<hr>
+<h2 id="8-把-Block-串起来：一个-Transformer-Layer-的完整前向"><a href="#8-把-Block-串起来：一个-Transformer-Layer-的完整前向" class="headerlink" title="8. 把 Block 串起来：一个 Transformer Layer 的完整前向"></a>8. 把 Block 串起来：一个 Transformer Layer 的完整前向</h2><p><img src="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/202611041058106.png" alt="概念图"></p>
+<p><strong>记忆点</strong>：</p>
+<ul>
+<li>每层输入输出 shape 都不变 → 可以堆 N 层（Llama-3-8B 是 32 层）；</li>
+<li>残差连接 &#x3D; 高速公路：让梯度能越过深层直接回传（防止梯度消失）；</li>
+<li>所以”模型参数量 ≈ 层数 ×（attention参数 + MLP参数）”，<br>大概估算：7B 模型 ≈ 32 层 × ~2.2 亿参数&#x2F;层。</li>
+</ul>
+<hr>
+<h2 id="9-Loss（交叉熵）：训练的目标函数"><a href="#9-Loss（交叉熵）：训练的目标函数" class="headerlink" title="9. Loss（交叉熵）：训练的目标函数"></a>9. Loss（交叉熵）：训练的目标函数</h2><p><strong>一句话</strong>：模型输出”下一个词的概率分布”，loss 衡量它和真实答案差多少。</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line">模型输出 logits (vocab_size,)</span><br><span class="line">   │ softmax</span><br><span class="line">   ▼</span><br><span class="line">概率分布 p = [0.02, 0.01, ..., 0.60, ...]</span><br><span class="line">   │  vs 真实 next token: id = 1234</span><br><span class="line">   ▼</span><br><span class="line">loss = -log p[1234]   ← 交叉熵：真实词概率越低，loss越大</span><br></pre></td></tr></table></figure>
+
+<p><strong>系统类比</strong>：像监控告警——模型”预测错了”会产生 error signal（loss），<br>梯度就是把这个 error 沿计算图回传、分摊给每个参数（下一节）。</p>
+<hr>
+<h2 id="10-Forward-与-Backward（前向传播-x2F-反向传播）"><a href="#10-Forward-与-Backward（前向传播-x2F-反向传播）" class="headerlink" title="10. Forward 与 Backward（前向传播 &#x2F; 反向传播）"></a>10. Forward 与 Backward（前向传播 &#x2F; 反向传播）</h2><p><strong>Forward（前向）</strong>：数据从输入流到 loss，纯计算，期间要<strong>保存激活值</strong>（中间结果）<br>供反向用——这就是训练显存里”激活”那一块的来源。</p>
+<p><strong>Backward（反向）</strong>：从 loss 出发，按链式法则把梯度从最后一层一路传回第一层，<br>每个参数都会得到一个”你对本步 loss 负多大责任”的数字。</p>
+<p><img src="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/202611041058935.png" alt="概念图"></p>
+<p><strong>系统类比</strong>：前向 &#x3D; 流水线生产；反向 &#x3D; 质量追溯——<br>每个工位（层）根据”产品缺陷（loss）”往回算自己环节的偏差贡献。<br>反向时<strong>需要重放前向的激活值</strong>，所以这是一次”穿越时空”的计算——<br>这也是 activation checkpointing（重算激活换显存）这类技术存在的背景。</p>
+<hr>
+<h2 id="11-Gradient（梯度）"><a href="#11-Gradient（梯度）" class="headerlink" title="11. Gradient（梯度）"></a>11. Gradient（梯度）</h2><p><strong>一句话</strong>：loss 对某个参数的偏导数——“这个参数往哪个方向调、调多少，能最快降低 loss”。</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">L(loss) 对参数 θ 求偏导:  ∂L/∂θ = g</span><br><span class="line">更新: θ ← θ − lr · g      (lr = 学习率/步长)</span><br></pre></td></tr></table></figure>
+
+<p><strong>系统类比</strong>：下山找最低点。你站在山上（当前 loss），梯度告诉你怎么走最陡的下坡<br>（最速下降）；学习率是每次迈的步子大小——步子太大（lr 太大）会越过谷底震荡，<br>太小则走得太慢。训练就是反复”所有参数一起迈一小步”，直到 loss 降到谷底。</p>
+<hr>
+<h2 id="12-Optimizer-与-Optimizer-State（优化器状态）—-显存大头"><a href="#12-Optimizer-与-Optimizer-State（优化器状态）—-显存大头" class="headerlink" title="12. Optimizer 与 Optimizer State（优化器状态）— 显存大头"></a>12. Optimizer 与 Optimizer State（优化器状态）— 显存大头</h2><p><strong>一句话</strong>：更新参数需要优化器（默认 Adam），Adam 除了权重还要维护<strong>两份额外状态</strong>：<br>一阶矩 m（动量）和二阶矩 v（历史梯度平方的均值）。</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line">每个参数在训练时占用显存：</span><br><span class="line">  fp32 权重    4 字节</span><br><span class="line">  梯度         4 字节</span><br><span class="line">  一阶矩 m     4 字节</span><br><span class="line">  二阶矩 v     4 字节</span><br><span class="line">  ─────────────────────</span><br><span class="line">  合计       16 字节/参数   ← 记住这个&quot;16B/参数&quot;</span><br></pre></td></tr></table></figure>
+
+<p><strong>为什么这个数字重要</strong>：</p>
+<ul>
+<li>推理：模型 7B 权重 FP16 &#x3D; 7B × 2 字节 &#x3D; <strong>14 GB</strong>，单卡可装；</li>
+<li>训练：同样 7B 模型 + Adam &#x3D; 7B × 16 字节 &#x3D; <strong>112 GB</strong>，单卡根本装不下 → 这就是<br>训练必须做显存分片（ZeRO&#x2F;FSDP，见词汇图鉴②）的根本原因。</li>
+</ul>
+<p><strong>系统类比</strong>：16B&#x2F;参数 ≈ 训练态的”全量副本×4”（权重、梯度、动量、方差各一份）。<br>分布式训练里省显存，本质就是”谁也别保存全量副本，大家分着存、用时再凑”——<br>这就是下一份图鉴的核心。</p>
+<hr>
+<h2 id="13-收尾：显存总账"><a href="#13-收尾：显存总账" class="headerlink" title="13. 收尾：显存总账"></a>13. 收尾：显存总账</h2><p>单卡训练一个模型需要：</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">权重 (2B) + 梯度 (2B) + 优化器状态 (12B) + 激活 (取决于 batch×seq×层数)</span><br></pre></td></tr></table></figure>
+
+<ul>
+<li>激活值 &#x3D; batch_size × seq_len × d_model × 层数 × 若干倍的中间量，<br>这是训练大 batch &#x2F; 长序列时显存爆炸的<strong>另一大头</strong>（与参数无关的部分）；</li>
+<li>上面 16B&#x2F;参数估算的是”参数相关”部分，激活另算。</li>
+</ul>
+<p><strong>记住三个公式</strong>（后面 Phase 1 W4 会实测验证）：</p>
+<ol>
+<li>推理权重显存 ≈ 参数量 × 精度字节数</li>
+<li>训练参数显存 ≈ 参数量 × 16B（Adam，bf16 训练）</li>
+<li>激活显存 ≈ 正比于 batch × seq_len × 层数</li>
+</ol>
+
+    </div>
+
+    
+    
+    
+
+    <footer class="post-footer">
+          <div class="reward-container">
+  <div>Buy Me a Coffee</div>
+  <button>
+    赞赏
+  </button>
+  <div class="post-reward">
+      <div>
+        <img src="/images/wechatpayme.png" alt="周淑科 微信">
+        <span>微信</span>
+      </div>
+      <div>
+        <img src="/images/alipayme.jpg" alt="周淑科 支付宝">
+        <span>支付宝</span>
+      </div>
+
+  </div>
+</div>
+
+          
+
+<div class="post-copyright">
+<ul>
+  <li class="post-copyright-author">
+      <strong>本文作者： </strong>周淑科
+  </li>
+  <li class="post-copyright-link">
+      <strong>本文链接：</strong>
+      <a href="https://zhoushuke.github.io/2026/04/15/AI-Infra-Glossary-01-Foundations/" title="词汇图鉴 ① — 模型在&quot;算&quot;什么（计算语义层）">https://zhoushuke.github.io/2026/04/15/AI-Infra-Glossary-01-Foundations/</a>
+  </li>
+  <li class="post-copyright-license">
+      <strong>版权声明： </strong>本站所有文章除特别声明外，均采用 <a href="https://creativecommons.org/licenses/by-nc-sa/4.0/" rel="noopener" target="_blank"><i class="fab fa-fw fa-creative-commons"></i>BY-NC-SA</a> 许可协议。转载请保留原文作者及链接！
+  </li>
+</ul>
+</div>
+
+          <div class="post-tags">
+              <a href="/tags/AI-Infra/" rel="tag"># AI-Infra</a>
+          </div>
+
+        
+
+          <div class="post-nav">
+            <div class="post-nav-item">
+                <a href="/2026/03/16/AI-Infra-Glossary-00-Overview/" rel="prev" title="总览大图 — AI Infra 概念全景图">
+                  <i class="fa fa-angle-left"></i> 总览大图 — AI Infra 概念全景图
+                </a>
+            </div>
+            <div class="post-nav-item">
+                <a href="/2026/05/15/AI-Infra-Glossary-02-Scaling/" rel="next" title="词汇图鉴 ② — 训练是怎么"铺开"到多卡的（扩展层）">
+                  词汇图鉴 ② — 训练是怎么"铺开"到多卡的（扩展层） <i class="fa fa-angle-right"></i>
+                </a>
+            </div>
+          </div>
+    </footer>
+  </article>
+</div>
+
+
+
+
+
+
+</div>
+  </main>
+
+  <footer class="footer">
+    <div class="footer-inner">
+
+  <div class="copyright">
+    &copy; 
+    <span itemprop="copyrightYear">2026</span>
+    <span class="with-love">
+      <i class="fa fa-heart"></i>
+    </span>
+    <span class="author" itemprop="copyrightHolder">周淑科</span>
+  </div>
+<div class="wordcount">
+  <span class="post-meta-item">
+    <span class="post-meta-item-icon">
+      <i class="fa fa-chart-line"></i>
+    </span>
+      <span>站点总字数：</span>
+    <span title="站点总字数">1m</span>
+  </span>
+  <span class="post-meta-item">
+    <span class="post-meta-item-icon">
+      <i class="fa fa-coffee"></i>
+    </span>
+      <span>站点阅读时长 &asymp;</span>
+    <span title="站点阅读时长">15:44</span>
+  </span>
+</div>
+<div class="busuanzi-count">
+    <span class="post-meta-item" id="busuanzi_container_site_uv">
+      <span class="post-meta-item-icon">
+        <i class="fa fa-user"></i>
+      </span>
+      <span class="site-uv" title="总访客量">
+        <span id="busuanzi_value_site_uv"></span>
+      </span>
+    </span>
+    <span class="post-meta-item" id="busuanzi_container_site_pv">
+      <span class="post-meta-item-icon">
+        <i class="fa fa-eye"></i>
+      </span>
+      <span class="site-pv" title="总访问量">
+        <span id="busuanzi_value_site_pv"></span>
+      </span>
+    </span>
+</div>
+  <div class="powered-by">Powered by <a href="https://hexo.io/" rel="noopener" target="_blank">Hexo</a> & <a href="https://theme-next.js.org/mist/" rel="noopener" target="_blank">NexT.Mist</a>
+  </div>
+
+    </div>
+  </footer>
+
+  
+  <div class="toggle sidebar-toggle" role="button">
+    <span class="toggle-line"></span>
+    <span class="toggle-line"></span>
+    <span class="toggle-line"></span>
+  </div>
+  <div class="sidebar-dimmer"></div>
+  <div class="back-to-top" role="button" aria-label="返回顶部">
+    <i class="fa fa-arrow-up fa-lg"></i>
+    <span>0%</span>
+  </div>
+
+<noscript>
+  <div class="noscript-warning">Theme NexT works best with JavaScript enabled</div>
+</noscript>
+
+
+  
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/animejs/3.2.1/anime.min.js" integrity="sha256-XL2inqUJaslATFnHdJOi9GfQ60on8Wx1C2H8DYiN1xY=" crossorigin="anonymous"></script>
+<script src="/js/comments.js"></script><script src="/js/utils.js"></script><script src="/js/motion.js"></script><script src="/js/sidebar.js"></script><script src="/js/next-boot.js"></script>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/hexo-generator-searchdb/1.4.1/search.js" integrity="sha256-1kfA5uHPf65M5cphT2dvymhkuyHPQp5A53EGZOnOLmc=" crossorigin="anonymous"></script>
+<script src="/js/third-party/search/local-search.js"></script>
+
+
+
+
+
+
+
+  
+  <script async src="https://cn.vercount.one/js"></script>
+
+
+
+
+
+</body>
+</html>

@@ -1,0 +1,798 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width">
+<meta name="theme-color" content="#222" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#222" media="(prefers-color-scheme: dark)"><meta name="generator" content="Hexo 6.2.0">
+
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon-next.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32x32-next.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon-16x16-next.png">
+  <link rel="mask-icon" href="/images/logo.svg" color="#222">
+
+<link rel="stylesheet" href="/css/main.css">
+
+<link rel="stylesheet" href="https://fonts.loli.net/css?family=Lato:300,300italic,400,400italic,700,700italic%7CRoboto+Mono:300,300italic,400,400italic,700,700italic&display=swap&subset=latin,latin-ext">
+
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.6.0/css/all.min.css" integrity="sha256-5eIC48iZUHmSlSUz9XtjRyK2mzQkHScZY1WdMaoz74E=" crossorigin="anonymous">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/3.1.1/animate.min.css" integrity="sha256-PR7ttpcvz8qrF57fur/yAx1qXMFJeJFiA6pSzWi0OIE=" crossorigin="anonymous">
+
+<script class="next-config" data-name="main" type="application/json">{"hostname":"zhoushuke.github.io","root":"/","images":"/images","scheme":"Mist","darkmode":true,"version":"8.21.1","exturl":false,"sidebar":{"position":"right","width_expanded":320,"width_dual_column":240,"display":"post","padding":18,"offset":12},"hljswrap":true,"copycode":{"enable":true,"style":"mac"},"fold":{"enable":true,"height":500},"bookmark":{"enable":false,"color":"#222","save":"auto"},"mediumzoom":false,"lazyload":false,"pangu":false,"comments":{"style":"tabs","active":null,"storage":true,"lazyload":false,"nav":null},"stickytabs":false,"motion":{"enable":true,"async":false,"transition":{"menu_item":"fadeInDown","post_block":"fadeIn","post_header":"fadeInDown","post_body":"fadeInDown","coll_header":"fadeInLeft","sidebar":"fadeInUp"}},"prism":false,"i18n":{"placeholder":"搜索...","empty":"没有找到任何搜索结果：${query}","hits_time":"找到 ${hits} 个搜索结果（用时 ${time} 毫秒）","hits":"找到 ${hits} 个搜索结果"},"path":"/search.xml","localsearch":{"enable":true,"top_n_per_article":1,"unescape":false,"preload":false}}</script><script src="/js/config.js"></script>
+
+    <meta name="description" content="对应路线图 Phase 4（W16-18）。这份是”硬件层”词鉴：之前三份讲模型在算什么、训练怎么并行、推理怎么服务——这一份讲这些计算到底跑在什么硬件上，以及为什么某些数字（算力&#x2F;TFLOPS、带宽&#x2F;TB&#x2F;s）会卡住你的训练和推理。 读完你应该能回答：CUDA Core 和 Tensor Core 的区别、为什么 H100 比 A100 快那么多、为什么 deco">
+<meta property="og:type" content="article">
+<meta property="og:title" content="词汇图鉴④ GPU 底层架构与性能（glossary-04）">
+<meta property="og:url" content="https://zhoushuke.github.io/2026/07/14/AI-Infra-Glossary-04-GPU-Hardware/index.html">
+<meta property="og:site_name" content="Z.S.K.&#39;s Records">
+<meta property="og:description" content="对应路线图 Phase 4（W16-18）。这份是”硬件层”词鉴：之前三份讲模型在算什么、训练怎么并行、推理怎么服务——这一份讲这些计算到底跑在什么硬件上，以及为什么某些数字（算力&#x2F;TFLOPS、带宽&#x2F;TB&#x2F;s）会卡住你的训练和推理。 读完你应该能回答：CUDA Core 和 Tensor Core 的区别、为什么 H100 比 A100 快那么多、为什么 deco">
+<meta property="og:locale" content="zh_CN">
+<meta property="og:image" content="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/202611041059412.png">
+<meta property="og:image" content="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/202611041059492.png">
+<meta property="og:image" content="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/202611041059427.png">
+<meta property="og:image" content="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/202611041059972.png">
+<meta property="og:image" content="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/202611041059028.png">
+<meta property="og:image" content="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/202611041059627.png">
+<meta property="og:image" content="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/202611041059616.png">
+<meta property="article:published_time" content="2026-07-14T01:00:00.000Z">
+<meta property="article:modified_time" content="2026-11-04T12:37:33.794Z">
+<meta property="article:author" content="周淑科">
+<meta property="article:tag" content="AI-Infra">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:image" content="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/202611041059412.png">
+
+
+<link rel="canonical" href="https://zhoushuke.github.io/2026/07/14/AI-Infra-Glossary-04-GPU-Hardware/">
+
+
+<script class="next-config" data-name="page" type="application/json">{"sidebar":"","isHome":false,"isPost":true,"lang":"zh-CN","comments":"","permalink":"https://zhoushuke.github.io/2026/07/14/AI-Infra-Glossary-04-GPU-Hardware/","path":"2026/07/14/AI-Infra-Glossary-04-GPU-Hardware/","title":"词汇图鉴④ GPU 底层架构与性能（glossary-04）"}</script>
+
+<script class="next-config" data-name="calendar" type="application/json">""</script>
+<title>词汇图鉴④ GPU 底层架构与性能（glossary-04） | Z.S.K.'s Records</title>
+  
+
+
+
+
+
+
+
+
+  <noscript>
+    <link rel="stylesheet" href="/css/noscript.css">
+  </noscript>
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage" class="use-motion">
+  <div class="headband"></div>
+
+  <main class="main">
+    <div class="column">
+      <header class="header" itemscope itemtype="http://schema.org/WPHeader"><div class="site-brand-container">
+  <div class="site-nav-toggle">
+    <div class="toggle" aria-label="切换导航栏" role="button">
+        <span class="toggle-line"></span>
+        <span class="toggle-line"></span>
+        <span class="toggle-line"></span>
+    </div>
+  </div>
+
+  <div class="site-meta">
+
+    <a href="/" class="brand" rel="start">
+      <i class="logo-line"></i>
+      <p class="site-title">Z.S.K.'s Records</p>
+      <i class="logo-line"></i>
+    </a>
+  </div>
+
+  <div class="site-nav-right">
+    <div class="toggle popup-trigger" aria-label="搜索" role="button">
+        <i class="fa fa-search fa-fw fa-lg"></i>
+    </div>
+  </div>
+</div>
+
+
+
+<nav class="site-nav">
+  <ul class="main-menu menu"><li class="menu-item menu-item-home"><a href="/" rel="section"><i class="fa fa-home fa-fw"></i>首页</a></li><li class="menu-item menu-item-about"><a href="/about/ZSK-Profile.pdf" rel="section"><i class="fa fa-user fa-fw"></i>简历</a></li><li class="menu-item menu-item-tags"><a href="/tags/" rel="section"><i class="fa fa-tags fa-fw"></i>标签</a></li><li class="menu-item menu-item-categories"><a href="/categories/" rel="section"><i class="fa fa-th fa-fw"></i>分类</a></li><li class="menu-item menu-item-archives"><a href="/archives/" rel="section"><i class="fa fa-archive fa-fw"></i>归档</a></li><li class="menu-item menu-item-commonweal"><a href="/404.html" rel="section"><i class="fa fa-heartbeat fa-fw"></i>公益 404</a></li>
+      <li class="menu-item menu-item-search">
+        <a role="button" class="popup-trigger"><i class="fa fa-search fa-fw"></i>搜索
+        </a>
+      </li>
+  </ul>
+</nav>
+
+
+
+  <div class="search-pop-overlay">
+    <div class="popup search-popup">
+      <div class="search-header">
+        <span class="search-icon">
+          <i class="fa fa-search"></i>
+        </span>
+        <div class="search-input-container">
+          <input autocomplete="off" autocapitalize="off" maxlength="80"
+                placeholder="搜索..." spellcheck="false"
+                type="search" class="search-input">
+        </div>
+        <span class="popup-btn-close" role="button">
+          <i class="fa fa-times-circle"></i>
+        </span>
+      </div>
+      <div class="search-result-container">
+        <div class="search-result-icon">
+          <i class="fa fa-spinner fa-pulse fa-5x"></i>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</header>
+        
+  
+  <aside class="sidebar">
+
+    <div class="sidebar-inner sidebar-nav-active sidebar-toc-active">
+      <ul class="sidebar-nav">
+        <li class="sidebar-nav-toc">
+          文章目录
+        </li>
+        <li class="sidebar-nav-overview">
+          站点概览
+        </li>
+      </ul>
+
+      <div class="sidebar-panel-container">
+        <!--noindex-->
+        <div class="post-toc-wrap sidebar-panel">
+            <div class="post-toc animated"><ol class="nav"><li class="nav-item nav-level-2"><a class="nav-link" href="#1-GPU-%E6%98%AF%E4%BB%80%E4%B9%88%EF%BC%9A%E4%B8%80%E5%8F%A5%E8%AF%9D"><span class="nav-number">1.</span> <span class="nav-text">1. GPU 是什么：一句话</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#2-%E8%8A%AF%E7%89%87%E5%86%85%E9%83%A8%E7%BB%93%E6%9E%84%EF%BC%9ASM-%E6%98%AF%E2%80%9D%E8%AE%A1%E7%AE%97%E5%8D%95%E5%85%83%E7%BB%84%E2%80%9D"><span class="nav-number">2.</span> <span class="nav-text">2. 芯片内部结构：SM 是”计算单元组”</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#3-CUDA-Core-vs-Tensor-Core%EF%BC%9A%E6%A0%B8%E5%BF%83%E5%AF%B9%E6%AF%94"><span class="nav-number">3.</span> <span class="nav-text">3. CUDA Core vs Tensor Core：核心对比</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#CUDA-Core"><span class="nav-number">3.1.</span> <span class="nav-text">CUDA Core</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#Tensor-Core"><span class="nav-number">3.2.</span> <span class="nav-text">Tensor Core</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#4-%E7%B2%BE%E5%BA%A6%E4%B8%8E%E6%95%B0%E6%8D%AE%E7%B1%BB%E5%9E%8B%EF%BC%9A%E6%95%B0%E5%AD%97%E6%80%8E%E4%B9%88%E5%AD%98%E7%9A%84"><span class="nav-number">4.</span> <span class="nav-text">4. 精度与数据类型：数字怎么存的</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#5-%E5%86%85%E5%AD%98%E5%B1%82%E6%AC%A1%EF%BC%9A%E4%B8%BA%E4%BB%80%E4%B9%88%E5%B8%A6%E5%AE%BD%E5%86%B3%E5%AE%9A%E6%8E%A8%E7%90%86%E9%80%9F%E5%BA%A6"><span class="nav-number">5.</span> <span class="nav-text">5. 内存层次：为什么带宽决定推理速度</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#6-GPU-%E4%BB%A3%E9%99%85%E6%BC%94%E8%BF%9B%EF%BC%9AV100-%E2%86%92-A100-%E2%86%92-H100-%E2%86%92-B200"><span class="nav-number">6.</span> <span class="nav-text">6. GPU 代际演进：V100 → A100 → H100 → B200</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#7-%E7%A8%80%E7%96%8F%E6%80%A7%E4%B8%8E%E5%85%B6%E5%AE%83%E9%87%8D%E8%A6%81%E6%A6%82%E5%BF%B5"><span class="nav-number">7.</span> <span class="nav-text">7. 稀疏性与其它重要概念</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#7-1-%E7%BB%93%E6%9E%84%E5%8C%96%E7%A8%80%E7%96%8F%EF%BC%882-4-Sparsity%EF%BC%89"><span class="nav-number">7.1.</span> <span class="nav-text">7.1 结构化稀疏（2:4 Sparsity）</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#7-2-Warp-%E4%B8%8E%E5%8F%91%E6%95%A3%EF%BC%88Divergence%EF%BC%89"><span class="nav-number">7.2.</span> <span class="nav-text">7.2 Warp 与发散（Divergence）</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#7-3-%E5%85%B1%E4%BA%AB%E5%86%85%E5%AD%98-Bank-Conflict"><span class="nav-number">7.3.</span> <span class="nav-text">7.3 共享内存 Bank Conflict</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#7-4-CUDA-Graphs%EF%BC%88%E5%9B%BE%E6%8D%95%E8%8E%B7%EF%BC%89"><span class="nav-number">7.4.</span> <span class="nav-text">7.4 CUDA Graphs（图捕获）</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#7-5-Kernel-Fusion%EF%BC%88%E5%86%85%E6%A0%B8%E8%9E%8D%E5%90%88%EF%BC%89"><span class="nav-number">7.5.</span> <span class="nav-text">7.5 Kernel Fusion（内核融合）</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#7-6-Triton%EF%BC%88OpenAI-%E5%BC%80%E6%BA%90-DSL%EF%BC%89"><span class="nav-number">7.6.</span> <span class="nav-text">7.6 Triton（OpenAI 开源 DSL）</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#7-7-%E7%BB%9F%E4%B8%80%E5%86%85%E5%AD%98-x2F-Pinned-Memory"><span class="nav-number">7.7.</span> <span class="nav-text">7.7 统一内存 &#x2F; Pinned Memory</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#7-8-Roofline-%E6%A8%A1%E5%9E%8B%EF%BC%88%E6%80%A7%E8%83%BD%E5%A4%A9%E8%8A%B1%E6%9D%BF%E6%80%8E%E4%B9%88%E7%AE%97%EF%BC%89"><span class="nav-number">7.8.</span> <span class="nav-text">7.8 Roofline 模型（性能天花板怎么算）</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#8-%E7%AE%A1%E7%90%86%E5%91%98%E8%A7%86%E8%A7%92%EF%BC%9Anvidia-smi-%E6%AF%8F%E4%B8%AA%E6%95%B0%E5%AD%97%E5%9C%A8%E8%AF%B4%E4%BB%80%E4%B9%88-%E5%B8%B8%E8%A7%81%E6%95%85%E9%9A%9C"><span class="nav-number">8.</span> <span class="nav-text">8. 管理员视角：nvidia-smi 每个数字在说什么 + 常见故障</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#9-GPU-%E7%AE%97%E5%8A%9B%E5%A6%82%E4%BD%95%E6%8E%A8%E7%AE%97%EF%BC%9A%E4%BB%8E-spec-%E6%95%B0%E5%AD%97%E8%AF%BB%E6%87%82%E7%A1%AC%E4%BB%B6"><span class="nav-number">9.</span> <span class="nav-text">9. GPU 算力如何推算：从 spec 数字读懂硬件</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#10-%E4%B8%8E%E8%B7%AF%E7%BA%BF%E5%9B%BE%E5%85%B6%E5%AE%83%E7%9F%A5%E8%AF%86%E7%9A%84%E6%8E%A5%E7%BC%9D"><span class="nav-number">10.</span> <span class="nav-text">10. 与路线图其它知识的接缝</span></a></li></ol></div>
+        </div>
+        <!--/noindex-->
+
+        <div class="site-overview-wrap sidebar-panel">
+          <div class="site-author animated" itemprop="author" itemscope itemtype="http://schema.org/Person">
+    <img class="site-author-image" itemprop="image" alt="周淑科"
+      src="/images/avatar.gif">
+  <p class="site-author-name" itemprop="name">周淑科</p>
+  <div class="site-description" itemprop="description">Better Later Than Never</div>
+</div>
+<div class="site-state-wrap animated">
+  <nav class="site-state">
+      <div class="site-state-item site-state-posts">
+        <a href="/archives/">
+          <span class="site-state-item-count">233</span>
+          <span class="site-state-item-name">日志</span>
+        </a>
+      </div>
+      <div class="site-state-item site-state-categories">
+          <a href="/categories/">
+        <span class="site-state-item-count">17</span>
+        <span class="site-state-item-name">分类</span></a>
+      </div>
+      <div class="site-state-item site-state-tags">
+          <a href="/tags/">
+        <span class="site-state-item-count">17</span>
+        <span class="site-state-item-name">标签</span></a>
+      </div>
+  </nav>
+</div>
+  <div class="cc-license animated" itemprop="license">
+    <a href="https://creativecommons.org/licenses/by-nc-sa/4.0/" class="cc-opacity" rel="noopener" target="_blank"><img src="https://cdnjs.cloudflare.com/ajax/libs/creativecommons-vocabulary/2020.11.3/assets/license_badges/small/by_nc_sa.svg" alt="Creative Commons"></a>
+  </div>
+
+        </div>
+      </div>
+    </div>
+
+    
+  </aside>
+
+
+    </div>
+
+    <div class="main-inner post posts-expand">
+
+
+  
+
+
+<div class="post-block">
+  
+  
+
+  <article itemscope itemtype="http://schema.org/Article" class="post-content" lang="zh-CN">
+    <link itemprop="mainEntityOfPage" href="https://zhoushuke.github.io/2026/07/14/AI-Infra-Glossary-04-GPU-Hardware/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/avatar.gif">
+      <meta itemprop="name" content="周淑科">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="Z.S.K.'s Records">
+      <meta itemprop="description" content="Better Later Than Never">
+    </span>
+
+    <span hidden itemprop="post" itemscope itemtype="http://schema.org/CreativeWork">
+      <meta itemprop="name" content="词汇图鉴④ GPU 底层架构与性能（glossary-04） | Z.S.K.'s Records">
+      <meta itemprop="description" content="">
+    </span>
+      <header class="post-header">
+        <h1 class="post-title" itemprop="name headline">
+          词汇图鉴④ GPU 底层架构与性能（glossary-04）
+        </h1>
+
+        <div class="post-meta-container">
+          <div class="post-meta">
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-calendar"></i>
+      </span>
+      <span class="post-meta-item-text">发表于</span>
+
+      <time title="创建时间：2026-07-14 09:00:00" itemprop="dateCreated datePublished" datetime="2026-07-14T09:00:00+08:00">2026-07-14</time>
+    </span>
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-folder"></i>
+      </span>
+      <span class="post-meta-item-text">分类于</span>
+        <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+          <a href="/categories/AI-Infra/" itemprop="url" rel="index"><span itemprop="name">AI-Infra</span></a>
+        </span>
+    </span>
+
+  
+    <span class="post-meta-item" title="阅读次数" id="busuanzi_container_page_pv">
+      <span class="post-meta-item-icon">
+        <i class="far fa-eye"></i>
+      </span>
+      <span class="post-meta-item-text">阅读次数：</span>
+      <span id="busuanzi_value_page_pv"></span>
+    </span>
+    <span class="post-meta-break"></span>
+    <span class="post-meta-item" title="本文字数">
+      <span class="post-meta-item-icon">
+        <i class="far fa-file-word"></i>
+      </span>
+      <span class="post-meta-item-text">本文字数：</span>
+      <span>7.7k</span>
+    </span>
+    <span class="post-meta-item" title="阅读时长">
+      <span class="post-meta-item-icon">
+        <i class="far fa-clock"></i>
+      </span>
+      <span class="post-meta-item-text">阅读时长 &asymp;</span>
+      <span>7 分钟</span>
+    </span>
+</div>
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody"><blockquote>
+<p>对应路线图 Phase 4（W16-18）。这份是”硬件层”词鉴：<br>之前三份讲模型在算什么、训练怎么并行、推理怎么服务——这一份讲<strong>这些计算到底跑在什么硬件上</strong>，<br>以及为什么某些数字（算力&#x2F;TFLOPS、带宽&#x2F;TB&#x2F;s）会卡住你的训练和推理。</p>
+<p>读完你应该能回答：CUDA Core 和 Tensor Core 的区别、为什么 H100 比 A100 快那么多、<br>为什么 decode 受带宽限制、nvidia-smi 里每个数字在说什么。</p>
+</blockquote>
+<hr>
+<span id="more"></span>
+
+
+<h2 id="1-GPU-是什么：一句话"><a href="#1-GPU-是什么：一句话" class="headerlink" title="1. GPU 是什么：一句话"></a>1. GPU 是什么：一句话</h2><p>GPU 是一个<strong>为”海量同构小任务并行”而设计的芯片</strong>——几千个简单计算单元同时执行，<br>配上一块超高带宽的显存。CPU 是几个超强核（few fast cores），GPU 是几千个简单核（many simple cores）。</p>
+<p><img src="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/202611041059412.png" alt="概念图"></p>
+<p><strong>系统管理员类比</strong>：CPU 是一个双核高主频的”通用计算服务”，每个请求都极其复杂、依赖重；<br>GPU 是一万台”只干固定数学运算”的无状态 Worker，任务是同样的运算但数据不同——调度器（CUDA runtime）<br>把任务切成 warb 分发给所有 Worker。你管理训练集群时看到的”GPU 利用率”，<br>本质是这批 Worker 有多少在干活。</p>
+<p><strong>要记住的数字</strong>：</p>
+<ul>
+<li>CPU→GPU 延迟差 ~100×（微秒 vs 毫秒级启动），但吞吐差几千倍</li>
+<li>一次 GPU kernel 启动（launch）约 3-10 微秒——你觉得”不算什么”，但 1000 次小 kernel 就是 10 毫秒</li>
+<li>GPU 用 <strong>HBM 高带宽内存</strong>，H100 带宽 3.35 TB&#x2F;s ≈ CPU DDR5（~50GB&#x2F;s）的 <strong>67 倍</strong></li>
+</ul>
+<hr>
+<h2 id="2-芯片内部结构：SM-是”计算单元组”"><a href="#2-芯片内部结构：SM-是”计算单元组”" class="headerlink" title="2. 芯片内部结构：SM 是”计算单元组”"></a>2. 芯片内部结构：SM 是”计算单元组”</h2><p>GPU 由若干 <strong>GPC（Graphics Processing Cluster）</strong> 组成，每个 GPC 含若干 <strong>SM（Streaming Multiprocessor，流式多处理器）</strong>。<br><strong>SM 才是真正的计算单元</strong>——每个 SM 里有 CUDA Core、Tensor Core、共享内存、寄存器堆。</p>
+<p><img src="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/202611041059492.png" alt="概念图"></p>
+<p><strong>每个部分干什么（类比电信机房）</strong>：</p>
+<table>
+<thead>
+<tr>
+<th>部件</th>
+<th>干什么</th>
+<th>类比</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>SM</td>
+<td>计算单元组，管一个”班组”的线程</td>
+<td>一个机柜</td>
+</tr>
+<tr>
+<td>CUDA Core</td>
+<td>单个标量运算（加&#x2F;乘&#x2F;比较），一次一个数</td>
+<td>普通服务器</td>
+</tr>
+<tr>
+<td>Tensor Core</td>
+<td>一次算一块矩阵（如 4×4×4），吞吐是 CUDA Core 的 ~10-30 倍</td>
+<td>专用算力硬件（如 FPGA&#x2F;ASIC 卸载卡）</td>
+</tr>
+<tr>
+<td>SFU</td>
+<td>exp&#x2F;sin&#x2F;rsqrt 等超越函数（softmax&#x2F;归一化要用）</td>
+<td>硬件加速器（如加密卡）</td>
+</tr>
+<tr>
+<td>共享内存</td>
+<td>SM 内所有线程共享的”手工管理高速缓存”，带宽极高</td>
+<td>机柜内共享内存盘</td>
+</tr>
+<tr>
+<td>寄存器堆</td>
+<td>每个线程私有寄存器，最快</td>
+<td>每个进程的寄存器</td>
+</tr>
+</tbody></table>
+<p><strong>要记住的数字</strong>（H100 SXM 为例）：</p>
+<ul>
+<li>132 SM × 128 FP32 CUDA Core &#x3D; <strong>16,896 CUDA Core</strong></li>
+<li>132 SM × 4 Tensor Core &#x3D; <strong>528 Tensor Core</strong></li>
+<li>每 SM 最多驻留 2048 线程（64 warp），寄存器堆 64K×32bit</li>
+<li>共享内存 228KB&#x2F;SM，带宽 ~19 TB&#x2F;s 级别（远高于 HBM 的 3.35 TB&#x2F;s）</li>
+</ul>
+<hr>
+<h2 id="3-CUDA-Core-vs-Tensor-Core：核心对比"><a href="#3-CUDA-Core-vs-Tensor-Core：核心对比" class="headerlink" title="3. CUDA Core vs Tensor Core：核心对比"></a>3. CUDA Core vs Tensor Core：核心对比</h2><h3 id="CUDA-Core"><a href="#CUDA-Core" class="headerlink" title="CUDA Core"></a>CUDA Core</h3><ul>
+<li>一次执行<strong>一个</strong>浮点运算（如 flt&#x3D;a*b+c），SIMT（单指令多线程）模式工作</li>
+<li>32 个线程组成一个 <strong>warp</strong>（束），一个 warp 同时执行同一条指令</li>
+<li>对应上一条 glossary 里的”标量乘法”——Transformer 里逐元素运算（激活函数、归一化、缩放）都跑在这</li>
+</ul>
+<h3 id="Tensor-Core"><a href="#Tensor-Core" class="headerlink" title="Tensor Core"></a>Tensor Core</h3><ul>
+<li>一次执行<strong>一块矩阵乘法</strong>（如 4×4×4 或 m16n8k16 分块），每个时钟周期完成一个分块 MAC</li>
+<li>对”精度有要求的混合精度”（FP16&#x2F;BF16 输入 → FP32 累加）管线化执行</li>
+<li>大矩阵乘（Linear、Attention 的 QK^T&#x2F;PV）几乎全部由它完成——<strong>Transformer 的 ~90% FLOPs 由 Tensor Core 贡献</strong></li>
+</ul>
+<p><img src="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/202611041059427.png" alt="CUDA Core 标量模式"></p>
+<p><strong>为什么 Tensor Core 快这么多</strong>：普通 FP32 流水线做乘加需要读 3 个数，吞吐只有 MUL+ADD 两条指令周而复始；<br>Tensor Core 在硬件上把<strong>分块乘加做成了流水线专用电路</strong>，让 16×16 的乘加在一个时钟内完成，<br>并且通过共享内存直连数据，不经过寄存器&#x2F;缓存抖动。</p>
+<p><strong>系统管理员类比</strong>：CUDA Core ≈ 通用服务器逐个跑任务；Tensor Core ≈ 专用的批量转发设备（像专线带宽 vs 普通交换机），<br>同样 1 秒，它因”专用电路+数据就地处理”吞吐高一个数量级。</p>
+<p><strong>要记住的数字</strong>（H100）：</p>
+<ul>
+<li>FP32 CUDA Core：67 TFLOPS</li>
+<li>FP16&#x2F;BF16 Tensor Core（dense）：<strong>989 TFLOPS</strong>（约 15 倍）</li>
+<li>FP8 Tensor Core：1,979 TFLOPS（约 30 倍）</li>
+<li>A100 的 FP16 TC 只有 312 TFLOPS——<strong>H100 的 TC 是 A100 的 ~3.2 倍</strong></li>
+</ul>
+<hr>
+<h2 id="4-精度与数据类型：数字怎么存的"><a href="#4-精度与数据类型：数字怎么存的" class="headerlink" title="4. 精度与数据类型：数字怎么存的"></a>4. 精度与数据类型：数字怎么存的</h2><p>矩阵运算的精度决定 Tensor Core 的吞吐。核心概念：<strong>指数位（决定范围）</strong> vs <strong>尾数位（决定精度）</strong>。</p>
+<table>
+<thead>
+<tr>
+<th>类型</th>
+<th>位宽</th>
+<th>指数位</th>
+<th>尾数位</th>
+<th>用途</th>
+<th>Tensor Core 吞吐（H100）</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>FP64</td>
+<td>64</td>
+<td>11</td>
+<td>52</td>
+<td>科学计算（高精度）</td>
+<td>34 TFLOPS</td>
+</tr>
+<tr>
+<td>FP32</td>
+<td>32</td>
+<td>8</td>
+<td>23</td>
+<td>通用&#x2F;默认</td>
+<td>67 TFLOPS</td>
+</tr>
+<tr>
+<td>TF32</td>
+<td>32（尾数截断到10）</td>
+<td>8</td>
+<td>10</td>
+<td>Ampere 起的 FP32 加速替代</td>
+<td>495 TFLOPS*</td>
+</tr>
+<tr>
+<td>FP16</td>
+<td>16</td>
+<td>5</td>
+<td>10</td>
+<td>混合精度训练主力</td>
+<td>989 TFLOPS</td>
+</tr>
+<tr>
+<td>BF16</td>
+<td>16</td>
+<td><strong>8</strong></td>
+<td>7</td>
+<td>大模型训练主力（同 FP32 指数范围）</td>
+<td>989 TFLOPS</td>
+</tr>
+<tr>
+<td>FP8(E4M3&#x2F;E5M2)</td>
+<td>8</td>
+<td>4&#x2F;5</td>
+<td>3&#x2F;2</td>
+<td>Hopper 起训练&#x2F;推理加速</td>
+<td>1,979 TFLOPS</td>
+</tr>
+<tr>
+<td>INT8</td>
+<td>8</td>
+<td>-</td>
+<td>8</td>
+<td>推理量化</td>
+<td>1,979 TOPS</td>
+</tr>
+</tbody></table>
+<p>*TF32 是 Ampere 引入：FP32 输入截断尾数在 Tensor Core 上算，精度比 FP16 高、速度接近 FP16。</p>
+<p><img src="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/202611041059972.png" alt="FP32 (32位)"></p>
+<p><strong>为什么 BF16 在大模型里流行</strong>：FP16 指数只有 5 位，训练时 loss 范围波动大容易溢出（变成 inf&#x2F;NaN）；<br>BF16 指数 8 位与 FP32 相同，<strong>范围一样、只降低精度</strong>（尾数 7 位）——对梯度更新足够，且数值稳定。<br>这就是为什么 Llama&#x2F;DeepSeek 训练全用 BF16 混合精度。</p>
+<p><strong>系统管理员类比</strong>：精度 &#x3D; 记账的位数。FP32 记到小数点后 23 位，FP16 记到 10 位但金额范围只有几千（易溢出爆表），<br>BF16 范围跟 FP32 一样但每笔只记 7 位小数。大规模训练（金额波动极大）选 BF16 更稳。</p>
+<p><strong>要记住的数字</strong>：</p>
+<ul>
+<li>混合精度（AMP）标准打法：<strong>权重 FP32 备份 + 前向&#x2F;反向 BF16&#x2F;FP16 + 梯度 FP32 累加</strong>（见 glossary-01 的 16B&#x2F;参数）</li>
+<li>FP8 是 Hopper 起的”下一代混合精度”，训练提速可达 1.3-1.5×，推理量化后权重占内存再减半</li>
+<li>精度从 FP16→FP8，Tensor Core 吞吐翻倍（989→1979）</li>
+</ul>
+<hr>
+<h2 id="5-内存层次：为什么带宽决定推理速度"><a href="#5-内存层次：为什么带宽决定推理速度" class="headerlink" title="5. 内存层次：为什么带宽决定推理速度"></a>5. 内存层次：为什么带宽决定推理速度</h2><p>GPU 内存金字塔，从快到慢（也是每次学习必背的那张）：</p>
+<p><img src="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/202611041059028.png" alt="快 小"></p>
+<p><strong>为什么 decode 是 memory-bound（呼应 glossary-03）</strong>：decode 每生成 1 个 token，需把全部权重<br>（7B BF16 ≈ 14GB）从 HBM 读到计算单元做矩阵乘。HBM 带宽 3.35TB&#x2F;s → 每 token 至少 14GB&#x2F;3.35TB&#x2F;s ≈ 4.2μs。<br>这个时间被带宽锁死，加再多 Tensor Core 也无济于事（它们闲着等数据）。</p>
+<p><strong>为什么 FlashAttention 快</strong>：把 attention 计算切成小块，让”读取→计算→丢弃”完全在<strong>共享内存&#x2F;寄存器</strong>里完成，<br>不把中间矩阵（N×N）写回 HBM——省掉的是慢层级的读写，不是计算量。</p>
+<p><strong>系统管理员类比</strong>：HBM &#x3D; 冷数据盘（量大慢），L2 &#x3D; 热缓存，共享内存 &#x3D; 每台机器的内存条（快但小），<br>寄存器 &#x3D; CPU 寄存器。推理的”每 token 读全量权重” &#x3D; 每次请求都要全表扫描冷盘——<br>这就是为什么 decode 快不了：不是算不动，是<strong>读不完</strong>。</p>
+<p><strong>要记住的数字</strong>：</p>
+<ul>
+<li>H100：HBM 3.35 TB&#x2F;s、50MB L2、228KB&#x2F;SM 共享内存</li>
+<li>A100：HBM 2.0 TB&#x2F;s、40MB L2</li>
+<li>B200：<strong>HBM 8 TB&#x2F;s</strong>、192GB HBM3e</li>
+<li>共享内存带宽 ~19TB&#x2F;s vs HBM 3.35TB&#x2F;s：<strong>约 6 倍差距</strong>，算得动但搬不动是常态</li>
+<li>MFU 上不去的第一嫌疑：HBM 带宽不够喂 tensor core（roofline 模型，见下）</li>
+</ul>
+<hr>
+<h2 id="6-GPU-代际演进：V100-→-A100-→-H100-→-B200"><a href="#6-GPU-代际演进：V100-→-A100-→-H100-→-B200" class="headerlink" title="6. GPU 代际演进：V100 → A100 → H100 → B200"></a>6. GPU 代际演进：V100 → A100 → H100 → B200</h2><p>从 Volta（2017）到 Blackwell（2024），每代的关键跳跃：</p>
+<p><img src="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/202611041059627.png" alt="概念图"></p>
+<p><strong>核心变化解读（不看热闹看门道）</strong>：</p>
+<ol>
+<li><strong>Tensor Core 一代比一代狠</strong>：V100→A100→H100→B200 的 TC 能力约 125→312→989→2250 TFLOPS（每代~2-3×）</li>
+<li><strong>每代引入一种”新精度”作为卖点</strong>：V100 引入 FP16 混合精度 → A100 加 TF32 → H100 加 FP8 → B200 加 FP4。<br>本质都是”精度降一点、速度翻倍”，配合对应的精调&#x2F;量化技术食用</li>
+<li><strong>带宽增速慢于算力</strong>：H100 算力是 A100 的 3.2 倍，但带宽只涨 1.7 倍——<strong>越新的卡，越容易出现”算得动搬不动”</strong></li>
+<li><strong>单卡显存</strong>：A100 40&#x2F;80GB → H100 80GB → H200 141GB → B200 192GB——大模型推理显存容量焦虑在缓解，<br>但单卡装不下的模型还是要靠并行（Phase 2 的知识正好接上）</li>
+</ol>
+<p><strong>要记住的数字</strong>（上表，说得出每代的 TC TFLOPS 和带宽即可）。</p>
+<hr>
+<h2 id="7-稀疏性与其它重要概念"><a href="#7-稀疏性与其它重要概念" class="headerlink" title="7. 稀疏性与其它重要概念"></a>7. 稀疏性与其它重要概念</h2><h3 id="7-1-结构化稀疏（2-4-Sparsity）"><a href="#7-1-结构化稀疏（2-4-Sparsity）" class="headerlink" title="7.1 结构化稀疏（2:4 Sparsity）"></a>7.1 结构化稀疏（2:4 Sparsity）</h3><ul>
+<li>NVIDIA 支持 <strong>2:4 模式</strong>：每 4 个权重里至多 2 个非零，Tensor Core 可以跳过零值，<strong>吞吐翻倍</strong></li>
+<li>H100 的 FP16 sparse &#x3D; 1,979 TFLOPS（dense 的 2 倍）</li>
+<li>训练后剪枝到 2:4 通常有精度损失 1-2%，需要重训&#x2F;校准——生产用得少，了解即可</li>
+</ul>
+<h3 id="7-2-Warp-与发散（Divergence）"><a href="#7-2-Warp-与发散（Divergence）" class="headerlink" title="7.2 Warp 与发散（Divergence）"></a>7.2 Warp 与发散（Divergence）</h3><ul>
+<li>warp &#x3D; 32 线程一组，<strong>同一时刻执行同一条指令</strong>（SIMT）</li>
+<li>若 if&#x2F;else 让 warp 内线程走不同分支 → <strong>串行执行两个分支</strong>（浪费一半算力）</li>
+<li>训练框架（PyTorch）基本不踩这个坑；手写 CUDA&#x2F;Triton 内核时要注意</li>
+</ul>
+<h3 id="7-3-共享内存-Bank-Conflict"><a href="#7-3-共享内存-Bank-Conflict" class="headerlink" title="7.3 共享内存 Bank Conflict"></a>7.3 共享内存 Bank Conflict</h3><ul>
+<li>共享内存分 32 个 bank，同 bank 不同地址同时访问 → 冲突串行化</li>
+<li>重要度：了解即可，排障时极少遇到（框架层已优化）</li>
+</ul>
+<h3 id="7-4-CUDA-Graphs（图捕获）"><a href="#7-4-CUDA-Graphs（图捕获）" class="headerlink" title="7.4 CUDA Graphs（图捕获）"></a>7.4 CUDA Graphs（图捕获）</h3><ul>
+<li>把一串 kernel launch”录制”成一张图，之后整体回放，省掉几千次 launch 的开销（几 ms → 几十 μs）</li>
+<li>PyTorch <code>torch.cuda.graph</code> 用在小 batch 推理&#x2F;大批次固定形状时收益明显</li>
+<li><strong>管理员视角</strong>：训练&#x2F;推理吞吐低且 GPU 利用率跳动的，查是不是 launch 太多、没用 CUDA Graphs</li>
+</ul>
+<h3 id="7-5-Kernel-Fusion（内核融合）"><a href="#7-5-Kernel-Fusion（内核融合）" class="headerlink" title="7.5 Kernel Fusion（内核融合）"></a>7.5 Kernel Fusion（内核融合）</h3><ul>
+<li>把多个逐元素 kernel（加 bias → 加激活 → dropout）合成一个，减少 HBM 往返</li>
+<li>PyTorch 的 <code>torch.compile</code>&#x2F;inductor 做这件事；vLLM 深度手写 fused kernel</li>
+<li>优化原理与 FlashAttention 相同：<strong>少搬数据</strong></li>
+</ul>
+<h3 id="7-6-Triton（OpenAI-开源-DSL）"><a href="#7-6-Triton（OpenAI-开源-DSL）" class="headerlink" title="7.6 Triton（OpenAI 开源 DSL）"></a>7.6 Triton（OpenAI 开源 DSL）</h3><ul>
+<li>用 Python 写 CUDA 内核，编译器（Triton → PTX）自动做 tile 化、寄存器分配、共享内存调度</li>
+<li>避免了手写 CUDA 的 90% 样板代码；性能接近手写（多数场景 80-100%）</li>
+<li>也绕开 CUDA 生态锁定的一个常见选择（AMD ROCm 也支持 Triton）</li>
+<li><strong>路线图用途</strong>：W16 实验用它写内核理解性能模型</li>
+</ul>
+<h3 id="7-7-统一内存-x2F-Pinned-Memory"><a href="#7-7-统一内存-x2F-Pinned-Memory" class="headerlink" title="7.7 统一内存 &#x2F; Pinned Memory"></a>7.7 统一内存 &#x2F; Pinned Memory</h3><ul>
+<li>统一内存：CPU&#x2F;GPU 共享地址空间，page fault 按需迁移（方便但慢，训练不用）</li>
+<li>Pinned Memory：锁页内存，CPU↔GPU 拷贝通过它走 DMA，是 DataLoader 加速的常见手段（<code>pin_memory=True</code>）</li>
+</ul>
+<h3 id="7-8-Roofline-模型（性能天花板怎么算）"><a href="#7-8-Roofline-模型（性能天花板怎么算）" class="headerlink" title="7.8 Roofline 模型（性能天花板怎么算）"></a>7.8 Roofline 模型（性能天花板怎么算）</h3><ul>
+<li>一张图判断瓶颈：<strong>算术强度 &#x3D; FLOPs&#x2F;字节</strong>，与<strong>机器的峰值算力&#x2F;带宽比</strong>比较</li>
+<li>算术强度 &gt; 机器甜点 → compute-bound（吃满 TFLOPS）；反之 → memory-bound（受带宽限制）</li>
+<li>decode 的算术强度极低（算一点点读一大堆）→ 永远 memory-bound；大矩阵乘（prefill）算术强度高 → compute-bound</li>
+</ul>
+<hr>
+<h2 id="8-管理员视角：nvidia-smi-每个数字在说什么-常见故障"><a href="#8-管理员视角：nvidia-smi-每个数字在说什么-常见故障" class="headerlink" title="8. 管理员视角：nvidia-smi 每个数字在说什么 + 常见故障"></a>8. 管理员视角：nvidia-smi 每个数字在说什么 + 常见故障</h2><p>对应你日常排障，这里给一张”字段解读 + 排查树”：</p>
+<p><img src="https://raw.githubusercontent.com/zhoushuke/BlogPhoto/master/githuboss/202611041059616.png" alt="概念图"></p>
+<p><strong>nvidia-smi 关键字段</strong>（你天天看，这里补含义）：</p>
+<ul>
+<li><strong>Utilization</strong>：SM 有 warp 在跑的时间占比。**不是”算力利用率”**——decode 阶段可能显示 30% 但已到带宽瓶颈</li>
+<li><strong>Memory Usage</strong>：显存分配量。训练一般占满；推理看 KV Cache 余量</li>
+<li><strong>Power</strong>：功耗接近 TDP 说明喂饱了电源；远低于 TDP 但 Utilization 高，多半 memory-bound（decode）</li>
+<li><strong>Clocks</strong>：SM 时钟。降频第一原因是<strong>供电&#x2F;温度限制</strong>（多见于机架超载散热不足）</li>
+<li><strong>ECC Errors</strong>：volatile（当前会话）和 aggregate（累计）。<strong>Uncorrectable 不断增长 &#x3D; 硬件故障信号</strong></li>
+<li><strong>Persistence Mode</strong>：关闭时 GPU 会因延时初始化慢 1-2s，且可能不跑任务时降功耗——集群里建议开（<code>nvidia-smi -pm 1</code>）</li>
+</ul>
+<p><strong>常见故障映射（你的排障语言）</strong>：</p>
+<table>
+<thead>
+<tr>
+<th>现象</th>
+<th>背后硬件机制</th>
+<th>排查动作</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>训练慢但 Utilization 高</td>
+<td>同 SM 争用&#x2F;调度抖动 &#x2F; 小 kernel 太多</td>
+<td>看 Power；试 CUDA Graphs；查 kernel 时长分布</td>
+</tr>
+<tr>
+<td>推理慢且带宽吃满</td>
+<td>memory-bound（预期行为）</td>
+<td>量化&#x2F;投机解码&#x2F;PD分离（见 glossary-03）</td>
+</tr>
+<tr>
+<td>XID 43 &#x2F; 驱动重置</td>
+<td>GPU 上下文被杀或显存 ECC 错误</td>
+<td><code>dmesg</code> 查 XID；换卡前先 <code>nvidia-smi -q -d ECC</code></td>
+</tr>
+<tr>
+<td>多卡速度不随卡数线性</td>
+<td>NVLink 带宽或 NCCL 拓扑不对</td>
+<td><code>nvidia-smi topo -m</code> 查拓扑；核对 NCCL 环境变量</td>
+</tr>
+<tr>
+<td>温度 90°C+ 降频</td>
+<td>散热&#x2F;风道问题</td>
+<td>检查风扇 PID、机架气流、带宽降配</td>
+</tr>
+</tbody></table>
+<p><strong>要记住的数字</strong>（管理员版）：</p>
+<ul>
+<li>PCIe Gen4 x16 ≈ 32 GB&#x2F;s 单向（双向 64）——远低于 NVLink，跨机通信别走 PCIe 当主路</li>
+<li>NVLink：V100 300GB&#x2F;s → A100 600GB&#x2F;s → H100 900GB&#x2F;s → B200 1.8TB&#x2F;s（每卡）</li>
+<li>NVSwitch（8卡全互联）：H100 算力 ~900GB&#x2F;s 全对全，8 卡任意两卡直连</li>
+<li>ECC：HBM 带 ECC 是标配（A100 起）；”aggregate ECC errors” 增长要警惕</li>
+<li>GPU kernel launch 开销 ~5μs；CUDA Graphs 可把它压到 ~1μs 且消除 CPU-GPU 同步等待</li>
+</ul>
+<hr>
+<h2 id="9-GPU-算力如何推算：从-spec-数字读懂硬件"><a href="#9-GPU-算力如何推算：从-spec-数字读懂硬件" class="headerlink" title="9. GPU 算力如何推算：从 spec 数字读懂硬件"></a>9. GPU 算力如何推算：从 spec 数字读懂硬件</h2><p><strong>核心公式</strong>（所有 GPU 通用）：</p>
+<figure class="highlight text"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line">理论峰值 FLOPS = SM数 × 每SM每时钟FLOPs × 时钟频率(Hz)</span><br><span class="line"></span><br><span class="line">其中：一次乘加 a*b+c = 2 FLOP（乘法和加法各算一次）</span><br><span class="line">每SM每时钟FLOPs 由“每SM的运算单元数 × 单单元每时钟能力”决定，随精度/代际变化</span><br></pre></td></tr></table></figure>
+
+<p><strong>验证：V100（完整的逐层验证）</strong></p>
+<figure class="highlight text"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line">V100: 80 SM，每 SM 8 个 Tensor Core，每个 TC 每时钟 64 次乘加 = 128 FLOP</span><br><span class="line">→ 每 SM 每时钟 TC FLOP = 8 × 128 = 1024</span><br><span class="line">→ 80 × 1024 × 1.53GHz(boost) ≈ 125 TF ✓ 官方 125 TFLOPS</span><br><span class="line">FP32 CUDA 核: 80 SM × 64核 × 2 × 1.53GHz ≈ 15.7 TF ✓（官方 15.7）</span><br></pre></td></tr></table></figure>
+
+<p><strong>验证：A100 &#x2F; H100（反推每SM能力再乘回来）</strong></p>
+<figure class="highlight text"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line">A100: 公式 = 108 SM × 每SM每时钟FP16 FLOP × 1.41GHz = 312 TF（官方）</span><br><span class="line">→ 反推每SM每时钟 = 312e12 ÷ (108 × 1.41e9) ≈ 2048 FLOP（对应 4 TC × 512 FMA）✓ 自洽</span><br><span class="line"></span><br><span class="line">H100: 官方 FP16 dense = 989.5 TF（132 SM，boost ~1.98GHz）</span><br><span class="line">→ 反推每SM每时钟 ≈ 989.5e12 ÷ (132 × 1.98e9) ≈ 3786 FLOP/clk</span><br><span class="line">（NVIDIA 白皮书用 wgmma m64nNk 形状与更高 turbo 时钟，规格表按典型频率公布）</span><br></pre></td></tr></table></figure>
+
+<p><strong>为什么喜欢直接查表而不是自己硬算</strong>：同样一张卡，FP16&#x2F;BF16&#x2F;FP8&#x2F;FP4 的每SM能力差好几倍，<br>且品牌方公布数字基于特定精度、形状和时钟——硬算极容易差 20%。<br><strong>你作为管理员真正有用的三件事：</strong></p>
+<ol>
+<li><strong>训练总 FLOPs 估算</strong>（≈ <strong>6 × 参数量 × token 数</strong>：前向3+反向3）<ul>
+<li>Llama-3-8B 训 1T token：6 × 8e9 × 1e12 &#x3D; <strong>4.8e22 FLOPs</strong></li>
+<li>H100 单卡理论 989 TF → 4.8e19 s ≈ <strong>4.6 万卡时</strong>（100% MFU）</li>
+<li>真实 MFU 40% → 除以 0.4 ≈ <strong>11.5 万卡时</strong>——报预算&#x2F;交期就按这个算</li>
+</ul>
+</li>
+<li><strong>推理 FLOPs</strong>：每 token ≈ 2 × 参数（1 次前向）→ 8B 模型 ≈ 16 GFLOP&#x2F;token</li>
+<li><strong>MFU 反推</strong>：实测 TFLOPS ÷ 理论峰值（glossary-02 的公式这里解释物理含义）</li>
+</ol>
+<p><strong>要记住的</strong>：</p>
+<ul>
+<li>公式：TFLOPS &#x3D; SM数 × 每SM每时钟FLOP × 频率；不同精度相差 2-4 倍</li>
+<li><strong>decode 别用算力算</strong>：它是带宽题（读 14GB ÷ 3.35TB&#x2F;s），不是算力题</li>
+<li>报训练成本用 <strong>6ND ÷ MFU</strong> 的口径，别用裸理论峰值康体型（会高估 2-3 倍）</li>
+</ul>
+<hr>
+<h2 id="10-与路线图其它知识的接缝"><a href="#10-与路线图其它知识的接缝" class="headerlink" title="10. 与路线图其它知识的接缝"></a>10. 与路线图其它知识的接缝</h2><table>
+<thead>
+<tr>
+<th>本词鉴概念</th>
+<th>接缝到哪</th>
+<th>会在哪周用上</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Tensor Core &#x2F; FP8</td>
+<td>glossary-01 的混合精度 16B&#x2F;参数</td>
+<td>W2-W4</td>
+</tr>
+<tr>
+<td>HBM 带宽 → decode memory-bound</td>
+<td>glossary-03 的 KV Cache 公式</td>
+<td>W11-W12 实测</td>
+</tr>
+<tr>
+<td>带宽&#x2F;算力比</td>
+<td>glossary-02 的 MFU 分析</td>
+<td>W9 算 MFU 时解释为什么上不去</td>
+</tr>
+<tr>
+<td>NVLink&#x2F;NVSwitch</td>
+<td>glossary-02 的 TP 只在机内</td>
+<td>W8 配 TP 时看拓扑</td>
+</tr>
+<tr>
+<td>Roofline</td>
+<td>glossary-03 推理瓶颈定性</td>
+<td>W12 vLLM 压测分析</td>
+</tr>
+<tr>
+<td>nvidia-smi &#x2F; ECC &#x2F; XID</td>
+<td>phase4 的 W18 故障复盘</td>
+<td>W18 直接排你的真实事故</td>
+</tr>
+</tbody></table>
+<blockquote>
+<p><strong>记忆锚点</strong>：GPU &#x3D; 一万个只会算数的 Worker（SM）＋一个超大内存对象（HBM）＋每层之间的高速缓存。<br>训练吃 Tensor Core（算力），推理 decode 吃 HBM（带宽），并行跨卡吃 NVLink——三种”资源”看的指标完全不同。</p>
+</blockquote>
+
+    </div>
+
+    
+    
+    
+
+    <footer class="post-footer">
+          <div class="reward-container">
+  <div>Buy Me a Coffee</div>
+  <button>
+    赞赏
+  </button>
+  <div class="post-reward">
+      <div>
+        <img src="/images/wechatpayme.png" alt="周淑科 微信">
+        <span>微信</span>
+      </div>
+      <div>
+        <img src="/images/alipayme.jpg" alt="周淑科 支付宝">
+        <span>支付宝</span>
+      </div>
+
+  </div>
+</div>
+
+          
+
+<div class="post-copyright">
+<ul>
+  <li class="post-copyright-author">
+      <strong>本文作者： </strong>周淑科
+  </li>
+  <li class="post-copyright-link">
+      <strong>本文链接：</strong>
+      <a href="https://zhoushuke.github.io/2026/07/14/AI-Infra-Glossary-04-GPU-Hardware/" title="词汇图鉴④ GPU 底层架构与性能（glossary-04）">https://zhoushuke.github.io/2026/07/14/AI-Infra-Glossary-04-GPU-Hardware/</a>
+  </li>
+  <li class="post-copyright-license">
+      <strong>版权声明： </strong>本站所有文章除特别声明外，均采用 <a href="https://creativecommons.org/licenses/by-nc-sa/4.0/" rel="noopener" target="_blank"><i class="fab fa-fw fa-creative-commons"></i>BY-NC-SA</a> 许可协议。转载请保留原文作者及链接！
+  </li>
+</ul>
+</div>
+
+          <div class="post-tags">
+              <a href="/tags/AI-Infra/" rel="tag"># AI-Infra</a>
+          </div>
+
+        
+
+          <div class="post-nav">
+            <div class="post-nav-item">
+                <a href="/2026/06/14/AI-Infra-Glossary-03-Inference-RL/" rel="prev" title="词汇图鉴 ③ — 推理服务的核心矛盾 + RL 是什么（服务层）">
+                  <i class="fa fa-angle-left"></i> 词汇图鉴 ③ — 推理服务的核心矛盾 + RL 是什么（服务层）
+                </a>
+            </div>
+            <div class="post-nav-item">
+                <a href="/2026/08/13/AI-Infra-Glossary-05-NCCL-RDMA/" rel="next" title="词汇图鉴⑤ NCCL 通信链路 + RDMA 网络（glossary-05）">
+                  词汇图鉴⑤ NCCL 通信链路 + RDMA 网络（glossary-05） <i class="fa fa-angle-right"></i>
+                </a>
+            </div>
+          </div>
+    </footer>
+  </article>
+</div>
+
+
+
+
+
+
+</div>
+  </main>
+
+  <footer class="footer">
+    <div class="footer-inner">
+
+  <div class="copyright">
+    &copy; 
+    <span itemprop="copyrightYear">2026</span>
+    <span class="with-love">
+      <i class="fa fa-heart"></i>
+    </span>
+    <span class="author" itemprop="copyrightHolder">周淑科</span>
+  </div>
+<div class="wordcount">
+  <span class="post-meta-item">
+    <span class="post-meta-item-icon">
+      <i class="fa fa-chart-line"></i>
+    </span>
+      <span>站点总字数：</span>
+    <span title="站点总字数">1m</span>
+  </span>
+  <span class="post-meta-item">
+    <span class="post-meta-item-icon">
+      <i class="fa fa-coffee"></i>
+    </span>
+      <span>站点阅读时长 &asymp;</span>
+    <span title="站点阅读时长">15:44</span>
+  </span>
+</div>
+<div class="busuanzi-count">
+    <span class="post-meta-item" id="busuanzi_container_site_uv">
+      <span class="post-meta-item-icon">
+        <i class="fa fa-user"></i>
+      </span>
+      <span class="site-uv" title="总访客量">
+        <span id="busuanzi_value_site_uv"></span>
+      </span>
+    </span>
+    <span class="post-meta-item" id="busuanzi_container_site_pv">
+      <span class="post-meta-item-icon">
+        <i class="fa fa-eye"></i>
+      </span>
+      <span class="site-pv" title="总访问量">
+        <span id="busuanzi_value_site_pv"></span>
+      </span>
+    </span>
+</div>
+  <div class="powered-by">Powered by <a href="https://hexo.io/" rel="noopener" target="_blank">Hexo</a> & <a href="https://theme-next.js.org/mist/" rel="noopener" target="_blank">NexT.Mist</a>
+  </div>
+
+    </div>
+  </footer>
+
+  
+  <div class="toggle sidebar-toggle" role="button">
+    <span class="toggle-line"></span>
+    <span class="toggle-line"></span>
+    <span class="toggle-line"></span>
+  </div>
+  <div class="sidebar-dimmer"></div>
+  <div class="back-to-top" role="button" aria-label="返回顶部">
+    <i class="fa fa-arrow-up fa-lg"></i>
+    <span>0%</span>
+  </div>
+
+<noscript>
+  <div class="noscript-warning">Theme NexT works best with JavaScript enabled</div>
+</noscript>
+
+
+  
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/animejs/3.2.1/anime.min.js" integrity="sha256-XL2inqUJaslATFnHdJOi9GfQ60on8Wx1C2H8DYiN1xY=" crossorigin="anonymous"></script>
+<script src="/js/comments.js"></script><script src="/js/utils.js"></script><script src="/js/motion.js"></script><script src="/js/sidebar.js"></script><script src="/js/next-boot.js"></script>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/hexo-generator-searchdb/1.4.1/search.js" integrity="sha256-1kfA5uHPf65M5cphT2dvymhkuyHPQp5A53EGZOnOLmc=" crossorigin="anonymous"></script>
+<script src="/js/third-party/search/local-search.js"></script>
+
+
+
+
+
+
+
+  
+  <script async src="https://cn.vercount.one/js"></script>
+
+
+
+
+
+</body>
+</html>

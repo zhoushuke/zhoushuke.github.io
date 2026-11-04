@@ -1,0 +1,574 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width">
+<meta name="theme-color" content="#222" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#222" media="(prefers-color-scheme: dark)"><meta name="generator" content="Hexo 6.2.0">
+
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon-next.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32x32-next.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon-16x16-next.png">
+  <link rel="mask-icon" href="/images/logo.svg" color="#222">
+
+<link rel="stylesheet" href="/css/main.css">
+
+<link rel="stylesheet" href="https://fonts.loli.net/css?family=Lato:300,300italic,400,400italic,700,700italic%7CRoboto+Mono:300,300italic,400,400italic,700,700italic&display=swap&subset=latin,latin-ext">
+
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.6.0/css/all.min.css" integrity="sha256-5eIC48iZUHmSlSUz9XtjRyK2mzQkHScZY1WdMaoz74E=" crossorigin="anonymous">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/3.1.1/animate.min.css" integrity="sha256-PR7ttpcvz8qrF57fur/yAx1qXMFJeJFiA6pSzWi0OIE=" crossorigin="anonymous">
+
+<script class="next-config" data-name="main" type="application/json">{"hostname":"zhoushuke.github.io","root":"/","images":"/images","scheme":"Mist","darkmode":true,"version":"8.21.1","exturl":false,"sidebar":{"position":"right","width_expanded":320,"width_dual_column":240,"display":"post","padding":18,"offset":12},"hljswrap":true,"copycode":{"enable":true,"style":"mac"},"fold":{"enable":true,"height":500},"bookmark":{"enable":false,"color":"#222","save":"auto"},"mediumzoom":false,"lazyload":false,"pangu":false,"comments":{"style":"tabs","active":null,"storage":true,"lazyload":false,"nav":null},"stickytabs":false,"motion":{"enable":true,"async":false,"transition":{"menu_item":"fadeInDown","post_block":"fadeIn","post_header":"fadeInDown","post_body":"fadeInDown","coll_header":"fadeInLeft","sidebar":"fadeInUp"}},"prism":false,"i18n":{"placeholder":"搜索...","empty":"没有找到任何搜索结果：${query}","hits_time":"找到 ${hits} 个搜索结果（用时 ${time} 毫秒）","hits":"找到 ${hits} 个搜索结果"},"path":"/search.xml","localsearch":{"enable":true,"top_n_per_article":1,"unescape":false,"preload":false}}</script><script src="/js/config.js"></script>
+
+    <meta name="description" content="背景假设：已精通K8s调度&#x2F;运维，熟悉GPU资源管理（device plugin&#x2F;调度&#x2F;监控），但未系统训练过模型、未深入看过PyTorch&#x2F;Transformer&#x2F;vLLM等框架内部。目标：训练系统 + 推理系统为重点，GPU底层性能与模型原理为支撑。节奏：10-15h&#x2F;周，总周期约 22-24 周（~5.5个月），每阶段必须产出可复">
+<meta property="og:type" content="article">
+<meta property="og:title" content="AI Infra 系统学习路线（面向资深K8s管理员）">
+<meta property="og:url" content="https://zhoushuke.github.io/2026/01/15/AI-Infra-Roadmap/index.html">
+<meta property="og:site_name" content="Z.S.K.&#39;s Records">
+<meta property="og:description" content="背景假设：已精通K8s调度&#x2F;运维，熟悉GPU资源管理（device plugin&#x2F;调度&#x2F;监控），但未系统训练过模型、未深入看过PyTorch&#x2F;Transformer&#x2F;vLLM等框架内部。目标：训练系统 + 推理系统为重点，GPU底层性能与模型原理为支撑。节奏：10-15h&#x2F;周，总周期约 22-24 周（~5.5个月），每阶段必须产出可复">
+<meta property="og:locale" content="zh_CN">
+<meta property="article:published_time" content="2026-01-15T01:00:00.000Z">
+<meta property="article:modified_time" content="2026-11-04T12:37:33.795Z">
+<meta property="article:author" content="周淑科">
+<meta property="article:tag" content="AI-Infra">
+<meta name="twitter:card" content="summary">
+
+
+<link rel="canonical" href="https://zhoushuke.github.io/2026/01/15/AI-Infra-Roadmap/">
+
+
+<script class="next-config" data-name="page" type="application/json">{"sidebar":"","isHome":false,"isPost":true,"lang":"zh-CN","comments":"","permalink":"https://zhoushuke.github.io/2026/01/15/AI-Infra-Roadmap/","path":"2026/01/15/AI-Infra-Roadmap/","title":"AI Infra 系统学习路线（面向资深K8s管理员）"}</script>
+
+<script class="next-config" data-name="calendar" type="application/json">""</script>
+<title>AI Infra 系统学习路线（面向资深K8s管理员） | Z.S.K.'s Records</title>
+  
+
+
+
+
+
+
+
+
+  <noscript>
+    <link rel="stylesheet" href="/css/noscript.css">
+  </noscript>
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage" class="use-motion">
+  <div class="headband"></div>
+
+  <main class="main">
+    <div class="column">
+      <header class="header" itemscope itemtype="http://schema.org/WPHeader"><div class="site-brand-container">
+  <div class="site-nav-toggle">
+    <div class="toggle" aria-label="切换导航栏" role="button">
+        <span class="toggle-line"></span>
+        <span class="toggle-line"></span>
+        <span class="toggle-line"></span>
+    </div>
+  </div>
+
+  <div class="site-meta">
+
+    <a href="/" class="brand" rel="start">
+      <i class="logo-line"></i>
+      <p class="site-title">Z.S.K.'s Records</p>
+      <i class="logo-line"></i>
+    </a>
+  </div>
+
+  <div class="site-nav-right">
+    <div class="toggle popup-trigger" aria-label="搜索" role="button">
+        <i class="fa fa-search fa-fw fa-lg"></i>
+    </div>
+  </div>
+</div>
+
+
+
+<nav class="site-nav">
+  <ul class="main-menu menu"><li class="menu-item menu-item-home"><a href="/" rel="section"><i class="fa fa-home fa-fw"></i>首页</a></li><li class="menu-item menu-item-about"><a href="/about/ZSK-Profile.pdf" rel="section"><i class="fa fa-user fa-fw"></i>简历</a></li><li class="menu-item menu-item-tags"><a href="/tags/" rel="section"><i class="fa fa-tags fa-fw"></i>标签</a></li><li class="menu-item menu-item-categories"><a href="/categories/" rel="section"><i class="fa fa-th fa-fw"></i>分类</a></li><li class="menu-item menu-item-archives"><a href="/archives/" rel="section"><i class="fa fa-archive fa-fw"></i>归档</a></li><li class="menu-item menu-item-commonweal"><a href="/404.html" rel="section"><i class="fa fa-heartbeat fa-fw"></i>公益 404</a></li>
+      <li class="menu-item menu-item-search">
+        <a role="button" class="popup-trigger"><i class="fa fa-search fa-fw"></i>搜索
+        </a>
+      </li>
+  </ul>
+</nav>
+
+
+
+  <div class="search-pop-overlay">
+    <div class="popup search-popup">
+      <div class="search-header">
+        <span class="search-icon">
+          <i class="fa fa-search"></i>
+        </span>
+        <div class="search-input-container">
+          <input autocomplete="off" autocapitalize="off" maxlength="80"
+                placeholder="搜索..." spellcheck="false"
+                type="search" class="search-input">
+        </div>
+        <span class="popup-btn-close" role="button">
+          <i class="fa fa-times-circle"></i>
+        </span>
+      </div>
+      <div class="search-result-container">
+        <div class="search-result-icon">
+          <i class="fa fa-spinner fa-pulse fa-5x"></i>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</header>
+        
+  
+  <aside class="sidebar">
+
+    <div class="sidebar-inner sidebar-nav-active sidebar-toc-active">
+      <ul class="sidebar-nav">
+        <li class="sidebar-nav-toc">
+          文章目录
+        </li>
+        <li class="sidebar-nav-overview">
+          站点概览
+        </li>
+      </ul>
+
+      <div class="sidebar-panel-container">
+        <!--noindex-->
+        <div class="post-toc-wrap sidebar-panel">
+            <div class="post-toc animated"><ol class="nav"><li class="nav-item nav-level-2"><a class="nav-link" href="#Phase-0%EF%BD%9C%E5%9C%B0%E5%9B%BE%E4%B8%8E%E8%AF%8D%E6%B1%87%EF%BC%881%E5%91%A8%EF%BC%89"><span class="nav-number">1.</span> <span class="nav-text">Phase 0｜地图与词汇（1周）</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#Phase-1%EF%BD%9CPyTorch-Transformer-%E4%BB%8E%E2%80%9D%E7%9C%8B%E6%87%82%E2%80%9D%E5%88%B0%E2%80%9D%E5%86%99%E5%87%BA%E6%9D%A5%E2%80%9D%EF%BC%884%E5%91%A8%EF%BC%89"><span class="nav-number">2.</span> <span class="nav-text">Phase 1｜PyTorch + Transformer 从”看懂”到”写出来”（4周）</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#Phase-2%EF%BD%9C%E5%88%86%E5%B8%83%E5%BC%8F%E8%AE%AD%E7%BB%83%E7%B3%BB%E7%BB%9F%EF%BC%88%E9%87%8D%E7%82%B9%E4%B8%80%EF%BC%8C5%E5%91%A8%EF%BC%89"><span class="nav-number">3.</span> <span class="nav-text">Phase 2｜分布式训练系统（重点一，5周）</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#Phase-3%EF%BD%9C%E6%8E%A8%E7%90%86%E6%9C%8D%E5%8A%A1%E7%B3%BB%E7%BB%9F%EF%BC%88%E9%87%8D%E7%82%B9%E4%BA%8C%EF%BC%8C5%E5%91%A8%EF%BC%89"><span class="nav-number">4.</span> <span class="nav-text">Phase 3｜推理服务系统（重点二，5周）</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#Phase-4%EF%BD%9CGPU%E5%BA%95%E5%B1%82%E4%B8%8E%E6%80%A7%E8%83%BD%E6%8E%92%E9%9A%9C%EF%BC%88%E6%94%AF%E6%92%91%E6%80%A7%EF%BC%8C3%E5%91%A8%EF%BC%89"><span class="nav-number">5.</span> <span class="nav-text">Phase 4｜GPU底层与性能排障（支撑性，3周）</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#Phase-5%EF%BD%9C%E6%A8%A1%E5%9E%8B-x2F-%E7%AE%97%E6%B3%95%E5%8E%9F%E7%90%86%E6%B7%B1%E5%8C%96-%E7%BB%BC%E5%90%88%E6%A1%88%E4%BE%8B%EF%BC%884%E5%91%A8%EF%BC%89"><span class="nav-number">6.</span> <span class="nav-text">Phase 5｜模型&#x2F;算法原理深化 + 综合案例（4周）</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#Phase-6%EF%BD%9C%E6%8C%81%E7%BB%AD%E8%B7%9F%E8%BF%9B%EF%BC%88%E9%95%BF%E6%9C%9F%EF%BC%89"><span class="nav-number">7.</span> <span class="nav-text">Phase 6｜持续跟进（长期）</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E6%97%B6%E9%97%B4%E6%80%BB%E8%A7%88"><span class="nav-number">8.</span> <span class="nav-text">时间总览</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%8E%9F%E5%88%99"><span class="nav-number">9.</span> <span class="nav-text">原则</span></a></li></ol></div>
+        </div>
+        <!--/noindex-->
+
+        <div class="site-overview-wrap sidebar-panel">
+          <div class="site-author animated" itemprop="author" itemscope itemtype="http://schema.org/Person">
+    <img class="site-author-image" itemprop="image" alt="周淑科"
+      src="/images/avatar.gif">
+  <p class="site-author-name" itemprop="name">周淑科</p>
+  <div class="site-description" itemprop="description">Better Later Than Never</div>
+</div>
+<div class="site-state-wrap animated">
+  <nav class="site-state">
+      <div class="site-state-item site-state-posts">
+        <a href="/archives/">
+          <span class="site-state-item-count">233</span>
+          <span class="site-state-item-name">日志</span>
+        </a>
+      </div>
+      <div class="site-state-item site-state-categories">
+          <a href="/categories/">
+        <span class="site-state-item-count">17</span>
+        <span class="site-state-item-name">分类</span></a>
+      </div>
+      <div class="site-state-item site-state-tags">
+          <a href="/tags/">
+        <span class="site-state-item-count">17</span>
+        <span class="site-state-item-name">标签</span></a>
+      </div>
+  </nav>
+</div>
+  <div class="cc-license animated" itemprop="license">
+    <a href="https://creativecommons.org/licenses/by-nc-sa/4.0/" class="cc-opacity" rel="noopener" target="_blank"><img src="https://cdnjs.cloudflare.com/ajax/libs/creativecommons-vocabulary/2020.11.3/assets/license_badges/small/by_nc_sa.svg" alt="Creative Commons"></a>
+  </div>
+
+        </div>
+      </div>
+    </div>
+
+    
+  </aside>
+
+
+    </div>
+
+    <div class="main-inner post posts-expand">
+
+
+  
+
+
+<div class="post-block">
+  
+  
+
+  <article itemscope itemtype="http://schema.org/Article" class="post-content" lang="zh-CN">
+    <link itemprop="mainEntityOfPage" href="https://zhoushuke.github.io/2026/01/15/AI-Infra-Roadmap/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/avatar.gif">
+      <meta itemprop="name" content="周淑科">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="Z.S.K.'s Records">
+      <meta itemprop="description" content="Better Later Than Never">
+    </span>
+
+    <span hidden itemprop="post" itemscope itemtype="http://schema.org/CreativeWork">
+      <meta itemprop="name" content="AI Infra 系统学习路线（面向资深K8s管理员） | Z.S.K.'s Records">
+      <meta itemprop="description" content="">
+    </span>
+      <header class="post-header">
+        <h1 class="post-title" itemprop="name headline">
+          AI Infra 系统学习路线（面向资深K8s管理员）
+        </h1>
+
+        <div class="post-meta-container">
+          <div class="post-meta">
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-calendar"></i>
+      </span>
+      <span class="post-meta-item-text">发表于</span>
+
+      <time title="创建时间：2026-01-15 09:00:00" itemprop="dateCreated datePublished" datetime="2026-01-15T09:00:00+08:00">2026-01-15</time>
+    </span>
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-folder"></i>
+      </span>
+      <span class="post-meta-item-text">分类于</span>
+        <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+          <a href="/categories/AI-Infra/" itemprop="url" rel="index"><span itemprop="name">AI-Infra</span></a>
+        </span>
+    </span>
+
+  
+    <span class="post-meta-item" title="阅读次数" id="busuanzi_container_page_pv">
+      <span class="post-meta-item-icon">
+        <i class="far fa-eye"></i>
+      </span>
+      <span class="post-meta-item-text">阅读次数：</span>
+      <span id="busuanzi_value_page_pv"></span>
+    </span>
+    <span class="post-meta-break"></span>
+    <span class="post-meta-item" title="本文字数">
+      <span class="post-meta-item-icon">
+        <i class="far fa-file-word"></i>
+      </span>
+      <span class="post-meta-item-text">本文字数：</span>
+      <span>3.5k</span>
+    </span>
+    <span class="post-meta-item" title="阅读时长">
+      <span class="post-meta-item-icon">
+        <i class="far fa-clock"></i>
+      </span>
+      <span class="post-meta-item-text">阅读时长 &asymp;</span>
+      <span>3 分钟</span>
+    </span>
+</div>
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody"><blockquote>
+<p>背景假设：已精通K8s调度&#x2F;运维，熟悉GPU资源管理（device plugin&#x2F;调度&#x2F;监控），<br>但未系统训练过模型、未深入看过PyTorch&#x2F;Transformer&#x2F;vLLM等框架内部。<br>目标：训练系统 + 推理系统为重点，GPU底层性能与模型原理为支撑。<br>节奏：10-15h&#x2F;周，总周期约 22-24 周（~5.5个月），每阶段必须产出可复现的实验数字。</p>
+</blockquote>
+<hr>
+<span id="more"></span>
+
+
+<h2 id="Phase-0｜地图与词汇（1周）"><a href="#Phase-0｜地图与词汇（1周）" class="headerlink" title="Phase 0｜地图与词汇（1周）"></a>Phase 0｜地图与词汇（1周）</h2><p>快速建立全局认知，知道每个术语属于哪一层，后面阶段才不会”学了后面忘了前面”。</p>
+<ul>
+<li>精读一遍 <a target="_blank" rel="noopener" href="https://github.com/pacoxu/ai-infra">pacoxu&#x2F;ai-infra</a> 的 landscape 图和定义：<br>Training(DP&#x2F;TP&#x2F;EP&#x2F;SP&#x2F;PP) &#x2F; Inference(P-D, KVCache) &#x2F; RL(训练推理一致性) 三分法</li>
+<li>过一遍 <a target="_blank" rel="noopener" href="https://learninfra.dev/topics/ai-infrastructure">learninfra.dev</a> 目录作为后续查词典用（不用细读，知道有哪些主题即可）</li>
+<li><strong>产出</strong>：自己整理一张术语表&#x2F;脑图（Tokenizer→Attention→KVCache→DP&#x2F;TP&#x2F;PP→ZeRO→PagedAttention→量化…），标注”我已经懂”&#x2F;“要补”</li>
+</ul>
+<hr>
+<h2 id="Phase-1｜PyTorch-Transformer-从”看懂”到”写出来”（4周）"><a href="#Phase-1｜PyTorch-Transformer-从”看懂”到”写出来”（4周）" class="headerlink" title="Phase 1｜PyTorch + Transformer 从”看懂”到”写出来”（4周）"></a>Phase 1｜PyTorch + Transformer 从”看懂”到”写出来”（4周）</h2><p>你了解概念但没训练过模型，这一步必须动手把 forward&#x2F;backward&#x2F;attention 用代码走一遍，<br>否则后面”为什么要切分””通信量多大”全是空中楼阁。</p>
+<p><strong>核心资源</strong></p>
+<ul>
+<li>Karpathy <em>Neural Networks: Zero to Hero</em>（micrograd → makemore → nanoGPT）— 手写 autograd 和 GPT</li>
+<li><a target="_blank" rel="noopener" href="http://nlp.seas.harvard.edu/annotated-transformer/">The Annotated Transformer</a> — 逐行对照论文看代码</li>
+<li>HuggingFace Transformers quickstart：tokenizer &#x2F; model &#x2F; Trainer，做一次真实 fine-tune</li>
+<li>learninfra.dev：《Inside the Transformer》《GPU Memory Math》巩固 RoPE&#x2F;GQA&#x2F;MLA&#x2F;MoE 和显存构成</li>
+</ul>
+<p><strong>项目（必须产出数字）</strong><br>在1张GPU上训练一个 nanoGPT 量级模型，记录：</p>
+<ul>
+<li>3种 batch size 下的 tokens&#x2F;sec 和峰值显存</li>
+<li>显存拆解：权重 &#x2F; 梯度 &#x2F; 优化器状态 &#x2F; 激活 各占多少</li>
+</ul>
+<hr>
+<h2 id="Phase-2｜分布式训练系统（重点一，5周）"><a href="#Phase-2｜分布式训练系统（重点一，5周）" class="headerlink" title="Phase 2｜分布式训练系统（重点一，5周）"></a>Phase 2｜分布式训练系统（重点一，5周）</h2><p>这是你日常运维对象的”内部原理”，优先级最高。</p>
+<p><strong>核心阅读（按顺序）</strong></p>
+<ol>
+<li><a target="_blank" rel="noopener" href="https://huggingface.co/spaces/nanotron/ultrascale-playbook">Hugging Face Ultra-Scale Playbook</a> — DP&#x2F;TP&#x2F;PP&#x2F;EP&#x2F;SP&#x2F;ZeRO 如何组合，怎么选</li>
+<li><a target="_blank" rel="noopener" href="https://jax-ml.github.io/scaling-book/">How to Scale Your Model</a>（jax-ml scaling-book）— rooflines + 并行策略的系统性分析，TPU视角但方法论通用</li>
+<li>论文精读三篇：<ul>
+<li>Megatron-LM（Tensor + Pipeline 并行）</li>
+<li>ZeRO: Memory Optimizations Toward Training Trillion Parameter Models</li>
+<li>PyTorch FSDP: Experiences on Scaling Fully Sharded Data Parallel</li>
+</ul>
+</li>
+<li>NCCL collectives 基础：all-reduce &#x2F; all-gather &#x2F; reduce-scatter 对应哪种并行策略的通信模式</li>
+</ol>
+<p><strong>实践</strong></p>
+<ul>
+<li>用 FSDP2 或 DeepSpeed ZeRO-3 在公司集群上微调一个 1B~8B 模型（多机多卡）</li>
+<li>测 MFU、step time、tokens&#x2F;sec</li>
+<li>故意 kill 一个 worker，验证分布式 checkpoint 保存&#x2F;恢复耗时</li>
+<li><strong>强烈建议</strong>：挑一个你集群里真实跑过的分布式训练 job，做 case study —— 它用的是什么并行组合？通信量多大？为什么这样配置？</li>
+</ul>
+<hr>
+<h2 id="Phase-3｜推理服务系统（重点二，5周）"><a href="#Phase-3｜推理服务系统（重点二，5周）" class="headerlink" title="Phase 3｜推理服务系统（重点二，5周）"></a>Phase 3｜推理服务系统（重点二，5周）</h2><p><strong>核心论文&#x2F;资源</strong></p>
+<ul>
+<li>vLLM 论文：<em>Efficient Memory Management for LLM Serving with PagedAttention</em>（SOSP’23）</li>
+<li>SGLang 论文：<em>Efficient Execution of Structured Language Model Programs</em>（RadixAttention）</li>
+<li>learninfra.dev 系列（非常对口，建议全看）：The KV Cache &#x2F; Batching for LLM Inference &#x2F;<br>Quantization &#x2F; Speculative Decoding &#x2F; LLM Inference at Scale</li>
+<li>Dynamo &#x2F; PD 分离架构：参考 pacoxu&#x2F;ai-infra 的 <code>docs/inference/pd-disaggregation.md</code></li>
+</ul>
+<p><strong>实践</strong></p>
+<ul>
+<li>走读 vLLM 源码关键模块：scheduler、block manager、worker 执行流程</li>
+<li>项目：同一个 8B 模型分别用 vLLM 和 SGLang 部署，在并发 1&#x2F;16&#x2F;64 下测 TTFT、ITL、吞吐&#x2F;GPU，<br>再换量化版本（FP8&#x2F;AWQ）对比一次</li>
+<li>延伸看一次：投机解码（Medusa&#x2F;EAGLE）、前缀缓存命中率对延迟的影响</li>
+</ul>
+<hr>
+<h2 id="Phase-4｜GPU底层与性能排障（支撑性，3周）"><a href="#Phase-4｜GPU底层与性能排障（支撑性，3周）" class="headerlink" title="Phase 4｜GPU底层与性能排障（支撑性，3周）"></a>Phase 4｜GPU底层与性能排障（支撑性，3周）</h2><p>这块直接提升你日常故障诊断能力，和你的岗位结合最紧。</p>
+<ul>
+<li>CUDA 编程模型基础：线程&#x2F;block&#x2F;warp、内存层级（learninfra.dev《GPU Programming with CUDA》）</li>
+<li>NCCL：在集群上跑 <code>nccl-tests</code>，理解 ring all-reduce 实现与带宽测算</li>
+<li>Profiling：Nsight Systems（看一次训练 step 时间都花在哪）+ PyTorch Profiler（算子级）</li>
+<li>故障诊断：Xid codes、GPU 掉卡&#x2F;ECC错误&#x2F;NCCL hang 等真实故障模式<br>（learninfra.dev《Troubleshooting GPU Clusters》里六个真实案例非常对口）</li>
+<li><strong>建议</strong>：复盘一次你集群里真实发生过的GPU故障或性能瓶颈，用上述工具重新分析一遍</li>
+</ul>
+<hr>
+<h2 id="Phase-5｜模型-x2F-算法原理深化-综合案例（4周）"><a href="#Phase-5｜模型-x2F-算法原理深化-综合案例（4周）" class="headerlink" title="Phase 5｜模型&#x2F;算法原理深化 + 综合案例（4周）"></a>Phase 5｜模型&#x2F;算法原理深化 + 综合案例（4周）</h2><ul>
+<li>Pretraining 全流程：数据pipeline、优化器、scaling law（可选做 Stanford CS336 的 Assignment 1&#x2F;2）</li>
+<li>Post-training：SFT &#x2F; RLHF &#x2F; DPO &#x2F; GRPO —— 重点理解 RL 训练的 actor-rollout 架构，<br>因为 RL 训练同时需要”训练”和”推理”两套系统协同，这正是你两个重点方向的交汇点</li>
+<li>综合案例精读：<strong>DeepSeek-V3 Technical Report</strong> + <strong>Insights into DeepSeek-V3: Scaling<br>Challenges and Reflections on Hardware</strong>（arXiv 2505.09343）—— MoE + MLA + 大规模训练 +<br>推理优化 + 硬件约束的综合实战案例，非常适合作为”期末案例”</li>
+<li><strong>产出</strong>：写一份你自己的技术分析——如果要在你的K8s集群上支撑类似规模的 MoE 训练 + RL<br>后训练，调度&#x2F;网络&#x2F;存储需要做哪些改造</li>
+</ul>
+<hr>
+<h2 id="Phase-6｜持续跟进（长期）"><a href="#Phase-6｜持续跟进（长期）" class="headerlink" title="Phase 6｜持续跟进（长期）"></a>Phase 6｜持续跟进（长期）</h2><ul>
+<li>关注 <a target="_blank" rel="noopener" href="https://github.com/pacoxu/ai-infra">pacoxu&#x2F;ai-infra</a>（每周更新的 landscape + blog）</li>
+<li>关注 vLLM &#x2F; SGLang &#x2F; Megatron-LM 的 release notes</li>
+<li>定期看 MLSys、OSDI&#x2F;SOSP 中 AI 系统相关论文</li>
+</ul>
+<hr>
+<h2 id="时间总览"><a href="#时间总览" class="headerlink" title="时间总览"></a>时间总览</h2><table>
+<thead>
+<tr>
+<th>Phase</th>
+<th>内容</th>
+<th>周数</th>
+<th>累计</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>0</td>
+<td>地图与词汇</td>
+<td>1</td>
+<td>1</td>
+</tr>
+<tr>
+<td>1</td>
+<td>PyTorch + Transformer 基础</td>
+<td>4</td>
+<td>5</td>
+</tr>
+<tr>
+<td>2</td>
+<td>分布式训练系统（重点）</td>
+<td>5</td>
+<td>10</td>
+</tr>
+<tr>
+<td>3</td>
+<td>推理服务系统（重点）</td>
+<td>5</td>
+<td>15</td>
+</tr>
+<tr>
+<td>4</td>
+<td>GPU底层与性能排障</td>
+<td>3</td>
+<td>18</td>
+</tr>
+<tr>
+<td>5</td>
+<td>模型原理深化 + 综合案例</td>
+<td>4</td>
+<td>22</td>
+</tr>
+<tr>
+<td>6</td>
+<td>持续跟进</td>
+<td>-</td>
+<td>-</td>
+</tr>
+</tbody></table>
+<h2 id="原则"><a href="#原则" class="headerlink" title="原则"></a>原则</h2><ul>
+<li>每阶段必须有带数字的产出（repo + 实测数据），不是看完课程就算完成</li>
+<li>尽量用你自己集群里真实的训练&#x2F;推理任务做 case study，比纯 toy 实验价值高得多</li>
+<li>顺序不要跳：Phase 3的延迟分析依赖Phase 1的token生成原理；Phase 2的MFU分析依赖Phase1的显存构成</li>
+</ul>
+
+    </div>
+
+    
+    
+    
+
+    <footer class="post-footer">
+          <div class="reward-container">
+  <div>Buy Me a Coffee</div>
+  <button>
+    赞赏
+  </button>
+  <div class="post-reward">
+      <div>
+        <img src="/images/wechatpayme.png" alt="周淑科 微信">
+        <span>微信</span>
+      </div>
+      <div>
+        <img src="/images/alipayme.jpg" alt="周淑科 支付宝">
+        <span>支付宝</span>
+      </div>
+
+  </div>
+</div>
+
+          
+
+<div class="post-copyright">
+<ul>
+  <li class="post-copyright-author">
+      <strong>本文作者： </strong>周淑科
+  </li>
+  <li class="post-copyright-link">
+      <strong>本文链接：</strong>
+      <a href="https://zhoushuke.github.io/2026/01/15/AI-Infra-Roadmap/" title="AI Infra 系统学习路线（面向资深K8s管理员）">https://zhoushuke.github.io/2026/01/15/AI-Infra-Roadmap/</a>
+  </li>
+  <li class="post-copyright-license">
+      <strong>版权声明： </strong>本站所有文章除特别声明外，均采用 <a href="https://creativecommons.org/licenses/by-nc-sa/4.0/" rel="noopener" target="_blank"><i class="fab fa-fw fa-creative-commons"></i>BY-NC-SA</a> 许可协议。转载请保留原文作者及链接！
+  </li>
+</ul>
+</div>
+
+          <div class="post-tags">
+              <a href="/tags/AI-Infra/" rel="tag"># AI-Infra</a>
+          </div>
+
+        
+
+          <div class="post-nav">
+            <div class="post-nav-item">
+                <a href="/2025/12/31/2025/" rel="prev" title="再见2025,2026再见">
+                  <i class="fa fa-angle-left"></i> 再见2025,2026再见
+                </a>
+            </div>
+            <div class="post-nav-item">
+                <a href="/2026/02/14/AI-Infra-Phase0-Map/" rel="next" title="Phase 0 — 地图与词汇（W1）">
+                  Phase 0 — 地图与词汇（W1） <i class="fa fa-angle-right"></i>
+                </a>
+            </div>
+          </div>
+    </footer>
+  </article>
+</div>
+
+
+
+
+
+
+</div>
+  </main>
+
+  <footer class="footer">
+    <div class="footer-inner">
+
+  <div class="copyright">
+    &copy; 
+    <span itemprop="copyrightYear">2026</span>
+    <span class="with-love">
+      <i class="fa fa-heart"></i>
+    </span>
+    <span class="author" itemprop="copyrightHolder">周淑科</span>
+  </div>
+<div class="wordcount">
+  <span class="post-meta-item">
+    <span class="post-meta-item-icon">
+      <i class="fa fa-chart-line"></i>
+    </span>
+      <span>站点总字数：</span>
+    <span title="站点总字数">1m</span>
+  </span>
+  <span class="post-meta-item">
+    <span class="post-meta-item-icon">
+      <i class="fa fa-coffee"></i>
+    </span>
+      <span>站点阅读时长 &asymp;</span>
+    <span title="站点阅读时长">15:44</span>
+  </span>
+</div>
+<div class="busuanzi-count">
+    <span class="post-meta-item" id="busuanzi_container_site_uv">
+      <span class="post-meta-item-icon">
+        <i class="fa fa-user"></i>
+      </span>
+      <span class="site-uv" title="总访客量">
+        <span id="busuanzi_value_site_uv"></span>
+      </span>
+    </span>
+    <span class="post-meta-item" id="busuanzi_container_site_pv">
+      <span class="post-meta-item-icon">
+        <i class="fa fa-eye"></i>
+      </span>
+      <span class="site-pv" title="总访问量">
+        <span id="busuanzi_value_site_pv"></span>
+      </span>
+    </span>
+</div>
+  <div class="powered-by">Powered by <a href="https://hexo.io/" rel="noopener" target="_blank">Hexo</a> & <a href="https://theme-next.js.org/mist/" rel="noopener" target="_blank">NexT.Mist</a>
+  </div>
+
+    </div>
+  </footer>
+
+  
+  <div class="toggle sidebar-toggle" role="button">
+    <span class="toggle-line"></span>
+    <span class="toggle-line"></span>
+    <span class="toggle-line"></span>
+  </div>
+  <div class="sidebar-dimmer"></div>
+  <div class="back-to-top" role="button" aria-label="返回顶部">
+    <i class="fa fa-arrow-up fa-lg"></i>
+    <span>0%</span>
+  </div>
+
+<noscript>
+  <div class="noscript-warning">Theme NexT works best with JavaScript enabled</div>
+</noscript>
+
+
+  
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/animejs/3.2.1/anime.min.js" integrity="sha256-XL2inqUJaslATFnHdJOi9GfQ60on8Wx1C2H8DYiN1xY=" crossorigin="anonymous"></script>
+<script src="/js/comments.js"></script><script src="/js/utils.js"></script><script src="/js/motion.js"></script><script src="/js/sidebar.js"></script><script src="/js/next-boot.js"></script>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/hexo-generator-searchdb/1.4.1/search.js" integrity="sha256-1kfA5uHPf65M5cphT2dvymhkuyHPQp5A53EGZOnOLmc=" crossorigin="anonymous"></script>
+<script src="/js/third-party/search/local-search.js"></script>
+
+
+
+
+
+
+
+  
+  <script async src="https://cn.vercount.one/js"></script>
+
+
+
+
+
+</body>
+</html>
